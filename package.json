@@ -1,0 +1,35 @@
+{
+  "name": "minecraft-magic-blueprint",
+  "version": "0.1.0",
+  "description": "A web-based 2D/3D editor for designing Minecraft structures",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@adobe/react-spectrum": "^3.37.0",
+    "@babylonjs/core": "^7.45.1",
+    "@babylonjs/loaders": "^7.45.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5"
+  },
+  "keywords": [
+    "minecraft",
+    "blueprint",
+    "editor",
+    "3d",
+    "voxel"
+  ],
+  "author": "",
+  "license": "ISC"
+}
