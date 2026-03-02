@@ -62,6 +62,54 @@ Business Logic (Singletons) → Events → HOCs → Props → Components (Render
 - **HOCs**: Subscribe to singleton events, pass data as props to wrapped components
 - **Components**: Pure rendering based on props, invoke singleton methods via callbacks
 
+### UI Component Selection Priority
+
+When building UI components, follow this priority order:
+
+1. **First: Use React Spectrum components** - Always check React Spectrum documentation first
+   - Layout: `View`, `Grid`, `Flex`, `Divider`
+   - Typography: `Heading`, `Text`, `Content`
+   - Containers: `Well`, `DialogContainer`
+   - Actions: `Button`, `ActionButton`, `ActionGroup`, `ActionBar`
+   - Color: `ColorSwatch`, `ColorArea`, `ColorField`
+   - Forms: All form components from React Spectrum
+   - See: https://react-spectrum.adobe.com/react-spectrum/
+
+2. **Second: Compose React Spectrum components** - Build custom components by composing existing Spectrum components
+
+3. **Last Resort: Custom components** - Only create custom components when no suitable Spectrum component exists
+
+**Why React Spectrum?**
+- ✓ Heavily tested by Adobe team
+- ✓ Built-in accessibility (ARIA, keyboard navigation)
+- ✓ Automatic theme adaptation (light/dark mode, platform-specific)
+- ✓ Design system consistency
+- ✓ Responsive behavior built-in
+- ✓ Spectrum design tokens for spacing, colors, sizing
+
+**Anti-patterns to avoid:**
+- ❌ Custom divs with inline styles
+- ❌ Manual implementation of common UI patterns
+- ❌ Hardcoded colors, spacing, or sizes (use Spectrum tokens)
+- ❌ Custom accessibility implementations (Spectrum handles this)
+- ❌ Re-inventing components that Spectrum provides
+
+**Example - Wrong vs Right:**
+
+```typescript
+// ❌ WRONG: Custom div with inline styles
+<div style={{ padding: '16px', background: '#fafafa', border: '1px solid #e0e0e0' }}>
+  <h2 style={{ fontSize: '20px' }}>Title</h2>
+  <p>Content</p>
+</div>
+
+// ✓ RIGHT: React Spectrum components with tokens
+<View padding="size-200" backgroundColor="gray-100" borderWidth="thin" borderColor="gray-300">
+  <Heading level={2}>Title</Heading>
+  <Content>Content</Content>
+</View>
+```
+
 ## Coding Style Rules
 
 ### 1. Singleton Pattern for Business Logic
