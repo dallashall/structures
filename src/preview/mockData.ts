@@ -1,4 +1,4 @@
-import type { Block, Project, ViewType } from '../types';
+import type { Block, Project, ViewType, LayoutMode } from '../types';
 
 /**
  * Mock Minecraft blocks for component testing
@@ -64,6 +64,10 @@ export const mockCallbacks = {
 
   onLayerChange: (layer: number): void => {
     console.log('[Mock Callback] Layer changed:', layer);
+  },
+
+  onLayoutModeChange: (mode: LayoutMode): void => {
+    console.log('[Mock Callback] Layout mode changed:', mode);
   },
 
   onNewProject: (): void => {

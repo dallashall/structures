@@ -1,16 +1,19 @@
-import { Flex, Button, Text, Heading, Divider, View } from '@adobe/react-spectrum';
+import { Flex, Button, Text, Heading, Divider, View, Picker, Item } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
-import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
+import type { LayoutMode } from '../types';
 
 interface ToolbarProps {
   projectName: string | null;
+  layoutMode: LayoutMode;
   onNewProject: () => void;
   onSaveProject: () => void;
   onOpenProject: () => void;
-  onToggle3D: () => void;
-  is3DMode: boolean;
+  onLayoutModeChange: (mode: LayoutMode) => void;
+  // Optional props for preview compatibility (3D feature not yet implemented)
+  onToggle3D?: () => void;
+  is3DMode?: boolean;
 }
 
 /**
@@ -27,11 +30,11 @@ interface ToolbarProps {
  */
 export function Toolbar({
   projectName,
+  layoutMode,
   onNewProject,
   onSaveProject,
   onOpenProject,
-  onToggle3D,
-  is3DMode,
+  onLayoutModeChange,
 }: ToolbarProps) {
   const handleNewClick = () => {
     onNewProject();
@@ -45,23 +48,34 @@ export function Toolbar({
     onOpenProject();
   };
 
-  const handleToggle3DClick = () => {
-    onToggle3D();
+  const handleLayoutModeChange = (key: React.Key | null) => {
+    if (key !== null) {
+      onLayoutModeChange(key as LayoutMode);
+    }
   };
 
   return (
     <View padding="size-150" borderBottomWidth="thick">
-      <Flex direction="row" alignItems="center" gap="size-200">
+      <Flex
+        direction={{ base: 'column', L: 'row' }}
+        alignItems={{ base: 'stretch', L: 'center' }}
+        gap="size-200"
+      >
         {/* Project Name */}
-        <View flex={1}>
-          <Heading level={1} margin={0}>
+        <View flex={{ L: 1 }} minWidth={0}>
+          <Heading level={1} margin={0} UNSAFE_style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {projectName || 'Minecraft Magic Blueprint'}
           </Heading>
           {projectName && <Text>Project</Text>}
         </View>
 
         {/* Action Buttons */}
-        <Flex direction="row" gap="size-100" alignItems="center">
+        <Flex
+          direction={{ base: 'column', M: 'row' }}
+          gap="size-100"
+          alignItems="center"
+          wrap
+        >
           <Button variant="primary" onPress={handleNewClick}>
             <Add />
             <Text>New</Text>
@@ -81,15 +95,17 @@ export function Toolbar({
             <Text>Open</Text>
           </Button>
 
-          <Divider orientation="vertical" size="S" />
+          <Divider orientation="vertical" size="S" isHidden={{ base: true, M: false }} />
 
-          <Button
-            variant={is3DMode ? 'accent' : 'secondary'}
-            onPress={handleToggle3DClick}
+          <Picker
+            label="View Mode"
+            selectedKey={layoutMode}
+            onSelectionChange={handleLayoutModeChange}
+            width={{ base: '100%', M: 'size-2000' }}
           >
-            <ViewGrid />
-            <Text>{is3DMode ? '3D View' : '2D Editor'}</Text>
-          </Button>
+            <Item key="tabbed">Tabbed</Item>
+            <Item key="quad">Quad Layout</Item>
+          </Picker>
         </Flex>
       </Flex>
     </View>

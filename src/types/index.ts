@@ -16,9 +16,27 @@ export interface Dimensions {
 
 export type Direction = 'north' | 'south' | 'east' | 'west';
 
-export type ViewType = 'front' | 'side' | 'back';
+// Layout modes for editor
+export type LayoutMode = 'tabbed' | 'quad';
 
-export type ToolType = 'paint' | 'erase' | 'eyedropper' | 'fill';
+// Orthographic view types with perspectives (front/back, left/right, top/bottom)
+export type ViewType = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
+// Painting modes
+export type PaintMode = 'point' | 'fill' | 'outline';
+
+// Painting behaviors (especially for fill mode)
+export type PaintBehavior = 'normal' | 'only-replace' | 'selective-replace';
+
+// Tool types (simplified for initial implementation)
+export type ToolType = 'paint' | 'erase';
+
+// Layer state for all three dimensions
+export interface LayerState {
+  x: number; // Active X layer (for Left/Right view)
+  y: number; // Active Y layer (for Top/Bottom view)
+  z: number; // Active Z layer (for Front/Back view)
+}
 
 export interface Block {
   id: string;
@@ -54,14 +72,19 @@ export interface ProjectMetadata {
   created: Date;
   modified: Date;
   dimensions: Dimensions;
+  blockCount: number;
+  thumbnail: string; // Base64 data URL
 }
 
 export interface EditorState {
+  layoutMode: LayoutMode;
   activeView: ViewType;
-  activeLayer: number;
+  activeLayers: LayerState;
   selectedBlockId: string | null;
   activeTool: ToolType;
-  is3DMode: boolean;
+  paintMode: PaintMode;
+  paintBehavior: PaintBehavior;
+  quickSelectSlots: (string | null)[]; // 5 slots for quick-select palette
 }
 
 export interface CameraState {

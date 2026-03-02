@@ -25,10 +25,10 @@ export function ViewSelectorPreview() {
         </Content>
       );
     }
-    if (activeView === 'side') {
+    if (activeView === 'left') {
       return (
         <Content>
-          <strong>Side View:</strong> Edit the side face of the structure. Shows
+          <strong>Left View:</strong> Edit the left face of the structure. Shows
           depth (Z-axis) and height (Y-axis).
         </Content>
       );
@@ -61,14 +61,14 @@ export function ViewSelectorPreview() {
         />
       </View>
 
-      {/* Side View */}
+      {/* Left View */}
       <View marginTop="size-600">
-        <Heading level={2}>Side View Selected</Heading>
+        <Heading level={2}>Left View Selected</Heading>
         <Content marginBottom="size-200">
-          Side view showing the Z-Y plane (depth × height)
+          Left view showing the Z-Y plane (depth × height)
         </Content>
         <ViewSelector
-          activeView="side"
+          activeView="left"
           onViewChange={mockCallbacks.onViewChange}
         />
       </View>

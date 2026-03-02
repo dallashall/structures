@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
-import { Toolbar } from '../../components/Toolbar';
+import { Toolbar } from '../../layouts/Toolbar';
 import { mockCallbacks } from '../mockData';
 
 /**
@@ -38,9 +38,11 @@ export function ToolbarPreview() {
         >
           <Toolbar
             projectName={null}
+            layoutMode="tabbed"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
+            onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
@@ -62,9 +64,11 @@ export function ToolbarPreview() {
         >
           <Toolbar
             projectName="Sample House"
+            layoutMode="tabbed"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
+            onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
@@ -85,9 +89,11 @@ export function ToolbarPreview() {
         >
           <Toolbar
             projectName="Medieval Castle"
+            layoutMode="quad"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
+            onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={true}
           />
@@ -108,9 +114,11 @@ export function ToolbarPreview() {
         >
           <Toolbar
             projectName="My Very Long Project Name For A Complex Minecraft Structure"
+            layoutMode="tabbed"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
+            onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
@@ -132,9 +140,11 @@ export function ToolbarPreview() {
         >
           <Toolbar
             projectName="Interactive Demo Project"
+            layoutMode="tabbed"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
+            onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={handleToggle3D}
             is3DMode={is3DMode}
           />
@@ -162,9 +172,11 @@ export function ToolbarPreview() {
           >
             <Toolbar
               projectName="Village House"
+              layoutMode="tabbed"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}
+              onLayoutModeChange={mockCallbacks.onLayoutModeChange}
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={false}
             />
@@ -177,9 +189,11 @@ export function ToolbarPreview() {
           >
             <Toolbar
               projectName="Nether Portal"
+              layoutMode="quad"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}
+              onLayoutModeChange={mockCallbacks.onLayoutModeChange}
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={true}
             />
@@ -192,9 +206,11 @@ export function ToolbarPreview() {
           >
             <Toolbar
               projectName="Redstone Machine"
+              layoutMode="tabbed"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}
+              onLayoutModeChange={mockCallbacks.onLayoutModeChange}
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={false}
             />

@@ -67,13 +67,9 @@ Business Logic (Singletons) → Events → HOCs → Props → Components (Render
 When building UI components, follow this priority order:
 
 1. **First: Use React Spectrum components** - Always check React Spectrum documentation first
-   - Layout: `View`, `Grid`, `Flex`, `Divider`
-   - Typography: `Heading`, `Text`, `Content`
-   - Containers: `Well`, `DialogContainer`
-   - Actions: `Button`, `ActionButton`, `ActionGroup`, `ActionBar`
-   - Color: `ColorSwatch`, `ColorArea`, `ColorField`
-   - Forms: All form components from React Spectrum
-   - See: https://react-spectrum.adobe.com/react-spectrum/
+   - See available components list below
+   - Documentation: https://react-spectrum.adobe.com/react-spectrum/
+   - MCP server available for Spectrum queries
 
 2. **Second: Compose React Spectrum components** - Build custom components by composing existing Spectrum components
 
@@ -87,12 +83,106 @@ When building UI components, follow this priority order:
 - ✓ Responsive behavior built-in
 - ✓ Spectrum design tokens for spacing, colors, sizing
 
+**Available React Spectrum Components:**
+
+```
+Accordion              - Collapsible sections
+ActionBar              - Contextual action toolbar
+ActionButton           - Icon-focused button
+ActionButtonGroup      - Group of action buttons
+ActionMenu             - Menu triggered by action button
+Avatar                 - User profile image
+AvatarGroup            - Collection of avatars
+Badge                  - Small status indicator
+Breadcrumbs            - Navigation trail
+Button                 - Standard button
+ButtonGroup            - Group of related buttons
+Calendar               - Date selection calendar
+Card                   - Content container
+CardView               - Grid of cards
+Checkbox               - Single checkbox
+CheckboxGroup          - Group of checkboxes
+ColorArea              - 2D color picker
+ColorField             - Color input field
+ColorSlider            - Color gradient slider
+ColorSwatch            - Color preview square
+ColorSwatchPicker      - Grid of color swatches
+ColorWheel             - Circular hue selector
+ComboBox               - Autocomplete input
+ContextualHelp         - Inline help popover
+DateField              - Date text input
+DatePicker             - Date picker with calendar
+DateRangePicker        - Date range selection
+Dialog                 - Modal dialog
+Disclosure             - Expandable section
+Divider                - Visual separator
+DropZone               - File drag-and-drop area
+Form                   - Form container
+Icons                  - Icon components
+IllustratedMessage     - Empty state with illustration
+Illustrations          - Illustration assets
+Image                  - Responsive image
+InlineAlert            - Inline notification
+Link                   - Hyperlink
+LinkButton             - Link styled as button
+Menu                   - Dropdown menu
+Meter                  - Progress/value indicator
+NumberField            - Numeric input
+Picker                 - Select dropdown
+Popover                - Floating container
+ProgressBar            - Linear progress indicator
+ProgressCircle         - Circular progress indicator
+Provider               - Theme/locale provider
+RadioGroup             - Radio button group
+RangeCalendar          - Calendar range selection
+RangeSlider            - Dual-handle slider
+SearchField            - Search input
+SegmentedControl       - Exclusive selection buttons
+SelectBoxGroup         - Selectable card group
+Skeleton               - Loading placeholder
+Slider                 - Single-value slider
+StatusLight            - Colored status indicator
+Switch                 - Toggle switch
+TableView              - Data table
+Tabs                   - Tab navigation
+TagGroup               - Collection of tags
+TextArea               - Multi-line text input
+TextField              - Single-line text input
+TimeField              - Time input
+Toast                  - Temporary notification
+ToggleButton           - Toggle state button
+ToggleButtonGroup      - Group of toggle buttons
+Tooltip                - Hover info popup
+TreeView               - Hierarchical tree
+```
+
+**Layout Components:**
+- `View` - Generic container with styling props
+- `Grid` - CSS Grid layout
+- `Flex` - Flexbox layout
+- `Content` - Text content wrapper
+- `Heading` - Heading text (levels 1-6)
+- `Text` - Body text
+- `Well` - Inset container
+
 **Anti-patterns to avoid:**
 - ❌ Custom divs with inline styles
 - ❌ Manual implementation of common UI patterns
 - ❌ Hardcoded colors, spacing, or sizes (use Spectrum tokens)
 - ❌ Custom accessibility implementations (Spectrum handles this)
 - ❌ Re-inventing components that Spectrum provides
+- ❌ **UNSAFE_style is FORBIDDEN** - Always use proper Spectrum props and patterns
+- ❌ Building custom components without checking the available Spectrum components list first
+
+**Before building any UI component:**
+1. Check the available Spectrum components list in this file
+2. Search React Spectrum documentation: https://react-spectrum.adobe.com/react-spectrum/
+3. Query the Spectrum MCP server if available
+4. Only build custom if no suitable Spectrum component exists
+
+**React Spectrum Skills:**
+- Available via: `npx skills add https://react-spectrum.adobe.com`
+- Provides additional tooling and capabilities for Spectrum components
 
 **Example - Wrong vs Right:**
 
@@ -245,6 +335,12 @@ import { Canvas } from './Canvas';
 export function Editor() { /* ... */ }
 ```
 
+**CRITICAL: After editing any TSX file, you MUST:**
+1. Read the entire file to check for multiple component definitions
+2. Count all function/class components (starts with `function`, `const`, `class` and returns JSX)
+3. If multiple components exist, immediately extract each into separate files
+4. This check is MANDATORY after every TSX file edit - NO EXCEPTIONS
+
 ### 5. 350 Line Limit for Components
 
 React components must not exceed 350 lines. If a component grows beyond this limit:
@@ -317,35 +413,75 @@ Design components to be loosely coupled and composable:
 
 ```
 src/
-├── components/        # Dumb rendering components (one per file)
+├── components/        # Atomic UI components (buttons, menus, form controls)
 │   ├── BlockButton.tsx
+│   ├── FullPaletteMenu.tsx
+│   ├── LayerControls.tsx
+│   ├── LayerDimensionControl.tsx
 │   ├── MaterialPalette.tsx
-│   ├── Toolbar.tsx
-│   └── ...
-├── hocs/             # Higher-order components for state
+│   ├── MetaBlockPlacementModal.tsx
+│   ├── NewProjectDialog.tsx
+│   ├── QuickSelectPalette.tsx
+│   └── ViewSelector.tsx
+├── layouts/           # Functional blocks composing components
+│   ├── Toolbar.tsx           # App header with actions
+│   ├── TabbedLayout.tsx      # Single-panel tab navigation
+│   └── QuadLayout.tsx        # Four-panel grid layout
+├── panels/            # Interactive view areas
+│   ├── Canvas2DView.tsx      # 2D orthographic canvas
+│   └── CanvasPlaceholder.tsx # Canvas placeholder
+├── views/             # Top-level composed views
+│   ├── EditorView.tsx        # Main editor orchestrator
+│   └── WelcomeView.tsx       # Project browser/landing
+├── hocs/              # Higher-order components for state
 │   ├── withProjectState.tsx
 │   ├── withEditorState.tsx
 │   └── withBlockRegistry.tsx
-├── core/             # Singleton classes (business logic)
+├── core/              # Singleton classes (business logic)
 │   ├── EventEmitter.ts
 │   ├── ProjectManager.ts
 │   ├── BlockRegistry.ts
 │   ├── StorageManager.ts
 │   ├── EditorStateManager.ts
 │   └── ViewportManager.ts
-├── types/            # TypeScript type definitions
+├── types/             # TypeScript type definitions
 │   └── index.ts
-├── utils/            # Pure utility functions
-│   ├── geometry.ts
-│   └── validation.ts
-├── views/            # Top-level view components
-│   ├── EditorView.tsx
-│   ├── Canvas2DView.tsx
-│   ├── Preview3DView.tsx
-│   └── SettingsView.tsx
-├── App.tsx           # Root application component
-└── main.tsx          # Application entry point
+└── preview/           # Component preview system
+    ├── ComponentPreview.tsx
+    ├── PreviewLayout.tsx
+    ├── mockData.ts
+    └── previews/      # Individual component previews
 ```
+
+## Folder Hierarchy Explained
+
+The architecture follows a clear hierarchy from atomic to composed:
+
+**1. components/** - Atomic UI elements
+- Single-responsibility React Spectrum compositions
+- Buttons, menus, form controls, dialogs
+- No complex business logic
+- Reusable across different contexts
+
+**2. layouts/** - Functional blocks
+- Compose atomic components into cohesive units
+- Handle layout concerns and component orchestration
+- Examples: Toolbar (header), TabbedLayout (navigation)
+- May contain minor interaction logic
+
+**3. panels/** - Interactive view areas
+- Canvas-based or viewport components
+- Handle rendering, zoom, pan, interactions
+- Examples: 2D canvas, 3D viewport (future)
+- Receive state via props from parent
+
+**4. views/** - Top-level compositions
+- Compose layouts and panels into complete screens
+- Orchestrate data flow between subsystems
+- Use HOCs to inject state from singletons
+- Examples: EditorView, WelcomeView
+
+**Dependency Flow:** components → layouts → panels → views
 
 ## File Naming Conventions
 

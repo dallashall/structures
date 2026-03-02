@@ -1,51 +1,100 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { WelcomeView } from './views/WelcomeView';
+import { EditorView } from './views/EditorView';
+import { NewProjectDialog } from './components/NewProjectDialog';
 import { ComponentPreview } from './preview/ComponentPreview';
+import { projectManager } from './core/ProjectManager';
+import { storageManager } from './core/StorageManager';
+import type { Dimensions } from './types';
 
+type AppView = 'welcome' | 'editor';
+
+/**
+ * App - Root application component
+ *
+ * Manages top-level application state and routing between:
+ * - WelcomeView (project browser)
+ * - EditorView (main editor)
+ *
+ * Handles project creation and loading flow.
+ */
 export function App() {
-  const [route, setRoute] = useState(window.location.hash);
+  const [currentView, setCurrentView] = React.useState<AppView>('welcome');
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = React.useState(false);
+  const [isPreviewMode, setIsPreviewMode] = React.useState(false);
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      setRoute(window.location.hash);
+  // Check for preview mode in hash on mount and hash changes
+  React.useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash;
+      setIsPreviewMode(hash.startsWith('#/preview'));
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
-  return (
-    <Provider theme={defaultTheme} colorScheme="light">
-      {route === '#/preview' ? (
+  // Handle new project
+  const handleNewProject = () => {
+    setIsNewProjectDialogOpen(true);
+  };
+
+  // Handle project creation
+  const handleCreateProject = (name: string, dimensions: Dimensions) => {
+    projectManager.createProject(name, dimensions);
+    setIsNewProjectDialogOpen(false);
+    setCurrentView('editor');
+  };
+
+  // Handle open project from welcome screen
+  const handleOpenProject = async (projectId: string) => {
+    const project = await storageManager.loadProject(projectId);
+    if (project) {
+      projectManager.loadProject(project);
+      setCurrentView('editor');
+    }
+  };
+
+  // Handle load from file
+  const handleLoadFromFile = () => {
+    // TODO: Implement file picker and import
+    console.log('Load from file not yet implemented');
+  };
+
+  // Handle close project dialog
+  const handleCloseProjectDialog = () => {
+    setIsNewProjectDialogOpen(false);
+  };
+
+  // Render preview mode if hash is #/preview
+  if (isPreviewMode) {
+    return (
+      <Provider theme={defaultTheme} colorScheme="light" height="100%">
         <ComponentPreview />
+      </Provider>
+    );
+  }
+
+  return (
+    <Provider theme={defaultTheme} colorScheme="light" height="100%">
+      {currentView === 'welcome' ? (
+        <WelcomeView
+          onNewProject={handleNewProject}
+          onOpenProject={handleOpenProject}
+          onLoadFromFile={handleLoadFromFile}
+        />
       ) : (
-        <div style={{ padding: '20px' }}>
-          <h1>Minecraft Magic Blueprint</h1>
-          <p>Bootstrap successful! The application is ready for development.</p>
-          <p>
-            Next steps: Implement core singleton classes and UI components.
-          </p>
-          <div style={{ marginTop: '20px' }}>
-            <a
-              href="#/preview"
-              style={{
-                display: 'inline-block',
-                padding: '10px 16px',
-                background: '#0078d4',
-                color: '#ffffff',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: '600',
-              }}
-            >
-              View Component Preview →
-            </a>
-          </div>
-        </div>
+        <EditorView />
       )}
+
+      {/* New Project Dialog */}
+      <NewProjectDialog
+        isOpen={isNewProjectDialogOpen}
+        onClose={handleCloseProjectDialog}
+        onCreate={handleCreateProject}
+      />
     </Provider>
   );
 }
