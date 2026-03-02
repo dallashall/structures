@@ -25,6 +25,7 @@ export function TabbedLayoutPreview() {
           project={mockProject}
           activeLayers={{ x: 5, y: 3, z: 7 }}
           isPlacementMode={false}
+          selectedBlockId="stone"
         />
       </View>
     </View>

@@ -1,15 +1,18 @@
+import React from 'react';
 import { Tabs, TabList, TabPanels, Item, View, Flex } from '@adobe/react-spectrum';
 
-import type { ViewType } from '../types';
+import type { ViewType, Project, LayerState, Vector3D } from '../types';
 
-import { CanvasPlaceholder } from '../panels/CanvasPlaceholder';
+import { Canvas2DView } from '../panels/Canvas2DView';
+import { projectManager } from '../core/ProjectManager';
 
 interface TabbedLayoutProps {
   activeView: ViewType;
   onViewChange: (key: React.Key) => void;
-  project: any;
-  activeLayers: any;
+  project: Project;
+  activeLayers: LayerState;
   isPlacementMode: boolean;
+  selectedBlockId: string | null;
 }
 
 /**
@@ -21,7 +24,36 @@ interface TabbedLayoutProps {
 export function TabbedLayout({
   activeView,
   onViewChange,
+  project,
+  activeLayers,
+  selectedBlockId,
 }: TabbedLayoutProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = React.useState({ width: 800, height: 600 });
+
+  // Measure container size for canvas dimensions
+  React.useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCanvasSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  // Handlers for block placement/removal
+  const handleBlockPlaced = React.useCallback((position: Vector3D, blockType: string) => {
+    projectManager.setBlock(position, blockType);
+  }, []);
+
+  const handleBlockRemoved = React.useCallback((position: Vector3D) => {
+    projectManager.removeBlock(position);
+  }, []);
+
   return (
     <Tabs
       selectedKey={activeView}
@@ -40,7 +72,7 @@ export function TabbedLayout({
       <TabPanels>
         {(['front', 'back', 'left', 'right', 'top', 'bottom', '3d'] as const).map((view) => (
           <Item key={view}>
-            <View padding="size-200" height="100%">
+            <View padding="size-200" height="100%" width="100%">
               {view === '3d' ? (
                 <View backgroundColor="gray-200" height="100%">
                   <Flex height="100%" alignItems="center" justifyContent="center">
@@ -48,7 +80,18 @@ export function TabbedLayout({
                   </Flex>
                 </View>
               ) : (
-                <CanvasPlaceholder viewType={view} />
+                <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+                  <Canvas2DView
+                    viewType={view}
+                    project={project}
+                    activeLayers={activeLayers}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
+                    selectedBlockId={selectedBlockId}
+                    onBlockPlaced={handleBlockPlaced}
+                    onBlockRemoved={handleBlockRemoved}
+                  />
+                </div>
               )}
             </View>
           </Item>

@@ -204,12 +204,14 @@ function EditorViewComponent(props: EditorViewProps) {
               project={project}
               activeLayers={activeLayers}
               isPlacementMode={isPlacementMode}
+              selectedBlockId={selectedBlock}
             />
           ) : (
             <QuadLayout
               project={project}
               activeLayers={activeLayers}
               isPlacementMode={isPlacementMode}
+              selectedBlockId={selectedBlock}
             />
           )}
         </View>
