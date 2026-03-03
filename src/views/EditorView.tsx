@@ -8,6 +8,7 @@ import type { ViewType, LayoutMode } from '../types';
 import { withProjectState, WithProjectStateProps } from '../hocs/withProjectState';
 import { withEditorState, WithEditorStateProps } from '../hocs/withEditorState';
 import { withBlockRegistry, WithBlockRegistryProps } from '../hocs/withBlockRegistry';
+import { withStorageState, WithStorageStateProps } from '../hocs/withStorageState';
 
 import { Toolbar } from '../layouts/Toolbar';
 import { LayerControls } from '../components/LayerControls';
@@ -39,7 +40,8 @@ import { Canvas2DController } from '../core/Canvas2DController';
 interface EditorViewProps
   extends WithProjectStateProps,
     WithEditorStateProps,
-    WithBlockRegistryProps {}
+    WithBlockRegistryProps,
+    WithStorageStateProps {}
 
 function EditorViewComponent(props: EditorViewProps) {
   const {
@@ -50,6 +52,7 @@ function EditorViewComponent(props: EditorViewProps) {
     blocks,
     quickSelectSlots,
     selectedBlock,
+    saveState,
   } = props;
 
   const [showMetaBlockModal, setShowMetaBlockModal] = React.useState(false);
@@ -128,13 +131,6 @@ function EditorViewComponent(props: EditorViewProps) {
     };
   }, [project, isPlacementMode]);
 
-  // Auto-save on project changes
-  React.useEffect(() => {
-    if (project) {
-      storageManager.autoSave(project);
-    }
-  }, [project]);
-
   // Handlers
   const handleNewProject = () => {
     // This will be handled by App.tsx
@@ -204,6 +200,7 @@ function EditorViewComponent(props: EditorViewProps) {
         <Toolbar
           projectName={project.name}
           layoutMode={layoutMode}
+          saveState={saveState}
           onNewProject={handleNewProject}
           onSaveProject={handleSaveProject}
           onOpenProject={handleOpenProject}
@@ -490,8 +487,10 @@ function EditorViewComponent(props: EditorViewProps) {
 }
 
 // Export with HOCs - all props are injected by HOCs
-const EditorViewWithHOCs = withBlockRegistry(
-  withEditorState(withProjectState(EditorViewComponent))
+const EditorViewWithHOCs = withStorageState(
+  withBlockRegistry(
+    withEditorState(withProjectState(EditorViewComponent))
+  )
 );
 
 // Type assertion to tell TypeScript that all props are injected by HOCs

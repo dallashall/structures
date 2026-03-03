@@ -41,6 +41,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName={null}
             layoutMode="tabbed"
+            saveState="saved"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
@@ -48,6 +49,85 @@ export function ToolbarPreview() {
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
+        </Box>
+      </Box>
+
+      {/* Save States */}
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Save Status Indicators</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Visual indicators showing the current autosave state of the project.
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Saved - All changes saved to browser</Typography>
+            <Box
+              sx={{
+                border: 1,
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
+            >
+              <Toolbar
+                projectName="Saved Project"
+                layoutMode="tabbed"
+                saveState="saved"
+                onNewProject={mockCallbacks.onNewProject}
+                onSaveProject={mockCallbacks.onSaveProject}
+                onOpenProject={mockCallbacks.onOpenProject}
+                onLayoutModeChange={mockCallbacks.onLayoutModeChange}
+                onToggle3D={mockCallbacks.onToggle3D}
+                is3DMode={false}
+              />
+            </Box>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Pending - Unsaved changes (autosave will trigger in 3 seconds)</Typography>
+            <Box
+              sx={{
+                border: 1,
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
+            >
+              <Toolbar
+                projectName="Project With Changes"
+                layoutMode="tabbed"
+                saveState="pending"
+                onNewProject={mockCallbacks.onNewProject}
+                onSaveProject={mockCallbacks.onSaveProject}
+                onOpenProject={mockCallbacks.onOpenProject}
+                onLayoutModeChange={mockCallbacks.onLayoutModeChange}
+                onToggle3D={mockCallbacks.onToggle3D}
+                is3DMode={false}
+              />
+            </Box>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Saving - Currently saving to browser (minimum 1.5s visible)</Typography>
+            <Box
+              sx={{
+                border: 1,
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
+            >
+              <Toolbar
+                projectName="Saving Project"
+                layoutMode="tabbed"
+                saveState="saving"
+                onNewProject={mockCallbacks.onNewProject}
+                onSaveProject={mockCallbacks.onSaveProject}
+                onOpenProject={mockCallbacks.onOpenProject}
+                onLayoutModeChange={mockCallbacks.onLayoutModeChange}
+                onToggle3D={mockCallbacks.onToggle3D}
+                is3DMode={false}
+              />
+            </Box>
+          </Box>
         </Box>
       </Box>
 
@@ -69,6 +149,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName="Sample House"
             layoutMode="tabbed"
+            saveState="saved"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
@@ -96,6 +177,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName="Medieval Castle"
             layoutMode="quad"
+            saveState="saved"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
@@ -123,6 +205,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName="My Very Long Project Name For A Complex Minecraft Structure"
             layoutMode="tabbed"
+            saveState="pending"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
@@ -151,6 +234,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName="Interactive Demo Project"
             layoutMode="tabbed"
+            saveState="saving"
             onNewProject={mockCallbacks.onNewProject}
             onSaveProject={mockCallbacks.onSaveProject}
             onOpenProject={mockCallbacks.onOpenProject}
@@ -185,6 +269,7 @@ export function ToolbarPreview() {
             <Toolbar
               projectName="Village House"
               layoutMode="tabbed"
+              saveState="saved"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}
@@ -204,6 +289,7 @@ export function ToolbarPreview() {
             <Toolbar
               projectName="Nether Portal"
               layoutMode="quad"
+              saveState="saved"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}
@@ -223,6 +309,7 @@ export function ToolbarPreview() {
             <Toolbar
               projectName="Redstone Machine"
               layoutMode="tabbed"
+              saveState="saved"
               onNewProject={mockCallbacks.onNewProject}
               onSaveProject={mockCallbacks.onSaveProject}
               onOpenProject={mockCallbacks.onOpenProject}

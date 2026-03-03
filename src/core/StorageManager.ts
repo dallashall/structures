@@ -1,12 +1,14 @@
 import { EventEmitter } from './EventEmitter';
 import type { Project, ProjectMetadata } from '../types';
 
+export type SaveState = 'saved' | 'pending' | 'saving';
+
 /**
  * StorageManager - Handles persistence to localStorage
  *
  * Singleton class that provides:
  * - Project saving and loading to/from localStorage
- * - Auto-save with 3-second debounce
+ * - Auto-save with 3-second debounce (minimum 1.5s visible saving state)
  * - Export to JSON file
  * - Import from JSON file
  * - Project metadata management
@@ -16,6 +18,7 @@ import type { Project, ProjectMetadata } from '../types';
  * - save:start - When save operation starts
  * - save:success - When save completes successfully
  * - save:error - When save fails
+ * - save:state-changed - When save state changes (saved, pending, saving)
  * - load:success - When load completes successfully
  * - load:error - When load fails
  */
@@ -23,11 +26,14 @@ class StorageManager extends EventEmitter {
   private static instance: StorageManager;
   private autoSaveTimer: number | null = null;
   private readonly AUTO_SAVE_DELAY = 3000; // 3 seconds
+  private readonly MIN_SAVE_DURATION = 1500; // 1.5 seconds minimum to show "saving" state
   private readonly STORAGE_PREFIX = 'mc-blueprint-project-';
   private readonly METADATA_KEY = 'mc-blueprint-metadata';
+  private saveState: SaveState = 'saved';
 
   private constructor() {
     super();
+    this.setupProjectListeners();
   }
 
   static getInstance(): StorageManager {
@@ -38,10 +44,50 @@ class StorageManager extends EventEmitter {
   }
 
   /**
-   * Save a project to localStorage
+   * Setup listeners for project changes to trigger autosave
+   */
+  private setupProjectListeners(): void {
+    const handleProjectChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ project: Project }>;
+      this.autoSave(customEvent.detail.project);
+    };
+
+    // Listen to custom window events
+    window.addEventListener('project:changed', handleProjectChanged);
+    window.addEventListener('block:added', handleProjectChanged);
+    window.addEventListener('block:removed', handleProjectChanged);
+  }
+
+  /**
+   * Get the current save state
+   */
+  getSaveState(): SaveState {
+    return this.saveState;
+  }
+
+  /**
+   * Set the save state and emit change event
+   */
+  private setSaveState(state: SaveState): void {
+    if (this.saveState !== state) {
+      this.saveState = state;
+      this.emit('save:state-changed', state);
+
+      // Dispatch window event for cross-module communication
+      window.dispatchEvent(new CustomEvent('save:state-changed', {
+        detail: { saveState: state }
+      }));
+    }
+  }
+
+  /**
+   * Save a project to localStorage with minimum visible duration
    */
   async saveProject(project: Project): Promise<void> {
+    this.setSaveState('saving');
     this.emit('save:start');
+
+    const startTime = Date.now();
 
     try {
       const key = this.getProjectKey(project.id);
@@ -52,9 +98,18 @@ class StorageManager extends EventEmitter {
       // Update metadata
       await this.updateMetadata(project);
 
+      // Ensure minimum visible duration
+      const elapsed = Date.now() - startTime;
+      const remaining = this.MIN_SAVE_DURATION - elapsed;
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+
+      this.setSaveState('saved');
       this.emit('save:success', project.id);
     } catch (error) {
       console.error('Failed to save project:', error);
+      this.setSaveState('pending');
       this.emit('save:error', error);
       throw error;
     }
@@ -140,8 +195,12 @@ class StorageManager extends EventEmitter {
 
   /**
    * Auto-save with debouncing (3 seconds after last change)
+   * Sets state to 'pending' immediately when changes are detected
    */
   autoSave(project: Project): void {
+    // Mark as pending (changes waiting to be saved)
+    this.setSaveState('pending');
+
     // Clear existing timer
     if (this.autoSaveTimer !== null) {
       window.clearTimeout(this.autoSaveTimer);

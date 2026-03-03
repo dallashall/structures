@@ -12,10 +12,13 @@ import {
 } from '@mui/material';
 import { Add, Save, FolderOpen } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
+import type { SaveState } from '../core/StorageManager';
+import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
 
 interface ToolbarProps {
   projectName: string | null;
   layoutMode: LayoutMode;
+  saveState: SaveState;
   onNewProject: () => void;
   onSaveProject: () => void;
   onOpenProject: () => void;
@@ -40,6 +43,7 @@ interface ToolbarProps {
 export function Toolbar({
   projectName,
   layoutMode,
+  saveState,
   onNewProject,
   onSaveProject,
   onOpenProject,
@@ -95,9 +99,12 @@ export function Toolbar({
             {projectName || 'Minecraft Magic Blueprint'}
           </Typography>
           {projectName && (
-            <Typography variant="caption" color="text.secondary">
-              Project
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                Project
+              </Typography>
+              <SaveStatusIndicator saveState={saveState} />
+            </Stack>
           )}
         </Box>
 

@@ -88,6 +88,11 @@ class ProjectManager extends EventEmitter {
     };
 
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window event for cross-module communication
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
@@ -109,6 +114,14 @@ class ProjectManager extends EventEmitter {
 
     this.emit('block:added', blockData);
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window events for cross-module communication
+    window.dispatchEvent(new CustomEvent('block:added', {
+      detail: { project: this.currentProject, block: blockData }
+    }));
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
@@ -126,6 +139,14 @@ class ProjectManager extends EventEmitter {
       this.currentProject.modified = new Date();
       this.emit('block:removed', position);
       this.emit('project:changed', this.currentProject);
+
+      // Dispatch window events for cross-module communication
+      window.dispatchEvent(new CustomEvent('block:removed', {
+        detail: { project: this.currentProject, position }
+      }));
+      window.dispatchEvent(new CustomEvent('project:changed', {
+        detail: { project: this.currentProject }
+      }));
     }
   }
 
@@ -169,6 +190,11 @@ class ProjectManager extends EventEmitter {
     this.currentProject.modified = new Date();
 
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window event for cross-module communication
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
@@ -184,6 +210,11 @@ class ProjectManager extends EventEmitter {
 
     this.emit('metablock:placed', this.currentProject.metaBlock);
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window event for cross-module communication
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
@@ -288,6 +319,11 @@ class ProjectManager extends EventEmitter {
 
     this.emit('dimensions:changed', newDimensions);
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window event for cross-module communication
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
@@ -377,6 +413,11 @@ class ProjectManager extends EventEmitter {
 
     this.emit('dimensions:changed', newDimensions);
     this.emit('project:changed', this.currentProject);
+
+    // Dispatch window event for cross-module communication
+    window.dispatchEvent(new CustomEvent('project:changed', {
+      detail: { project: this.currentProject }
+    }));
   }
 
   /**
