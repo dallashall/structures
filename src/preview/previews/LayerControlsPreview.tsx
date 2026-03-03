@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { LayerControls } from '../../components/LayerControls';
 import type { Dimensions, LayerState } from '../../types';
 
@@ -26,19 +26,19 @@ export function LayerControlsPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>LayerControls</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">LayerControls</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Compact layer display showing current X/Y/Z layer values with a settings
         button that opens a popover containing full slider controls.
-      </Content>
+      </Typography>
 
       {/* Small Dimensions */}
-      <View marginTop="size-600">
-        <Heading level={2}>Small Project (16×16×16)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Small Project (16×16×16)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Layer controls for a small 16×16×16 project. Layers range from 0-15.
-        </Content>
+        </Typography>
         <LayerControls
           maxDimensions={smallDimensions}
           activeLayers={{ x: 8, y: 8, z: 8 }}
@@ -46,14 +46,14 @@ export function LayerControlsPreview() {
             console.log('[Static] Layer change:', dim, layer)
           }
         />
-      </View>
+      </Box>
 
       {/* Large Dimensions */}
-      <View marginTop="size-600">
-        <Heading level={2}>Large Project (64×64×64)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Large Project (64×64×64)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Layer controls for a large 64×64×64 project. Layers range from 0-63.
-        </Content>
+        </Typography>
         <LayerControls
           maxDimensions={largeDimensions}
           activeLayers={{ x: 32, y: 16, z: 48 }}
@@ -61,36 +61,36 @@ export function LayerControlsPreview() {
             console.log('[Static] Layer change:', dim, layer)
           }
         />
-      </View>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click the settings icon to open the popover and adjust layer sliders.
           Current layers update below.
-        </Content>
+        </Typography>
         <LayerControls
           maxDimensions={{ width: 32, height: 32, depth: 32 }}
           activeLayers={activeLayers}
           onLayerChange={handleLayerChange}
         />
-        <Well marginTop="size-300">
-          <Heading level={4}>Current Layers</Heading>
-          <Content>
-            <Text><strong>X Layer:</strong> {activeLayers.x}</Text>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+          <Typography variant="h6" component="h4">Current Layers</Typography>
+          <Typography variant="body1">
+            <strong>X Layer:</strong> {activeLayers.x}
             <br />
-            <Text><strong>Y Layer:</strong> {activeLayers.y}</Text>
+            <strong>Y Layer:</strong> {activeLayers.y}
             <br />
-            <Text><strong>Z Layer:</strong> {activeLayers.z}</Text>
-          </Content>
-        </Well>
-      </View>
+            <strong>Z Layer:</strong> {activeLayers.z}
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -117,13 +117,13 @@ interface LayerState {
   z: number;  // Active Z layer (0 to depth-1)
 }`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Compact read-only display of current X/Y/Z layers</li>
             <li>Settings icon button opens popover with full controls</li>
@@ -132,13 +132,13 @@ interface LayerState {
             <li>Keyboard shortcuts available globally: x/Shift+x, y/Shift+y, z/Shift+z</li>
             <li>Accessible via React Spectrum DialogTrigger</li>
           </ul>
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Usage Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Layer Behavior</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Layer Behavior</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>
               <strong>Front/Back views</strong> use Z layer (controls depth slice)
@@ -150,10 +150,12 @@ interface LayerState {
               <strong>Top/Bottom views</strong> use Y layer (controls height slice)
             </li>
           </ul>
+        </Typography>
+        <Typography variant="body1">
           Only the relevant layer for the current view affects what's visible in
           the 2D canvas.
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

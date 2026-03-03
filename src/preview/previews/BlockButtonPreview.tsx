@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Flex, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography, Stack } from '@mui/material';
 import { BlockButton } from '../../components/BlockButton';
 import { mockBlocks, mockCallbacks } from '../mockData';
 
@@ -37,73 +37,73 @@ export function BlockButtonPreview() {
   );
 
   return (
-    <View>
-      <Heading level={1}>BlockButton</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">BlockButton</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         A fundamental UI primitive that represents a Minecraft block type.
         Shows the block's color and displays its name in a tooltip on hover.
-      </Content>
+      </Typography>
 
       {/* Default State */}
-      <View marginTop="size-600">
-        <Heading level={2}>Default State</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Default State</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Unselected block button - hover to see tooltip
-        </Content>
-        <Flex gap="size-150" wrap>
+        </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
           {renderBlockButton(mockBlocks[0], false)}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Selected State */}
-      <View marginTop="size-600">
-        <Heading level={2}>Selected State</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Selected State</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Block button with selection highlight (blue border and glow)
-        </Content>
-        <Flex gap="size-150" wrap>
+        </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
           {renderBlockButton(mockBlocks[0], true)}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Multiple Blocks */}
-      <View marginTop="size-600">
-        <Heading level={2}>Multiple Blocks (Stone Category)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Multiple Blocks (Stone Category)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Collection of stone-type blocks showing color variety
-        </Content>
-        <Flex gap="size-150" wrap>
+        </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
           {mockBlocks.filter(filterStone).map((block) => renderBlockButton(block, false))}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Wood Blocks */}
-      <View marginTop="size-600">
-        <Heading level={2}>Multiple Blocks (Wood Category)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Multiple Blocks (Wood Category)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Collection of wood-type blocks
-        </Content>
-        <Flex gap="size-150" wrap>
+        </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
           {mockBlocks.filter(filterWood).map((block) => renderBlockButton(block, false))}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Interactive Selection */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Selection</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Selection</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click any block to select it. Check console for callback logs.
-          Currently selected: <Text><strong>{selectedId || 'none'}</strong></Text>
-        </Content>
-        <Flex gap="size-150" wrap>
+          Currently selected: <strong>{selectedId || 'none'}</strong>
+        </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
           {mockBlocks.slice(0, 12).map(renderInteractiveBlockButton)}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -118,8 +118,8 @@ export function BlockButtonPreview() {
   onClick: (blockId: string) => void;  // Selection callback
 }`}
           </pre>
-        </Well>
-      </View>
-    </View>
+        </Box>
+      </Box>
+    </Box>
   );
 }

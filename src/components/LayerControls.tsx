@@ -1,16 +1,10 @@
-import {
-  Flex,
-  ActionButton,
-  Text,
-  DialogTrigger,
-  Dialog,
-  Content,
-} from '@adobe/react-spectrum';
-import Settings from '@spectrum-icons/workflow/Settings';
+import { Stack, IconButton, Typography, Box } from '@mui/material';
+import { Settings } from '@mui/icons-material';
 
 import type { Dimensions, LayerState } from '../types';
 
 import { LayerDimensionControl } from './LayerDimensionControl';
+import { DialogTrigger } from './DialogTrigger';
 
 interface LayerControlsProps {
   maxDimensions: Dimensions;
@@ -84,28 +78,28 @@ export function LayerControls({
   };
 
   return (
-    <Flex direction="row" gap="size-100" alignItems="center">
+    <Stack direction="row" spacing={1} alignItems="center">
       {/* Compact Read-Only Display */}
-      <Flex direction="row" gap="size-200" alignItems="center">
-        <Text>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Typography variant="body2">
           <strong>X:</strong> {activeLayers.x}
-        </Text>
-        <Text>
+        </Typography>
+        <Typography variant="body2">
           <strong>Y:</strong> {activeLayers.y}
-        </Text>
-        <Text>
+        </Typography>
+        <Typography variant="body2">
           <strong>Z:</strong> {activeLayers.z}
-        </Text>
-      </Flex>
+        </Typography>
+      </Stack>
 
       {/* Expand Button */}
       <DialogTrigger type="popover">
-        <ActionButton isQuiet aria-label="Layer settings">
-          <Settings />
-        </ActionButton>
-        <Dialog>
-          <Content>
-            <Flex direction="column" gap="size-100">
+        <IconButton size="small" aria-label="Layer settings">
+          <Settings fontSize="small" />
+        </IconButton>
+        {() => (
+          <Box sx={{ p: 2 }}>
+            <Stack spacing={1}>
               {/* X Layer Control */}
               <LayerDimensionControl
                 label="X"
@@ -135,10 +129,10 @@ export function LayerControls({
                 onDecrement={handleZDecrement}
                 onChange={handleZChange}
               />
-            </Flex>
-          </Content>
-        </Dialog>
+            </Stack>
+          </Box>
+        )}
       </DialogTrigger>
-    </Flex>
+    </Stack>
   );
 }

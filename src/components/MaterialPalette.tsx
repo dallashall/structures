@@ -1,5 +1,6 @@
-import { Well, ActionGroup, Item, ColorSwatch } from '@adobe/react-spectrum';
-import type { Selection } from '@react-types/shared';
+import { Box } from '@mui/material';
+import { ActionGroup, ActionGroupItem } from './ActionGroup';
+import { ColorSwatch } from './ColorSwatch';
 import type { Block } from '../types';
 
 interface MaterialPaletteProps {
@@ -11,11 +12,10 @@ interface MaterialPaletteProps {
 /**
  * MaterialPalette - Grid display of available Minecraft blocks
  *
- * Thin wrapper around React Spectrum's ActionGroup with ColorSwatch items.
  * Displays a collection of block types as a selectable color palette.
  * Users can click any block to select it as the active material for painting.
  *
- * Uses ActionGroup for selection state management and ColorSwatch for
+ * Uses our custom ActionGroup for selection state management and ColorSwatch for
  * proper color display with automatic theming and accessibility.
  */
 export function MaterialPalette({
@@ -23,8 +23,8 @@ export function MaterialPalette({
   selectedBlockId,
   onSelectBlock,
 }: MaterialPaletteProps) {
-  const handleSelectionChange = (keys: Selection) => {
-    if (keys !== 'all' && keys.size > 0) {
+  const handleSelectionChange = (keys: Set<string>) => {
+    if (keys.size > 0) {
       const selectedId = Array.from(keys)[0] as string;
       onSelectBlock(selectedId);
     }
@@ -32,14 +32,26 @@ export function MaterialPalette({
 
   const renderItem = (block: Block) => {
     return (
-      <Item key={block.id} textValue={block.name}>
+      <ActionGroupItem
+        key={block.id}
+        itemKey={block.id}
+        aria-label={block.name}
+      >
         <ColorSwatch color={block.color} />
-      </Item>
+      </ActionGroupItem>
     );
   };
 
   return (
-    <Well>
+    <Box
+      sx={{
+        p: 1.5,
+        bgcolor: 'grey.100',
+        borderRadius: 1,
+        border: 1,
+        borderColor: 'grey.400',
+      }}
+    >
       <ActionGroup
         selectionMode="single"
         selectedKeys={selectedBlockId ? new Set([selectedBlockId]) : new Set()}
@@ -49,6 +61,6 @@ export function MaterialPalette({
       >
         {blocks.map(renderItem)}
       </ActionGroup>
-    </Well>
+    </Box>
   );
 }

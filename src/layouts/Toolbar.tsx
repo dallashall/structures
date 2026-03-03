@@ -1,7 +1,16 @@
-import { Flex, Button, Text, Heading, Divider, View, Picker, Item } from '@adobe/react-spectrum';
-import Add from '@spectrum-icons/workflow/Add';
-import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
+import {
+  Box,
+  Stack,
+  Button,
+  Typography,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
+} from '@mui/material';
+import { Add, Save, FolderOpen } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
 
 interface ToolbarProps {
@@ -25,7 +34,7 @@ interface ToolbarProps {
  * - Opening existing projects
  * - Toggling between 2D editor and 3D preview
  *
- * Uses React Spectrum components for consistent theming and
+ * Uses MUI components for consistent theming and
  * automatic light/dark mode support.
  */
 export function Toolbar({
@@ -48,66 +57,105 @@ export function Toolbar({
     onOpenProject();
   };
 
-  const handleLayoutModeChange = (key: React.Key | null) => {
-    if (key !== null) {
-      onLayoutModeChange(key as LayoutMode);
-    }
+  const handleLayoutModeChange = (event: SelectChangeEvent<LayoutMode>) => {
+    onLayoutModeChange(event.target.value as LayoutMode);
   };
 
   return (
-    <View padding="size-150" borderBottomWidth="thick">
-      <Flex
-        direction={{ base: 'column', L: 'row' }}
-        alignItems={{ base: 'stretch', L: 'center' }}
-        gap="size-200"
+    <Box
+      sx={{
+        p: 1.5,
+        borderBottom: 2,
+        borderColor: 'divider',
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', lg: 'row' }}
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        spacing={2}
       >
         {/* Project Name */}
-        <View flex={{ L: 1 }} minWidth={0}>
-          <Heading level={1} margin={0} UNSAFE_style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <Box
+          sx={{
+            flex: { lg: 1 },
+            minWidth: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              m: 0,
+            }}
+          >
             {projectName || 'Minecraft Magic Blueprint'}
-          </Heading>
-          {projectName && <Text>Project</Text>}
-        </View>
+          </Typography>
+          {projectName && (
+            <Typography variant="caption" color="text.secondary">
+              Project
+            </Typography>
+          )}
+        </Box>
 
         {/* Action Buttons */}
-        <Flex
-          direction={{ base: 'column', M: 'row' }}
-          gap="size-100"
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1}
           alignItems="center"
-          wrap
+          flexWrap="wrap"
         >
-          <Button variant="primary" onPress={handleNewClick}>
-            <Add />
-            <Text>New</Text>
+          <Button
+            variant="contained"
+            onClick={handleNewClick}
+            startIcon={<Add />}
+          >
+            New
           </Button>
 
           <Button
-            variant="secondary"
-            onPress={handleSaveClick}
-            isDisabled={!projectName}
+            variant="outlined"
+            onClick={handleSaveClick}
+            disabled={!projectName}
+            startIcon={<Save />}
           >
-            <SaveFloppy />
-            <Text>Save</Text>
+            Save
           </Button>
 
-          <Button variant="secondary" onPress={handleOpenClick}>
-            <FolderOpen />
-            <Text>Open</Text>
+          <Button
+            variant="outlined"
+            onClick={handleOpenClick}
+            startIcon={<FolderOpen />}
+          >
+            Open
           </Button>
 
-          <Divider orientation="vertical" size="S" isHidden={{ base: true, M: false }} />
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={{ display: { xs: 'none', md: 'block' } }}
+          />
 
-          <Picker
-            label="View Mode"
-            selectedKey={layoutMode}
-            onSelectionChange={handleLayoutModeChange}
-            width={{ base: '100%', M: 'size-2000' }}
+          <FormControl
+            size="small"
+            sx={{ minWidth: { xs: '100%', md: 200 } }}
           >
-            <Item key="tabbed">Tabbed</Item>
-            <Item key="quad">Quad Layout</Item>
-          </Picker>
-        </Flex>
-      </Flex>
-    </View>
+            <InputLabel id="layout-mode-label">View Mode</InputLabel>
+            <Select
+              labelId="layout-mode-label"
+              value={layoutMode}
+              onChange={handleLayoutModeChange}
+              label="View Mode"
+            >
+              <MenuItem value="tabbed">Tabbed</MenuItem>
+              <MenuItem value="quad">Quad Layout</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

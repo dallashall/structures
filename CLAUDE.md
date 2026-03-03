@@ -66,123 +66,114 @@ Business Logic (Singletons) → Events → HOCs → Props → Components (Render
 
 When building UI components, follow this priority order:
 
-1. **First: Use React Spectrum components** - Always check React Spectrum documentation first
-   - See available components list below
-   - Documentation: https://react-spectrum.adobe.com/react-spectrum/
-   - MCP server available for Spectrum queries
+1. **First: Use Material-UI (MUI) components** - Always check MUI documentation first
+   - See commonly used components list below
+   - Documentation: https://mui.com/material-ui/
+   - MUI v6 is installed in this project
 
-2. **Second: Compose React Spectrum components** - Build custom components by composing existing Spectrum components
+2. **Second: Compose MUI components** - Build custom components by composing existing MUI components
 
-3. **Last Resort: Custom components** - Only create custom components when no suitable Spectrum component exists
+3. **Third: Use custom components** - Use our custom components (ColorSwatch, NumberField, ActionGroup, etc.)
 
-**Why React Spectrum?**
-- ✓ Heavily tested by Adobe team
+4. **Last Resort: Build new custom components** - Only when no suitable MUI or custom component exists
+
+**Why Material-UI?**
+- ✓ Industry-standard React component library
 - ✓ Built-in accessibility (ARIA, keyboard navigation)
-- ✓ Automatic theme adaptation (light/dark mode, platform-specific)
-- ✓ Design system consistency
+- ✓ Material Design 3 support
+- ✓ Comprehensive theming system
+- ✓ Excellent TypeScript support
+- ✓ Large ecosystem and community
 - ✓ Responsive behavior built-in
-- ✓ Spectrum design tokens for spacing, colors, sizing
 
-**Available React Spectrum Components:**
+**Custom Components (Project-Specific):**
 
-```
-Accordion              - Collapsible sections
-ActionBar              - Contextual action toolbar
-ActionButton           - Icon-focused button
-ActionButtonGroup      - Group of action buttons
-ActionMenu             - Menu triggered by action button
-Avatar                 - User profile image
-AvatarGroup            - Collection of avatars
-Badge                  - Small status indicator
-Breadcrumbs            - Navigation trail
-Button                 - Standard button
-ButtonGroup            - Group of related buttons
-Calendar               - Date selection calendar
-Card                   - Content container
-CardView               - Grid of cards
-Checkbox               - Single checkbox
-CheckboxGroup          - Group of checkboxes
-ColorArea              - 2D color picker
-ColorField             - Color input field
-ColorSlider            - Color gradient slider
-ColorSwatch            - Color preview square
-ColorSwatchPicker      - Grid of color swatches
-ColorWheel             - Circular hue selector
-ComboBox               - Autocomplete input
-ContextualHelp         - Inline help popover
-DateField              - Date text input
-DatePicker             - Date picker with calendar
-DateRangePicker        - Date range selection
-Dialog                 - Modal dialog
-Disclosure             - Expandable section
-Divider                - Visual separator
-DropZone               - File drag-and-drop area
-Form                   - Form container
-Icons                  - Icon components
-IllustratedMessage     - Empty state with illustration
-Illustrations          - Illustration assets
-Image                  - Responsive image
-InlineAlert            - Inline notification
-Link                   - Hyperlink
-LinkButton             - Link styled as button
-Menu                   - Dropdown menu
-Meter                  - Progress/value indicator
-NumberField            - Numeric input
-Picker                 - Select dropdown
-Popover                - Floating container
-ProgressBar            - Linear progress indicator
-ProgressCircle         - Circular progress indicator
-Provider               - Theme/locale provider
-RadioGroup             - Radio button group
-RangeCalendar          - Calendar range selection
-RangeSlider            - Dual-handle slider
-SearchField            - Search input
-SegmentedControl       - Exclusive selection buttons
-SelectBoxGroup         - Selectable card group
-Skeleton               - Loading placeholder
-Slider                 - Single-value slider
-StatusLight            - Colored status indicator
-Switch                 - Toggle switch
-TableView              - Data table
-Tabs                   - Tab navigation
-TagGroup               - Collection of tags
-TextArea               - Multi-line text input
-TextField              - Single-line text input
-TimeField              - Time input
-Toast                  - Temporary notification
-ToggleButton           - Toggle state button
-ToggleButtonGroup      - Group of toggle buttons
-Tooltip                - Hover info popup
-TreeView               - Hierarchical tree
-```
+The following custom components have been created for this project:
 
-**Layout Components:**
-- `View` - Generic container with styling props
-- `Grid` - CSS Grid layout
-- `Flex` - Flexbox layout
-- `Content` - Text content wrapper
-- `Heading` - Heading text (levels 1-6)
-- `Text` - Body text
-- `Well` - Inset container
+- **ColorSwatch** (`src/components/ColorSwatch.tsx`) - Display color squares for block colors
+- **NumberField** (`src/components/NumberField.tsx`) - Numeric input with increment/decrement buttons
+- **ActionGroup** (`src/components/ActionGroup.tsx`) - Button group with selection state (uses MUI ToggleButtonGroup)
+- **Form** (`src/components/Form.tsx`) - Form container with consistent spacing
+- **DialogTrigger** (`src/components/DialogTrigger.tsx`) - Pattern for triggering dialogs/popovers
+
+Use these custom components when needed instead of recreating similar functionality.
+
+**Commonly Used MUI Components:**
+
+**Layout & Containers:**
+- `Box` - Generic container with `sx` prop for styling (replaces `View`)
+- `Stack` - Flexbox layout with spacing (replaces `Flex`)
+- `Grid` - CSS Grid layout (use for complex grids)
+- `Container` - Responsive container with max-width
+- `Paper` - Elevated surface with shadow
+- `Card` - Content card with actions
+- `Accordion` - Collapsible sections
+- `Divider` - Visual separator
+
+**Typography:**
+- `Typography` - All text (headings, body, captions)
+  - Variants: `h1`-`h6`, `body1`, `body2`, `caption`, `button`, `overline`
+
+**Buttons:**
+- `Button` - Standard button (variants: contained, outlined, text)
+- `IconButton` - Icon-only button
+- `ButtonGroup` - Group related buttons
+- `ToggleButton` + `ToggleButtonGroup` - Selection buttons
+
+**Form Inputs:**
+- `TextField` - Text input (single/multi-line)
+- `Select` + `MenuItem` - Dropdown selection
+- `Checkbox` - Single checkbox
+- `Radio` + `RadioGroup` - Radio buttons
+- `Switch` - Toggle switch
+- `Slider` - Value slider
+- `Autocomplete` - Autocomplete input
+
+**Feedback:**
+- `Dialog` - Modal dialog
+- `Snackbar` - Toast notification
+- `Tooltip` - Hover tooltip
+- `Alert` - Inline alert message
+- `CircularProgress` / `LinearProgress` - Loading indicators
+- `Skeleton` - Loading placeholder
+
+**Navigation:**
+- `Tabs` + `Tab` - Tab navigation
+- `Breadcrumbs` - Navigation trail
+- `Link` - Hyperlink
+- `Drawer` - Side drawer
+- `AppBar` - Top app bar
+
+**Icons:**
+- Import from `@mui/icons-material`
+- Example: `import { Add, Save, Delete } from '@mui/icons-material';`
+
+**MUI Lab (Additional Components):**
+- `TabContext`, `TabList`, `TabPanel` - Enhanced tabs
+- `LoadingButton` - Button with loading state
 
 **Anti-patterns to avoid:**
-- ❌ Custom divs with inline styles
-- ❌ Manual implementation of common UI patterns
-- ❌ Hardcoded colors, spacing, or sizes (use Spectrum tokens)
-- ❌ Custom accessibility implementations (Spectrum handles this)
-- ❌ Re-inventing components that Spectrum provides
-- ❌ **UNSAFE_style is FORBIDDEN** - Always use proper Spectrum props and patterns
-- ❌ Building custom components without checking the available Spectrum components list first
+- ❌ Custom divs with inline styles (use `Box` with `sx` prop)
+- ❌ Manual implementation of common UI patterns (use MUI components)
+- ❌ Hardcoded colors, spacing, or sizes (use theme tokens via `sx`)
+- ❌ Custom accessibility implementations (MUI handles this)
+- ❌ Re-inventing components that MUI provides
+- ❌ Ignoring the custom components (ColorSwatch, NumberField, etc.)
+- ❌ Using deprecated props (check MUI v6 documentation)
 
-**Before building any UI component:**
-1. Check the available Spectrum components list in this file
-2. Search React Spectrum documentation: https://react-spectrum.adobe.com/react-spectrum/
-3. Query the Spectrum MCP server if available
-4. Only build custom if no suitable Spectrum component exists
+**MUI Styling with `sx` Prop:**
 
-**React Spectrum Skills:**
-- Available via: `npx skills add https://react-spectrum.adobe.com`
-- Provides additional tooling and capabilities for Spectrum components
+The `sx` prop is the preferred way to style MUI components. It provides:
+- Direct access to theme tokens
+- Responsive styling
+- Pseudo-selectors
+- Type safety
+
+**Theme Tokens:**
+- Spacing: `p: 2` (16px), `m: 1` (8px), `gap: 3` (24px)
+- Colors: `bgcolor: 'primary.main'`, `color: 'text.secondary'`, `borderColor: 'divider'`
+- Borders: `border: 1`, `borderRadius: 1`, `borderColor: 'grey.300'`
+- Typography: `fontSize: 'h6.fontSize'`, `fontWeight: 'bold'`
 
 **Example - Wrong vs Right:**
 
@@ -193,11 +184,25 @@ TreeView               - Hierarchical tree
   <p>Content</p>
 </div>
 
-// ✓ RIGHT: React Spectrum components with tokens
-<View padding="size-200" backgroundColor="gray-100" borderWidth="thin" borderColor="gray-300">
-  <Heading level={2}>Title</Heading>
-  <Content>Content</Content>
-</View>
+// ✓ RIGHT: MUI components with sx prop and theme tokens
+<Box sx={{ p: 2, bgcolor: 'grey.50', border: 1, borderColor: 'grey.300' }}>
+  <Typography variant="h5">Title</Typography>
+  <Typography variant="body1">Content</Typography>
+</Box>
+```
+
+**Responsive Design:**
+
+```typescript
+// MUI sx prop supports responsive values
+<Box
+  sx={{
+    display: { xs: 'block', md: 'flex' },  // block on mobile, flex on desktop
+    p: { xs: 1, sm: 2, md: 3 },            // 8px, 16px, 24px padding
+  }}
+>
+  <Typography variant={{ xs: 'body2', md: 'body1' }}>Text</Typography>
+</Box>
 ```
 
 ## Coding Style Rules

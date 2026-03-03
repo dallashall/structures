@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { LayerDimensionControl } from '../../components/LayerDimensionControl';
 
 /**
@@ -63,19 +63,19 @@ export function LayerDimensionControlPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>LayerDimensionControl</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">LayerDimensionControl</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Single dimension layer control with increment/decrement buttons, number
         field, and slider. Used within LayerControls popover.
-      </Content>
+      </Typography>
 
       {/* X Dimension */}
-      <View marginTop="size-600">
-        <Heading level={2}>X Dimension Control</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">X Dimension Control</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Controls the X layer (width). Range: 0-15 for a 16-wide project.
-        </Content>
+        </Typography>
         <LayerDimensionControl
           label="X Layer"
           currentLayer={8}
@@ -84,14 +84,14 @@ export function LayerDimensionControlPreview() {
           onDecrement={() => console.log('[Static] X decrement')}
           onChange={(value) => console.log('[Static X]:', value)}
         />
-      </View>
+      </Box>
 
       {/* Y Dimension */}
-      <View marginTop="size-600">
-        <Heading level={2}>Y Dimension Control</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Y Dimension Control</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Controls the Y layer (height). Range: 0-31 for a 32-tall project.
-        </Content>
+        </Typography>
         <LayerDimensionControl
           label="Y Layer"
           currentLayer={16}
@@ -100,14 +100,14 @@ export function LayerDimensionControlPreview() {
           onDecrement={() => console.log('[Static] Y decrement')}
           onChange={(value) => console.log('[Static Y]:', value)}
         />
-      </View>
+      </Box>
 
       {/* Z Dimension */}
-      <View marginTop="size-600">
-        <Heading level={2}>Z Dimension Control</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Z Dimension Control</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Controls the Z layer (depth). Range: 0-63 for a 64-deep project.
-        </Content>
+        </Typography>
         <LayerDimensionControl
           label="Z Layer"
           currentLayer={32}
@@ -116,16 +116,16 @@ export function LayerDimensionControlPreview() {
           onDecrement={() => console.log('[Static] Z decrement')}
           onChange={(value) => console.log('[Static Z]:', value)}
         />
-      </View>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo (32×32×32 Project)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo (32×32×32 Project)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Use buttons, number field, or slider to adjust layer values.
-        </Content>
+        </Typography>
 
-        <View marginBottom="size-300">
+        <Box sx={{ mb: 3 }}>
           <LayerDimensionControl
             label="X Layer"
             currentLayer={xLayer}
@@ -134,9 +134,9 @@ export function LayerDimensionControlPreview() {
             onDecrement={handleXDecrement}
             onChange={handleXChange}
           />
-        </View>
+        </Box>
 
-        <View marginBottom="size-300">
+        <Box sx={{ mb: 3 }}>
           <LayerDimensionControl
             label="Y Layer"
             currentLayer={yLayer}
@@ -145,9 +145,9 @@ export function LayerDimensionControlPreview() {
             onDecrement={handleYDecrement}
             onChange={handleYChange}
           />
-        </View>
+        </Box>
 
-        <View marginBottom="size-300">
+        <Box sx={{ mb: 3 }}>
           <LayerDimensionControl
             label="Z Layer"
             currentLayer={zLayer}
@@ -156,24 +156,24 @@ export function LayerDimensionControlPreview() {
             onDecrement={handleZDecrement}
             onChange={handleZChange}
           />
-        </View>
+        </Box>
 
-        <Well marginTop="size-300">
-          <Heading level={4}>Current Layers</Heading>
-          <Content>
-            <Text><strong>X Layer:</strong> {xLayer} / 31</Text>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+          <Typography variant="h6" component="h4">Current Layers</Typography>
+          <Typography variant="body1">
+            <strong>X Layer:</strong> {xLayer} / 31
             <br />
-            <Text><strong>Y Layer:</strong> {yLayer} / 31</Text>
+            <strong>Y Layer:</strong> {yLayer} / 31
             <br />
-            <Text><strong>Z Layer:</strong> {zLayer} / 31</Text>
-          </Content>
-        </Well>
-      </View>
+            <strong>Z Layer:</strong> {zLayer} / 31
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -194,13 +194,13 @@ export function LayerDimensionControlPreview() {
 // Decrement button is disabled when currentLayer <= 0
 // Increment button is disabled when currentLayer >= maxLayer`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Increment/decrement buttons with chevron icons</li>
             <li>Number field for direct value entry</li>
@@ -209,17 +209,17 @@ export function LayerDimensionControlPreview() {
             <li>Accessible keyboard navigation</li>
             <li>Compact horizontal layout</li>
           </ul>
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Usage Context */}
-      <View marginTop="size-600">
-        <Heading level={3}>Usage Context</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Usage Context</Typography>
+        <Typography variant="body1">
           This component is used within the LayerControls popover, displaying
           three instances (one per dimension: X, Y, Z) stacked vertically.
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

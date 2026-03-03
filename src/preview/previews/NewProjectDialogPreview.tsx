@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Button, Text } from '@adobe/react-spectrum';
+import { Box, Typography, Button } from '@mui/material';
 import { NewProjectDialog } from '../../components/NewProjectDialog';
 import type { Dimensions } from '../../types';
 
@@ -26,36 +26,34 @@ export function NewProjectDialogPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>NewProjectDialog</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">NewProjectDialog</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Dialog for creating new projects with customizable dimensions. Supports
         presets (Small, Medium, Large) and custom sizes.
-      </Content>
+      </Typography>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click the button to open the New Project dialog. Test the presets
           and custom dimension inputs.
-        </Content>
-        <Button variant="primary" onPress={handleOpen}>
+        </Typography>
+        <Button variant="contained" color="primary" onClick={handleOpen}>
           Open New Project Dialog
         </Button>
 
         {lastCreated && (
-          <Well marginTop="size-300">
-            <Heading level={4}>Last Created Project</Heading>
-            <Content>
-              <Text><strong>Name:</strong> {lastCreated.name}</Text>
+          <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+            <Typography variant="h6" component="h4">Last Created Project</Typography>
+            <Typography variant="body1">
+              <strong>Name:</strong> {lastCreated.name}
               <br />
-              <Text>
-                <strong>Dimensions:</strong> {lastCreated.dimensions.width} ×{' '}
-                {lastCreated.dimensions.height} × {lastCreated.dimensions.depth}
-              </Text>
-            </Content>
-          </Well>
+              <strong>Dimensions:</strong> {lastCreated.dimensions.width} ×{' '}
+              {lastCreated.dimensions.height} × {lastCreated.dimensions.depth}
+            </Typography>
+          </Box>
         )}
 
         <NewProjectDialog
@@ -63,12 +61,12 @@ export function NewProjectDialogPreview() {
           onClose={handleClose}
           onCreate={handleCreate}
         />
-      </View>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -95,13 +93,13 @@ interface Dimensions {
 // - Large: 64×64×64
 // - Custom: User-defined`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Required project name field with validation</li>
             <li>Dimension presets for quick setup</li>
@@ -110,8 +108,8 @@ interface Dimensions {
             <li>Create button disabled when name is empty</li>
             <li>Note reminding users dimensions can be changed later</li>
           </ul>
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

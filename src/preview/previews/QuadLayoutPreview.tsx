@@ -1,23 +1,23 @@
-import { View, Heading, Content } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { QuadLayout } from '../../layouts/QuadLayout';
 import { mockProject } from '../mockData';
 
 export function QuadLayoutPreview() {
   return (
-    <View>
-      <Heading level={1}>QuadLayout</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">QuadLayout</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Four-panel grid layout showing multiple orthographic views simultaneously.
-      </Content>
+      </Typography>
 
-      <View marginTop="size-600" height="600px" borderWidth="thin">
+      <Box sx={{ mt: 6, height: '600px', border: 1, borderColor: 'grey.300' }}>
         <QuadLayout
           project={mockProject}
           activeLayers={{ x: 5, y: 3, z: 7 }}
           isPlacementMode={false}
           selectedBlockId="stone"
         />
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 }

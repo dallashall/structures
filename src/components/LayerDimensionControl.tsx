@@ -1,6 +1,5 @@
-import { Flex, NumberField, ActionButton, Text, Slider } from '@adobe/react-spectrum';
-import ChevronUp from '@spectrum-icons/workflow/ChevronUp';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
+import { Stack, IconButton, Typography, Slider, TextField } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
 
 interface LayerDimensionControlProps {
   label: string;
@@ -25,43 +24,61 @@ export function LayerDimensionControl({
   onDecrement,
   onChange,
 }: LayerDimensionControlProps) {
-  return (
-    <Flex direction="row" gap="size-100" alignItems="center">
-      <Text>
-        <strong>{label}:</strong>
-      </Text>
-      <ActionButton
-        onPress={onDecrement}
-        isDisabled={currentLayer <= 0}
-        isQuiet
-      >
-        <ChevronDown />
-      </ActionButton>
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(event.target.value, 10);
+    if (!isNaN(newValue)) {
+      onChange(newValue);
+    }
+  };
 
-      <NumberField
+  const handleSliderChange = (_event: Event, value: number | number[]) => {
+    onChange(value as number);
+  };
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Typography variant="body2">
+        <strong>{label}:</strong>
+      </Typography>
+      <IconButton
+        onClick={onDecrement}
+        disabled={currentLayer <= 0}
+        size="small"
+        aria-label={`Decrement ${label}`}
+      >
+        <KeyboardArrowDown />
+      </IconButton>
+
+      <TextField
+        type="number"
         value={currentLayer}
-        onChange={onChange}
-        minValue={0}
-        maxValue={maxLayer - 1}
-        width="size-800"
-        hideStepper
+        onChange={handleInputChange}
+        slotProps={{
+          htmlInput: {
+            min: 0,
+            max: maxLayer - 1,
+          },
+        }}
+        size="small"
+        sx={{ width: 80 }}
       />
 
-      <ActionButton
-        onPress={onIncrement}
-        isDisabled={currentLayer >= maxLayer - 1}
-        isQuiet
+      <IconButton
+        onClick={onIncrement}
+        disabled={currentLayer >= maxLayer - 1}
+        size="small"
+        aria-label={`Increment ${label}`}
       >
-        <ChevronUp />
-      </ActionButton>
+        <KeyboardArrowUp />
+      </IconButton>
 
       <Slider
         value={currentLayer}
-        onChange={onChange}
-        minValue={0}
-        maxValue={maxLayer - 1}
-        width="size-2000"
+        onChange={handleSliderChange}
+        min={0}
+        max={maxLayer - 1}
+        sx={{ width: 200 }}
       />
-    </Flex>
+    </Stack>
   );
 }

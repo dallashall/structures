@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { LayerDepthSelector } from '../../components/LayerDepthSelector';
 import { mockCallbacks } from '../mockData';
 
@@ -22,124 +22,129 @@ export function LayerDepthSelectorPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>LayerDepthSelector</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">LayerDepthSelector</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Controls for selecting the active editing layer. Provides slider, number
         field, and prev/next buttons for flexible layer navigation.
-      </Content>
+      </Typography>
 
       {/* Small Layer Count (5 layers) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Small Structure (5 Layers)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Small Structure (5 Layers)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Example with a shallow structure (width/height/depth: 5×5×5)
-        </Content>
-        <Well>
+        </Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <LayerDepthSelector
             maxLayers={5}
             activeLayer={0}
             onLayerChange={mockCallbacks.onLayerChange}
           />
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Medium Layer Count (10 layers) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Medium Structure (10 Layers)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Medium Structure (10 Layers)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Example with a medium-sized structure (width/height/depth: 10×10×10)
-        </Content>
-        <Well>
+        </Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <LayerDepthSelector
             maxLayers={10}
             activeLayer={4}
             onLayerChange={mockCallbacks.onLayerChange}
           />
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Large Layer Count (20 layers) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Large Structure (20 Layers)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Large Structure (20 Layers)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Example with a large structure (width/height/depth: 20×20×20)
-        </Content>
-        <Well>
+        </Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <LayerDepthSelector
             maxLayers={20}
             activeLayer={9}
             onLayerChange={mockCallbacks.onLayerChange}
           />
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo (10 Layers)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo (10 Layers)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Use slider, number field, or arrow buttons to change layers. Check
           console for callback logs.
-        </Content>
-        <Well>
+        </Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <LayerDepthSelector
             maxLayers={10}
             activeLayer={activeLayer1}
             onLayerChange={handleLayerChange1}
           />
-          <View
-            marginTop="size-200"
-            padding="size-150"
-            backgroundColor="blue-400"
-            borderWidth="thin"
-            borderColor="blue-600"
-            borderRadius="medium"
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              bgcolor: 'primary.main',
+              border: 1,
+              borderColor: 'primary.dark',
+              borderRadius: 1,
+              color: 'white'
+            }}
           >
-            <Content UNSAFE_style={{ color: 'white' }}>
-              Current layer: <Text><strong>{activeLayer1}</strong></Text> (0 = front, 9 = back)
-            </Content>
-          </View>
-        </Well>
-      </View>
+            <Typography variant="body1">
+              Current layer: <strong>{activeLayer1}</strong> (0 = front, 9 = back)
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Boundary Testing */}
-      <View marginTop="size-600">
-        <Heading level={2}>Boundary Testing (16 Layers)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Boundary Testing (16 Layers)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Test prev/next button disable states at boundaries. Try reaching layer
           0 or layer 15.
-        </Content>
-        <Well>
+        </Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <LayerDepthSelector
             maxLayers={16}
             activeLayer={activeLayer2}
             onLayerChange={handleLayerChange2}
           />
-          <View
-            marginTop="size-200"
-            padding="size-150"
-            backgroundColor="blue-400"
-            borderWidth="thin"
-            borderColor="blue-600"
-            borderRadius="medium"
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              bgcolor: 'primary.main',
+              border: 1,
+              borderColor: 'primary.dark',
+              borderRadius: 1
+            }}
           >
-            <Heading level={4} UNSAFE_style={{ color: 'white' }}>Boundary Status</Heading>
-            <Content UNSAFE_style={{ color: 'white' }}>
+            <Typography variant="h6" component="h4" sx={{ color: 'white' }}>Boundary Status</Typography>
+            <Typography variant="body1" component="div" sx={{ color: 'white' }}>
               <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
                 <li>
                   Previous button {activeLayer2 === 0 ? 'DISABLED' : 'enabled'}
                 </li>
                 <li>Next button {activeLayer2 === 15 ? 'DISABLED' : 'enabled'}</li>
               </ul>
-            </Content>
-          </View>
-        </Well>
-      </View>
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -157,8 +162,8 @@ export function LayerDepthSelectorPreview() {
 // Layer 0 = frontmost layer
 // Layer maxLayers-1 = backmost layer`}
           </pre>
-        </Well>
-      </View>
-    </View>
+        </Box>
+      </Box>
+    </Box>
   );
 }

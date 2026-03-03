@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { MaterialPalette } from '../../components/MaterialPalette';
 import { mockBlocks, mockCallbacks, getBlocksByCategory } from '../mockData';
 
@@ -21,128 +21,130 @@ export function MaterialPalettePreview() {
     if (!selectedId) return null;
     const block = findBlock(selectedId);
     return (
-      <Well marginTop="size-200">
-        <Heading level={4}>Selected Block Details</Heading>
-        <Content>
-          <Text><strong>ID:</strong> {selectedId}</Text>
-          <Text><strong>Name:</strong> {block?.name}</Text>
-          <Text><strong>Category:</strong> {block?.category}</Text>
-          <Text><strong>Color:</strong> {block?.color}</Text>
-        </Content>
-      </Well>
+      <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 2 }}>
+        <Typography variant="h6" component="h4">Selected Block Details</Typography>
+        <Typography variant="body1">
+          <strong>ID:</strong> {selectedId}
+          <br />
+          <strong>Name:</strong> {block?.name}
+          <br />
+          <strong>Category:</strong> {block?.category}
+          <br />
+          <strong>Color:</strong> {block?.color}
+        </Typography>
+      </Box>
     );
   };
 
   return (
-    <View>
-      <Heading level={1}>MaterialPalette</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">MaterialPalette</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         A thin wrapper around React Spectrum's ActionGroup with ColorSwatch items.
         Displays a selectable palette of Minecraft blocks with automatic theming.
-      </Content>
+      </Typography>
 
       {/* Small Set (Stone Blocks) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Small Set (Stone Category)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Small Set (Stone Category)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           6 blocks from the stone category
-        </Content>
+        </Typography>
         <MaterialPalette
           blocks={getBlocksByCategory('stone')}
           selectedBlockId={null}
           onSelectBlock={mockCallbacks.onSelectBlock}
         />
-      </View>
+      </Box>
 
       {/* Medium Set (Wood Blocks) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Medium Set (Wood Category)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Medium Set (Wood Category)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           6 blocks from the wood category
-        </Content>
+        </Typography>
         <MaterialPalette
           blocks={getBlocksByCategory('wood')}
           selectedBlockId={null}
           onSelectBlock={mockCallbacks.onSelectBlock}
         />
-      </View>
+      </Box>
 
       {/* Large Set (Decoration Blocks) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Large Set (Decoration Category)</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Large Set (Decoration Category)</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           8 blocks from the decoration category showing grid responsiveness
-        </Content>
+        </Typography>
         <MaterialPalette
           blocks={getBlocksByCategory('decoration')}
           selectedBlockId={null}
           onSelectBlock={mockCallbacks.onSelectBlock}
         />
-      </View>
+      </Box>
 
       {/* Full Set (All Blocks) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Full Block Registry</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Full Block Registry</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           All {mockBlocks.length} available blocks in the registry
-        </Content>
+        </Typography>
         <MaterialPalette
           blocks={mockBlocks}
           selectedBlockId={null}
           onSelectBlock={mockCallbacks.onSelectBlock}
         />
-      </View>
+      </Box>
 
       {/* Interactive Selection */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Selection</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Selection</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click any block to select it. Currently selected:{' '}
-          <Text><strong>{selectedId || 'none'}</strong></Text>
-        </Content>
+          <strong>{selectedId || 'none'}</strong>
+        </Typography>
         <MaterialPalette
           blocks={mockBlocks}
           selectedBlockId={selectedId}
           onSelectBlock={handleSelect}
         />
         {renderBlockDetails()}
-      </View>
+      </Box>
 
       {/* With Pre-selection */}
-      <View marginTop="size-600">
-        <Heading level={2}>With Pre-selected Block</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">With Pre-selected Block</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Palette with "oak_planks" pre-selected
-        </Content>
+        </Typography>
         <MaterialPalette
           blocks={mockBlocks.slice(0, 16)}
           selectedBlockId="oak_planks"
           onSelectBlock={mockCallbacks.onSelectBlock}
         />
-      </View>
+      </Box>
 
       {/* Responsive Behavior */}
-      <View marginTop="size-600">
-        <Heading level={2}>Responsive Grid Behavior</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Responsive Grid Behavior</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Constrained width to demonstrate grid auto-fill responsiveness
-        </Content>
-        <View maxWidth="size-5000">
+        </Typography>
+        <Box sx={{ maxWidth: 400 }}>
           <MaterialPalette
             blocks={mockBlocks.slice(0, 20)}
             selectedBlockId={null}
             onSelectBlock={mockCallbacks.onSelectBlock}
           />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
-          <Content>
-            <pre>
-              {`interface MaterialPaletteProps {
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
+          <Typography variant="body1" component="pre">
+            {`interface MaterialPaletteProps {
   blocks: Block[];                 // Array of blocks to display
   selectedBlockId: string | null;  // Currently selected block ID
   onSelectBlock: (blockId: string) => void;  // Selection callback
@@ -151,10 +153,9 @@ export function MaterialPalettePreview() {
 // Uses React Spectrum's ActionGroup with ColorSwatch
 // Automatic theming and accessibility support
 // Keyboard navigation built-in`}
-            </pre>
-          </Content>
-        </Well>
-      </View>
-    </View>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }

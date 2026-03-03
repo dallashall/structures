@@ -54,6 +54,7 @@ export interface BlockData {
 export interface MetaBlock {
   position: Vector3D;
   direction: Direction;
+  isConfirmed: boolean; // Whether the user has finalized this position
 }
 
 export interface Project {

@@ -1,4 +1,4 @@
-import { View, Heading, Content } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { Canvas2DView } from '../../panels/Canvas2DView';
 import { mockProject } from '../mockData';
 
@@ -12,15 +12,15 @@ export function Canvas2DViewPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>Canvas2DView</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">Canvas2DView</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         2D orthographic canvas with grid rendering, block display, and interactive editing.
-      </Content>
+      </Typography>
 
-      <View marginTop="size-600">
-        <Heading level={2}>Front View</Heading>
-        <View height="400px" width="400px" borderWidth="thin">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Front View</Typography>
+        <Box sx={{ height: '400px', width: '400px', border: 1, borderColor: 'grey.300' }}>
           <Canvas2DView
             viewType="front"
             project={mockProject}
@@ -28,11 +28,12 @@ export function Canvas2DViewPreview() {
             width={400}
             height={400}
             selectedBlockId="stone"
+            isPlacementMode={false}
             onBlockPlaced={handleBlockPlaced}
             onBlockRemoved={handleBlockRemoved}
           />
-        </View>
-      </View>
-    </View>
+        </Box>
+      </Box>
+    </Box>
   );
 }

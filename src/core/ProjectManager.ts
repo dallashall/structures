@@ -46,14 +46,15 @@ class ProjectManager extends EventEmitter {
       metaBlock: {
         position: { x: 0, y: 0, z: 0 },
         direction: 'north', // Fixed direction as per UX decisions
+        isConfirmed: false, // User must place and confirm
       },
       blocks: new Map(),
       created: now,
       modified: now,
     };
 
-    // Note: Meta block position is initialized but not "placed" yet
-    // The user will place it as their first action
+    // Note: Meta block position is initialized but not confirmed yet
+    // The user will place and confirm it as their first action
     this.emit('project:created', this.currentProject);
   }
 
@@ -152,8 +153,8 @@ class ProjectManager extends EventEmitter {
   }
 
   /**
-   * Set/place the meta block at the given position
-   * Direction is always 'north' (fixed as per UX decisions)
+   * Set/update the meta block position
+   * Can be called multiple times before confirmation
    */
   setMetaBlock(position: Vector3D): void {
     if (!this.currentProject) {
@@ -163,7 +164,22 @@ class ProjectManager extends EventEmitter {
     this.currentProject.metaBlock = {
       position,
       direction: 'north', // Always north
+      isConfirmed: this.currentProject.metaBlock.isConfirmed, // Preserve confirmation status
     };
+    this.currentProject.modified = new Date();
+
+    this.emit('project:changed', this.currentProject);
+  }
+
+  /**
+   * Confirm the meta block placement - locks it in place
+   */
+  confirmMetaBlock(): void {
+    if (!this.currentProject?.metaBlock) {
+      return;
+    }
+
+    this.currentProject.metaBlock.isConfirmed = true;
     this.currentProject.modified = new Date();
 
     this.emit('metablock:placed', this.currentProject.metaBlock);
@@ -194,6 +210,13 @@ class ProjectManager extends EventEmitter {
 
     // If there are blocks or position is not origin, meta block is placed
     return hasBlocks || (meta.position.x !== 0 || meta.position.y !== 0 || meta.position.z !== 0);
+  }
+
+  /**
+   * Check if meta block has been confirmed (finalized)
+   */
+  isMetaBlockConfirmed(): boolean {
+    return this.currentProject?.metaBlock?.isConfirmed ?? false;
   }
 
   /**

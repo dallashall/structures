@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Flex } from '@adobe/react-spectrum';
+import { Box, Typography, Stack } from '@mui/material';
 import { FullPaletteMenu } from '../../components/FullPaletteMenu';
 import { mockBlocks } from '../mockData';
 
@@ -18,27 +18,27 @@ export function FullPaletteMenuPreview() {
   const selectedBlockInfo = mockBlocks.find((b) => b.id === selectedBlock);
 
   return (
-    <View>
-      <Heading level={1}>FullPaletteMenu</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">FullPaletteMenu</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Popover menu (non-modal) displaying the full block catalog with fuzzy
         search and category organization. Triggered by button press.
-      </Content>
+      </Typography>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click the "All Blocks" button to open the popover. The menu doesn't
           block the rest of the UI.
-        </Content>
+        </Typography>
 
-        <Flex gap="size-200" alignItems="center">
-          <FullPaletteMenu blocks={mockBlocks} onSelectBlock={handleSelectBlock} />
+        <Stack direction="row" spacing={2} alignItems="center">
+          <FullPaletteMenu blocks={mockBlocks} selectedBlockId={selectedBlock} onSelectBlock={handleSelectBlock} />
 
           {selectedBlockInfo && (
-            <Well>
-              <Heading level={4}>Selected: {selectedBlockInfo.name}</Heading>
+            <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
+              <Typography variant="h6" component="h4">Selected: {selectedBlockInfo.name}</Typography>
               <div
                 style={{
                   backgroundColor: selectedBlockInfo.color,
@@ -48,15 +48,15 @@ export function FullPaletteMenuPreview() {
                   border: '1px solid #ccc',
                 }}
               />
-            </Well>
+            </Box>
           )}
-        </Flex>
-      </View>
+        </Stack>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -80,13 +80,13 @@ interface Block {
   textureRef?: string; // Optional texture reference
 }`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Fuzzy search across block names</li>
             <li>Blocks organized by category (stone, wood, decoration, etc.)</li>
@@ -95,17 +95,17 @@ interface Block {
             <li>Accessible keyboard navigation</li>
             <li>Responsive dialog sizing</li>
           </ul>
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Usage Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Usage</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Usage</Typography>
+        <Typography variant="body1">
           Typically opened via a button in the main editor interface when users
           want to select blocks beyond the 5-slot quick-select palette.
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

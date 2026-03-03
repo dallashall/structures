@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { Toolbar } from '../../layouts/Toolbar';
 import { mockCallbacks } from '../mockData';
 
@@ -16,25 +16,27 @@ export function ToolbarPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>Toolbar</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">Toolbar</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Application header with primary actions: New, Save, Open projects, and
         toggle between 2D editor and 3D preview mode.
-      </Content>
+      </Typography>
 
       {/* No Project Active */}
-      <View marginTop="size-600">
-        <Heading level={2}>No Active Project</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">No Active Project</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Toolbar state when no project is loaded. Note that Save button is
           disabled.
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}
         >
           <Toolbar
             projectName={null}
@@ -46,21 +48,23 @@ export function ToolbarPreview() {
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* With Project (2D Mode) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Active Project - 2D Editor Mode</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Active Project - 2D Editor Mode</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Toolbar with an active project named "Sample House". All buttons
           enabled.
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}
         >
           <Toolbar
             projectName="Sample House"
@@ -72,20 +76,22 @@ export function ToolbarPreview() {
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* With Project (3D Mode) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Active Project - 3D Preview Mode</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Active Project - 3D Preview Mode</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Toolbar with 3D mode active (note the accent variant on Toggle button).
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}
         >
           <Toolbar
             projectName="Medieval Castle"
@@ -97,20 +103,22 @@ export function ToolbarPreview() {
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={true}
           />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* Long Project Name */}
-      <View marginTop="size-600">
-        <Heading level={2}>Long Project Name</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Long Project Name</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Toolbar with a longer project name to test text overflow behavior.
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}
         >
           <Toolbar
             projectName="My Very Long Project Name For A Complex Minecraft Structure"
@@ -122,21 +130,23 @@ export function ToolbarPreview() {
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={false}
           />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click buttons to test interactions. Toggle 3D mode button changes
           variant. Check console for callback logs.
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}
         >
           <Toolbar
             projectName="Interactive Demo Project"
@@ -148,27 +158,29 @@ export function ToolbarPreview() {
             onToggle3D={handleToggle3D}
             is3DMode={is3DMode}
           />
-        </View>
-        <Well marginTop="size-200">
-          <Heading level={4}>Current Mode</Heading>
-          <Content>
-            <Text><strong>{is3DMode ? '3D Preview Mode' : '2D Editor Mode'}</strong></Text>
-          </Content>
-        </Well>
-      </View>
+        </Box>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 2 }}>
+          <Typography variant="h6" component="h4">Current Mode</Typography>
+          <Typography variant="body1">
+            <strong>{is3DMode ? '3D Preview Mode' : '2D Editor Mode'}</strong>
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Multiple Instances */}
-      <View marginTop="size-600">
-        <Heading level={2}>Multiple Project Examples</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Multiple Project Examples</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Different project names and states
-        </Content>
-        <View UNSAFE_style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <View
-            borderWidth="thin"
-            borderColor="gray-300"
-            borderRadius="medium"
-            overflow="hidden"
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'grey.300',
+              borderRadius: 1,
+              overflow: 'hidden'
+            }}
           >
             <Toolbar
               projectName="Village House"
@@ -180,12 +192,14 @@ export function ToolbarPreview() {
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={false}
             />
-          </View>
-          <View
-            borderWidth="thin"
-            borderColor="gray-300"
-            borderRadius="medium"
-            overflow="hidden"
+          </Box>
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'grey.300',
+              borderRadius: 1,
+              overflow: 'hidden'
+            }}
           >
             <Toolbar
               projectName="Nether Portal"
@@ -197,12 +211,14 @@ export function ToolbarPreview() {
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={true}
             />
-          </View>
-          <View
-            borderWidth="thin"
-            borderColor="gray-300"
-            borderRadius="medium"
-            overflow="hidden"
+          </Box>
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'grey.300',
+              borderRadius: 1,
+              overflow: 'hidden'
+            }}
           >
             <Toolbar
               projectName="Redstone Machine"
@@ -214,14 +230,14 @@ export function ToolbarPreview() {
               onToggle3D={mockCallbacks.onToggle3D}
               is3DMode={false}
             />
-          </View>
-        </View>
-      </View>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -242,8 +258,8 @@ export function ToolbarPreview() {
 // Save button is disabled when projectName is null
 // Toggle button uses accent variant when is3DMode is true`}
           </pre>
-        </Well>
-      </View>
-    </View>
+        </Box>
+      </Box>
+    </Box>
   );
 }

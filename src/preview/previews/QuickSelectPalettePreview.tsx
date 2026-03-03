@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { QuickSelectPalette } from '../../components/QuickSelectPalette';
 import { mockBlocks } from '../mockData';
 
@@ -37,62 +37,62 @@ export function QuickSelectPalettePreview() {
   const selectedBlockInfo = mockBlocks.find((b) => b.id === selectedBlock);
 
   return (
-    <View>
-      <Heading level={1}>QuickSelectPalette</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">QuickSelectPalette</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         5-slot quick-select palette for rapid material switching during editing.
         Displays blocks as color swatches with selection state.
-      </Content>
+      </Typography>
 
       {/* Empty State */}
-      <View marginTop="size-600">
-        <Heading level={2}>Empty State</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Empty State</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Palette with no blocks assigned. Shows empty gray squares.
-        </Content>
+        </Typography>
         <QuickSelectPalette
           slots={emptySlots}
           selectedSlotIndex={null}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
-      </View>
+      </Box>
 
       {/* Partial State */}
-      <View marginTop="size-600">
-        <Heading level={2}>Partially Filled</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Partially Filled</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Palette with some slots filled, others empty.
-        </Content>
+        </Typography>
         <QuickSelectPalette
           slots={partialSlots}
           selectedSlotIndex={0}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
-      </View>
+      </Box>
 
       {/* Full State */}
-      <View marginTop="size-600">
-        <Heading level={2}>All Slots Filled</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">All Slots Filled</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Palette with all 5 slots assigned. Second slot selected.
-        </Content>
+        </Typography>
         <QuickSelectPalette
           slots={fullSlots}
           selectedSlotIndex={1}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
-      </View>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click slots to select different materials. Selected slot is
           highlighted with a ring.
-        </Content>
+        </Typography>
         <QuickSelectPalette
           slots={interactiveSlots}
           selectedSlotIndex={selectedSlotIndex}
@@ -100,25 +100,23 @@ export function QuickSelectPalettePreview() {
           onSelectSlot={handleSelectSlot}
         />
         {selectedBlockInfo && (
-          <Well marginTop="size-300">
-            <Heading level={4}>Selected Block</Heading>
-            <Content>
-              <Text>
-                <strong>Slot:</strong> {selectedSlotIndex !== null ? selectedSlotIndex + 1 : 'None'}
-              </Text>
+          <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+            <Typography variant="h6" component="h4">Selected Block</Typography>
+            <Typography variant="body1">
+              <strong>Slot:</strong> {selectedSlotIndex !== null ? selectedSlotIndex + 1 : 'None'}
               <br />
-              <Text><strong>Block:</strong> {selectedBlockInfo.name}</Text>
+              <strong>Block:</strong> {selectedBlockInfo.name}
               <br />
-              <Text><strong>ID:</strong> {selectedBlockInfo.id}</Text>
-            </Content>
-          </Well>
+              <strong>ID:</strong> {selectedBlockInfo.id}
+            </Typography>
+          </Box>
         )}
-      </View>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -141,13 +139,13 @@ export function QuickSelectPalettePreview() {
 // - Selected slot has visual ring indicator
 // - Future: Right-click or long-press to assign new block to slot`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>5 customizable slots for frequently used blocks</li>
             <li>Empty slots displayed as gray placeholder squares</li>
@@ -156,8 +154,8 @@ export function QuickSelectPalettePreview() {
             <li>Color swatch represents block's 2D rendering color</li>
             <li>Accessible via React Spectrum ActionGroup</li>
           </ul>
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Text } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { ViewSelector } from '../../components/ViewSelector';
 import { mockCallbacks } from '../mockData';
 import type { ViewType } from '../../types';
@@ -19,90 +19,90 @@ export function ViewSelectorPreview() {
   const renderViewExplanation = () => {
     if (activeView === 'front') {
       return (
-        <Content>
+        <Typography variant="body1">
           <strong>Front View:</strong> Edit the front face of the structure.
           Shows width (X-axis) and height (Y-axis).
-        </Content>
+        </Typography>
       );
     }
     if (activeView === 'left') {
       return (
-        <Content>
+        <Typography variant="body1">
           <strong>Left View:</strong> Edit the left face of the structure. Shows
           depth (Z-axis) and height (Y-axis).
-        </Content>
+        </Typography>
       );
     }
     return (
-      <Content>
+      <Typography variant="body1">
         <strong>Back View:</strong> Edit the back face of the structure. Shows
         width (X-axis) and height (Y-axis) from the opposite side.
-      </Content>
+      </Typography>
     );
   };
 
   return (
-    <View>
-      <Heading level={1}>ViewSelector</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">ViewSelector</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         A button group for toggling between different 2D editing views (Front,
         Side, Back) of the 3D structure.
-      </Content>
+      </Typography>
 
       {/* Default State (Front) */}
-      <View marginTop="size-600">
-        <Heading level={2}>Front View Selected</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Front View Selected</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Default view showing the X-Y plane (width × height)
-        </Content>
+        </Typography>
         <ViewSelector
           activeView="front"
           onViewChange={mockCallbacks.onViewChange}
         />
-      </View>
+      </Box>
 
       {/* Left View */}
-      <View marginTop="size-600">
-        <Heading level={2}>Left View Selected</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Left View Selected</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Left view showing the Z-Y plane (depth × height)
-        </Content>
+        </Typography>
         <ViewSelector
           activeView="left"
           onViewChange={mockCallbacks.onViewChange}
         />
-      </View>
+      </Box>
 
       {/* Back View */}
-      <View marginTop="size-600">
-        <Heading level={2}>Back View Selected</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Back View Selected</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Back view showing the X-Y plane from opposite perspective
-        </Content>
+        </Typography>
         <ViewSelector
           activeView="back"
           onViewChange={mockCallbacks.onViewChange}
         />
-      </View>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click buttons to switch views. Currently active:{' '}
-          <Text><strong>{activeView}</strong></Text>
-        </Content>
+          <strong>{activeView}</strong>
+        </Typography>
         <ViewSelector activeView={activeView} onViewChange={handleViewChange} />
-        <Well marginTop="size-300">
-          <Heading level={4}>View Explanation</Heading>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+          <Typography variant="h6" component="h4">View Explanation</Typography>
           {renderViewExplanation()}
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -116,8 +116,8 @@ export function ViewSelectorPreview() {
   onViewChange: (view: ViewType) => void;  // View change callback
 }`}
           </pre>
-        </Well>
-      </View>
-    </View>
+        </Box>
+      </Box>
+    </Box>
   );
 }

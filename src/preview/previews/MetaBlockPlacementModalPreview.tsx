@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Heading, Content, Well, Button, Text } from '@adobe/react-spectrum';
+import { Box, Typography, Button } from '@mui/material';
 import { MetaBlockPlacementModal } from '../../components/MetaBlockPlacementModal';
 
 /**
@@ -22,54 +22,52 @@ export function MetaBlockPlacementModalPreview() {
   };
 
   return (
-    <View>
-      <Heading level={1}>MetaBlockPlacementModal</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">MetaBlockPlacementModal</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Informational modal explaining the meta block and guiding users to place
         it as their first action after creating a new project.
-      </Content>
+      </Typography>
 
       {/* Context */}
-      <View marginTop="size-600">
-        <Heading level={2}>Context</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Context</Typography>
+        <Typography variant="body1">
           The meta block is a special marker that defines the entry point and
           orientation for structures imported into Minecraft. This modal appears
           automatically when a new project is created, before the editor is
           shown.
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Interactive Demo */}
-      <View marginTop="size-600">
-        <Heading level={2}>Interactive Demo</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Interactive Demo</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Click the button to open the modal as users would see it on first
           project creation.
-        </Content>
-        <Button variant="primary" onPress={handleOpen}>
+        </Typography>
+        <Button variant="contained" color="primary" onClick={handleOpen}>
           Show Meta Block Modal
         </Button>
 
         {acknowledged && (
-          <Well marginTop="size-300">
-            <Heading level={4}>Modal Acknowledged</Heading>
-            <Content>
-              <Text>
-                User clicked "Got it" and is now in placement mode. Canvas would
-                show crosshair cursor and await first click to place meta block.
-              </Text>
-            </Content>
-          </Well>
+          <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
+            <Typography variant="h6" component="h4">Modal Acknowledged</Typography>
+            <Typography variant="body1">
+              User clicked "Got it" and is now in placement mode. Canvas would
+              show crosshair cursor and await first click to place meta block.
+            </Typography>
+          </Box>
         )}
 
         <MetaBlockPlacementModal isOpen={isOpen} onClose={handleClose} />
-      </View>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -89,13 +87,13 @@ export function MetaBlockPlacementModalPreview() {
 // - First click places meta block
 // - Modal does not reappear for this project`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Clear explanation of meta block purpose</li>
             <li>Visual indicator (placeholder for future illustration)</li>
@@ -104,13 +102,13 @@ export function MetaBlockPlacementModalPreview() {
             <li>Shown once per project on creation</li>
             <li>Guides user workflow for proper structure setup</li>
           </ul>
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Meta Block Purpose */}
-      <View marginTop="size-600">
-        <Heading level={3}>Meta Block Purpose</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Meta Block Purpose</Typography>
+        <Typography variant="body1" component="div">
           The meta block serves two functions:
           <ol>
             <li>
@@ -123,8 +121,8 @@ export function MetaBlockPlacementModalPreview() {
               rotated
             </li>
           </ol>
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

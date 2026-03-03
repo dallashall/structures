@@ -105,6 +105,7 @@ export const mockProject: Project = {
   metaBlock: {
     position: { x: 5, y: 0, z: 5 },
     direction: 'north',
+    isConfirmed: true,
   },
   blocks: new Map(),
   created: new Date('2026-03-01T10:00:00Z'),

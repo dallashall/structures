@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Heading, Content, View } from '@adobe/react-spectrum';
 import { PreviewLayout } from './PreviewLayout';
+import { WelcomePreview } from './WelcomePreview';
 import { BlockButtonPreview } from './previews/BlockButtonPreview';
 import { ViewSelectorPreview } from './previews/ViewSelectorPreview';
 import { LayerDepthSelectorPreview } from './previews/LayerDepthSelectorPreview';
@@ -22,41 +22,6 @@ interface PreviewRoute {
   name: string;
   path: string;
   component: React.ComponentType;
-}
-
-/**
- * Placeholder component shown when no preview is selected
- */
-function WelcomePreview() {
-  return (
-    <View>
-      <Heading level={1}>Welcome to Component Preview</Heading>
-      <Content marginBottom="size-200">
-        This is a lightweight component preview system for the Minecraft Magic
-        Blueprint System.
-      </Content>
-      <Content marginBottom="size-400">
-        Select a component from the sidebar to view its preview and
-        interactive states.
-      </Content>
-      <View
-        padding="size-200"
-        borderWidth="thin"
-        borderRadius="medium"
-        marginTop="size-400"
-      >
-        <Heading level={3}>Features</Heading>
-        <Content>
-          <ul>
-            <li>Zero additional dependencies</li>
-            <li>Hash-based routing (#/preview)</li>
-            <li>Hot module replacement (HMR) support</li>
-            <li>Interactive component testing with mock data</li>
-          </ul>
-        </Content>
-      </View>
-    </View>
-  );
 }
 
 /**

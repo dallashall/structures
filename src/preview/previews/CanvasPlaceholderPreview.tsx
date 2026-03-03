@@ -1,4 +1,4 @@
-import { View, Heading, Content, Well } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { CanvasPlaceholder } from '../../panels/CanvasPlaceholder';
 
 /**
@@ -7,34 +7,36 @@ import { CanvasPlaceholder } from '../../panels/CanvasPlaceholder';
  */
 export function CanvasPlaceholderPreview() {
   return (
-    <View>
-      <Heading level={1}>CanvasPlaceholder</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">CanvasPlaceholder</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Placeholder component shown in canvas areas before full 2D/3D rendering
         is implemented. Displays a message indicating the canvas is coming soon.
-      </Content>
+      </Typography>
 
       {/* Default State */}
-      <View marginTop="size-600">
-        <Heading level={2}>Default Placeholder</Heading>
-        <Content marginBottom="size-200">
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" component="h2">Default Placeholder</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
           Placeholder as shown in tabbed or quad layouts.
-        </Content>
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          overflow="hidden"
-          height="size-6000"
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'grey.300',
+            borderRadius: 1,
+            overflow: 'hidden',
+            height: 480
+          }}
         >
           <CanvasPlaceholder viewType="front" />
-        </View>
-      </View>
+        </Box>
+      </Box>
 
       {/* Props Documentation */}
-      <View marginTop="size-600">
-        <Heading level={3}>Props Interface</Heading>
-        <Well>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Props Interface</Typography>
+        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
           <pre
             style={{
               fontSize: '13px',
@@ -48,13 +50,13 @@ export function CanvasPlaceholderPreview() {
 // No props - stateless component
 // Simply displays centered message`}
           </pre>
-        </Well>
-      </View>
+        </Box>
+      </Box>
 
       {/* Feature Notes */}
-      <View marginTop="size-600">
-        <Heading level={3}>Features</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Features</Typography>
+        <Typography variant="body1" component="div">
           <ul>
             <li>Centered layout with gray background</li>
             <li>Heading and descriptive text</li>
@@ -62,18 +64,18 @@ export function CanvasPlaceholderPreview() {
             <li>Fills available space (width: 100%, height: 100%)</li>
             <li>Temporary placeholder for development</li>
           </ul>
-        </Content>
-      </View>
+        </Typography>
+      </Box>
 
       {/* Usage Context */}
-      <View marginTop="size-600">
-        <Heading level={3}>Usage Context</Heading>
-        <Content>
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h6" component="h3">Usage Context</Typography>
+        <Typography variant="body1">
           Currently used in TabbedLayout and QuadLayout to fill canvas slots
           before Canvas2DView rendering is fully implemented. Will be replaced
           by actual canvas components as development progresses.
-        </Content>
-      </View>
-    </View>
+        </Typography>
+      </Box>
+    </Box>
   );
 }

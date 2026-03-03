@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Flex, Heading, Link, Button } from '@adobe/react-spectrum';
+import { Box, Stack, Typography, Button, Link as MuiLink } from '@mui/material';
 
 interface PreviewRoute {
   name: string;
@@ -17,8 +17,7 @@ interface PreviewLayoutProps {
  * Layout component for the component preview system
  * Provides sidebar navigation and content area
  *
- * Uses React Spectrum components (View, Heading, Link, Button) for consistent
- * theming and design system integration.
+ * Uses MUI components for consistent theming and design system integration.
  */
 export function PreviewLayout({
   routes,
@@ -38,63 +37,70 @@ export function PreviewLayout({
     };
 
     return (
-      <View key={route.path} marginBottom="size-50">
+      <Box key={route.path} sx={{ mb: 0.5 }}>
         <Button
-          variant={isActive ? 'accent' : 'secondary'}
-          onPress={handleClick}
-          width="100%"
-          isQuiet={!isActive}
-          UNSAFE_style={{ justifyContent: 'flex-start' }}
+          variant={isActive ? 'contained' : 'text'}
+          onClick={handleClick}
+          fullWidth
+          sx={{ justifyContent: 'flex-start' }}
         >
           {route.name}
         </Button>
-      </View>
+      </Box>
     );
   };
 
   return (
-    <Flex direction="row" height="100vh">
+    <Stack direction="row" sx={{ height: '100vh' }}>
       {/* Sidebar Navigation */}
-      <View
-        width="size-3000"
-        backgroundColor="gray-75"
-        borderEndWidth="thin"
-        borderEndColor="gray-300"
-        padding="size-200"
-        overflow="auto"
+      <Box
+        sx={{
+          width: 300,
+          bgcolor: 'grey.50',
+          borderRight: 1,
+          borderColor: 'divider',
+          p: 2,
+          overflow: 'auto',
+        }}
       >
-        <View marginBottom="size-200">
-          <Heading level={1} marginBottom="size-100">
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
             Component Preview
-          </Heading>
-          <Link href="#/" isQuiet>
+          </Typography>
+          <MuiLink href="#/" underline="hover">
             ← Back to App
-          </Link>
-        </View>
+          </MuiLink>
+        </Box>
 
         <nav>
-          <Heading level={2} marginBottom="size-100">
-            <View
-              UNSAFE_style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Components
-            </View>
-          </Heading>
-          <View UNSAFE_style={{ listStyle: 'none' }} paddingStart="size-0">
+          <Typography
+            variant="overline"
+            component="h2"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              mb: 1,
+            }}
+          >
+            Components
+          </Typography>
+          <Box sx={{ listStyle: 'none', pl: 0 }}>
             {routes.map(renderNavItem)}
-          </View>
+          </Box>
         </nav>
-      </View>
+      </Box>
 
       {/* Main Content Area */}
-      <View flex={1} padding="size-500" overflow="auto" backgroundColor="gray-50">
+      <Box
+        sx={{
+          flex: 1,
+          p: 5,
+          overflow: 'auto',
+          bgcolor: 'grey.50',
+        }}
+      >
         {children}
-      </View>
-    </Flex>
+      </Box>
+    </Stack>
   );
 }

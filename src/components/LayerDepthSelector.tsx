@@ -1,6 +1,6 @@
-import { Flex, Slider, NumberField, Button, Text as SpectrumText } from '@adobe/react-spectrum';
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import { Stack, Slider, Button, Typography } from '@mui/material';
+import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
+import { NumberField } from './NumberField';
 
 interface LayerDepthSelectorProps {
   maxLayers: number;
@@ -23,8 +23,8 @@ export function LayerDepthSelector({
   activeLayer,
   onLayerChange,
 }: LayerDepthSelectorProps) {
-  const handleSliderChange = (value: number) => {
-    onLayerChange(value);
+  const handleSliderChange = (_event: Event, value: number | number[]) => {
+    onLayerChange(value as number);
   };
 
   const handleNumberChange = (value: number) => {
@@ -44,54 +44,53 @@ export function LayerDepthSelector({
   };
 
   return (
-    <Flex direction="column" gap="size-100">
-      <SpectrumText>
+    <Stack spacing={1}>
+      <Typography variant="body2">
         Layer Depth: {activeLayer} / {maxLayers - 1}
-      </SpectrumText>
+      </Typography>
 
-      <Flex direction="row" gap="size-100" alignItems="center">
+      <Stack direction="row" spacing={1} alignItems="center">
         {/* Previous Layer Button */}
         <Button
-          variant="secondary"
-          onPress={handlePreviousClick}
-          isDisabled={activeLayer === 0}
+          variant="outlined"
+          onClick={handlePreviousClick}
+          disabled={activeLayer === 0}
           aria-label="Previous layer"
+          startIcon={<KeyboardArrowLeft />}
         >
-          <ChevronLeft />
+          Prev
         </Button>
 
         {/* Slider */}
         <Slider
-          label="Layer"
-          labelPosition="side"
-          minValue={0}
-          maxValue={maxLayers - 1}
+          min={0}
+          max={maxLayers - 1}
           value={activeLayer}
           onChange={handleSliderChange}
-          flex={1}
+          sx={{ flex: 1 }}
+          aria-label="Layer"
         />
 
         {/* Number Input */}
         <NumberField
           label="Layer"
-          labelPosition="side"
           minValue={0}
           maxValue={maxLayers - 1}
           value={activeLayer}
           onChange={handleNumberChange}
-          width="size-1200"
         />
 
         {/* Next Layer Button */}
         <Button
-          variant="secondary"
-          onPress={handleNextClick}
-          isDisabled={activeLayer === maxLayers - 1}
+          variant="outlined"
+          onClick={handleNextClick}
+          disabled={activeLayer === maxLayers - 1}
           aria-label="Next layer"
+          endIcon={<KeyboardArrowRight />}
         >
-          <ChevronRight />
+          Next
         </Button>
-      </Flex>
-    </Flex>
+      </Stack>
+    </Stack>
   );
 }

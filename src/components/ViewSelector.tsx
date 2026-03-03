@@ -1,5 +1,4 @@
-import { ActionGroup, Item } from '@adobe/react-spectrum';
-import type { Selection } from '@react-types/shared';
+import { ActionGroup, ActionGroupItem } from './ActionGroup';
 import type { ViewType } from '../types';
 
 interface ViewSelectorProps {
@@ -16,12 +15,12 @@ interface ViewSelectorProps {
  * - Side: Z-Y plane (depth × height)
  * - Back: X-Y plane from opposite perspective
  *
- * Uses ActionGroup with single selection mode for proper theming
+ * Uses our custom ActionGroup with single selection mode for proper theming
  * and keyboard navigation support.
  */
 export function ViewSelector({ activeView, onViewChange }: ViewSelectorProps) {
-  const handleSelectionChange = (keys: Selection) => {
-    if (keys !== 'all' && keys.size > 0) {
+  const handleSelectionChange = (keys: Set<string>) => {
+    if (keys.size > 0) {
       const selectedView = Array.from(keys)[0] as ViewType;
       onViewChange(selectedView);
     }
@@ -34,9 +33,9 @@ export function ViewSelector({ activeView, onViewChange }: ViewSelectorProps) {
       onSelectionChange={handleSelectionChange}
       aria-label="View selector"
     >
-      <Item key="front">Front</Item>
-      <Item key="side">Side</Item>
-      <Item key="back">Back</Item>
+      <ActionGroupItem itemKey="front">Front</ActionGroupItem>
+      <ActionGroupItem itemKey="side">Side</ActionGroupItem>
+      <ActionGroupItem itemKey="back">Back</ActionGroupItem>
     </ActionGroup>
   );
 }

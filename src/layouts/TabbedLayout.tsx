@@ -1,5 +1,6 @@
 import React from 'react';
-import { Tabs, TabList, TabPanels, Item, View, Flex } from '@adobe/react-spectrum';
+import { Tab, Box, Typography } from '@mui/material';
+import { TabContext, TabList, TabPanel } from '@mui/lab';
 
 import type { ViewType, Project, LayerState, Vector3D } from '../types';
 
@@ -13,6 +14,7 @@ interface TabbedLayoutProps {
   activeLayers: LayerState;
   isPlacementMode: boolean;
   selectedBlockId: string | null;
+  renderTabBar?: boolean; // Whether to render the tab bar internally (default false)
 }
 
 /**
@@ -27,6 +29,8 @@ export function TabbedLayout({
   project,
   activeLayers,
   selectedBlockId,
+  isPlacementMode,
+  renderTabBar = false,
 }: TabbedLayoutProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = React.useState({ width: 800, height: 600 });
@@ -54,49 +58,103 @@ export function TabbedLayout({
     projectManager.removeBlock(position);
   }, []);
 
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+    onViewChange(newValue);
+  };
+
+  const views = ['front', 'back', 'left', 'right', 'top', 'bottom', '3d'] as const;
+
+  // Get the depth coordinate for the current view
+  const getDepthLabel = (view: ViewType | '3d'): string | null => {
+    switch (view) {
+      case 'front':
+      case 'back':
+        return `Y: ${activeLayers.y}`;
+      case 'left':
+      case 'right':
+        return `X: ${activeLayers.x}`;
+      case 'top':
+      case 'bottom':
+        return `Z: ${activeLayers.z}`;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Tabs
-      selectedKey={activeView}
-      onSelectionChange={onViewChange}
-      height="100%"
-    >
-      <TabList>
-        <Item key="front">Front</Item>
-        <Item key="back">Back</Item>
-        <Item key="left">Left</Item>
-        <Item key="right">Right</Item>
-        <Item key="top">Top</Item>
-        <Item key="bottom">Bottom</Item>
-        <Item key="3d">3D Preview</Item>
-      </TabList>
-      <TabPanels>
-        {(['front', 'back', 'left', 'right', 'top', 'bottom', '3d'] as const).map((view) => (
-          <Item key={view}>
-            <View padding="size-200" height="100%" width="100%">
-              {view === '3d' ? (
-                <View backgroundColor="gray-200" height="100%">
-                  <Flex height="100%" alignItems="center" justifyContent="center">
-                    <p>3D Preview (Placeholder)</p>
-                  </Flex>
-                </View>
-              ) : (
-                <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-                  <Canvas2DView
-                    viewType={view}
-                    project={project}
-                    activeLayers={activeLayers}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
-                    selectedBlockId={selectedBlockId}
-                    onBlockPlaced={handleBlockPlaced}
-                    onBlockRemoved={handleBlockRemoved}
-                  />
-                </div>
+    <TabContext value={activeView}>
+      {renderTabBar && (
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <TabList onChange={handleTabChange} aria-label="View tabs">
+            <Tab label="Front" value="front" />
+            <Tab label="Back" value="back" />
+            <Tab label="Left" value="left" />
+            <Tab label="Right" value="right" />
+            <Tab label="Top" value="top" />
+            <Tab label="Bottom" value="bottom" />
+            <Tab label="3D Preview" value="3d" />
+          </TabList>
+        </Box>
+      )}
+      {views.map((view) => (
+        <TabPanel key={view} value={view} sx={{ p: 0, height: renderTabBar ? 'calc(100% - 48px)' : '100%', position: 'relative' }}>
+          {view === '3d' ? (
+            <Box
+              sx={{
+                bgcolor: 'grey.200',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <p>3D Preview (Placeholder)</p>
+            </Box>
+          ) : (
+            <>
+              {/* Depth indicator */}
+              {getDepthLabel(view) && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    zIndex: 10,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.primary',
+                      bgcolor: 'rgba(255, 255, 255, 0.9)',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {getDepthLabel(view)}
+                  </Typography>
+                </Box>
               )}
-            </View>
-          </Item>
-        ))}
-      </TabPanels>
-    </Tabs>
+              <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+                <Canvas2DView
+                  viewType={view}
+                  project={project}
+                  activeLayers={activeLayers}
+                  width={canvasSize.width}
+                  height={canvasSize.height}
+                  selectedBlockId={selectedBlockId}
+                  isPlacementMode={isPlacementMode}
+                  onBlockPlaced={handleBlockPlaced}
+                  onBlockRemoved={handleBlockRemoved}
+                />
+              </div>
+            </>
+          )}
+        </TabPanel>
+      ))}
+    </TabContext>
   );
 }

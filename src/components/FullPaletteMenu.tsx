@@ -1,23 +1,25 @@
 import React from 'react';
 import {
-  DialogTrigger,
   Dialog,
-  Heading,
+  DialogTitle,
+  DialogContent,
   Divider,
-  Content,
-  SearchField,
-  Grid,
-  ActionButton,
-  ColorSwatch,
-  View,
-  Flex,
-  Text,
-} from '@adobe/react-spectrum';
-import Apps from '@spectrum-icons/workflow/Apps';
+  TextField,
+  IconButton,
+  Button,
+  Box,
+  Stack,
+  Typography,
+  InputAdornment,
+} from '@mui/material';
+import { Apps, Search } from '@mui/icons-material';
+import { DialogTrigger } from './DialogTrigger';
+import { ColorSwatch } from './ColorSwatch';
 import type { Block } from '../types';
 
 interface FullPaletteMenuProps {
   blocks: Block[];
+  selectedBlockId: string | null;
   onSelectBlock: (blockId: string) => void;
 }
 
@@ -31,16 +33,22 @@ interface FullPaletteMenuProps {
  * - Responsive grid layout
  * - Click block to select and close menu
  *
- * Uses React Spectrum DialogTrigger with type="popover" for non-blocking UI.
+ * Uses our custom DialogTrigger with type="popover" for non-blocking UI.
  */
 export function FullPaletteMenu({
   blocks,
+  selectedBlockId,
   onSelectBlock,
 }: FullPaletteMenuProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
+  // Find the selected block
+  const selectedBlock = selectedBlockId
+    ? blocks.find((block) => block.id === selectedBlockId)
+    : null;
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   };
 
   const handleBlockClick = (blockId: string, close: () => void) => {
@@ -67,34 +75,53 @@ export function FullPaletteMenu({
 
   return (
     <DialogTrigger type="popover">
-      <ActionButton aria-label="Open block palette">
-        <Apps />
-        <Text>All Blocks</Text>
-      </ActionButton>
+      {selectedBlock ? (
+        <IconButton aria-label={`Selected: ${selectedBlock.name}`}>
+          <ColorSwatch color={selectedBlock.color} size="L" />
+        </IconButton>
+      ) : (
+        <Button
+          variant="outlined"
+          startIcon={<Apps />}
+          aria-label="Open block palette"
+        >
+          All Blocks
+        </Button>
+      )}
       {(close) => (
-        <Dialog>
-          <Heading>Block Palette</Heading>
+        <Dialog open onClose={close} maxWidth="md" fullWidth>
+          <DialogTitle>Block Palette</DialogTitle>
           <Divider />
-          <Content>
-            <Flex
-              direction="column"
-              gap="size-200"
-              width={{ base: '90vw', M: 'size-6000' }}
-              height={{ base: '80vh', M: 'size-6000' }}
-              maxWidth="100%"
+          <DialogContent>
+            <Stack
+              spacing={2}
+              sx={{
+                height: '70vh',
+                minHeight: 400,
+              }}
             >
               {/* Search */}
-              <SearchField
-                label="Search blocks"
+              <TextField
+                placeholder="Search blocks"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                width="100%"
+                fullWidth
+                size="small"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
               />
 
               {/* Block Grid by Category */}
-              <View overflow="auto" flex={1}>
+              <Box sx={{ overflow: 'auto', flex: 1 }}>
                 {categories.length === 0 ? (
-                  <Text>No blocks found</Text>
+                  <Typography variant="body2">No blocks found</Typography>
                 ) : (
                   categories.map((category) => {
                     const categoryBlocks = getBlocksByCategory(category);
@@ -103,39 +130,64 @@ export function FullPaletteMenu({
                       const handleClick = () => handleBlockClick(block.id, close);
 
                       return (
-                        <ActionButton key={block.id} onPress={handleClick} isQuiet>
-                          <Flex direction="column" gap="size-50" alignItems="center">
-                            <ColorSwatch color={block.color} />
-                            <Text UNSAFE_style={{ fontSize: '11px', textAlign: 'center' }}>
-                              {block.name}
-                            </Text>
-                          </Flex>
-                        </ActionButton>
+                        <Box
+                          key={block.id}
+                          onClick={handleClick}
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            cursor: 'pointer',
+                            p: 1,
+                            borderRadius: 1,
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                            },
+                          }}
+                        >
+                          <ColorSwatch color={block.color} />
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: 11,
+                              textAlign: 'center',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%',
+                            }}
+                          >
+                            {block.name}
+                          </Typography>
+                        </Box>
                       );
                     };
 
                     return (
-                      <View key={category} marginBottom="size-300">
-                        <Heading level={4} marginBottom="size-100">
+                      <Box key={category} sx={{ mb: 3 }}>
+                        <Typography variant="h6" sx={{ mb: 1 }}>
                           {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </Heading>
-                        <Grid
-                          columns={{
-                            base: 'repeat(auto-fill, minmax(60px, 1fr))',
-                            M: 'repeat(auto-fill, minmax(80px, 1fr))',
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                              xs: 'repeat(4, 1fr)',
+                              sm: 'repeat(6, 1fr)',
+                              md: 'repeat(8, 1fr)',
+                            },
+                            gap: 1,
                           }}
-                          autoRows="auto"
-                          gap="size-100"
                         >
                           {categoryBlocks.map(renderBlock)}
-                        </Grid>
-                      </View>
+                        </Box>
+                      </Box>
                     );
                   })
                 )}
-              </View>
-            </Flex>
-          </Content>
+              </Box>
+            </Stack>
+          </DialogContent>
         </Dialog>
       )}
     </DialogTrigger>

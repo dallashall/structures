@@ -1,4 +1,4 @@
-import { View, Flex } from '@adobe/react-spectrum';
+import { Box } from '@mui/material';
 
 import type { ViewType } from '../types';
 
@@ -14,16 +14,19 @@ interface CanvasPlaceholderProps {
  */
 export function CanvasPlaceholder({ viewType }: CanvasPlaceholderProps) {
   return (
-    <View
-      backgroundColor="gray-50"
-      height="100%"
-      borderWidth="thin"
-      borderColor="gray-400"
-      borderRadius="medium"
+    <Box
+      sx={{
+        bgcolor: 'grey.50',
+        height: '100%',
+        border: 1,
+        borderColor: 'grey.400',
+        borderRadius: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <Flex height="100%" alignItems="center" justifyContent="center">
-        <p>{viewType.charAt(0).toUpperCase() + viewType.slice(1)} View Canvas (Placeholder)</p>
-      </Flex>
-    </View>
+      <p>{viewType.charAt(0).toUpperCase() + viewType.slice(1)} View Canvas (Placeholder)</p>
+    </Box>
   );
 }

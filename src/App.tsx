@@ -1,5 +1,5 @@
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { WelcomeView } from './views/WelcomeView';
 import { EditorView } from './views/EditorView';
 import { NewProjectDialog } from './components/NewProjectDialog';
@@ -7,6 +7,27 @@ import { ComponentPreview } from './preview/ComponentPreview';
 import { projectManager } from './core/ProjectManager';
 import { storageManager } from './core/StorageManager';
 import type { Dimensions } from './types';
+
+// Create MUI theme
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#0d6efd',
+    },
+    background: {
+      default: '#ffffff',
+      paper: '#f5f5f5',
+    },
+  },
+  spacing: 8, // 8px base unit
+  shape: {
+    borderRadius: 4,
+  },
+  typography: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+});
 
 type AppView = 'welcome' | 'editor';
 
@@ -71,14 +92,16 @@ export function App() {
   // Render preview mode if hash is #/preview
   if (isPreviewMode) {
     return (
-      <Provider theme={defaultTheme} colorScheme="light" height="100%">
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
         <ComponentPreview />
-      </Provider>
+      </ThemeProvider>
     );
   }
 
   return (
-    <Provider theme={defaultTheme} colorScheme="light" height="100%">
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
       {currentView === 'welcome' ? (
         <WelcomeView
           onNewProject={handleNewProject}
@@ -95,6 +118,6 @@ export function App() {
         onClose={handleCloseProjectDialog}
         onCreate={handleCreateProject}
       />
-    </Provider>
+    </ThemeProvider>
   );
 }

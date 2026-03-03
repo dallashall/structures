@@ -1,7 +1,7 @@
 import { projectManager } from './ProjectManager';
 import { blockRegistry } from './BlockRegistry';
 import { editorStateManager } from './EditorStateManager';
-import type { ViewType, Vector3D, Dimensions } from '../types';
+import type { ViewType, Vector3D, Dimensions, Direction } from '../types';
 
 /**
  * Canvas2DController - Pure TypeScript canvas controller
@@ -9,6 +9,9 @@ import type { ViewType, Vector3D, Dimensions } from '../types';
  * Handles all rendering, zoom/pan, and user interactions for 2D canvas.
  * No React - just DOM and singletons.
  */
+// Global registry of active controllers for meta block confirmation
+const activeControllers = new Set<Canvas2DController>();
+
 export class Canvas2DController {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -25,6 +28,7 @@ export class Canvas2DController {
   private lastPaintedCell: string | null = null;
   private spacebarHeld = false;
   private lastZoomTime = 0;
+  private isPlacementMode = false;
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
@@ -49,6 +53,9 @@ export class Canvas2DController {
     }
     this.ctx = ctx;
 
+    // Register this controller globally
+    activeControllers.add(this);
+
     // Initialize pan to center grid
     this.initializePan();
 
@@ -57,6 +64,7 @@ export class Canvas2DController {
     projectManager.on('block:added', this.boundHandlers.projectChanged);
     projectManager.on('block:removed', this.boundHandlers.projectChanged);
     editorStateManager.on('block:selected', this.boundHandlers.editorChanged);
+    editorStateManager.on('layer:changed', this.boundHandlers.editorChanged);
 
     // Add DOM event listeners
     this.canvas.addEventListener('wheel', this.boundHandlers.wheel, { passive: false });
@@ -72,11 +80,15 @@ export class Canvas2DController {
   }
 
   destroy(): void {
+    // Unregister this controller
+    activeControllers.delete(this);
+
     // Unsubscribe from singleton events
     projectManager.off('project:changed', this.boundHandlers.projectChanged);
     projectManager.off('block:added', this.boundHandlers.projectChanged);
     projectManager.off('block:removed', this.boundHandlers.projectChanged);
     editorStateManager.off('block:selected', this.boundHandlers.editorChanged);
+    editorStateManager.off('layer:changed', this.boundHandlers.editorChanged);
 
     // Remove DOM event listeners
     this.canvas.removeEventListener('wheel', this.boundHandlers.wheel);
@@ -92,6 +104,24 @@ export class Canvas2DController {
     this.viewType = viewType;
     this.initializePan();
     this.render();
+  }
+
+  setPlacementMode(isPlacementMode: boolean): void {
+    this.isPlacementMode = isPlacementMode;
+    this.updateCursor();
+    this.render();
+  }
+
+  static confirmAllPlacements(): void {
+    // Mark the meta block as confirmed
+    projectManager.confirmMetaBlock();
+
+    // Update all controllers - exit placement mode
+    activeControllers.forEach((controller) => {
+      controller.isPlacementMode = false;
+      controller.updateCursor();
+      controller.render();
+    });
   }
 
   resize(width: number, height: number): void {
@@ -115,16 +145,21 @@ export class Canvas2DController {
   }
 
   private getGridDimensions(dimensions: Dimensions): { gridWidth: number; gridHeight: number } {
+    // Z-up coordinate system:
+    // X = East/West (width), Y = North/South (height), Z = Up/Down (depth)
     switch (this.viewType) {
       case 'front':
       case 'back':
-        return { gridWidth: dimensions.width, gridHeight: dimensions.height };
+        // Looking North/South: see X (width) and Z (depth for up/down)
+        return { gridWidth: dimensions.width, gridHeight: dimensions.depth };
       case 'left':
       case 'right':
-        return { gridWidth: dimensions.depth, gridHeight: dimensions.height };
+        // Looking East/West: see Y (height for north/south) and Z (depth for up/down)
+        return { gridWidth: dimensions.height, gridHeight: dimensions.depth };
       case 'top':
       case 'bottom':
-        return { gridWidth: dimensions.width, gridHeight: dimensions.depth };
+        // Looking Down/Up: see X (width) and Y (height for north/south)
+        return { gridWidth: dimensions.width, gridHeight: dimensions.height };
       default:
         return { gridWidth: 16, gridHeight: 16 };
     }
@@ -180,8 +215,12 @@ export class Canvas2DController {
         return;
       }
 
-      // Check if on active layer
-      const isOnActiveLayer = this.isBlockOnActiveLayer(blockData.position, activeLayers);
+      // Calculate layer distance and opacity
+      const distance = this.getLayerDistance(blockData.position, activeLayers);
+      const opacity = this.getOpacityForDistance(distance);
+
+      // Don't render if 3+ layers away
+      if (opacity === 0.0) return;
 
       // Get block color
       const block = blockRegistry.getBlock(blockData.blockType);
@@ -192,7 +231,7 @@ export class Canvas2DController {
       const py = offsetY + gridY * cellSize;
 
       this.ctx.fillStyle = block.color;
-      this.ctx.globalAlpha = isOnActiveLayer ? 1.0 : 0.3;
+      this.ctx.globalAlpha = opacity;
       this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       this.ctx.globalAlpha = 1.0;
     });
@@ -200,63 +239,340 @@ export class Canvas2DController {
     // Draw meta block
     const metaBlock = project.metaBlock;
     if (metaBlock) {
-      const { gridX, gridY } = this.projectToGrid(metaBlock.position, activeLayers);
+      const distance = this.getLayerDistance(metaBlock.position, activeLayers);
+      const opacity = this.getOpacityForDistance(distance);
 
-      if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
-        const px = offsetX + gridX * cellSize;
-        const py = offsetY + gridY * cellSize;
+      // Don't render if 3+ layers away
+      if (opacity > 0.0) {
+        const { gridX, gridY } = this.projectToGrid(metaBlock.position, activeLayers);
 
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+          const px = offsetX + gridX * cellSize;
+          const py = offsetY + gridY * cellSize;
+          const centerX = px + cellSize / 2;
+          const centerY = py + cellSize / 2;
 
-        // Draw "M" label
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = `${Math.min(cellSize * 0.5, 16)}px sans-serif`;
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('M', px + cellSize / 2, py + cellSize / 2);
+          // Determine rendering style based on confirmation status
+          const isConfirmed = metaBlock.isConfirmed;
+          const strokeColor = isConfirmed ? '#000000' : '#4CAF50'; // Black = confirmed, Green = unconfirmed
+          const strokeWidth = isConfirmed ? 2 : 3;
+          const fillOpacity = isConfirmed ? opacity : opacity * 0.7;
+
+          // Draw white background
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.globalAlpha = fillOpacity;
+          this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+          // Draw border
+          this.ctx.strokeStyle = strokeColor;
+          this.ctx.lineWidth = strokeWidth;
+          this.ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+          // Draw directional arrow
+          this.ctx.strokeStyle = strokeColor;
+          this.ctx.fillStyle = strokeColor;
+          this.drawMetaBlockArrow(centerX, centerY, cellSize, metaBlock.direction);
+          this.ctx.globalAlpha = 1.0;
+        }
       }
     }
+  }
+
+  private drawMetaBlockArrow(
+    centerX: number,
+    centerY: number,
+    cellSize: number,
+    direction: Direction
+  ): void {
+    const arrowSize = Math.min(cellSize * 0.6, 20);
+    this.ctx.strokeStyle = '#000000';
+    this.ctx.fillStyle = '#000000';
+    this.ctx.lineWidth = 2;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    // Determine what to draw based on view type and meta block direction
+    const isFacingCamera = this.isMetaBlockFacingCamera(direction);
+    const isFacingAway = this.isMetaBlockFacingAway(direction);
+
+    if (isFacingCamera) {
+      // Front view: Draw turnaround arrow (circular arrow)
+      this.drawTurnaroundArrow(centerX, centerY, arrowSize);
+    } else if (isFacingAway) {
+      // Back view: Draw arrows pointing inward
+      this.drawInwardArrows(centerX, centerY, arrowSize);
+    } else {
+      // Side/top/bottom views: Draw arrow pointing toward front
+      this.drawDirectionalArrow(centerX, centerY, arrowSize, direction);
+    }
+  }
+
+  private isMetaBlockFacingCamera(direction: Direction): boolean {
+    // Z-up coordinate system: X=East/West, Y=North/South, Z=Up/Down
+    // When the meta block faces toward the camera, we see its front (turnaround arrow)
+    switch (this.viewType) {
+      case 'front':
+        // Looking North (+Y): meta block faces us if it faces South (-Y)
+        return direction === 'south';
+      case 'back':
+        // Looking South (-Y): meta block faces us if it faces North (+Y)
+        return direction === 'north';
+      case 'left':
+        // Looking East (+X): meta block faces us if it faces West (-X)
+        return direction === 'west';
+      case 'right':
+        // Looking West (-X): meta block faces us if it faces East (+X)
+        return direction === 'east';
+      default:
+        return false;
+    }
+  }
+
+  private isMetaBlockFacingAway(direction: Direction): boolean {
+    // When the meta block faces away from the camera, we see its back (inward arrows)
+    switch (this.viewType) {
+      case 'front':
+        // Looking North (+Y): meta block faces away if it faces North (+Y)
+        return direction === 'north';
+      case 'back':
+        // Looking South (-Y): meta block faces away if it faces South (-Y)
+        return direction === 'south';
+      case 'left':
+        // Looking East (+X): meta block faces away if it faces East (+X)
+        return direction === 'east';
+      case 'right':
+        // Looking West (-X): meta block faces away if it faces West (-X)
+        return direction === 'west';
+      default:
+        return false;
+    }
+  }
+
+  private drawTurnaroundArrow(centerX: number, centerY: number, size: number): void {
+    const radius = size * 0.35;
+
+    // Draw circular arc (270 degrees)
+    this.ctx.beginPath();
+    this.ctx.arc(centerX, centerY, radius, -Math.PI * 0.75, Math.PI * 0.75, false);
+    this.ctx.stroke();
+
+    // Draw arrowhead at the end
+    const endAngle = Math.PI * 0.75;
+    const arrowX = centerX + Math.cos(endAngle) * radius;
+    const arrowY = centerY + Math.sin(endAngle) * radius;
+    const arrowLen = size * 0.2;
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(arrowX, arrowY);
+    this.ctx.lineTo(
+      arrowX - arrowLen * Math.cos(endAngle - Math.PI * 0.3),
+      arrowY - arrowLen * Math.sin(endAngle - Math.PI * 0.3)
+    );
+    this.ctx.moveTo(arrowX, arrowY);
+    this.ctx.lineTo(
+      arrowX - arrowLen * Math.cos(endAngle + Math.PI * 0.3),
+      arrowY - arrowLen * Math.sin(endAngle + Math.PI * 0.3)
+    );
+    this.ctx.stroke();
+  }
+
+  private drawInwardArrows(centerX: number, centerY: number, size: number): void {
+    const arrowLen = size * 0.4;
+    const arrowHeadLen = size * 0.15;
+    const offset = size * 0.15;
+
+    // Draw four arrows pointing inward from edges
+    const arrows = [
+      { x: centerX, y: centerY - offset, dx: 0, dy: arrowLen }, // Top
+      { x: centerX, y: centerY + offset, dx: 0, dy: -arrowLen }, // Bottom
+      { x: centerX - offset, y: centerY, dx: arrowLen, dy: 0 }, // Left
+      { x: centerX + offset, y: centerY, dx: -arrowLen, dy: 0 }, // Right
+    ];
+
+    arrows.forEach((arrow) => {
+      const endX = arrow.x + arrow.dx;
+      const endY = arrow.y + arrow.dy;
+
+      // Draw arrow line
+      this.ctx.beginPath();
+      this.ctx.moveTo(arrow.x, arrow.y);
+      this.ctx.lineTo(endX, endY);
+      this.ctx.stroke();
+
+      // Draw arrowhead
+      const angle = Math.atan2(arrow.dy, arrow.dx);
+      this.ctx.beginPath();
+      this.ctx.moveTo(endX, endY);
+      this.ctx.lineTo(
+        endX - arrowHeadLen * Math.cos(angle - Math.PI / 6),
+        endY - arrowHeadLen * Math.sin(angle - Math.PI / 6)
+      );
+      this.ctx.moveTo(endX, endY);
+      this.ctx.lineTo(
+        endX - arrowHeadLen * Math.cos(angle + Math.PI / 6),
+        endY - arrowHeadLen * Math.sin(angle + Math.PI / 6)
+      );
+      this.ctx.stroke();
+    });
+  }
+
+  private drawDirectionalArrow(
+    centerX: number,
+    centerY: number,
+    size: number,
+    direction: Direction
+  ): void {
+    // Calculate arrow direction based on meta block facing and current view
+    const { dx, dy } = this.getArrowDirection(direction);
+
+    const arrowLen = size * 0.5;
+    const arrowHeadLen = size * 0.2;
+
+    const startX = centerX - (dx * arrowLen) / 2;
+    const startY = centerY - (dy * arrowLen) / 2;
+    const endX = centerX + (dx * arrowLen) / 2;
+    const endY = centerY + (dy * arrowLen) / 2;
+
+    // Draw arrow line
+    this.ctx.beginPath();
+    this.ctx.moveTo(startX, startY);
+    this.ctx.lineTo(endX, endY);
+    this.ctx.stroke();
+
+    // Draw arrowhead
+    const angle = Math.atan2(dy, dx);
+    this.ctx.beginPath();
+    this.ctx.moveTo(endX, endY);
+    this.ctx.lineTo(
+      endX - arrowHeadLen * Math.cos(angle - Math.PI / 6),
+      endY - arrowHeadLen * Math.sin(angle - Math.PI / 6)
+    );
+    this.ctx.moveTo(endX, endY);
+    this.ctx.lineTo(
+      endX - arrowHeadLen * Math.cos(angle + Math.PI / 6),
+      endY - arrowHeadLen * Math.sin(angle + Math.PI / 6)
+    );
+    this.ctx.stroke();
+  }
+
+  private getArrowDirection(direction: Direction): { dx: number; dy: number } {
+    // Z-up coordinate system: X=East/West, Y=North/South, Z=Up/Down
+    // Screen coordinates: +dx is right, +dy is down
+
+    switch (this.viewType) {
+      case 'front':
+        // Looking North (+Y), camera at -Y
+        // Horizontal = X (East/West), Vertical = Z (Up/Down)
+        if (direction === 'north') return { dx: 0, dy: 0 };  // Into screen
+        if (direction === 'south') return { dx: 0, dy: 0 };  // Out of screen
+        if (direction === 'east') return { dx: 1, dy: 0 };   // Right (+X)
+        if (direction === 'west') return { dx: -1, dy: 0 };  // Left (-X)
+        break;
+      case 'back':
+        // Looking South (-Y), camera at +Y
+        // Horizontal = X (East/West, mirrored), Vertical = Z (Up/Down)
+        if (direction === 'north') return { dx: 0, dy: 0 };  // Out of screen
+        if (direction === 'south') return { dx: 0, dy: 0 };  // Into screen
+        if (direction === 'east') return { dx: -1, dy: 0 };  // Left (mirrored)
+        if (direction === 'west') return { dx: 1, dy: 0 };   // Right (mirrored)
+        break;
+      case 'left':
+        // Looking East (+X), camera at -X
+        // Horizontal = Y (North/South), Vertical = Z (Up/Down)
+        if (direction === 'north') return { dx: 1, dy: 0 };  // Right (+Y)
+        if (direction === 'south') return { dx: -1, dy: 0 }; // Left (-Y)
+        if (direction === 'east') return { dx: 0, dy: 0 };   // Into screen
+        if (direction === 'west') return { dx: 0, dy: 0 };   // Out of screen
+        break;
+      case 'right':
+        // Looking West (-X), camera at +X
+        // Horizontal = Y (North/South, mirrored), Vertical = Z (Up/Down)
+        if (direction === 'north') return { dx: -1, dy: 0 }; // Left (mirrored)
+        if (direction === 'south') return { dx: 1, dy: 0 };  // Right (mirrored)
+        if (direction === 'east') return { dx: 0, dy: 0 };   // Out of screen
+        if (direction === 'west') return { dx: 0, dy: 0 };   // Into screen
+        break;
+      case 'top':
+        // Looking Down (-Z), camera at +Z
+        // Horizontal = X (East/West), Vertical = Y (North/South)
+        if (direction === 'north') return { dx: 0, dy: -1 }; // Up (-Y on screen)
+        if (direction === 'south') return { dx: 0, dy: 1 };  // Down (+Y on screen)
+        if (direction === 'east') return { dx: 1, dy: 0 };   // Right (+X)
+        if (direction === 'west') return { dx: -1, dy: 0 };  // Left (-X)
+        break;
+      case 'bottom':
+        // Looking Up (+Z), camera at -Z
+        // Horizontal = X (East/West), Vertical = Y (North/South, mirrored)
+        if (direction === 'north') return { dx: 0, dy: 1 };  // Down (mirrored)
+        if (direction === 'south') return { dx: 0, dy: -1 }; // Up (mirrored)
+        if (direction === 'east') return { dx: 1, dy: 0 };   // Right (+X)
+        if (direction === 'west') return { dx: -1, dy: 0 };  // Left (-X)
+        break;
+    }
+    return { dx: 0, dy: 0 };
   }
 
   private projectToGrid(
     position: Vector3D,
     _activeLayers: { x: number; y: number; z: number }
   ): { gridX: number; gridY: number } {
+    const project = projectManager.getProject();
+    if (!project) return { gridX: 0, gridY: 0 };
+
+    // Z-up coordinate system: X=East/West, Y=North/South, Z=Up/Down
+    // Canvas: Y=0 is top, increases downward
+    // We want: visual bottom = coordinate 0
     switch (this.viewType) {
       case 'front':
       case 'back':
-        return { gridX: position.x, gridY: position.y };
+        // Looking North/South: see X and Z (vertical)
+        // Invert Z: Z=0 (down) should appear at bottom of screen
+        return { gridX: position.x, gridY: project.dimensions.depth - 1 - position.z };
       case 'left':
       case 'right':
-        return { gridX: position.z, gridY: position.y };
+        // Looking East/West: see Y (horizontal) and Z (vertical)
+        // Invert Z: Z=0 (down) should appear at bottom of screen
+        return { gridX: position.y, gridY: project.dimensions.depth - 1 - position.z };
       case 'top':
       case 'bottom':
-        return { gridX: position.x, gridY: position.z };
+        // Looking Down/Up: see X and Y
+        // Invert Y: Y=0 (south) should appear at bottom of screen
+        return { gridX: position.x, gridY: project.dimensions.height - 1 - position.y };
       default:
         return { gridX: 0, gridY: 0 };
     }
   }
 
-  private isBlockOnActiveLayer(
+  private getLayerDistance(
     position: Vector3D,
     activeLayers: { x: number; y: number; z: number }
-  ): boolean {
+  ): number {
+    // Z-up coordinate system: X=East/West, Y=North/South, Z=Up/Down
+    // Return absolute distance from active layer
     switch (this.viewType) {
       case 'front':
       case 'back':
-        return position.z === activeLayers.z;
+        // Looking North/South: hidden axis is Y
+        return Math.abs(position.y - activeLayers.y);
       case 'left':
       case 'right':
-        return position.x === activeLayers.x;
+        // Looking East/West: hidden axis is X
+        return Math.abs(position.x - activeLayers.x);
       case 'top':
       case 'bottom':
-        return position.y === activeLayers.y;
+        // Looking Down/Up: hidden axis is Z
+        return Math.abs(position.z - activeLayers.z);
       default:
-        return false;
+        return 0;
     }
+  }
+
+  private getOpacityForDistance(distance: number): number {
+    // Graduated dimming based on layer distance
+    if (distance === 0) return 1.0;  // On active layer
+    if (distance === 1) return 0.3;  // 1 layer away
+    if (distance === 2) return 0.1;  // 2 layers away
+    return 0.0;                       // 3+ layers away (don't render)
   }
 
   private pixelToGrid(pixelX: number, pixelY: number): { gridX: number; gridY: number } | null {
@@ -279,20 +595,49 @@ export class Canvas2DController {
 
   private gridToPosition(gridX: number, gridY: number): Vector3D {
     const activeLayers = editorStateManager.getActiveLayers();
+    const project = projectManager.getProject();
+    if (!project) return { x: 0, y: 0, z: 0 };
 
+    // Z-up coordinate system: X=East/West, Y=North/South, Z=Up/Down
     switch (this.viewType) {
       case 'front':
       case 'back':
-        return { x: gridX, y: gridY, z: activeLayers.z };
+        // Looking North/South: gridX=X, gridY=Z (inverted)
+        return { x: gridX, y: activeLayers.y, z: project.dimensions.depth - 1 - gridY };
       case 'left':
       case 'right':
-        return { x: activeLayers.x, y: gridY, z: gridX };
+        // Looking East/West: gridX=Y, gridY=Z (inverted)
+        return { x: activeLayers.x, y: gridX, z: project.dimensions.depth - 1 - gridY };
       case 'top':
       case 'bottom':
-        return { x: gridX, y: activeLayers.y, z: gridY };
+        // Looking Down/Up: gridX=X, gridY=Y (inverted)
+        return { x: gridX, y: project.dimensions.height - 1 - gridY, z: activeLayers.z };
       default:
         return { x: 0, y: 0, z: 0 };
     }
+  }
+
+  private placeMetaBlockAtPixel(pixelX: number, pixelY: number): void {
+    const project = projectManager.getProject();
+    if (!project) return;
+
+    const gridCoords = this.pixelToGrid(pixelX, pixelY);
+    if (!gridCoords) return;
+
+    const { gridX, gridY } = gridCoords;
+    const position = this.gridToPosition(gridX, gridY);
+
+    // Validate position
+    if (
+      position.x < 0 || position.x >= project.dimensions.width ||
+      position.y < 0 || position.y >= project.dimensions.height ||
+      position.z < 0 || position.z >= project.dimensions.depth
+    ) {
+      return;
+    }
+
+    // Update meta block position (not confirmed yet, can still be moved)
+    projectManager.setMetaBlock(position);
   }
 
   private paintAtPixel(pixelX: number, pixelY: number): void {
@@ -389,6 +734,12 @@ export class Canvas2DController {
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
 
+    // Meta block placement mode: left click to place meta block
+    if (this.isPlacementMode && event.button === 0) {
+      this.placeMetaBlockAtPixel(pixelX, pixelY);
+      return;
+    }
+
     // Pan mode: spacebar + left, middle mouse, or shift+left
     if (
       (event.button === 0 && this.spacebarHeld) ||
@@ -469,6 +820,8 @@ export class Canvas2DController {
       this.canvas.style.cursor = 'grabbing';
     } else if (this.spacebarHeld) {
       this.canvas.style.cursor = 'grab';
+    } else if (this.isPlacementMode) {
+      this.canvas.style.cursor = 'pointer';
     } else {
       this.canvas.style.cursor = 'crosshair';
     }

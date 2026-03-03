@@ -1,24 +1,24 @@
 import { useState } from 'react';
-import { View, Heading, Content } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { TabbedLayout } from '../../layouts/TabbedLayout';
 import { mockProject } from '../mockData';
 import type { ViewType } from '../../types';
 
 export function TabbedLayoutPreview() {
   const [activeView, setActiveView] = useState<ViewType>('front');
-  
+
   const handleViewChange = (key: React.Key) => {
     setActiveView(key as ViewType);
   };
 
   return (
-    <View>
-      <Heading level={1}>TabbedLayout</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">TabbedLayout</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Single-panel tabbed layout with view selector tabs.
-      </Content>
+      </Typography>
 
-      <View marginTop="size-600" height="600px" borderWidth="thin">
+      <Box sx={{ mt: 6, height: '600px', border: 1, borderColor: 'grey.300' }}>
         <TabbedLayout
           activeView={activeView}
           onViewChange={handleViewChange}
@@ -27,7 +27,7 @@ export function TabbedLayoutPreview() {
           isPlacementMode={false}
           selectedBlockId="stone"
         />
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 }

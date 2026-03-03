@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Flex } from '@adobe/react-spectrum';
+import { Box, Stack, IconButton, Paper, Tab, Button, Typography } from '@mui/material';
+import { TabList, TabContext } from '@mui/lab';
+import { Apps, Check } from '@mui/icons-material';
 
 import type { ViewType, LayoutMode } from '../types';
 
@@ -19,6 +21,7 @@ import { QuadLayout } from '../layouts/QuadLayout';
 import { projectManager } from '../core/ProjectManager';
 import { editorStateManager } from '../core/EditorStateManager';
 import { storageManager } from '../core/StorageManager';
+import { Canvas2DController } from '../core/Canvas2DController';
 
 /**
  * EditorView - Main editor container
@@ -51,10 +54,11 @@ function EditorViewComponent(props: EditorViewProps) {
 
   const [showMetaBlockModal, setShowMetaBlockModal] = React.useState(false);
   const [isPlacementMode, setIsPlacementMode] = React.useState(false);
+  const [isActionBarExpanded, setIsActionBarExpanded] = React.useState(true);
 
-  // Check if meta block has been placed
+  // Check if meta block has been confirmed
   React.useEffect(() => {
-    if (project && !projectManager.isMetaBlockPlaced()) {
+    if (project && !projectManager.isMetaBlockConfirmed()) {
       setShowMetaBlockModal(true);
     }
   }, [project]);
@@ -77,7 +81,7 @@ function EditorViewComponent(props: EditorViewProps) {
     };
   }, []);
 
-  // Keyboard shortcuts for layer navigation
+  // Keyboard shortcuts for layer navigation and meta block confirmation
   React.useEffect(() => {
     if (!project) {
       return;
@@ -86,6 +90,13 @@ function EditorViewComponent(props: EditorViewProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       const { shiftKey } = event;
+
+      // Confirm meta block placement with Enter
+      if (isPlacementMode && key === 'enter') {
+        event.preventDefault();
+        handleConfirmMetaBlockPlacement();
+        return;
+      }
 
       if (key === 'x') {
         event.preventDefault();
@@ -115,7 +126,7 @@ function EditorViewComponent(props: EditorViewProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [project]);
+  }, [project, isPlacementMode]);
 
   // Auto-save on project changes
   React.useEffect(() => {
@@ -157,23 +168,38 @@ function EditorViewComponent(props: EditorViewProps) {
     }
   };
 
+  const handleAssignSlot = (index: number) => {
+    if (selectedBlock) {
+      editorStateManager.setQuickSelectSlot(index, selectedBlock);
+    }
+  };
+
   const handleViewChange = (key: React.Key) => {
     editorStateManager.setActiveView(key as ViewType);
   };
 
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+    handleViewChange(newValue);
+  };
+
+  const handleConfirmMetaBlockPlacement = () => {
+    Canvas2DController.confirmAllPlacements();
+    setIsPlacementMode(false);
+  };
+
   if (!project) {
     return (
-      <View padding="size-400">
+      <Box sx={{ p: 4 }}>
         <p>No project loaded</p>
-      </View>
+      </Box>
     );
-  }
+  };
 
   const selectedSlotIndex = quickSelectSlots.findIndex((id) => id === selectedBlock);
 
   return (
-    <View height="100%" overflow="hidden">
-      <Flex direction="column" height="100%">
+    <Box sx={{ height: '100%', overflow: 'hidden' }}>
+      <Stack direction="column" sx={{ height: '100%' }}>
         {/* Toolbar */}
         <Toolbar
           projectName={project.name}
@@ -184,67 +210,282 @@ function EditorViewComponent(props: EditorViewProps) {
           onLayoutModeChange={handleLayoutModeChange}
         />
 
-        {/* Layer Controls */}
-        <View padding="size-200">
-          <Flex direction="row" justifyContent="end">
-            <LayerControls
-              maxDimensions={project.dimensions}
-              activeLayers={activeLayers}
-              onLayerChange={handleLayerChange}
-            />
-          </Flex>
-        </View>
-
-        {/* Main Canvas Area */}
-        <View flex={1} overflow="hidden">
+        {/* Main Canvas Area with ActionBar */}
+        <Box sx={{ flex: 1, overflow: 'hidden', height: '100%', minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {layoutMode === 'tabbed' ? (
-            <TabbedLayout
-              activeView={activeView}
-              onViewChange={handleViewChange}
-              project={project}
-              activeLayers={activeLayers}
-              isPlacementMode={isPlacementMode}
-              selectedBlockId={selectedBlock}
-            />
-          ) : (
-            <QuadLayout
-              project={project}
-              activeLayers={activeLayers}
-              isPlacementMode={isPlacementMode}
-              selectedBlockId={selectedBlock}
-            />
-          )}
-        </View>
+            <TabContext value={activeView}>
+              {/* Layer Controls / Tab Bar */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  {/* Tabs */}
+                  <Box sx={{ flex: 1 }}>
+                    <TabList onChange={handleTabChange} aria-label="View tabs">
+                      <Tab label="Front" value="front" />
+                      <Tab label="Back" value="back" />
+                      <Tab label="Left" value="left" />
+                      <Tab label="Right" value="right" />
+                      <Tab label="Top" value="top" />
+                      <Tab label="Bottom" value="bottom" />
+                      <Tab label="3D Preview" value="3d" />
+                    </TabList>
+                  </Box>
 
-        {/* Bottom Actionbar */}
-        <View padding="size-200" borderTopWidth="thick">
-          <Flex
-            direction={{ base: 'column', M: 'row' }}
-            gap="size-200"
-            justifyContent="center"
-            alignItems="center"
-            wrap
-          >
-            <QuickSelectPalette
-              slots={quickSelectSlots}
-              selectedSlotIndex={selectedSlotIndex}
-              blocks={blocks}
-              onSelectSlot={handleQuickSelectSlot}
-            />
-            <FullPaletteMenu
-              blocks={blocks}
-              onSelectBlock={(blockId: string) => editorStateManager.setSelectedBlock(blockId)}
-            />
-          </Flex>
-        </View>
-      </Flex>
+                  {/* Layer Controls */}
+                  <Box>
+                    <LayerControls
+                      maxDimensions={project.dimensions}
+                      activeLayers={activeLayers}
+                      onLayerChange={handleLayerChange}
+                    />
+                  </Box>
+                </Stack>
+              </Box>
+
+              {/* Canvas Layout */}
+              <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
+                <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                  <TabbedLayout
+                    activeView={activeView}
+                    onViewChange={handleViewChange}
+                    project={project}
+                    activeLayers={activeLayers}
+                    isPlacementMode={isPlacementMode}
+                    selectedBlockId={selectedBlock}
+                  />
+                </Box>
+
+                {/* Meta Block Placement Confirmation UI */}
+                {isPlacementMode && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 24,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 100,
+                    }}
+                  >
+                    <Paper elevation={8} sx={{ p: 2 }}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Typography variant="body2">
+                          Click to place meta block, then confirm
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          startIcon={<Check />}
+                          size="small"
+                          onClick={handleConfirmMetaBlockPlacement}
+                        >
+                          Confirm (Enter)
+                        </Button>
+                      </Stack>
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Expand Button (shown when ActionBar is hidden) */}
+                {!isActionBarExpanded && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      right: 16,
+                      transform: 'translateY(-50%)',
+                      zIndex: 101,
+                    }}
+                  >
+                    <Paper elevation={4}>
+                      <IconButton
+                        onClick={() => setIsActionBarExpanded(true)}
+                        aria-label="Show palette"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                        }}
+                      >
+                        <Apps />
+                      </IconButton>
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Right Sidebar Action Bar */}
+                {isActionBarExpanded && (
+                  <Paper
+                    elevation={8}
+                    sx={{
+                      width: 'auto',
+                      minWidth: 80,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderLeft: 1,
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <Stack direction="column" spacing={2} sx={{ p: 2, flex: 1 }}>
+                      <QuickSelectPalette
+                        slots={quickSelectSlots}
+                        selectedSlotIndex={selectedSlotIndex}
+                        blocks={blocks}
+                        onSelectSlot={handleQuickSelectSlot}
+                        onAssignSlot={handleAssignSlot}
+                        orientation="vertical"
+                      />
+                      <FullPaletteMenu
+                        blocks={blocks}
+                        selectedBlockId={selectedBlock}
+                        onSelectBlock={(blockId: string) => editorStateManager.setSelectedBlock(blockId)}
+                      />
+                    </Stack>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', p: 1, display: 'flex', justifyContent: 'center' }}>
+                      <IconButton
+                        onClick={() => setIsActionBarExpanded(false)}
+                        size="small"
+                        aria-label="Hide palette"
+                      >
+                        <Apps />
+                      </IconButton>
+                    </Box>
+                  </Paper>
+                )}
+              </Box>
+            </TabContext>
+          ) : (
+            <>
+              {/* Layer Controls / Tab Bar */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>
+                <Stack direction="row" justifyContent="flex-end" alignItems="center">
+                  {/* Layer Controls */}
+                  <LayerControls
+                    maxDimensions={project.dimensions}
+                    activeLayers={activeLayers}
+                    onLayerChange={handleLayerChange}
+                  />
+                </Stack>
+              </Box>
+
+              {/* Canvas Layout */}
+              <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
+                <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                  <QuadLayout
+                    project={project}
+                    activeLayers={activeLayers}
+                    isPlacementMode={isPlacementMode}
+                    selectedBlockId={selectedBlock}
+                  />
+                </Box>
+
+                {/* Meta Block Placement Confirmation UI */}
+                {isPlacementMode && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 24,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 100,
+                    }}
+                  >
+                    <Paper elevation={8} sx={{ p: 2 }}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Typography variant="body2">
+                          Click to place meta block, then confirm
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          startIcon={<Check />}
+                          size="small"
+                          onClick={handleConfirmMetaBlockPlacement}
+                        >
+                          Confirm (Enter)
+                        </Button>
+                      </Stack>
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Expand Button (shown when ActionBar is hidden) */}
+                {!isActionBarExpanded && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      right: 16,
+                      transform: 'translateY(-50%)',
+                      zIndex: 101,
+                    }}
+                  >
+                    <Paper elevation={4}>
+                      <IconButton
+                        onClick={() => setIsActionBarExpanded(true)}
+                        aria-label="Show palette"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                        }}
+                      >
+                        <Apps />
+                      </IconButton>
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Right Sidebar Action Bar */}
+                {isActionBarExpanded && (
+                  <Paper
+                    elevation={8}
+                    sx={{
+                      width: 'auto',
+                      minWidth: 80,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderLeft: 1,
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <Stack direction="column" spacing={2} sx={{ p: 2, flex: 1 }}>
+                      <QuickSelectPalette
+                        slots={quickSelectSlots}
+                        selectedSlotIndex={selectedSlotIndex}
+                        blocks={blocks}
+                        onSelectSlot={handleQuickSelectSlot}
+                        onAssignSlot={handleAssignSlot}
+                        orientation="vertical"
+                      />
+                      <FullPaletteMenu
+                        blocks={blocks}
+                        selectedBlockId={selectedBlock}
+                        onSelectBlock={(blockId: string) => editorStateManager.setSelectedBlock(blockId)}
+                      />
+                    </Stack>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', p: 1, display: 'flex', justifyContent: 'center' }}>
+                      <IconButton
+                        onClick={() => setIsActionBarExpanded(false)}
+                        size="small"
+                        aria-label="Hide palette"
+                      >
+                        <Apps />
+                      </IconButton>
+                    </Box>
+                  </Paper>
+                )}
+              </Box>
+            </>
+          )}
+        </Box>
+
+      </Stack>
 
       {/* Meta Block Placement Modal */}
       <MetaBlockPlacementModal
         isOpen={showMetaBlockModal}
         onClose={handleMetaBlockModalClose}
       />
-    </View>
+    </Box>
   );
 }
 

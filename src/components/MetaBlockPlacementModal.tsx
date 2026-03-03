@@ -1,14 +1,13 @@
 import {
   Dialog,
-  DialogContainer,
-  Heading,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Divider,
-  Content,
-  ButtonGroup,
   Button,
-  Text,
-  View,
-} from '@adobe/react-spectrum';
+  Typography,
+  Box,
+} from '@mui/material';
 
 interface MetaBlockPlacementModalProps {
   isOpen: boolean;
@@ -26,7 +25,7 @@ interface MetaBlockPlacementModalProps {
  * - Placeholder for image/illustration (future enhancement)
  * - "Got it" button to close and enter placement mode
  *
- * Uses React Spectrum Dialog for consistent theming and accessibility.
+ * Uses MUI Dialog for consistent theming and accessibility.
  */
 export function MetaBlockPlacementModal({
   isOpen,
@@ -37,54 +36,60 @@ export function MetaBlockPlacementModal({
   };
 
   return (
-    <DialogContainer onDismiss={handleGotIt}>
-      {isOpen && (
-        <Dialog>
-          <Heading>Place the Meta Block</Heading>
-          <Divider />
-          <Content>
-            <View>
-              <Text>
-                The <strong>meta block</strong> is the origin point for your structure.
-                It represents the location where the structure will be activated
-                in-game.
-              </Text>
+    <Dialog open={isOpen} onClose={handleGotIt}>
+      <DialogTitle>Place the Meta Block</DialogTitle>
+      <Divider />
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body1">
+            The <strong>meta block</strong> is the origin point for your structure.
+            It represents the location where the structure will be activated
+            in-game.
+          </Typography>
 
-              <Text marginTop="size-150">
-                <strong>Key points:</strong>
-              </Text>
-              <ul>
-                <li>
+          <Box>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>Key points:</strong>
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, m: 0 }}>
+              <li>
+                <Typography variant="body2">
                   All other blocks are positioned relative to the meta block
-                </li>
-                <li>
-                  It has a directional arrow showing the "front" of your structure
-                </li>
-                <li>
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  It has a directional arrow showing the &quot;front&quot; of your structure
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
                   In-game, this represents either an activatable block or a player
                   holding an item
-                </li>
-                <li>
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
                   <strong>Note:</strong> Once placed, the meta block cannot be moved
-                </li>
-              </ul>
+                </Typography>
+              </li>
+            </Box>
+          </Box>
 
-              {/* Placeholder for image/illustration */}
-              {/* <Image src="/meta-block-illustration.png" alt="Meta block example" /> */}
+          {/* Placeholder for image/illustration */}
+          {/* <img src="/meta-block-illustration.png" alt="Meta block example" /> */}
 
-              <Text marginTop="size-150">
-                Click on any 2D view to place the meta block and begin building
-                your structure.
-              </Text>
-            </View>
-          </Content>
-          <ButtonGroup>
-            <Button variant="accent" onPress={handleGotIt} autoFocus>
-              Got it
-            </Button>
-          </ButtonGroup>
-        </Dialog>
-      )}
-    </DialogContainer>
+          <Typography variant="body1">
+            Click on any 2D view to place the meta block and begin building
+            your structure.
+          </Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="contained" onClick={handleGotIt} autoFocus>
+          Got it
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

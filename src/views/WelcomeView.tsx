@@ -1,23 +1,15 @@
 import React from 'react';
 import {
-  View,
-  Flex,
-  Heading,
+  Box,
+  Stack,
+  Typography,
   Button,
-  Text,
-  Grid,
-  Content,
-  Well,
   Divider,
-  ActionButton,
-  DialogTrigger,
-  AlertDialog,
-  Image,
-} from '@adobe/react-spectrum';
-import Add from '@spectrum-icons/workflow/Add';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
-import Delete from '@spectrum-icons/workflow/Delete';
+} from '@mui/material';
+import { Add, FolderOpen } from '@mui/icons-material';
 import { storageManager } from '../core/StorageManager';
+import { ProjectCard } from '../components/ProjectCard';
+import { ProjectMetadataPanel } from '../components/ProjectMetadataPanel';
 import type { ProjectMetadata } from '../types';
 
 interface WelcomeViewProps {
@@ -36,7 +28,7 @@ interface WelcomeViewProps {
  * - Select project to show metadata panel
  * - Open and delete actions for selected project
  *
- * Uses React Spectrum Grid and Well components for layout.
+ * Uses MUI Grid and Box components for layout.
  */
 export function WelcomeView({
   onNewProject,
@@ -87,45 +79,65 @@ export function WelcomeView({
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   return (
-    <View padding="size-400" height="100%" overflow="hidden">
-      <Flex direction="column" gap="size-300" height="100%">
+    <Box sx={{ p: 4, height: '100%', overflow: 'hidden' }}>
+      <Stack spacing={3} sx={{ height: '100%' }}>
         {/* Header */}
-        <View>
-          <Heading level={1}>Minecraft Magic Blueprint</Heading>
-          <Text>Design 3D Minecraft structures using a 2D pixel-art editor</Text>
-        </View>
+        <Box>
+          <Typography variant="h3" component="h1">
+            Minecraft Magic Blueprint
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Design 3D Minecraft structures using a 2D pixel-art editor
+          </Typography>
+        </Box>
 
-        <Divider size="M" />
+        <Divider />
 
         {/* Action Buttons */}
-        <Flex direction="row" gap="size-200">
-          <Button variant="accent" onPress={onNewProject}>
-            <Add />
-            <Text>New Project</Text>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="contained"
+            onClick={onNewProject}
+            startIcon={<Add />}
+          >
+            New Project
           </Button>
-          <Button variant="secondary" onPress={onLoadFromFile}>
-            <FolderOpen />
-            <Text>Load from File</Text>
+          <Button
+            variant="outlined"
+            onClick={onLoadFromFile}
+            startIcon={<FolderOpen />}
+          >
+            Load from File
           </Button>
-        </Flex>
+        </Stack>
 
         {/* Content Area */}
-        <Flex direction="row" gap="size-300" flex={1}>
+        <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
           {/* Project Grid */}
-          <View flex={2} overflow="auto">
+          <Box sx={{ flex: 2, overflow: 'auto' }}>
             {isLoading ? (
-              <Text>Loading projects...</Text>
+              <Typography variant="body1">Loading projects...</Typography>
             ) : projects.length === 0 ? (
-              <Well>
-                <Content>
-                  <Text>No projects yet. Create your first structure!</Text>
-                </Content>
-              </Well>
+              <Box
+                sx={{
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  p: 2,
+                  border: 1,
+                  borderColor: 'grey.300',
+                }}
+              >
+                <Typography variant="body1">
+                  No projects yet. Create your first structure!
+                </Typography>
+              </Box>
             ) : (
-              <Grid
-                columns={['1fr', '1fr', '1fr']}
-                autoRows="size-2400"
-                gap="size-200"
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: 2,
+                }}
               >
                 {projects.map((project) => {
                   const handleClick = () => handleProjectClick(project.id);
@@ -139,12 +151,12 @@ export function WelcomeView({
                     />
                   );
                 })}
-              </Grid>
+              </Box>
             )}
-          </View>
+          </Box>
 
           {/* Metadata Panel */}
-          <View flex={1}>
+          <Box sx={{ flex: 1 }}>
             {selectedProject ? (
               <ProjectMetadataPanel
                 project={selectedProject}
@@ -152,128 +164,23 @@ export function WelcomeView({
                 onDelete={handleDeleteProject}
               />
             ) : (
-              <Well>
-                <Content>
-                  <Text>Select a project to view details</Text>
-                </Content>
-              </Well>
+              <Box
+                sx={{
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  p: 2,
+                  border: 1,
+                  borderColor: 'grey.300',
+                }}
+              >
+                <Typography variant="body1">
+                  Select a project to view details
+                </Typography>
+              </Box>
             )}
-          </View>
-        </Flex>
-      </Flex>
-    </View>
-  );
-}
-
-/**
- * ProjectCard - Individual project card in grid
- */
-interface ProjectCardProps {
-  project: ProjectMetadata;
-  isSelected: boolean;
-  onClick: () => void;
-}
-
-function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) {
-  return (
-    <div onClick={onClick} style={{ cursor: 'pointer' }}>
-      <View
-        borderWidth={isSelected ? 'thick' : 'thin'}
-        borderColor={isSelected ? 'blue-500' : 'gray-300'}
-        borderRadius="medium"
-        padding="size-100"
-        backgroundColor="gray-50"
-      >
-        <Flex direction="column" gap="size-100">
-          {/* Thumbnail */}
-          <View backgroundColor="gray-200" height="size-2000" borderRadius="medium">
-            <Flex height="100%" alignItems="center" justifyContent="center">
-              {project.thumbnail ? (
-                <Image
-                  src={project.thumbnail}
-                  alt={project.name}
-                  objectFit="contain"
-                  width="100%"
-                  height="100%"
-                />
-              ) : (
-                <Text>No thumbnail</Text>
-              )}
-            </Flex>
-          </View>
-
-          {/* Project Name */}
-          <Heading level={4} marginTop="size-100">
-            {project.name}
-          </Heading>
-        </Flex>
-      </View>
-    </div>
-  );
-}
-
-/**
- * ProjectMetadataPanel - Shows detailed info for selected project
- */
-interface ProjectMetadataPanelProps {
-  project: ProjectMetadata;
-  onOpen: () => void;
-  onDelete: () => void;
-}
-
-function ProjectMetadataPanel({
-  project,
-  onOpen,
-  onDelete,
-}: ProjectMetadataPanelProps) {
-  return (
-    <Well>
-      <Flex direction="column" gap="size-200">
-        <Heading level={3}>{project.name}</Heading>
-
-        <Divider size="S" />
-
-        <View>
-          <Text>
-            <strong>Created:</strong> {project.created.toLocaleDateString()}
-          </Text>
-          <Text>
-            <strong>Modified:</strong> {project.modified.toLocaleDateString()}
-          </Text>
-          <Text>
-            <strong>Dimensions:</strong> {project.dimensions.width} ×{' '}
-            {project.dimensions.height} × {project.dimensions.depth}
-          </Text>
-          <Text>
-            <strong>Blocks:</strong> {project.blockCount}
-          </Text>
-        </View>
-
-        <Divider size="S" />
-
-        <Flex direction="column" gap="size-100">
-          <Button variant="accent" onPress={onOpen}>
-            Open Project
-          </Button>
-
-          <DialogTrigger>
-            <ActionButton>
-              <Delete />
-              <Text>Delete Project</Text>
-            </ActionButton>
-            <AlertDialog
-              variant="destructive"
-              title="Delete Project"
-              primaryActionLabel="Delete"
-              cancelLabel="Cancel"
-              onPrimaryAction={onDelete}
-            >
-              Are you sure you want to delete "{project.name}"? This action cannot
-              be undone.
-            </AlertDialog>
-          </DialogTrigger>
-        </Flex>
-      </Flex>
-    </Well>
+          </Box>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

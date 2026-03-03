@@ -1,4 +1,4 @@
-import { View, Heading, Content } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 import { WelcomeView } from '../../views/WelcomeView';
 
 export function WelcomeViewPreview() {
@@ -7,20 +7,20 @@ export function WelcomeViewPreview() {
   const handleLoadFromFile = () => console.log('[Preview] Load from file');
 
   return (
-    <View>
-      <Heading level={1}>WelcomeView</Heading>
-      <Content marginBottom="size-400">
+    <Box>
+      <Typography variant="h4" component="h1">WelcomeView</Typography>
+      <Typography variant="body1" sx={{ mb: 4 }}>
         Landing page shown when no project is loaded. Displays recent projects
         and options to create new or load from file.
-      </Content>
+      </Typography>
 
-      <View marginTop="size-600" height="600px" borderWidth="thin">
+      <Box sx={{ mt: 6, height: '600px', border: 1, borderColor: 'grey.300' }}>
         <WelcomeView
           onNewProject={handleNewProject}
           onOpenProject={handleOpenProject}
           onLoadFromFile={handleLoadFromFile}
         />
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 }

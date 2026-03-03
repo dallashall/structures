@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, View } from '@adobe/react-spectrum';
+import { Box, Typography } from '@mui/material';
 
 import type { Project, LayerState, Vector3D } from '../types';
 
@@ -26,6 +26,7 @@ export function QuadLayout({
   project,
   activeLayers,
   selectedBlockId,
+  isPlacementMode,
 }: QuadLayoutProps) {
   const frontContainerRef = React.useRef<HTMLDivElement>(null);
   const leftContainerRef = React.useRef<HTMLDivElement>(null);
@@ -78,13 +79,59 @@ export function QuadLayout({
   }, []);
 
   return (
-    <Grid
-      columns={['1fr', '1fr']}
-      rows={['1fr', '1fr']}
-      height="100%"
-      gap="size-100"
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gridTemplateRows: '1fr 1fr',
+        height: '100%',
+        gap: 1,
+      }}
     >
-      <View backgroundColor="gray-100" padding="size-200">
+      {/* Front View */}
+      <Box
+        sx={{
+          bgcolor: 'grey.50',
+          border: 2,
+          borderColor: 'error.main',
+          borderRadius: 1,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'error.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'medium',
+            }}
+          >
+            FRONT VIEW
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'error.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'bold',
+            }}
+          >
+            Y: {activeLayers.y}
+          </Typography>
+        </Box>
         <div ref={frontContainerRef} style={{ width: '100%', height: '100%' }}>
           <Canvas2DView
             viewType="front"
@@ -93,12 +140,57 @@ export function QuadLayout({
             width={canvasSizes.front.width}
             height={canvasSizes.front.height}
             selectedBlockId={selectedBlockId}
+            isPlacementMode={isPlacementMode}
             onBlockPlaced={handleBlockPlaced}
             onBlockRemoved={handleBlockRemoved}
           />
         </div>
-      </View>
-      <View backgroundColor="gray-100" padding="size-200">
+      </Box>
+
+      {/* Left View */}
+      <Box
+        sx={{
+          bgcolor: 'grey.50',
+          border: 2,
+          borderColor: 'primary.main',
+          borderRadius: 1,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'primary.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'medium',
+            }}
+          >
+            LEFT VIEW
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'primary.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'bold',
+            }}
+          >
+            X: {activeLayers.x}
+          </Typography>
+        </Box>
         <div ref={leftContainerRef} style={{ width: '100%', height: '100%' }}>
           <Canvas2DView
             viewType="left"
@@ -107,12 +199,57 @@ export function QuadLayout({
             width={canvasSizes.left.width}
             height={canvasSizes.left.height}
             selectedBlockId={selectedBlockId}
+            isPlacementMode={isPlacementMode}
             onBlockPlaced={handleBlockPlaced}
             onBlockRemoved={handleBlockRemoved}
           />
         </div>
-      </View>
-      <View backgroundColor="gray-100" padding="size-200">
+      </Box>
+
+      {/* Top View */}
+      <Box
+        sx={{
+          bgcolor: 'grey.50',
+          border: 2,
+          borderColor: 'success.main',
+          borderRadius: 1,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'success.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'medium',
+            }}
+          >
+            TOP VIEW
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'success.main',
+              textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              fontWeight: 'bold',
+            }}
+          >
+            Z: {activeLayers.z}
+          </Typography>
+        </Box>
         <div ref={topContainerRef} style={{ width: '100%', height: '100%' }}>
           <Canvas2DView
             viewType="top"
@@ -121,16 +258,52 @@ export function QuadLayout({
             width={canvasSizes.top.width}
             height={canvasSizes.top.height}
             selectedBlockId={selectedBlockId}
+            isPlacementMode={isPlacementMode}
             onBlockPlaced={handleBlockPlaced}
             onBlockRemoved={handleBlockRemoved}
           />
         </div>
-      </View>
-      <View backgroundColor="gray-200" padding="size-200">
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p>3D Preview (Placeholder)</p>
-        </div>
-      </View>
-    </Grid>
+      </Box>
+
+      {/* 3D Preview */}
+      <Box
+        sx={{
+          bgcolor: 'grey.50',
+          border: 2,
+          borderColor: 'secondary.main',
+          borderRadius: 1,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            color: 'secondary.main',
+            textShadow: '0 0 4px rgba(255,255,255,0.8)',
+            fontWeight: 'medium',
+          }}
+        >
+          3D PREVIEW
+        </Typography>
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            bgcolor: 'grey.100',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="body1">3D Preview (Placeholder)</Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
