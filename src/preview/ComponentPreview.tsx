@@ -17,6 +17,7 @@ import { TabbedLayoutPreview } from './previews/TabbedLayoutPreview';
 import { QuadLayoutPreview } from './previews/QuadLayoutPreview';
 import { WelcomeViewPreview } from './previews/WelcomeViewPreview';
 import { CanvasPlaceholderPreview } from './previews/CanvasPlaceholderPreview';
+import { Preview3DViewPreview } from './previews/Preview3DViewPreview';
 
 interface PreviewRoute {
   name: string;
@@ -47,6 +48,7 @@ export function ComponentPreview() {
     { name: 'LayerControls', path: 'layer-controls', component: LayerControlsPreview },
     { name: 'LayerDimensionControl', path: 'layer-dimension-control', component: LayerDimensionControlPreview },
     { name: 'Canvas2DView', path: 'canvas-2d-view', component: Canvas2DViewPreview },
+    { name: 'Preview3DView', path: 'preview-3d-view', component: Preview3DViewPreview },
     { name: 'TabbedLayout', path: 'tabbed-layout', component: TabbedLayoutPreview },
     { name: 'QuadLayout', path: 'quad-layout', component: QuadLayoutPreview },
     { name: 'WelcomeView', path: 'welcome-view', component: WelcomeViewPreview },

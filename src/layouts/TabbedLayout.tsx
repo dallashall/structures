@@ -5,6 +5,7 @@ import { TabContext, TabList, TabPanel } from '@mui/lab';
 import type { ViewType, Project, LayerState, Vector3D } from '../types';
 
 import { Canvas2DView } from '../panels/Canvas2DView';
+import { Preview3DView } from '../panels/Preview3DView';
 import { projectManager } from '../core/ProjectManager';
 
 interface TabbedLayoutProps {
@@ -33,7 +34,9 @@ export function TabbedLayout({
   renderTabBar = false,
 }: TabbedLayoutProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const preview3DContainerRef = React.useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = React.useState({ width: 800, height: 600 });
+  const [preview3DSize, setPreview3DSize] = React.useState({ width: 800, height: 600 });
 
   // Measure container size for canvas dimensions
   React.useEffect(() => {
@@ -41,6 +44,10 @@ export function TabbedLayout({
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         setCanvasSize({ width: rect.width, height: rect.height });
+      }
+      if (preview3DContainerRef.current) {
+        const rect = preview3DContainerRef.current.getBoundingClientRect();
+        setPreview3DSize({ width: rect.width, height: rect.height });
       }
     };
 
@@ -99,17 +106,12 @@ export function TabbedLayout({
       {views.map((view) => (
         <TabPanel key={view} value={view} sx={{ p: 0, height: renderTabBar ? 'calc(100% - 48px)' : '100%', position: 'relative' }}>
           {view === '3d' ? (
-            <Box
-              sx={{
-                bgcolor: 'grey.200',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <p>3D Preview (Placeholder)</p>
-            </Box>
+            <div ref={preview3DContainerRef} style={{ width: '100%', height: '100%' }}>
+              <Preview3DView
+                width={preview3DSize.width}
+                height={preview3DSize.height}
+              />
+            </div>
           ) : (
             <>
               {/* Depth indicator */}

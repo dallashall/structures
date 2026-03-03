@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 import type { Project, LayerState, Vector3D } from '../types';
 
 import { Canvas2DView } from '../panels/Canvas2DView';
+import { Preview3DView } from '../panels/Preview3DView';
 import { projectManager } from '../core/ProjectManager';
 
 interface QuadLayoutProps {
@@ -31,11 +32,13 @@ export function QuadLayout({
   const frontContainerRef = React.useRef<HTMLDivElement>(null);
   const leftContainerRef = React.useRef<HTMLDivElement>(null);
   const topContainerRef = React.useRef<HTMLDivElement>(null);
+  const preview3DContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [canvasSizes, setCanvasSizes] = React.useState({
     front: { width: 400, height: 300 },
     left: { width: 400, height: 300 },
     top: { width: 400, height: 300 },
+    preview3D: { width: 400, height: 300 },
   });
 
   // Measure container sizes for canvas dimensions
@@ -60,6 +63,13 @@ export function QuadLayout({
         setCanvasSizes((prev) => ({
           ...prev,
           top: { width: rect.width, height: rect.height },
+        }));
+      }
+      if (preview3DContainerRef.current) {
+        const rect = preview3DContainerRef.current.getBoundingClientRect();
+        setCanvasSizes((prev) => ({
+          ...prev,
+          preview3D: { width: rect.width, height: rect.height },
         }));
       }
     };
@@ -291,18 +301,12 @@ export function QuadLayout({
         >
           3D PREVIEW
         </Typography>
-        <Box
-          sx={{
-            width: '100%',
-            height: '100%',
-            bgcolor: 'grey.100',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography variant="body1">3D Preview (Placeholder)</Typography>
-        </Box>
+        <div ref={preview3DContainerRef} style={{ width: '100%', height: '100%' }}>
+          <Preview3DView
+            width={canvasSizes.preview3D.width}
+            height={canvasSizes.preview3D.height}
+          />
+        </div>
       </Box>
     </Box>
   );

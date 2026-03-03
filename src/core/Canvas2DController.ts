@@ -24,9 +24,11 @@ export class Canvas2DController {
   // Interaction state
   private isDraggingPan = false;
   private isPainting = false;
+  private isErasing = false;
   private lastMousePos = { x: 0, y: 0 };
   private lastPaintedCell: string | null = null;
   private spacebarHeld = false;
+  private shiftHeld = false;
   private lastZoomTime = 0;
   private isPlacementMode = false;
 
@@ -275,6 +277,123 @@ export class Canvas2DController {
           this.ctx.globalAlpha = 1.0;
         }
       }
+    }
+
+    // Draw coordinate axes legend
+    this.drawCoordinateAxes();
+  }
+
+  /**
+   * Draw coordinate axes legend in bottom-left corner
+   *
+   * Color scheme (consistent across all views):
+   * - Red = X coordinate (width)
+   * - Green = Z coordinate (height)
+   * - Blue = Y coordinate (depth)
+   */
+  private drawCoordinateAxes(): void {
+    const { height } = this.canvas;
+    const padding = 20;
+    const arrowLength = 40;
+    const arrowHeadSize = 8;
+
+    // Get axes for current view
+    const axes = this.getAxesForView();
+
+    // Starting position (bottom-left corner)
+    const originX = padding;
+    const originY = height - padding;
+
+    this.ctx.save();
+    this.ctx.lineWidth = 2;
+    this.ctx.font = 'bold 14px sans-serif';
+
+    // Draw horizontal axis (right)
+    const hColor = this.getColorForAxis(axes.horizontal);
+    this.ctx.strokeStyle = hColor;
+    this.ctx.fillStyle = hColor;
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY);
+    this.ctx.lineTo(originX + arrowLength, originY);
+    this.ctx.stroke();
+    // Arrowhead
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX + arrowLength, originY);
+    this.ctx.lineTo(originX + arrowLength - arrowHeadSize, originY - arrowHeadSize / 2);
+    this.ctx.lineTo(originX + arrowLength - arrowHeadSize, originY + arrowHeadSize / 2);
+    this.ctx.closePath();
+    this.ctx.fill();
+    // Label
+    this.ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
+
+    // Draw vertical axis (up)
+    const vColor = this.getColorForAxis(axes.vertical);
+    this.ctx.strokeStyle = vColor;
+    this.ctx.fillStyle = vColor;
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY);
+    this.ctx.lineTo(originX, originY - arrowLength);
+    this.ctx.stroke();
+    // Arrowhead
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY - arrowLength);
+    this.ctx.lineTo(originX - arrowHeadSize / 2, originY - arrowLength + arrowHeadSize);
+    this.ctx.lineTo(originX + arrowHeadSize / 2, originY - arrowLength + arrowHeadSize);
+    this.ctx.closePath();
+    this.ctx.fill();
+    // Label
+    this.ctx.fillText(axes.vertical, originX - 5, originY - arrowLength - 8);
+
+    // Draw depth indicator (circle with label)
+    const depthX = originX + arrowLength + 60;
+    const depthY = originY;
+    const dColor = this.getColorForAxis(axes.depth);
+    this.ctx.strokeStyle = dColor;
+    this.ctx.fillStyle = dColor;
+    this.ctx.beginPath();
+    this.ctx.arc(depthX, depthY, 6, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.fillText(axes.depth, depthX + 12, depthY + 5);
+    this.ctx.fillStyle = '#666';
+    this.ctx.font = '12px sans-serif';
+    this.ctx.fillText('(depth)', depthX + 12, depthY + 18);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Get color for a coordinate axis
+   * Red = X, Green = Z, Blue = Y
+   */
+  private getColorForAxis(axis: string): string {
+    switch (axis) {
+      case 'X':
+        return '#e74c3c'; // Red - width
+      case 'Y':
+        return '#3498db'; // Blue - depth
+      case 'Z':
+        return '#27ae60'; // Green - height
+      default:
+        return '#000000';
+    }
+  }
+
+  /**
+   * Get axis labels for current view
+   */
+  private getAxesForView(): { horizontal: string; vertical: string; depth: string } {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return { horizontal: 'X', vertical: 'Z', depth: 'Y' };
+      case 'left':
+      case 'right':
+        return { horizontal: 'Y', vertical: 'Z', depth: 'X' };
+      case 'top':
+      case 'bottom':
+        return { horizontal: 'X', vertical: 'Y', depth: 'Z' };
+      default:
+        return { horizontal: 'X', vertical: 'Y', depth: 'Z' };
     }
   }
 
@@ -674,6 +793,35 @@ export class Canvas2DController {
     }
   }
 
+  private eraseAtPixel(pixelX: number, pixelY: number): void {
+    const project = projectManager.getProject();
+    if (!project) return;
+
+    const gridCoords = this.pixelToGrid(pixelX, pixelY);
+    if (!gridCoords) return;
+
+    const { gridX, gridY } = gridCoords;
+    const cellKey = `${gridX},${gridY}`;
+
+    // Avoid duplicate deletions during drag
+    if (this.lastPaintedCell === cellKey) return;
+    this.lastPaintedCell = cellKey;
+
+    const position = this.gridToPosition(gridX, gridY);
+
+    // Validate position
+    if (
+      position.x < 0 || position.x >= project.dimensions.width ||
+      position.y < 0 || position.y >= project.dimensions.height ||
+      position.z < 0 || position.z >= project.dimensions.depth
+    ) {
+      return;
+    }
+
+    // Remove block at this position
+    projectManager.removeBlock(position);
+  }
+
   private mouseToCanvasSpace(mouseX: number, mouseY: number): { x: number; y: number } {
     return {
       x: (mouseX - this.pan.x) / this.zoom,
@@ -735,20 +883,27 @@ export class Canvas2DController {
     const pixelY = event.clientY - rect.top;
 
     // Meta block placement mode: left click to place meta block
-    if (this.isPlacementMode && event.button === 0) {
+    if (this.isPlacementMode && event.button === 0 && !event.shiftKey) {
       this.placeMetaBlockAtPixel(pixelX, pixelY);
       return;
     }
 
-    // Pan mode: spacebar + left, middle mouse, or shift+left
+    // Pan mode: spacebar + left or middle mouse
     if (
       (event.button === 0 && this.spacebarHeld) ||
-      event.button === 1 ||
-      (event.button === 0 && event.shiftKey)
+      event.button === 1
     ) {
       this.isDraggingPan = true;
       this.lastMousePos = { x: pixelX, y: pixelY };
       this.canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    // Delete mode: shift + left click
+    if (event.button === 0 && event.shiftKey) {
+      this.isErasing = true;
+      this.lastPaintedCell = null;
+      this.eraseAtPixel(pixelX, pixelY);
       return;
     }
 
@@ -778,6 +933,12 @@ export class Canvas2DController {
       return;
     }
 
+    // Handle erasing
+    if (this.isErasing) {
+      this.eraseAtPixel(pixelX, pixelY);
+      return;
+    }
+
     // Handle painting
     if (this.isPainting) {
       this.paintAtPixel(pixelX, pixelY);
@@ -786,6 +947,7 @@ export class Canvas2DController {
 
   private handleMouseUp(): void {
     this.isPainting = false;
+    this.isErasing = false;
     this.isDraggingPan = false;
     this.lastPaintedCell = null;
     this.updateCursor();
@@ -793,6 +955,7 @@ export class Canvas2DController {
 
   private handleMouseLeave(): void {
     this.isPainting = false;
+    this.isErasing = false;
     this.isDraggingPan = false;
     this.lastPaintedCell = null;
     this.updateCursor();
@@ -804,6 +967,10 @@ export class Canvas2DController {
       this.spacebarHeld = true;
       this.updateCursor();
     }
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+      this.shiftHeld = true;
+      this.updateCursor();
+    }
   }
 
   private handleKeyUp(event: KeyboardEvent): void {
@@ -813,6 +980,11 @@ export class Canvas2DController {
       this.isDraggingPan = false;
       this.updateCursor();
     }
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+      this.shiftHeld = false;
+      this.isErasing = false;
+      this.updateCursor();
+    }
   }
 
   private updateCursor(): void {
@@ -820,6 +992,8 @@ export class Canvas2DController {
       this.canvas.style.cursor = 'grabbing';
     } else if (this.spacebarHeld) {
       this.canvas.style.cursor = 'grab';
+    } else if (this.shiftHeld) {
+      this.canvas.style.cursor = 'not-allowed'; // Eraser cursor
     } else if (this.isPlacementMode) {
       this.canvas.style.cursor = 'pointer';
     } else {
