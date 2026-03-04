@@ -24,7 +24,6 @@ export class Canvas2DPreviewManager {
   private pointPreviewCell: { gridX: number; gridY: number } | null = null;
 
   // Fill/point preview (Alt key)
-  private _previewKeyActive = false; // Track if preview key is active
   private lastGridPos: { gridX: number; gridY: number } | null = null;
 
   constructor(
@@ -98,7 +97,6 @@ export class Canvas2DPreviewManager {
    * Activate preview key (Alt) - shows what would happen if user clicked
    */
   activatePreviewKey(): void {
-    this._previewKeyActive = true;
     this.updatePreviewKeyPreview();
   }
 
@@ -106,7 +104,6 @@ export class Canvas2DPreviewManager {
    * Deactivate preview key
    */
   deactivatePreviewKey(): void {
-    this._previewKeyActive = false;
     editorStateManager.clearPreview();
   }
 

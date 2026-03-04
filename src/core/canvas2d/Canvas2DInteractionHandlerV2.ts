@@ -41,6 +41,7 @@ export class Canvas2DInteractionHandler {
   private lastPixelPos: PixelPosition = { pixelX: 0, pixelY: 0 };
   private lastGridPos: GridPosition | null = null;
   private dragStartGridPos: GridPosition | null = null;
+  private isMouseInside = false; // Track if mouse is inside canvas
 
   // Pan state
   private isPanning = false;
@@ -54,6 +55,7 @@ export class Canvas2DInteractionHandler {
     mouseDown: this.handleMouseDown.bind(this),
     mouseMove: this.handleMouseMove.bind(this),
     mouseUp: this.handleMouseUp.bind(this),
+    mouseEnter: this.handleMouseEnter.bind(this),
     mouseLeave: this.handleMouseLeave.bind(this),
     keyDown: this.handleKeyDown.bind(this),
     keyUp: this.handleKeyUp.bind(this),
@@ -75,6 +77,7 @@ export class Canvas2DInteractionHandler {
     this.canvas.addEventListener('mousedown', this.boundHandlers.mouseDown);
     this.canvas.addEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.addEventListener('mouseup', this.boundHandlers.mouseUp);
+    this.canvas.addEventListener('mouseenter', this.boundHandlers.mouseEnter);
     this.canvas.addEventListener('mouseleave', this.boundHandlers.mouseLeave);
     window.addEventListener('keydown', this.boundHandlers.keyDown);
     window.addEventListener('keyup', this.boundHandlers.keyUp);
@@ -88,6 +91,7 @@ export class Canvas2DInteractionHandler {
     this.canvas.removeEventListener('mousedown', this.boundHandlers.mouseDown);
     this.canvas.removeEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.removeEventListener('mouseup', this.boundHandlers.mouseUp);
+    this.canvas.removeEventListener('mouseenter', this.boundHandlers.mouseEnter);
     this.canvas.removeEventListener('mouseleave', this.boundHandlers.mouseLeave);
     window.removeEventListener('keydown', this.boundHandlers.keyDown);
     window.removeEventListener('keyup', this.boundHandlers.keyUp);
@@ -98,6 +102,13 @@ export class Canvas2DInteractionHandler {
    */
   getModifiers(): ModifierKeys {
     return { ...this.modifiers };
+  }
+
+  /**
+   * Check if mouse is inside canvas
+   */
+  isMouseInsideCanvas(): boolean {
+    return this.isMouseInside;
   }
 
   /**
@@ -235,9 +246,29 @@ export class Canvas2DInteractionHandler {
   }
 
   /**
+   * Handle mouse enter - update grid position immediately
+   */
+  private handleMouseEnter(event: MouseEvent): void {
+    this.isMouseInside = true;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const pixelX = event.clientX - rect.left;
+    const pixelY = event.clientY - rect.top;
+    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+
+    // Update grid position for Alt preview
+    if (gridPos) {
+      this.lastGridPos = gridPos;
+      this.handlers.onHover?.(gridPos, this.modifiers);
+    }
+  }
+
+  /**
    * Handle mouse leave
    */
   private handleMouseLeave(): void {
+    this.isMouseInside = false;
+
     // End any active interactions
     if (this.isPanning) {
       this.handlers.onPanEnd?.();

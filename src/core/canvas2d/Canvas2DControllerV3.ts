@@ -376,11 +376,13 @@ export class Canvas2DController {
     }
     this.updateCursor();
 
-    // Alt key: activate preview
-    if (modifiers.alt) {
+    // Alt key: activate preview ONLY if mouse is inside this canvas
+    if (modifiers.alt && this.interactionHandler.isMouseInsideCanvas()) {
       this.previewManager.activatePreviewKey();
-    } else {
+      this.render();
+    } else if (!modifiers.alt) {
       this.previewManager.deactivatePreviewKey();
+      this.render();
     }
   }
 

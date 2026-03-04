@@ -58,6 +58,7 @@ export class Canvas2DRenderer {
     // Draw previews
     this.drawOutlinePreview(previewManager, viewport, gridWidth, gridHeight, cellSize, pan);
     this.drawPointPreview(previewManager, gridWidth, gridHeight, cellSize, pan);
+    this.drawSharedPreview(viewport, gridWidth, gridHeight, cellSize, pan);
   }
 
   /**
@@ -393,7 +394,7 @@ export class Canvas2DRenderer {
    */
   private drawOutlinePreview(
     previewManager: Canvas2DPreviewManager,
-    viewport: Canvas2DViewport,
+    _viewport: Canvas2DViewport,
     gridWidth: number,
     gridHeight: number,
     cellSize: number,
@@ -455,6 +456,51 @@ export class Canvas2DRenderer {
     const rectHeight = (maxY - minY + 1) * cellSize;
     this.ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
     this.ctx.setLineDash([]);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Draw shared preview blocks from EditorStateManager
+   * This allows all canvases to render preview computed by the active canvas
+   */
+  private drawSharedPreview(
+    viewport: Canvas2DViewport,
+    gridWidth: number,
+    gridHeight: number,
+    cellSize: number,
+    pan: { x: number; y: number }
+  ): void {
+    const previewBlocks = editorStateManager.getPreviewBlocks();
+    if (!previewBlocks || previewBlocks.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.5;
+
+    // Render each preview block
+    for (const previewBlock of previewBlocks) {
+      if (!previewBlock.blockType) continue;
+
+      const block = blockRegistry.getBlock(previewBlock.blockType);
+      if (!block) continue;
+
+      // Convert 3D position to 2D grid coordinates
+      const gridPos = viewport.positionToGrid(previewBlock.position);
+
+      // Check if within visible grid
+      if (
+        gridPos.gridX < 0 || gridPos.gridX >= gridWidth ||
+        gridPos.gridY < 0 || gridPos.gridY >= gridHeight
+      ) {
+        continue;
+      }
+
+      const px = pan.x + gridPos.gridX * cellSize;
+      const py = pan.y + gridPos.gridY * cellSize;
+
+      this.ctx.fillStyle = block.color;
+      this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+    }
 
     this.ctx.restore();
   }
