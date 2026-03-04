@@ -1,7 +1,7 @@
-import React from 'react';
-import { Box } from '@mui/material';
-import type { ViewType, Project, LayerState, Vector3D } from '../types';
-import { Canvas2DController } from '../core/Canvas2DController';
+import React from "react";
+import { Box } from "@mui/material";
+import type { ViewType, Project, LayerState, Vector3D } from "../types";
+import { Canvas2DController } from "../core/Canvas2DController";
 
 interface Canvas2DViewProps {
   viewType: ViewType;
@@ -68,16 +68,16 @@ export function Canvas2DView({
   }, [isPlacementMode]);
 
   return (
-    <Box sx={{ width: '100%', height: '100%' }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
         style={{
-          display: 'block',
+          display: "block",
           width: `${width}px`,
           height: `${height}px`,
-          boxSizing: 'border-box'
+          boxSizing: "border-box",
         }}
       />
     </Box>

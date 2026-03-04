@@ -281,6 +281,9 @@ export class Canvas2DController {
 
     // Draw coordinate axes legend
     this.drawCoordinateAxes();
+
+    // Draw active layer indicators
+    this.drawActiveLayerIndicators();
   }
 
   /**
@@ -359,6 +362,164 @@ export class Canvas2DController {
     this.ctx.fillText('(depth)', depthX + 12, depthY + 18);
 
     this.ctx.restore();
+  }
+
+  /**
+   * Draw active layer indicators showing where other slices intersect this view
+   * Shows colored lines on the edges and labels
+   */
+  private drawActiveLayerIndicators(): void {
+    const project = projectManager.getProject();
+    if (!project) return;
+    const { gridWidth, gridHeight } = this.getGridDimensions(project.dimensions);
+    const activeLayers = editorStateManager.getActiveLayers();
+    const BASE_CELL_SIZE = 20;
+    const cellSize = BASE_CELL_SIZE * this.zoom;
+    const offsetX = this.pan.x;
+    const offsetY = this.pan.y;
+
+    this.ctx.save();
+
+    // Get which axes are visible in this view
+    const axes = this.getAxesForView();
+
+    // Draw horizontal layer indicator (if not the depth axis)
+    if (axes.vertical !== axes.depth) {
+      const axisName = axes.vertical;
+      const layerValue = this.getLayerForAxis(axisName, activeLayers);
+      const color = this.getColorForAxis(axisName);
+
+      // Calculate grid position for this layer
+      const gridPos = this.getGridPositionForLayer(axisName, layerValue, project.dimensions);
+      if (gridPos !== null && gridPos >= 0 && gridPos < gridHeight) {
+        const py = offsetY + gridPos * cellSize;
+        const gridLeft = offsetX;
+        const gridRight = offsetX + gridWidth * cellSize;
+
+        // Draw full-width line across the grid
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(gridLeft, py);
+        this.ctx.lineTo(gridRight, py);
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
+
+        // Draw thicker markers on both left and right edges
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(gridLeft - 2, py);
+        this.ctx.lineTo(gridLeft, py);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.moveTo(gridRight, py);
+        this.ctx.lineTo(gridRight + 2, py);
+        this.ctx.stroke();
+
+        // Draw labels on both sides
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 11px sans-serif';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`${axisName}: ${layerValue}`, gridLeft - 8, py - 6);
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`${axisName}: ${layerValue}`, gridRight + 8, py - 6);
+      }
+    }
+
+    // Draw vertical layer indicator (if not the depth axis)
+    if (axes.horizontal !== axes.depth) {
+      const axisName = axes.horizontal;
+      const layerValue = this.getLayerForAxis(axisName, activeLayers);
+      const color = this.getColorForAxis(axisName);
+
+      // Calculate grid position for this layer
+      const gridPos = this.getGridPositionForLayer(axisName, layerValue, project.dimensions);
+      if (gridPos !== null && gridPos >= 0 && gridPos < gridWidth) {
+        const px = offsetX + gridPos * cellSize;
+        const gridTop = offsetY;
+        const gridBottom = offsetY + gridHeight * cellSize;
+
+        // Draw full-height line across the grid
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, gridTop);
+        this.ctx.lineTo(px, gridBottom);
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
+
+        // Draw thicker markers on both top and bottom edges
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, gridTop - 2);
+        this.ctx.lineTo(px, gridTop);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, gridBottom);
+        this.ctx.lineTo(px, gridBottom + 2);
+        this.ctx.stroke();
+
+        // Draw labels on both top and bottom
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 11px sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${axisName}: ${layerValue}`, px, gridTop - 8);
+        this.ctx.fillText(`${axisName}: ${layerValue}`, px, gridBottom + 18);
+      }
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Get the layer value for a specific axis name
+   */
+  private getLayerForAxis(axis: string, activeLayers: { x: number; y: number; z: number }): number {
+    switch (axis) {
+      case 'X':
+        return activeLayers.x;
+      case 'Y':
+        return activeLayers.y;
+      case 'Z':
+        return activeLayers.z;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Get the grid position for a layer on a specific axis
+   * Returns the grid coordinate in the current view's coordinate system
+   */
+  private getGridPositionForLayer(
+    axis: string,
+    layerValue: number,
+    dimensions: Dimensions
+  ): number | null {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        // Grid: X horizontal, Z vertical (inverted)
+        if (axis === 'X') return layerValue;
+        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
+        return null;
+      case 'left':
+      case 'right':
+        // Grid: Y horizontal, Z vertical (inverted)
+        if (axis === 'Y') return layerValue;
+        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
+        return null;
+      case 'top':
+      case 'bottom':
+        // Grid: X horizontal, Y vertical (inverted)
+        if (axis === 'X') return layerValue;
+        if (axis === 'Y') return dimensions.height - 1 - layerValue;
+        return null;
+      default:
+        return null;
+    }
   }
 
   /**

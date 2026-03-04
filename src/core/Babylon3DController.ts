@@ -3,6 +3,7 @@ import {
   Scene,
   ArcRotateCamera,
   HemisphericLight,
+  DirectionalLight,
   Vector3,
   MeshBuilder,
   StandardMaterial,
@@ -15,6 +16,8 @@ import {
 } from '@babylonjs/core';
 import { projectManager } from './ProjectManager';
 import { blockRegistry } from './BlockRegistry';
+import { editorStateManager } from './EditorStateManager';
+import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import type { Vector3D, BlockData } from '../types';
 
 /**
@@ -38,6 +41,7 @@ export class Babylon3DController {
   private scene: Scene;
   private camera: ArcRotateCamera;
   private axesViewer: AxesViewer | null = null;
+  private slicePlaneVisualizer: SlicePlaneVisualizer | null = null;
 
   // Block mesh instances
   private blockMeshes = new Map<string, Mesh>();
@@ -50,6 +54,7 @@ export class Babylon3DController {
     projectChanged: this.updateScene.bind(this),
     blockAdded: this.handleBlockAdded.bind(this),
     blockRemoved: this.handleBlockRemoved.bind(this),
+    layerChanged: this.updateBlockBrightness.bind(this),
     resize: this.handleResize.bind(this),
   };
 
@@ -78,12 +83,18 @@ export class Babylon3DController {
     // Setup coordinate axes
     this.setupAxes();
 
+    // Setup slice plane visualizer
+    this.setupSlicePlanes();
+
     // Subscribe to project events
     // Note: We only listen to project:loaded for full rebuilds
     // and block:added/removed for incremental updates to avoid flickering
     projectManager.on('project:loaded', this.boundHandlers.projectChanged);
     projectManager.on('block:added', this.boundHandlers.blockAdded);
     projectManager.on('block:removed', this.boundHandlers.blockRemoved);
+
+    // Subscribe to editor state events for active layer highlighting
+    editorStateManager.on('layer:changed', this.boundHandlers.layerChanged);
 
     // Subscribe to viewport events (future: sync camera state)
     // viewportManager.on('camera:changed', this.handleCameraChanged);
@@ -105,7 +116,11 @@ export class Babylon3DController {
     projectManager.off('project:loaded', this.boundHandlers.projectChanged);
     projectManager.off('block:added', this.boundHandlers.blockAdded);
     projectManager.off('block:removed', this.boundHandlers.blockRemoved);
+    editorStateManager.off('layer:changed', this.boundHandlers.layerChanged);
     window.removeEventListener('resize', this.boundHandlers.resize);
+
+    // Dispose slice plane visualizer
+    this.slicePlaneVisualizer?.destroy();
 
     // Dispose axes viewer
     this.axesViewer?.dispose();
@@ -164,11 +179,12 @@ export class Babylon3DController {
   private setupLighting(): void {
     // Ambient light from above
     const light = new HemisphericLight('light', new Vector3(0, 1, 0), this.scene);
-    light.intensity = 0.8;
+    light.intensity = 0.7;
 
-    // Optional: Add directional light for better depth perception
-    // const dirLight = new DirectionalLight('dirLight', new Vector3(-1, -2, -1), this.scene);
-    // dirLight.intensity = 0.5;
+    // Directional light for better depth perception and glass highlights
+    const dirLight = new DirectionalLight('dirLight', new Vector3(-1, -2, -1), this.scene);
+    dirLight.intensity = 0.6;
+    dirLight.specular = new Color3(1, 1, 1); // White specular for glass shine
   }
 
   /**
@@ -234,6 +250,24 @@ export class Babylon3DController {
   }
 
   /**
+   * Setup slice plane visualizer
+   * Shows translucent planes marking the active 2D slice positions
+   */
+  private setupSlicePlanes(): void {
+    const project = projectManager.getProject();
+    if (!project) return;
+
+    // Dispose old visualizer if it exists
+    this.slicePlaneVisualizer?.destroy();
+
+    // Create new visualizer with current project dimensions
+    this.slicePlaneVisualizer = new SlicePlaneVisualizer(
+      this.scene,
+      project.dimensions
+    );
+  }
+
+  /**
    * Convert our coordinate system to Babylon coordinate system
    *
    * Our system: Z-up, right-handed (X=width, Y=depth, Z=height)
@@ -272,12 +306,22 @@ export class Babylon3DController {
 
   /**
    * Create a block mesh with scale-in animation
+   * If a block already exists at this position, update its material instead
    */
   private createBlockMesh(blockData: BlockData, animate: boolean = true): void {
     const key = `${blockData.position.x},${blockData.position.y},${blockData.position.z}`;
 
-    // Skip if already exists
-    if (this.blockMeshes.has(key)) return;
+    // Check if block already exists at this position
+    if (this.blockMeshes.has(key)) {
+      // Update existing block material
+      const existingMesh = this.blockMeshes.get(key)!;
+      const block = blockRegistry.getBlock(blockData.blockType);
+      if (block) {
+        existingMesh.material = this.getMaterial(block.color);
+        this.updateMeshBrightness(existingMesh, blockData.position);
+      }
+      return;
+    }
 
     // Get block definition
     const block = blockRegistry.getBlock(blockData.blockType);
@@ -299,6 +343,9 @@ export class Babylon3DController {
 
     // Store reference
     this.blockMeshes.set(key, box);
+
+    // Set initial brightness based on active layers
+    this.updateMeshBrightness(box, blockData.position);
 
     // Animate scale-in along Y axis (vertical in Babylon space) with elastic bounce
     if (animate) {
@@ -445,6 +492,55 @@ export class Babylon3DController {
   }
 
   /**
+   * Update brightness of all blocks when active layer changes
+   */
+  private updateBlockBrightness(): void {
+    const project = projectManager.getProject();
+    if (!project) return;
+
+    // Update brightness for all blocks
+    project.blocks.forEach((blockData) => {
+      const key = `${blockData.position.x},${blockData.position.y},${blockData.position.z}`;
+      const mesh = this.blockMeshes.get(key);
+      if (mesh) {
+        this.updateMeshBrightness(mesh, blockData.position);
+      }
+    });
+  }
+
+  /**
+   * Update brightness of a single mesh based on active layers
+   * Blocks on any active layer appear much brighter
+   */
+  private updateMeshBrightness(mesh: Mesh, position: Vector3D): void {
+    const activeLayers = editorStateManager.getActiveLayers();
+
+    // Check if block is on any active layer
+    const isOnActiveLayer =
+      position.x === activeLayers.x ||
+      position.y === activeLayers.y ||
+      position.z === activeLayers.z;
+
+    if (isOnActiveLayer) {
+      // Brighten blocks on active layers using strong emissive glow
+      const material = mesh.material as StandardMaterial;
+      if (material && material.diffuseColor) {
+        // Strong emissive glow to make it very obvious
+        material.emissiveColor = material.diffuseColor.scale(0.7);
+        // Also slightly increase specular for extra pop
+        material.specularColor = new Color3(0.3, 0.3, 0.3);
+      }
+    } else {
+      // Dim blocks not on active layers
+      const material = mesh.material as StandardMaterial;
+      if (material) {
+        material.emissiveColor = new Color3(0, 0, 0);
+        material.specularColor = new Color3(0.2, 0.2, 0.2);
+      }
+    }
+  }
+
+  /**
    * Clear all block meshes
    */
   private clearAllBlocks(): void {
@@ -464,6 +560,12 @@ export class Babylon3DController {
 
     // Recreate grid with new dimensions
     this.setupGrid();
+
+    // Update slice planes with new dimensions
+    const project = projectManager.getProject();
+    if (project) {
+      this.slicePlaneVisualizer?.updateDimensions(project.dimensions);
+    }
   }
 
   /**
@@ -503,5 +605,19 @@ export class Babylon3DController {
     this.canvas.width = width;
     this.canvas.height = height;
     this.engine.resize();
+  }
+
+  /**
+   * Toggle visibility of slice plane guides
+   */
+  setSliceGuidesVisible(visible: boolean): void {
+    this.slicePlaneVisualizer?.setVisible(visible);
+  }
+
+  /**
+   * Toggle visibility of a specific axis slice guide
+   */
+  setAxisSliceVisible(axis: 'x' | 'y' | 'z', visible: boolean): void {
+    this.slicePlaneVisualizer?.setAxisVisible(axis, visible);
   }
 }
