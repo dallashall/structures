@@ -33,7 +33,7 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
         };
       case 'saving':
         return {
-          icon: <CircularProgress size={16} thickness={6} />,
+          icon: <CircularProgress size={18} thickness={5} />,  // Match icon size: 18px
           text: 'Saving...',
           color: 'info.main',
         };
@@ -52,13 +52,17 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
         py: 0.5,
         borderRadius: 1,
         bgcolor: 'action.hover',
+        minWidth: 110, // Fixed min width prevents size changes between states
       }}
     >
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           color: config.color,
+          width: 18, // Fixed icon width
+          height: 18, // Fixed icon height - prevents vertical size changes
         }}
       >
         {config.icon}
@@ -69,6 +73,7 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
           fontWeight: 500,
           color: 'text.secondary',
           lineHeight: 1,
+          whiteSpace: 'nowrap', // Prevent text wrapping
         }}
       >
         {config.text}

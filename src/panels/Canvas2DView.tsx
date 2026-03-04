@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import type { ViewType, Project, LayerState, Vector3D } from "../types";
-import { Canvas2DController } from "../core/Canvas2DController";
+import { Canvas2DController } from "../core/canvas2d";
 
 interface Canvas2DViewProps {
   viewType: ViewType;

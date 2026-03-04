@@ -46,8 +46,14 @@ export class Babylon3DController {
   // Block mesh instances
   private blockMeshes = new Map<string, Mesh>();
 
+  // Preview/ghost mesh instances (for drag preview)
+  private previewMeshes = new Map<string, Mesh>();
+
   // Materials cache (one per block color)
   private materials = new Map<string, StandardMaterial>();
+
+  // Ghost materials cache (semi-transparent versions for preview)
+  private ghostMaterials = new Map<string, StandardMaterial>();
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
@@ -55,6 +61,7 @@ export class Babylon3DController {
     blockAdded: this.handleBlockAdded.bind(this),
     blockRemoved: this.handleBlockRemoved.bind(this),
     layerChanged: this.updateBlockBrightness.bind(this),
+    previewChanged: this.handlePreviewChanged.bind(this),
     resize: this.handleResize.bind(this),
   };
 
@@ -96,6 +103,9 @@ export class Babylon3DController {
     // Subscribe to editor state events for active layer highlighting
     editorStateManager.on('layer:changed', this.boundHandlers.layerChanged);
 
+    // Subscribe to preview events for ghost block rendering
+    editorStateManager.on('preview:changed', this.boundHandlers.previewChanged);
+
     // Subscribe to viewport events (future: sync camera state)
     // viewportManager.on('camera:changed', this.handleCameraChanged);
 
@@ -117,6 +127,7 @@ export class Babylon3DController {
     projectManager.off('block:added', this.boundHandlers.blockAdded);
     projectManager.off('block:removed', this.boundHandlers.blockRemoved);
     editorStateManager.off('layer:changed', this.boundHandlers.layerChanged);
+    editorStateManager.off('preview:changed', this.boundHandlers.previewChanged);
     window.removeEventListener('resize', this.boundHandlers.resize);
 
     // Dispose slice plane visualizer
@@ -334,9 +345,14 @@ export class Babylon3DController {
       this.scene
     );
 
-    // Position in Babylon coordinates
-    const babylonPos = this.toBabylonVector(blockData.position);
-    box.position = babylonPos.add(new Vector3(0.5, 0.5, 0.5)); // Center on grid cell
+    // Center block in grid cell by adding 0.5 offset in our coordinate system
+    // BEFORE converting to Babylon coordinates
+    const centeredPos: Vector3D = {
+      x: blockData.position.x + 0.5,
+      y: blockData.position.y + 0.5,
+      z: blockData.position.z + 0.5,
+    };
+    box.position = this.toBabylonVector(centeredPos);
 
     // Apply material
     box.material = this.getMaterial(block.color);
@@ -619,5 +635,94 @@ export class Babylon3DController {
    */
   setAxisSliceVisible(axis: 'x' | 'y' | 'z', visible: boolean): void {
     this.slicePlaneVisualizer?.setAxisVisible(axis, visible);
+  }
+
+  /**
+   * Handle preview blocks changed event
+   * Creates/updates ghost preview meshes
+   */
+  private handlePreviewChanged(previewBlocks: import('../core/EditorStateManager').PreviewBlock[]): void {
+    // Clear existing preview meshes
+    this.clearPreviewMeshes();
+
+    // If no preview blocks, we're done
+    if (previewBlocks.length === 0) {
+      return;
+    }
+
+    // Create ghost meshes for each preview block
+    for (const previewBlock of previewBlocks) {
+      if (!previewBlock.blockType) continue; // Skip null block types
+
+      this.createPreviewMesh(previewBlock);
+    }
+  }
+
+  /**
+   * Create a ghost/preview mesh (semi-transparent)
+   */
+  private createPreviewMesh(previewBlock: import('../core/EditorStateManager').PreviewBlock): void {
+    const key = `${previewBlock.position.x},${previewBlock.position.y},${previewBlock.position.z}`;
+
+    // Get block definition
+    const block = blockRegistry.getBlock(previewBlock.blockType!);
+    if (!block) return;
+
+    // Create box mesh
+    const box = MeshBuilder.CreateBox(
+      `preview_${key}`,
+      { size: 1 },
+      this.scene
+    );
+
+    // Center block in grid cell by adding 0.5 offset in our coordinate system
+    // BEFORE converting to Babylon coordinates
+    const centeredPos: Vector3D = {
+      x: previewBlock.position.x + 0.5,
+      y: previewBlock.position.y + 0.5,
+      z: previewBlock.position.z + 0.5,
+    };
+    box.position = this.toBabylonVector(centeredPos);
+
+    // Apply ghost material (semi-transparent)
+    box.material = this.getGhostMaterial(block.color);
+
+    // Store reference
+    this.previewMeshes.set(key, box);
+  }
+
+  /**
+   * Get or create a ghost material (semi-transparent version)
+   */
+  private getGhostMaterial(color: string): StandardMaterial {
+    // Check cache
+    if (this.ghostMaterials.has(color)) {
+      return this.ghostMaterials.get(color)!;
+    }
+
+    // Parse hex color
+    const r = parseInt(color.substring(1, 3), 16) / 255;
+    const g = parseInt(color.substring(3, 5), 16) / 255;
+    const b = parseInt(color.substring(5, 7), 16) / 255;
+
+    // Create material
+    const material = new StandardMaterial(`ghost_${color}`, this.scene);
+    material.diffuseColor = new Color3(r, g, b);
+    material.specularColor = new Color3(0.3, 0.3, 0.3);
+    material.alpha = 0.5; // Semi-transparent
+    material.transparencyMode = 2; // Alpha blend mode
+
+    this.ghostMaterials.set(color, material);
+    return material;
+  }
+
+  /**
+   * Clear all preview meshes
+   */
+  private clearPreviewMeshes(): void {
+    for (const mesh of this.previewMeshes.values()) {
+      mesh.dispose();
+    }
+    this.previewMeshes.clear();
   }
 }

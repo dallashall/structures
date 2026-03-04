@@ -46,6 +46,10 @@ export class Canvas2DController {
   // Point mode preview state (tracks current hover position during drag)
   private paintPreviewCell: { gridX: number; gridY: number } | null = null;
 
+  // Fill/point preview state (for Alt key preview)
+  private previewKeyHeld = false;
+  private lastMouseGridPos: { gridX: number; gridY: number } | null = null;
+
   // Painting orchestrator
   private canvasPainter: CanvasPainter;
 
@@ -1188,6 +1192,9 @@ export class Canvas2DController {
           this.outlinePreviewStart = { gridX, gridY };
           this.outlinePreviewEnd = { gridX, gridY };
 
+          // Initialize preview for 3D view
+          this.updatePreviewBlocks();
+
           // Notify outline strategy that drag started
           const strategy = this.canvasPainter['strategy'];
           if (strategy && 'startDrag' in strategy) {
@@ -1211,6 +1218,21 @@ export class Canvas2DController {
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
 
+    // Update last mouse grid position (for preview)
+    const gridCoords = this.pixelToGrid(pixelX, pixelY);
+    if (gridCoords) {
+      this.lastMouseGridPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+
+      // Show hover preview for point mode (when not actively painting/panning/erasing)
+      if (!this.isPainting && !this.isDraggingPan && !this.isErasing && !this.previewKeyHeld) {
+        const paintMode = editorStateManager.getPaintMode();
+        if (paintMode === 'point') {
+          this.paintPreviewCell = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+          this.render(); // Re-render to show preview
+        }
+      }
+    }
+
     // Handle panning
     if (this.isDraggingPan) {
       const deltaX = pixelX - this.lastMousePos.x;
@@ -1233,13 +1255,13 @@ export class Canvas2DController {
     // Handle painting
     if (this.isPainting) {
       const paintMode = editorStateManager.getPaintMode();
-      const gridCoords = this.pixelToGrid(pixelX, pixelY);
 
       // For outline mode, update preview during drag
       if (paintMode === 'outline') {
         if (gridCoords) {
           this.outlinePreviewEnd = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
-          this.render(); // Re-render to show preview
+          this.updatePreviewBlocks(); // Update 3D preview
+          this.render(); // Re-render to show 2D preview
         }
         return;
       }
@@ -1283,6 +1305,7 @@ export class Canvas2DController {
     this.paintPreviewCell = null;
     this.outlinePreviewStart = null;
     this.outlinePreviewEnd = null;
+    editorStateManager.clearPreview();
 
     this.isPainting = false;
     this.isErasing = false;
@@ -1296,6 +1319,7 @@ export class Canvas2DController {
     this.paintPreviewCell = null;
     this.outlinePreviewStart = null;
     this.outlinePreviewEnd = null;
+    editorStateManager.clearPreview();
 
     this.isPainting = false;
     this.isErasing = false;
@@ -1315,6 +1339,11 @@ export class Canvas2DController {
       this.shiftHeld = true;
       this.updateCursor();
     }
+    if ((event.code === 'AltLeft' || event.code === 'AltRight') && !event.repeat) {
+      event.preventDefault();
+      this.previewKeyHeld = true;
+      this.showPreviewAtCursor();
+    }
   }
 
   private handleKeyUp(event: KeyboardEvent): void {
@@ -1328,6 +1357,11 @@ export class Canvas2DController {
       this.shiftHeld = false;
       this.isErasing = false;
       this.updateCursor();
+    }
+    if (event.code === 'AltLeft' || event.code === 'AltRight') {
+      event.preventDefault();
+      this.previewKeyHeld = false;
+      editorStateManager.clearPreview(); // Clear preview when key released
     }
   }
 
@@ -1343,6 +1377,168 @@ export class Canvas2DController {
     } else {
       this.canvas.style.cursor = 'crosshair';
     }
+  }
+
+  /**
+   * Show preview at current cursor position (for Alt key preview)
+   * Calculates what would happen if the user clicked at the current position
+   */
+  private showPreviewAtCursor(): void {
+    if (!this.lastMouseGridPos) {
+      editorStateManager.clearPreview();
+      return;
+    }
+
+    const selectedBlock = editorStateManager.getSelectedBlock();
+    if (!selectedBlock) {
+      editorStateManager.clearPreview();
+      return;
+    }
+
+    const project = projectManager.getProject();
+    if (!project) {
+      editorStateManager.clearPreview();
+      return;
+    }
+
+    // Convert grid position to 3D world position
+    const position = this.gridToPosition(this.lastMouseGridPos.gridX, this.lastMouseGridPos.gridY);
+
+    // Calculate what would be painted using the current strategy
+    const constrainAxis = this.getConstrainedAxis();
+    const operations = this.canvasPainter['strategy'].calculateOperations(
+      position,
+      selectedBlock,
+      project.dimensions,
+      constrainAxis
+    );
+
+    // Filter through behavior (same as actual painting)
+    const getBlock = (pos: Vector3D) => {
+      const blockData = projectManager.getBlock(pos);
+      return blockData ? blockData.blockType : null;
+    };
+    const filteredOperations = this.canvasPainter['behavior'].filter(operations, getBlock);
+
+    // Convert to preview blocks
+    const previewBlocks = filteredOperations.map(op => ({
+      position: op.position,
+      blockType: op.blockType,
+    }));
+
+    editorStateManager.setPreviewBlocks(previewBlocks);
+  }
+
+  /**
+   * Get constrained axis for current view (helper method)
+   */
+  private getConstrainedAxis(): { axis: 'x' | 'y' | 'z'; value: number } {
+    const activeLayers = editorStateManager.getActiveLayers();
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return { axis: 'y', value: activeLayers.y };
+      case 'left':
+      case 'right':
+        return { axis: 'x', value: activeLayers.x };
+      case 'top':
+      case 'bottom':
+        return { axis: 'z', value: activeLayers.z };
+    }
+  }
+
+  /**
+   * Update preview blocks for 3D ghost rendering
+   * Called during outline mode drag to show what will be placed
+   */
+  private updatePreviewBlocks(): void {
+    const selectedBlock = editorStateManager.getSelectedBlock();
+    if (!selectedBlock || !this.outlinePreviewStart || !this.outlinePreviewEnd) {
+      editorStateManager.clearPreview();
+      return;
+    }
+
+    const project = projectManager.getProject();
+    if (!project) {
+      editorStateManager.clearPreview();
+      return;
+    }
+
+    // Convert grid coordinates to 3D positions
+    const startPos = this.gridToPosition(this.outlinePreviewStart.gridX, this.outlinePreviewStart.gridY);
+    const endPos = this.gridToPosition(this.outlinePreviewEnd.gridX, this.outlinePreviewEnd.gridY);
+
+    // Calculate outline rectangle positions
+    const previewPositions = this.calculateOutlinePositions(startPos, endPos, project.dimensions);
+
+    // Create preview blocks
+    const previewBlocks = previewPositions.map(pos => ({
+      position: pos,
+      blockType: selectedBlock,
+    }));
+
+    editorStateManager.setPreviewBlocks(previewBlocks);
+  }
+
+  /**
+   * Calculate outline rectangle positions (similar to OutlinePaintStrategy)
+   */
+  private calculateOutlinePositions(
+    start: Vector3D,
+    end: Vector3D,
+    dimensions: Dimensions
+  ): Vector3D[] {
+    const positions: Vector3D[] = [];
+
+    // Calculate rectangle bounds
+    const minX = Math.max(0, Math.min(start.x, end.x));
+    const maxX = Math.min(dimensions.width - 1, Math.max(start.x, end.x));
+    const minY = Math.max(0, Math.min(start.y, end.y));
+    const maxY = Math.min(dimensions.height - 1, Math.max(start.y, end.y));
+    const minZ = Math.max(0, Math.min(start.z, end.z));
+    const maxZ = Math.min(dimensions.depth - 1, Math.max(start.z, end.z));
+
+    // Determine which plane we're drawing on
+    const isXConstant = start.x === end.x;
+    const isYConstant = start.y === end.y;
+    const isZConstant = start.z === end.z;
+
+    if (isXConstant) {
+      // YZ plane (front/back view)
+      const x = start.x;
+      for (let y = minY; y <= maxY; y++) {
+        positions.push({ x, y, z: minZ });
+        positions.push({ x, y, z: maxZ });
+      }
+      for (let z = minZ + 1; z < maxZ; z++) {
+        positions.push({ x, y: minY, z });
+        positions.push({ x, y: maxY, z });
+      }
+    } else if (isYConstant) {
+      // XZ plane (left/right view)
+      const y = start.y;
+      for (let x = minX; x <= maxX; x++) {
+        positions.push({ x, y, z: minZ });
+        positions.push({ x, y, z: maxZ });
+      }
+      for (let z = minZ + 1; z < maxZ; z++) {
+        positions.push({ x: minX, y, z });
+        positions.push({ x: maxX, y, z });
+      }
+    } else if (isZConstant) {
+      // XY plane (top/bottom view)
+      const z = start.z;
+      for (let x = minX; x <= maxX; x++) {
+        positions.push({ x, y: minY, z });
+        positions.push({ x, y: maxY, z });
+      }
+      for (let y = minY + 1; y < maxY; y++) {
+        positions.push({ x: minX, y, z });
+        positions.push({ x: maxX, y, z });
+      }
+    }
+
+    return positions;
   }
 
   /**

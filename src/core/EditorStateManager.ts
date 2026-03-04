@@ -6,7 +6,16 @@ import type {
   ToolType,
   PaintMode,
   PaintBehavior,
+  Vector3D,
 } from '../types';
+
+/**
+ * PreviewBlock - Represents a ghost/preview block to be rendered
+ */
+export interface PreviewBlock {
+  position: Vector3D;
+  blockType: string | null; // null = erase
+}
 
 /**
  * EditorStateManager - Manages UI state for the editor
@@ -28,6 +37,7 @@ import type {
  * - paintmode:changed - When paint mode changes
  * - paintbehavior:changed - When paint behavior changes
  * - quickselect:changed - When quick-select slots change
+ * - preview:changed - When preview blocks change (for ghost rendering)
  */
 class EditorStateManager extends EventEmitter {
   private static instance: EditorStateManager;
@@ -40,6 +50,7 @@ class EditorStateManager extends EventEmitter {
   private paintMode: PaintMode = 'point';
   private paintBehavior: PaintBehavior = 'normal';
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null];
+  private previewBlocks: PreviewBlock[] = [];
 
   private constructor() {
     super();
@@ -227,6 +238,32 @@ class EditorStateManager extends EventEmitter {
     const current = this.activeLayers[dimension];
     if (current > 0) {
       this.setActiveLayer(dimension, current - 1);
+    }
+  }
+
+  /**
+   * Set preview blocks for ghost rendering
+   * Used when dragging in outline/fill modes to show what will be placed
+   */
+  setPreviewBlocks(blocks: PreviewBlock[]): void {
+    this.previewBlocks = blocks;
+    this.emit('preview:changed', blocks);
+  }
+
+  /**
+   * Get current preview blocks
+   */
+  getPreviewBlocks(): PreviewBlock[] {
+    return [...this.previewBlocks];
+  }
+
+  /**
+   * Clear preview blocks
+   */
+  clearPreview(): void {
+    if (this.previewBlocks.length > 0) {
+      this.previewBlocks = [];
+      this.emit('preview:changed', []);
     }
   }
 }

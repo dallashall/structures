@@ -23,7 +23,7 @@ import { QuadLayout } from '../layouts/QuadLayout';
 import { projectManager } from '../core/ProjectManager';
 import { editorStateManager } from '../core/EditorStateManager';
 import { storageManager } from '../core/StorageManager';
-import { Canvas2DController } from '../core/Canvas2DController';
+import { Canvas2DController } from '../core/canvas2d';
 
 /**
  * EditorView - Main editor container
