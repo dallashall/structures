@@ -1,7 +1,14 @@
 import { projectManager } from './ProjectManager';
 import { blockRegistry } from './BlockRegistry';
 import { editorStateManager } from './EditorStateManager';
-import type { ViewType, Vector3D, Dimensions, Direction } from '../types';
+import { CanvasPainter } from './painting/CanvasPainter';
+import { PointPaintStrategy } from './painting/strategies/PointPaintStrategy';
+import { FillPaintStrategy } from './painting/strategies/FillPaintStrategy';
+import { OutlinePaintStrategy } from './painting/strategies/OutlinePaintStrategy';
+import { NormalBehavior } from './painting/behaviors/NormalBehavior';
+import { OnlyReplaceBehavior } from './painting/behaviors/OnlyReplaceBehavior';
+import { SelectiveReplaceBehavior } from './painting/behaviors/SelectiveReplaceBehavior';
+import type { ViewType, Vector3D, Dimensions, Direction, PaintMode, PaintBehavior } from '../types';
 
 /**
  * Canvas2DController - Pure TypeScript canvas controller
@@ -32,6 +39,16 @@ export class Canvas2DController {
   private lastZoomTime = 0;
   private isPlacementMode = false;
 
+  // Outline mode preview state
+  private outlinePreviewStart: { gridX: number; gridY: number } | null = null;
+  private outlinePreviewEnd: { gridX: number; gridY: number } | null = null;
+
+  // Point mode preview state (tracks current hover position during drag)
+  private paintPreviewCell: { gridX: number; gridY: number } | null = null;
+
+  // Painting orchestrator
+  private canvasPainter: CanvasPainter;
+
   // Bound event handlers (for cleanup)
   private boundHandlers = {
     wheel: this.handleWheel.bind(this),
@@ -43,6 +60,8 @@ export class Canvas2DController {
     keyUp: this.handleKeyUp.bind(this),
     projectChanged: this.render.bind(this),
     editorChanged: this.render.bind(this),
+    paintModeChanged: this.handlePaintModeChanged.bind(this),
+    paintBehaviorChanged: this.handlePaintBehaviorChanged.bind(this),
   };
 
   constructor(canvas: HTMLCanvasElement, viewType: ViewType) {
@@ -58,6 +77,11 @@ export class Canvas2DController {
     // Register this controller globally
     activeControllers.add(this);
 
+    // Initialize painting system
+    const initialStrategy = this.createStrategyForMode(editorStateManager.getPaintMode());
+    const initialBehavior = this.createBehaviorForType(editorStateManager.getPaintBehavior());
+    this.canvasPainter = new CanvasPainter(initialStrategy, initialBehavior);
+
     // Initialize pan to center grid
     this.initializePan();
 
@@ -67,6 +91,8 @@ export class Canvas2DController {
     projectManager.on('block:removed', this.boundHandlers.projectChanged);
     editorStateManager.on('block:selected', this.boundHandlers.editorChanged);
     editorStateManager.on('layer:changed', this.boundHandlers.editorChanged);
+    editorStateManager.on('paintmode:changed', this.boundHandlers.paintModeChanged);
+    editorStateManager.on('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
 
     // Add DOM event listeners
     this.canvas.addEventListener('wheel', this.boundHandlers.wheel, { passive: false });
@@ -91,6 +117,8 @@ export class Canvas2DController {
     projectManager.off('block:removed', this.boundHandlers.projectChanged);
     editorStateManager.off('block:selected', this.boundHandlers.editorChanged);
     editorStateManager.off('layer:changed', this.boundHandlers.editorChanged);
+    editorStateManager.off('paintmode:changed', this.boundHandlers.paintModeChanged);
+    editorStateManager.off('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
 
     // Remove DOM event listeners
     this.canvas.removeEventListener('wheel', this.boundHandlers.wheel);
@@ -284,6 +312,9 @@ export class Canvas2DController {
 
     // Draw active layer indicators
     this.drawActiveLayerIndicators();
+
+    // Draw outline preview if dragging
+    this.drawOutlinePreview();
   }
 
   /**
@@ -487,6 +518,110 @@ export class Canvas2DController {
       default:
         return 0;
     }
+  }
+
+  /**
+   * Draw preview visualization while dragging
+   * Shows semi-transparent blocks for outline/point mode before placement
+   */
+  private drawOutlinePreview(): void {
+    const selectedBlock = editorStateManager.getSelectedBlock();
+    if (!selectedBlock) return;
+
+    const block = blockRegistry.getBlock(selectedBlock);
+    if (!block) return;
+
+    const project = projectManager.getProject();
+    if (!project) return;
+
+    const { gridWidth, gridHeight } = this.getGridDimensions(project.dimensions);
+    const BASE_CELL_SIZE = 20;
+    const cellSize = BASE_CELL_SIZE * this.zoom;
+    const offsetX = this.pan.x;
+    const offsetY = this.pan.y;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.5; // Semi-transparent preview
+
+    // Outline mode preview
+    if (this.outlinePreviewStart && this.outlinePreviewEnd) {
+      const minX = Math.min(this.outlinePreviewStart.gridX, this.outlinePreviewEnd.gridX);
+      const maxX = Math.max(this.outlinePreviewStart.gridX, this.outlinePreviewEnd.gridX);
+      const minY = Math.min(this.outlinePreviewStart.gridY, this.outlinePreviewEnd.gridY);
+      const maxY = Math.max(this.outlinePreviewStart.gridY, this.outlinePreviewEnd.gridY);
+
+      // Draw outline rectangle preview
+      this.ctx.fillStyle = block.color;
+
+      // Top edge
+      for (let x = minX; x <= maxX; x++) {
+        if (x >= 0 && x < gridWidth && minY >= 0 && minY < gridHeight) {
+          const px = offsetX + x * cellSize;
+          const py = offsetY + minY * cellSize;
+          this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        }
+      }
+
+      // Bottom edge
+      for (let x = minX; x <= maxX; x++) {
+        if (x >= 0 && x < gridWidth && maxY >= 0 && maxY < gridHeight) {
+          const px = offsetX + x * cellSize;
+          const py = offsetY + maxY * cellSize;
+          this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        }
+      }
+
+      // Left edge (excluding corners to avoid double-draw)
+      for (let y = minY + 1; y < maxY; y++) {
+        if (minX >= 0 && minX < gridWidth && y >= 0 && y < gridHeight) {
+          const px = offsetX + minX * cellSize;
+          const py = offsetY + y * cellSize;
+          this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        }
+      }
+
+      // Right edge (excluding corners)
+      for (let y = minY + 1; y < maxY; y++) {
+        if (maxX >= 0 && maxX < gridWidth && y >= 0 && y < gridHeight) {
+          const px = offsetX + maxX * cellSize;
+          const py = offsetY + y * cellSize;
+          this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        }
+      }
+
+      // Draw dashed rectangle guide
+      this.ctx.setLineDash([5, 5]);
+      this.ctx.strokeStyle = block.color;
+      this.ctx.lineWidth = 2;
+      this.ctx.globalAlpha = 0.7;
+      const rectX = offsetX + minX * cellSize;
+      const rectY = offsetY + minY * cellSize;
+      const rectWidth = (maxX - minX + 1) * cellSize;
+      const rectHeight = (maxY - minY + 1) * cellSize;
+      this.ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
+      this.ctx.setLineDash([]);
+    }
+
+    // Point mode preview (hover cell during drag)
+    if (this.paintPreviewCell && this.isPainting) {
+      const { gridX, gridY } = this.paintPreviewCell;
+      if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+        const px = offsetX + gridX * cellSize;
+        const py = offsetY + gridY * cellSize;
+
+        this.ctx.fillStyle = block.color;
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+        // Draw highlight border
+        this.ctx.strokeStyle = block.color;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.8;
+        this.ctx.strokeRect(px + 2, py + 2, cellSize - 4, cellSize - 4);
+      }
+    }
+
+    this.ctx.restore();
   }
 
   /**
@@ -921,9 +1056,6 @@ export class Canvas2DController {
   }
 
   private paintAtPixel(pixelX: number, pixelY: number): void {
-    const project = projectManager.getProject();
-    if (!project) return;
-
     const gridCoords = this.pixelToGrid(pixelX, pixelY);
     if (!gridCoords) return;
 
@@ -934,30 +1066,13 @@ export class Canvas2DController {
     if (this.lastPaintedCell === cellKey) return;
     this.lastPaintedCell = cellKey;
 
-    const position = this.gridToPosition(gridX, gridY);
-
-    // Validate position
-    if (
-      position.x < 0 || position.x >= project.dimensions.width ||
-      position.y < 0 || position.y >= project.dimensions.height ||
-      position.z < 0 || position.z >= project.dimensions.depth
-    ) {
-      return;
-    }
-
-    // Place or remove block
+    // Delegate to canvas painter
     const selectedBlock = editorStateManager.getSelectedBlock();
-    if (selectedBlock) {
-      projectManager.setBlock(position, selectedBlock);
-    } else {
-      projectManager.removeBlock(position);
-    }
+    const activeLayers = editorStateManager.getActiveLayers();
+    this.canvasPainter.paint(gridX, gridY, this.viewType, activeLayers, selectedBlock);
   }
 
   private eraseAtPixel(pixelX: number, pixelY: number): void {
-    const project = projectManager.getProject();
-    if (!project) return;
-
     const gridCoords = this.pixelToGrid(pixelX, pixelY);
     if (!gridCoords) return;
 
@@ -968,19 +1083,9 @@ export class Canvas2DController {
     if (this.lastPaintedCell === cellKey) return;
     this.lastPaintedCell = cellKey;
 
-    const position = this.gridToPosition(gridX, gridY);
-
-    // Validate position
-    if (
-      position.x < 0 || position.x >= project.dimensions.width ||
-      position.y < 0 || position.y >= project.dimensions.height ||
-      position.z < 0 || position.z >= project.dimensions.depth
-    ) {
-      return;
-    }
-
-    // Remove block at this position
-    projectManager.removeBlock(position);
+    // Delegate to canvas painter with null blockId (erase mode)
+    const activeLayers = editorStateManager.getActiveLayers();
+    this.canvasPainter.paint(gridX, gridY, this.viewType, activeLayers, null);
   }
 
   private mouseToCanvasSpace(mouseX: number, mouseY: number): { x: number; y: number } {
@@ -1070,9 +1175,34 @@ export class Canvas2DController {
 
     // Paint mode: left click
     if (event.button === 0) {
+      const paintMode = editorStateManager.getPaintMode();
+
+      // Outline mode: start drag for rectangle
+      if (paintMode === 'outline') {
+        const gridCoords = this.pixelToGrid(pixelX, pixelY);
+        if (gridCoords) {
+          const { gridX, gridY } = gridCoords;
+          const position = this.gridToPosition(gridX, gridY);
+
+          // Store preview start
+          this.outlinePreviewStart = { gridX, gridY };
+          this.outlinePreviewEnd = { gridX, gridY };
+
+          // Notify outline strategy that drag started
+          const strategy = this.canvasPainter['strategy'];
+          if (strategy && 'startDrag' in strategy) {
+            (strategy as any).startDrag(position);
+          }
+        }
+      }
+
       this.isPainting = true;
       this.lastPaintedCell = null;
-      this.paintAtPixel(pixelX, pixelY);
+
+      // Only paint immediately for non-outline modes
+      if (paintMode !== 'outline') {
+        this.paintAtPixel(pixelX, pixelY);
+      }
     }
   }
 
@@ -1102,11 +1232,58 @@ export class Canvas2DController {
 
     // Handle painting
     if (this.isPainting) {
+      const paintMode = editorStateManager.getPaintMode();
+      const gridCoords = this.pixelToGrid(pixelX, pixelY);
+
+      // For outline mode, update preview during drag
+      if (paintMode === 'outline') {
+        if (gridCoords) {
+          this.outlinePreviewEnd = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+          this.render(); // Re-render to show preview
+        }
+        return;
+      }
+
+      // For point/fill mode, show preview of current cell while dragging
+      if (gridCoords) {
+        this.paintPreviewCell = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+      }
+
       this.paintAtPixel(pixelX, pixelY);
     }
   }
 
-  private handleMouseUp(): void {
+  private handleMouseUp(event: MouseEvent): void {
+    // If we were painting in outline mode, finalize the rectangle
+    if (this.isPainting) {
+      const paintMode = editorStateManager.getPaintMode();
+      if (paintMode === 'outline') {
+        const rect = this.canvas.getBoundingClientRect();
+        const pixelX = event.clientX - rect.left;
+        const pixelY = event.clientY - rect.top;
+
+        // Clear preview
+        this.outlinePreviewStart = null;
+        this.outlinePreviewEnd = null;
+
+        // Paint the final rectangle outline
+        this.paintAtPixel(pixelX, pixelY);
+
+        // End drag in strategy
+        const strategy = this.canvasPainter['strategy'];
+        if (strategy && 'endDrag' in strategy) {
+          (strategy as any).endDrag();
+        }
+
+        this.render(); // Re-render to clear preview
+      }
+    }
+
+    // Clear all preview state
+    this.paintPreviewCell = null;
+    this.outlinePreviewStart = null;
+    this.outlinePreviewEnd = null;
+
     this.isPainting = false;
     this.isErasing = false;
     this.isDraggingPan = false;
@@ -1115,11 +1292,17 @@ export class Canvas2DController {
   }
 
   private handleMouseLeave(): void {
+    // Clear all preview state
+    this.paintPreviewCell = null;
+    this.outlinePreviewStart = null;
+    this.outlinePreviewEnd = null;
+
     this.isPainting = false;
     this.isErasing = false;
     this.isDraggingPan = false;
     this.lastPaintedCell = null;
     this.updateCursor();
+    this.render(); // Re-render to clear preview
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -1159,6 +1342,54 @@ export class Canvas2DController {
       this.canvas.style.cursor = 'pointer';
     } else {
       this.canvas.style.cursor = 'crosshair';
+    }
+  }
+
+  /**
+   * Handle paint mode change event
+   */
+  private handlePaintModeChanged(mode: PaintMode): void {
+    const strategy = this.createStrategyForMode(mode);
+    this.canvasPainter.setStrategy(strategy);
+  }
+
+  /**
+   * Handle paint behavior change event
+   */
+  private handlePaintBehaviorChanged(behavior: PaintBehavior): void {
+    const behaviorImpl = this.createBehaviorForType(behavior);
+    this.canvasPainter.setBehavior(behaviorImpl);
+  }
+
+  /**
+   * Create paint strategy based on mode
+   */
+  private createStrategyForMode(mode: PaintMode) {
+    switch (mode) {
+      case 'point':
+        return new PointPaintStrategy();
+      case 'fill':
+        return new FillPaintStrategy();
+      case 'outline':
+        return new OutlinePaintStrategy();
+      default:
+        return new PointPaintStrategy();
+    }
+  }
+
+  /**
+   * Create paint behavior based on type
+   */
+  private createBehaviorForType(behavior: PaintBehavior) {
+    switch (behavior) {
+      case 'normal':
+        return new NormalBehavior();
+      case 'only-replace':
+        return new OnlyReplaceBehavior();
+      case 'selective-replace':
+        return new SelectiveReplaceBehavior();
+      default:
+        return new NormalBehavior();
     }
   }
 }

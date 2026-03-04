@@ -3,7 +3,7 @@ import { Box, Stack, IconButton, Paper, Tab, Button, Typography } from '@mui/mat
 import { TabList, TabContext } from '@mui/lab';
 import { Apps, Check } from '@mui/icons-material';
 
-import type { ViewType, LayoutMode } from '../types';
+import type { ViewType, LayoutMode, PaintMode, PaintBehavior } from '../types';
 
 import { withProjectState, WithProjectStateProps } from '../hocs/withProjectState';
 import { withEditorState, WithEditorStateProps } from '../hocs/withEditorState';
@@ -15,6 +15,7 @@ import { LayerControls } from '../components/LayerControls';
 import { QuickSelectPalette } from '../components/QuickSelectPalette';
 import { FullPaletteMenu } from '../components/FullPaletteMenu';
 import { MetaBlockPlacementModal } from '../components/MetaBlockPlacementModal';
+import { PaintControls } from '../components/PaintControls';
 
 import { TabbedLayout } from '../layouts/TabbedLayout';
 import { QuadLayout } from '../layouts/QuadLayout';
@@ -52,6 +53,8 @@ function EditorViewComponent(props: EditorViewProps) {
     blocks,
     quickSelectSlots,
     selectedBlock,
+    paintMode,
+    paintBehavior,
     saveState,
   } = props;
 
@@ -168,6 +171,14 @@ function EditorViewComponent(props: EditorViewProps) {
     if (selectedBlock) {
       editorStateManager.setQuickSelectSlot(index, selectedBlock);
     }
+  };
+
+  const handlePaintModeChange = (mode: PaintMode) => {
+    editorStateManager.setPaintMode(mode);
+  };
+
+  const handlePaintBehaviorChange = (behavior: PaintBehavior) => {
+    editorStateManager.setPaintBehavior(behavior);
   };
 
   const handleViewChange = (key: React.Key) => {
@@ -322,6 +333,13 @@ function EditorViewComponent(props: EditorViewProps) {
                     }}
                   >
                     <Stack direction="column" spacing={2} sx={{ p: 2, flex: 1 }}>
+                      <PaintControls
+                        paintMode={paintMode}
+                        paintBehavior={paintBehavior}
+                        onPaintModeChange={handlePaintModeChange}
+                        onPaintBehaviorChange={handlePaintBehaviorChange}
+                        orientation="vertical"
+                      />
                       <QuickSelectPalette
                         slots={quickSelectSlots}
                         selectedSlotIndex={selectedSlotIndex}
@@ -445,6 +463,13 @@ function EditorViewComponent(props: EditorViewProps) {
                     }}
                   >
                     <Stack direction="column" spacing={2} sx={{ p: 2, flex: 1 }}>
+                      <PaintControls
+                        paintMode={paintMode}
+                        paintBehavior={paintBehavior}
+                        onPaintModeChange={handlePaintModeChange}
+                        onPaintBehaviorChange={handlePaintBehaviorChange}
+                        orientation="vertical"
+                      />
                       <QuickSelectPalette
                         slots={quickSelectSlots}
                         selectedSlotIndex={selectedSlotIndex}
