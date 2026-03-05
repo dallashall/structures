@@ -8,24 +8,49 @@ import { projectManager } from './core/ProjectManager';
 import { storageManager } from './core/StorageManager';
 import type { Dimensions } from './types';
 
-// Create MUI theme
-const theme = createTheme({
+// Create dark professional theme inspired by Adobe/Blender
+const darkTheme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
-      main: '#0d6efd',
+      main: '#4a9eff',
+      dark: '#3d8ae5',
+    },
+    secondary: {
+      main: '#ff9f40',
+      dark: '#e68a2e',
     },
     background: {
-      default: '#ffffff',
-      paper: '#f5f5f5',
+      default: '#1a1a1a',
+      paper: '#2a2a2a',
+    },
+    divider: '#3a3a3a',
+    text: {
+      primary: '#e0e0e0',
+      secondary: '#a0a0a0',
     },
   },
-  spacing: 8, // 8px base unit
+  spacing: 8,
   shape: {
     borderRadius: 4,
   },
   typography: {
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  components: {
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          '&.Mui-selected': {
+            backgroundColor: '#4a9eff',
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: '#3d8ae5',
+            },
+          },
+        },
+      },
+    },
   },
 });
 
@@ -92,7 +117,7 @@ export function App() {
   // Render preview mode if hash is #/preview
   if (isPreviewMode) {
     return (
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={darkTheme}>
         <CssBaseline />
         <ComponentPreview />
       </ThemeProvider>
@@ -100,7 +125,7 @@ export function App() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       {currentView === 'welcome' ? (
         <WelcomeView

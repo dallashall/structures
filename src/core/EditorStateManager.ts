@@ -7,6 +7,10 @@ import type {
   PaintMode,
   PaintBehavior,
   Vector3D,
+  ShapeFillMode,
+  DepthConfig,
+  CircleDrawMode,
+  CurveControlState,
 } from '../types';
 
 /**
@@ -36,21 +40,39 @@ export interface PreviewBlock {
  * - tool:changed - When active tool changes
  * - paintmode:changed - When paint mode changes
  * - paintbehavior:changed - When paint behavior changes
+ * - shapefillmode:changed - When shape fill mode changes
+ * - depthconfig:changed - When depth config changes
+ * - curvecontrol:changed - When curve control state changes
+ * - placementmode:changed - When placement mode changes
+ * - actionbar:changed - When action bar expanded state changes
  * - quickselect:changed - When quick-select slots change
  * - preview:changed - When preview blocks change (for ghost rendering)
  */
 class EditorStateManager extends EventEmitter {
   private static instance: EditorStateManager;
 
-  private layoutMode: LayoutMode = 'tabbed';
+  private layoutMode: LayoutMode = 'quad';
   private activeView: ViewType = 'front';
   private activeLayers: LayerState = { x: 0, y: 0, z: 0 };
   private selectedBlockId: string | null = null;
   private activeTool: ToolType = 'paint';
   private paintMode: PaintMode = 'point';
   private paintBehavior: PaintBehavior = 'normal';
-  private quickSelectSlots: (string | null)[] = [null, null, null, null, null];
+  private shapeFillMode: ShapeFillMode = 'outline';
+  private depthConfig: DepthConfig = {
+    enabled: false,
+    thickness: 1,
+    mode: 'through',
+  };
+  private circleDrawMode: CircleDrawMode = 'center-radius';
+  private curveControlState: CurveControlState | null = null;
+  private isPlacementMode = false;
+  private isActionBarExpanded = true;
+  private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
   private previewBlocks: PreviewBlock[] = [];
+  private isMaterialBrowserOpen = false;
+  private materialBrowserSearchQuery = '';
+  private materialBrowserSelectedTab = 0;
 
   private constructor() {
     super();
@@ -190,10 +212,158 @@ class EditorStateManager extends EventEmitter {
   }
 
   /**
+   * Set the shape fill mode
+   */
+  setShapeFillMode(mode: ShapeFillMode): void {
+    if (this.shapeFillMode !== mode) {
+      this.shapeFillMode = mode;
+      this.emit('shapefillmode:changed', mode);
+    }
+  }
+
+  /**
+   * Get the current shape fill mode
+   */
+  getShapeFillMode(): ShapeFillMode {
+    return this.shapeFillMode;
+  }
+
+  /**
+   * Set the depth configuration
+   */
+  setDepthConfig(config: Partial<DepthConfig>): void {
+    this.depthConfig = { ...this.depthConfig, ...config };
+    this.emit('depthconfig:changed', this.depthConfig);
+  }
+
+  /**
+   * Get the current depth configuration
+   */
+  getDepthConfig(): DepthConfig {
+    return { ...this.depthConfig };
+  }
+
+  /**
+   * Set the circle draw mode
+   */
+  setCircleDrawMode(mode: CircleDrawMode): void {
+    this.circleDrawMode = mode;
+    // No event needed - used during interaction only
+  }
+
+  /**
+   * Get the current circle draw mode
+   */
+  getCircleDrawMode(): CircleDrawMode {
+    return this.circleDrawMode;
+  }
+
+  /**
+   * Set the curve control state
+   */
+  setCurveControlState(state: CurveControlState | null): void {
+    this.curveControlState = state;
+    this.emit('curvecontrol:changed', state);
+  }
+
+  /**
+   * Get the current curve control state
+   */
+  getCurveControlState(): CurveControlState | null {
+    return this.curveControlState;
+  }
+
+  /**
+   * Set placement mode (for meta block placement)
+   */
+  setPlacementMode(isPlacementMode: boolean): void {
+    if (this.isPlacementMode !== isPlacementMode) {
+      this.isPlacementMode = isPlacementMode;
+      this.emit('placementmode:changed', isPlacementMode);
+    }
+  }
+
+  /**
+   * Get the current placement mode
+   */
+  getPlacementMode(): boolean {
+    return this.isPlacementMode;
+  }
+
+  /**
+   * Set action bar expanded state
+   */
+  setActionBarExpanded(isExpanded: boolean): void {
+    if (this.isActionBarExpanded !== isExpanded) {
+      this.isActionBarExpanded = isExpanded;
+      this.emit('actionbar:changed', isExpanded);
+    }
+  }
+
+  /**
+   * Get the action bar expanded state
+   */
+  getActionBarExpanded(): boolean {
+    return this.isActionBarExpanded;
+  }
+
+  /**
+   * Set material browser open state
+   */
+  setMaterialBrowserOpen(isOpen: boolean): void {
+    if (this.isMaterialBrowserOpen !== isOpen) {
+      this.isMaterialBrowserOpen = isOpen;
+      // Reset search and tab when opening
+      if (isOpen) {
+        this.materialBrowserSearchQuery = '';
+        this.materialBrowserSelectedTab = 0;
+      }
+      this.emit('materialbrowser:changed', isOpen);
+    }
+  }
+
+  /**
+   * Get material browser open state
+   */
+  getMaterialBrowserOpen(): boolean {
+    return this.isMaterialBrowserOpen;
+  }
+
+  /**
+   * Set material browser search query
+   */
+  setMaterialBrowserSearchQuery(query: string): void {
+    this.materialBrowserSearchQuery = query;
+    this.emit('materialbrowser:search:changed', query);
+  }
+
+  /**
+   * Get material browser search query
+   */
+  getMaterialBrowserSearchQuery(): string {
+    return this.materialBrowserSearchQuery;
+  }
+
+  /**
+   * Set material browser selected tab
+   */
+  setMaterialBrowserSelectedTab(tab: number): void {
+    this.materialBrowserSelectedTab = tab;
+    this.emit('materialbrowser:tab:changed', tab);
+  }
+
+  /**
+   * Get material browser selected tab
+   */
+  getMaterialBrowserSelectedTab(): number {
+    return this.materialBrowserSelectedTab;
+  }
+
+  /**
    * Set a block ID in a quick-select slot
    */
   setQuickSelectSlot(index: number, blockId: string | null): void {
-    if (index < 0 || index >= 5) {
+    if (index < 0 || index >= 9) {
       console.warn(`Invalid quick-select slot index: ${index}`);
       return;
     }
@@ -215,7 +385,7 @@ class EditorStateManager extends EventEmitter {
    * Get a specific quick-select slot
    */
   getQuickSelectSlot(index: number): string | null {
-    if (index < 0 || index >= 5) {
+    if (index < 0 || index >= 9) {
       return null;
     }
     return this.quickSelectSlots[index];

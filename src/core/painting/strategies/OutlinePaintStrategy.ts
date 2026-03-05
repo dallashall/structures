@@ -17,6 +17,8 @@ export class OutlinePaintStrategy implements PaintStrategy {
    * Start a drag operation (call on mousedown)
    */
   startDrag(position: Vector3D): void {
+    // Clear any previous drag state to prevent state leakage
+    this.dragStart = null;
     this.dragStart = position;
   }
 

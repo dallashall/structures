@@ -23,10 +23,32 @@ export type LayoutMode = 'tabbed' | 'quad';
 export type ViewType = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
 
 // Painting modes
-export type PaintMode = 'point' | 'fill' | 'outline';
+export type PaintMode = 'point' | 'fill' | 'outline' | 'circle' | 'arch' | 'curve';
 
 // Painting behaviors (especially for fill mode)
 export type PaintBehavior = 'normal' | 'only-replace' | 'selective-replace';
+
+// Shape fill modes (separate from paint behavior)
+export type ShapeFillMode = 'outline' | 'filled';
+
+// Depth painting modes
+export type DepthPaintMode = 'through' | 'until-collision';
+
+// Depth configuration for painting through multiple layers
+export interface DepthConfig {
+  enabled: boolean;
+  thickness: number; // 1-10 layers
+  mode: DepthPaintMode;
+}
+
+// Circle drawing modes (for modifier keys)
+export type CircleDrawMode = 'center-radius' | 'bounding-box' | 'constrained-box';
+
+// Curve control state for bezier curve manipulation
+export interface CurveControlState {
+  controlPoint1: { x: number; y: number }; // Grid coordinates
+  controlPoint2: { x: number; y: number };
+}
 
 // Tool types (simplified for initial implementation)
 export type ToolType = 'paint' | 'erase';

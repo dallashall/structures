@@ -11,17 +11,25 @@ import {
   Brush,
   FormatColorFill,
   BorderOuter,
+  Circle,
+  Timeline,
   Edit,
   SwapHoriz,
   FilterAlt,
 } from '@mui/icons-material';
-import type { PaintMode, PaintBehavior } from '../types';
+import type { PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
+import { ShapeFillModeControl } from './ShapeFillModeControl';
+import { DepthPaintingControl } from './DepthPaintingControl';
 
 interface PaintControlsProps {
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
+  shapeFillMode: ShapeFillMode;
+  depthConfig: DepthConfig;
   onPaintModeChange: (mode: PaintMode) => void;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
+  onShapeFillModeChange: (mode: ShapeFillMode) => void;
+  onDepthConfigChange: (config: Partial<DepthConfig>) => void;
   orientation?: 'horizontal' | 'vertical';
 }
 
@@ -29,7 +37,9 @@ interface PaintControlsProps {
  * PaintControls - UI for selecting paint mode and behavior
  *
  * Allows user to switch between:
- * - Paint modes: point, fill, outline
+ * - Paint modes: point, fill, outline, circle, arch, curve
+ * - Shape fill modes: outline, filled
+ * - Depth configuration for multi-layer painting
  * - Paint behaviors: normal, only-replace, selective-replace
  *
  * Designed to be placed in the action bar near the material picker.
@@ -37,8 +47,12 @@ interface PaintControlsProps {
 export function PaintControls({
   paintMode,
   paintBehavior,
+  shapeFillMode,
+  depthConfig,
   onPaintModeChange,
   onPaintBehaviorChange,
+  onShapeFillModeChange,
+  onDepthConfigChange,
   orientation = 'vertical',
 }: PaintControlsProps) {
   const handleModeChange = (
@@ -58,6 +72,9 @@ export function PaintControls({
       onPaintBehaviorChange(newBehavior);
     }
   };
+
+  // Check if current mode is a shape mode that supports fill
+  const isShapeMode = ['outline', 'circle', 'arch', 'curve'].includes(paintMode);
 
   return (
     <Box
@@ -119,12 +136,46 @@ export function PaintControls({
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="outline" aria-label="Outline mode">
-            <Tooltip title="Outline - Draw rectangle outlines" placement="left">
+            <Tooltip title="Rectangle - Draw rectangles" placement="left">
               <BorderOuter fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="circle" aria-label="Circle mode">
+            <Tooltip title="Circle - Draw circles (Shift: bbox, Ctrl: 1:1)" placement="left">
+              <Circle fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="arch" aria-label="Arch mode">
+            <Tooltip title="Arch - Draw curved arches" placement="left">
+              <Box sx={{ fontSize: 'small' }}>⌒</Box>
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="curve" aria-label="Curve mode">
+            <Tooltip title="Curve - Draw bezier curves" placement="left">
+              <Timeline fontSize="small" />
             </Tooltip>
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
+
+      {/* Shape Fill Mode Section (only for shape modes) */}
+      {isShapeMode && (
+        <>
+          <Divider />
+          <ShapeFillModeControl
+            shapeFillMode={shapeFillMode}
+            onShapeFillModeChange={onShapeFillModeChange}
+            orientation={orientation}
+          />
+        </>
+      )}
+
+      {/* Depth Painting Section */}
+      <Divider sx={{ mt: isShapeMode ? 0 : 0 }} />
+      <DepthPaintingControl
+        depthConfig={depthConfig}
+        onDepthConfigChange={onDepthConfigChange}
+      />
 
       <Divider />
 

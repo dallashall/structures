@@ -5,6 +5,9 @@ import { CanvasPainter } from './painting/CanvasPainter';
 import { PointPaintStrategy } from './painting/strategies/PointPaintStrategy';
 import { FillPaintStrategy } from './painting/strategies/FillPaintStrategy';
 import { OutlinePaintStrategy } from './painting/strategies/OutlinePaintStrategy';
+import { CirclePaintStrategy } from './painting/strategies/CirclePaintStrategy';
+import { ArchPaintStrategy } from './painting/strategies/ArchPaintStrategy';
+import { CurvePaintStrategy } from './painting/strategies/CurvePaintStrategy';
 import { NormalBehavior } from './painting/behaviors/NormalBehavior';
 import { OnlyReplaceBehavior } from './painting/behaviors/OnlyReplaceBehavior';
 import { SelectiveReplaceBehavior } from './painting/behaviors/SelectiveReplaceBehavior';
@@ -60,6 +63,7 @@ export class Canvas2DController {
     mouseMove: this.handleMouseMove.bind(this),
     mouseUp: this.handleMouseUp.bind(this),
     mouseLeave: this.handleMouseLeave.bind(this),
+    contextMenu: this.handleContextMenu.bind(this),
     keyDown: this.handleKeyDown.bind(this),
     keyUp: this.handleKeyUp.bind(this),
     projectChanged: this.render.bind(this),
@@ -104,6 +108,7 @@ export class Canvas2DController {
     this.canvas.addEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.addEventListener('mouseup', this.boundHandlers.mouseUp);
     this.canvas.addEventListener('mouseleave', this.boundHandlers.mouseLeave);
+    this.canvas.addEventListener('contextmenu', this.boundHandlers.contextMenu);
     window.addEventListener('keydown', this.boundHandlers.keyDown);
     window.addEventListener('keyup', this.boundHandlers.keyUp);
 
@@ -130,6 +135,7 @@ export class Canvas2DController {
     this.canvas.removeEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.removeEventListener('mouseup', this.boundHandlers.mouseUp);
     this.canvas.removeEventListener('mouseleave', this.boundHandlers.mouseLeave);
+    this.canvas.removeEventListener('contextmenu', this.boundHandlers.contextMenu);
     window.removeEventListener('keydown', this.boundHandlers.keyDown);
     window.removeEventListener('keyup', this.boundHandlers.keyUp);
   }
@@ -207,8 +213,9 @@ export class Canvas2DController {
     const { gridWidth, gridHeight } = this.getGridDimensions(project.dimensions);
     const activeLayers = editorStateManager.getActiveLayers();
 
-    // Clear canvas
-    this.ctx.clearRect(0, 0, width, height);
+    // Dark background for professional graphic tool aesthetic
+    this.ctx.fillStyle = '#1a1a1a';
+    this.ctx.fillRect(0, 0, width, height);
 
     // Calculate cell size
     const BASE_CELL_SIZE = 20;
@@ -218,8 +225,8 @@ export class Canvas2DController {
     const offsetX = this.pan.x;
     const offsetY = this.pan.y;
 
-    // Draw grid
-    this.ctx.strokeStyle = '#cccccc';
+    // Draw grid with subtle dark gray lines
+    this.ctx.strokeStyle = '#3a3a3a';
     this.ctx.lineWidth = 1;
 
     // Vertical lines
@@ -1181,8 +1188,8 @@ export class Canvas2DController {
     if (event.button === 0) {
       const paintMode = editorStateManager.getPaintMode();
 
-      // Outline mode: start drag for rectangle
-      if (paintMode === 'outline') {
+      // Shape modes (outline, circle, arch, curve): start drag
+      if (['outline', 'circle', 'arch', 'curve'].includes(paintMode)) {
         const gridCoords = this.pixelToGrid(pixelX, pixelY);
         if (gridCoords) {
           const { gridX, gridY } = gridCoords;
@@ -1195,7 +1202,7 @@ export class Canvas2DController {
           // Initialize preview for 3D view
           this.updatePreviewBlocks();
 
-          // Notify outline strategy that drag started
+          // Notify strategy that drag started
           const strategy = this.canvasPainter['strategy'];
           if (strategy && 'startDrag' in strategy) {
             (strategy as any).startDrag(position);
@@ -1206,8 +1213,8 @@ export class Canvas2DController {
       this.isPainting = true;
       this.lastPaintedCell = null;
 
-      // Only paint immediately for non-outline modes
-      if (paintMode !== 'outline') {
+      // Only paint immediately for point/fill modes
+      if (!['outline', 'circle', 'arch', 'curve'].includes(paintMode)) {
         this.paintAtPixel(pixelX, pixelY);
       }
     }
@@ -1256,8 +1263,8 @@ export class Canvas2DController {
     if (this.isPainting) {
       const paintMode = editorStateManager.getPaintMode();
 
-      // For outline mode, update preview during drag
-      if (paintMode === 'outline') {
+      // For shape modes, update preview during drag
+      if (['outline', 'circle', 'arch', 'curve'].includes(paintMode)) {
         if (gridCoords) {
           this.outlinePreviewEnd = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
           this.updatePreviewBlocks(); // Update 3D preview
@@ -1276,10 +1283,10 @@ export class Canvas2DController {
   }
 
   private handleMouseUp(event: MouseEvent): void {
-    // If we were painting in outline mode, finalize the rectangle
+    // If we were painting in shape mode, finalize the shape
     if (this.isPainting) {
       const paintMode = editorStateManager.getPaintMode();
-      if (paintMode === 'outline') {
+      if (['outline', 'circle', 'arch', 'curve'].includes(paintMode)) {
         const rect = this.canvas.getBoundingClientRect();
         const pixelX = event.clientX - rect.left;
         const pixelY = event.clientY - rect.top;
@@ -1288,14 +1295,8 @@ export class Canvas2DController {
         this.outlinePreviewStart = null;
         this.outlinePreviewEnd = null;
 
-        // Paint the final rectangle outline
+        // Paint the final shape
         this.paintAtPixel(pixelX, pixelY);
-
-        // End drag in strategy
-        const strategy = this.canvasPainter['strategy'];
-        if (strategy && 'endDrag' in strategy) {
-          (strategy as any).endDrag();
-        }
 
         this.render(); // Re-render to clear preview
       }
@@ -1327,6 +1328,11 @@ export class Canvas2DController {
     this.lastPaintedCell = null;
     this.updateCursor();
     this.render(); // Re-render to clear preview
+  }
+
+  private handleContextMenu(event: MouseEvent): void {
+    // Prevent default context menu to allow ctrl+click and right-click interactions
+    event.preventDefault();
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -1568,6 +1574,12 @@ export class Canvas2DController {
         return new FillPaintStrategy();
       case 'outline':
         return new OutlinePaintStrategy();
+      case 'circle':
+        return new CirclePaintStrategy();
+      case 'arch':
+        return new ArchPaintStrategy();
+      case 'curve':
+        return new CurvePaintStrategy();
       default:
         return new PointPaintStrategy();
     }

@@ -7,6 +7,8 @@ import type {
   ToolType,
   PaintMode,
   PaintBehavior,
+  ShapeFillMode,
+  DepthConfig,
 } from '../types';
 
 /**
@@ -20,6 +22,10 @@ export interface WithEditorStateProps {
   activeTool: ToolType;
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
+  shapeFillMode: ShapeFillMode;
+  depthConfig: DepthConfig;
+  isPlacementMode: boolean;
+  isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
 }
 
@@ -75,6 +81,18 @@ export function withEditorState<P extends object>(
     const [paintBehavior, setPaintBehavior] = React.useState<PaintBehavior>(
       editorStateManager.getPaintBehavior()
     );
+    const [shapeFillMode, setShapeFillMode] = React.useState<ShapeFillMode>(
+      editorStateManager.getShapeFillMode()
+    );
+    const [depthConfig, setDepthConfig] = React.useState<DepthConfig>(
+      editorStateManager.getDepthConfig()
+    );
+    const [isPlacementMode, setIsPlacementMode] = React.useState<boolean>(
+      editorStateManager.getPlacementMode()
+    );
+    const [isActionBarExpanded, setIsActionBarExpanded] = React.useState<boolean>(
+      editorStateManager.getActionBarExpanded()
+    );
     const [quickSelectSlots, setQuickSelectSlots] = React.useState<(string | null)[]>(
       editorStateManager.getQuickSelectSlots()
     );
@@ -108,6 +126,22 @@ export function withEditorState<P extends object>(
         setPaintBehavior(behavior);
       };
 
+      const handleShapeFillModeChanged = (mode: ShapeFillMode) => {
+        setShapeFillMode(mode);
+      };
+
+      const handleDepthConfigChanged = (config: DepthConfig) => {
+        setDepthConfig(config);
+      };
+
+      const handlePlacementModeChanged = (isPlacement: boolean) => {
+        setIsPlacementMode(isPlacement);
+      };
+
+      const handleActionBarChanged = (isExpanded: boolean) => {
+        setIsActionBarExpanded(isExpanded);
+      };
+
       const handleQuickSelectChanged = (slots: (string | null)[]) => {
         setQuickSelectSlots(slots);
       };
@@ -120,6 +154,10 @@ export function withEditorState<P extends object>(
       editorStateManager.on('tool:changed', handleToolChanged);
       editorStateManager.on('paintmode:changed', handlePaintModeChanged);
       editorStateManager.on('paintbehavior:changed', handlePaintBehaviorChanged);
+      editorStateManager.on('shapefillmode:changed', handleShapeFillModeChanged);
+      editorStateManager.on('depthconfig:changed', handleDepthConfigChanged);
+      editorStateManager.on('placementmode:changed', handlePlacementModeChanged);
+      editorStateManager.on('actionbar:changed', handleActionBarChanged);
       editorStateManager.on('quickselect:changed', handleQuickSelectChanged);
 
       // Cleanup
@@ -131,6 +169,10 @@ export function withEditorState<P extends object>(
         editorStateManager.off('tool:changed', handleToolChanged);
         editorStateManager.off('paintmode:changed', handlePaintModeChanged);
         editorStateManager.off('paintbehavior:changed', handlePaintBehaviorChanged);
+        editorStateManager.off('shapefillmode:changed', handleShapeFillModeChanged);
+        editorStateManager.off('depthconfig:changed', handleDepthConfigChanged);
+        editorStateManager.off('placementmode:changed', handlePlacementModeChanged);
+        editorStateManager.off('actionbar:changed', handleActionBarChanged);
         editorStateManager.off('quickselect:changed', handleQuickSelectChanged);
       };
     }, []);
@@ -145,6 +187,10 @@ export function withEditorState<P extends object>(
         activeTool={activeTool}
         paintMode={paintMode}
         paintBehavior={paintBehavior}
+        shapeFillMode={shapeFillMode}
+        depthConfig={depthConfig}
+        isPlacementMode={isPlacementMode}
+        isActionBarExpanded={isActionBarExpanded}
         quickSelectSlots={quickSelectSlots}
       />
     );
