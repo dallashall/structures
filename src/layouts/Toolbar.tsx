@@ -96,7 +96,7 @@ export function Toolbar({
               m: 0,
             }}
           >
-            {projectName || 'Minecraft Magic Blueprint'}
+            {projectName || 'Structures'}
           </Typography>
           {projectName && (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>

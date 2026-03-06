@@ -27,6 +27,7 @@ export interface WithEditorStateProps {
   isPlacementMode: boolean;
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
+  activeDragBlock: string | null;
 }
 
 /**
@@ -96,6 +97,9 @@ export function withEditorState<P extends object>(
     const [quickSelectSlots, setQuickSelectSlots] = React.useState<(string | null)[]>(
       editorStateManager.getQuickSelectSlots()
     );
+    const [activeDragBlock, setActiveDragBlock] = React.useState<string | null>(
+      editorStateManager.getActiveDragBlock()
+    );
 
     React.useEffect(() => {
       const handleLayoutChanged = (mode: LayoutMode) => {
@@ -146,6 +150,10 @@ export function withEditorState<P extends object>(
         setQuickSelectSlots(slots);
       };
 
+      const handleDragChanged = (blockId: string | null) => {
+        setActiveDragBlock(blockId);
+      };
+
       // Subscribe to events
       editorStateManager.on('layout:changed', handleLayoutChanged);
       editorStateManager.on('view:changed', handleViewChanged);
@@ -159,6 +167,7 @@ export function withEditorState<P extends object>(
       editorStateManager.on('placementmode:changed', handlePlacementModeChanged);
       editorStateManager.on('actionbar:changed', handleActionBarChanged);
       editorStateManager.on('quickselect:changed', handleQuickSelectChanged);
+      editorStateManager.on('drag:changed', handleDragChanged);
 
       // Cleanup
       return () => {
@@ -174,6 +183,7 @@ export function withEditorState<P extends object>(
         editorStateManager.off('placementmode:changed', handlePlacementModeChanged);
         editorStateManager.off('actionbar:changed', handleActionBarChanged);
         editorStateManager.off('quickselect:changed', handleQuickSelectChanged);
+        editorStateManager.off('drag:changed', handleDragChanged);
       };
     }, []);
 
@@ -192,6 +202,7 @@ export function withEditorState<P extends object>(
         isPlacementMode={isPlacementMode}
         isActionBarExpanded={isActionBarExpanded}
         quickSelectSlots={quickSelectSlots}
+        activeDragBlock={activeDragBlock}
       />
     );
   };

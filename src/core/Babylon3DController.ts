@@ -76,7 +76,8 @@ export class Babylon3DController {
 
     // Create scene
     this.scene = new Scene(this.engine);
-    this.scene.clearColor = new Color3(0.95, 0.95, 0.95).toColor4();
+    // Dark background for professional editor aesthetic
+    this.scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
 
     // Setup camera
     this.camera = this.setupCamera();

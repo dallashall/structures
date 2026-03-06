@@ -35,7 +35,68 @@ const darkTheme = createTheme({
     borderRadius: 4,
   },
   typography: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    // Default font for general text
+    fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+
+    // Headers use Lexend
+    h1: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+    h2: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+    h3: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+    h4: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+    h5: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+    h6: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+    },
+
+    // Subtitle uses Lexend
+    subtitle1: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+    subtitle2: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+
+    // Body text uses Chakra Petch (default)
+    body1: {
+      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+    body2: {
+      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+
+    // Button text uses Chakra Petch
+    button: {
+      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+      textTransform: 'none',
+    },
+
+    // Caption uses Chakra Petch
+    caption: {
+      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+
+    // Overline uses Lexend (for labels)
+    overline: {
+      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      letterSpacing: '0.08em',
+    },
   },
   components: {
     MuiToggleButton: {
@@ -48,6 +109,26 @@ const darkTheme = createTheme({
               backgroundColor: '#3d8ae5',
             },
           },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          // Input fields use Red Hat Mono for data entry
+          '& input': {
+            fontFamily: '"Red Hat Mono", "Courier New", monospace',
+            fontWeight: 500,
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        label: {
+          // Chips use Red Hat Mono for compact data display
+          fontFamily: '"Red Hat Mono", "Courier New", monospace',
+          fontWeight: 500,
         },
       },
     },

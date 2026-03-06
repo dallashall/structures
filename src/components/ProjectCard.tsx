@@ -19,32 +19,36 @@ export function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) 
       sx={{
         cursor: 'pointer',
         border: isSelected ? 3 : 1,
-        borderColor: isSelected ? 'primary.main' : 'grey.300',
+        borderColor: isSelected ? 'primary.main' : 'divider',
         borderRadius: 1,
         p: 1,
-        bgcolor: 'grey.50',
+        bgcolor: 'background.paper',
+        transition: 'all 0.2s',
         '&:hover': {
           borderColor: 'primary.light',
+          boxShadow: 1,
         },
       }}
     >
       {/* Thumbnail */}
       <Box
         sx={{
-          bgcolor: 'grey.200',
+          bgcolor: 'action.hover',
           height: 160,
           borderRadius: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           mb: 1,
+          overflow: 'hidden',
         }}
       >
         {project.thumbnail ? (
-          <img
+          <Box
+            component="img"
             src={project.thumbnail}
             alt={project.name}
-            style={{
+            sx={{
               width: '100%',
               height: '100%',
               objectFit: 'contain',

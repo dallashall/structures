@@ -1,7 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import type { ViewType, LayoutMode, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
-import type { Block } from '../types';
 
 import { withProjectState, WithProjectStateProps } from '../hocs/withProjectState';
 import { withEditorState, WithEditorStateProps } from '../hocs/withEditorState';
@@ -60,6 +59,7 @@ function EditorViewComponent(props: EditorViewProps) {
     isMaterialBrowserOpen,
     materialBrowserSearchQuery,
     materialBrowserSelectedTab,
+    activeDragBlock,
   } = props;
 
   // No project loaded
@@ -97,8 +97,8 @@ function EditorViewComponent(props: EditorViewProps) {
     };
   }, []);
 
-  // Track actively dragged block for overlay
-  const [activeDragBlock, setActiveDragBlock] = React.useState<Block | null>(null);
+  // Get the actual Block object for the active drag block ID
+  const activeDragBlockObject = activeDragBlock ? blocks.find((b) => b.id === activeDragBlock) ?? null : null;
 
   // Handlers
   const handleNewProject = () => {
@@ -189,8 +189,7 @@ function EditorViewComponent(props: EditorViewProps) {
   const handleDragStart = (event: DragStartEvent) => {
     const blockId = event.active.data.current?.blockId;
     if (blockId) {
-      const block = blocks.find((b) => b.id === blockId);
-      setActiveDragBlock(block ?? null);
+      editorStateManager.setActiveDragBlock(blockId);
     }
   };
 
@@ -198,7 +197,7 @@ function EditorViewComponent(props: EditorViewProps) {
     const { active, over } = event;
 
     // Clear the active drag block
-    setActiveDragBlock(null);
+    editorStateManager.setActiveDragBlock(null);
 
     if (!over) return;
 
@@ -213,7 +212,7 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleDragCancel = () => {
-    setActiveDragBlock(null);
+    editorStateManager.setActiveDragBlock(null);
   };
 
   const matchesSelectedBlock = (id: string | null) => id === selectedBlock;
@@ -336,7 +335,7 @@ function EditorViewComponent(props: EditorViewProps) {
 
         {/* Drag Overlay - shows visual feedback while dragging */}
         <DragOverlay zIndex={1400} dropAnimation={null}>
-          {activeDragBlock && (
+          {activeDragBlockObject && (
             <Box
               sx={{
                 width: 60,
@@ -352,7 +351,7 @@ function EditorViewComponent(props: EditorViewProps) {
                 cursor: 'grabbing',
               }}
             >
-              <ColorSwatch color={activeDragBlock.color} size="L" />
+              <ColorSwatch color={activeDragBlockObject.color} size="L" />
             </Box>
           )}
         </DragOverlay>

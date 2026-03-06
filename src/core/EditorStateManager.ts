@@ -73,6 +73,7 @@ class EditorStateManager extends EventEmitter {
   private isMaterialBrowserOpen = false;
   private materialBrowserSearchQuery = '';
   private materialBrowserSelectedTab = 0;
+  private activeDragBlockId: string | null = null;
 
   private constructor() {
     super();
@@ -357,6 +358,23 @@ class EditorStateManager extends EventEmitter {
    */
   getMaterialBrowserSelectedTab(): number {
     return this.materialBrowserSelectedTab;
+  }
+
+  /**
+   * Set the active drag block (for drag-and-drop overlay)
+   */
+  setActiveDragBlock(blockId: string | null): void {
+    if (this.activeDragBlockId !== blockId) {
+      this.activeDragBlockId = blockId;
+      this.emit('drag:changed', blockId);
+    }
+  }
+
+  /**
+   * Get the active drag block
+   */
+  getActiveDragBlock(): string | null {
+    return this.activeDragBlockId;
   }
 
   /**

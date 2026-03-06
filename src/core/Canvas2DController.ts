@@ -82,6 +82,9 @@ export class Canvas2DController {
     }
     this.ctx = ctx;
 
+    // Configure context for crisp pixel rendering
+    this.configureContextSmoothness();
+
     // Register this controller globally
     activeControllers.add(this);
 
@@ -165,10 +168,35 @@ export class Canvas2DController {
   }
 
   resize(width: number, height: number): void {
-    this.canvas.width = width;
-    this.canvas.height = height;
+    const dpr = window.devicePixelRatio || 1;
+
+    // Set actual canvas size (accounts for HiDPI displays)
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
+
+    // Scale context to match device pixel ratio for sharp rendering
+    this.ctx.scale(dpr, dpr);
+
+    // Re-configure smoothness after context reset
+    this.configureContextSmoothness();
+
+    // Recenter pan and render
     this.initializePan();
     this.render();
+  }
+
+  /**
+   * Configure context for crisp, pixel-perfect rendering
+   * Disables image smoothing across all browser implementations
+   */
+  private configureContextSmoothness(): void {
+    this.ctx.imageSmoothingEnabled = false;
+    // @ts-ignore - vendor prefixes for older browsers
+    this.ctx.webkitImageSmoothingEnabled = false;
+    // @ts-ignore
+    this.ctx.mozImageSmoothingEnabled = false;
+    // @ts-ignore
+    this.ctx.msImageSmoothingEnabled = false;
   }
 
   private initializePan(): void {

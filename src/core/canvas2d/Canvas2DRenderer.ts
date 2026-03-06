@@ -6,6 +6,57 @@ import type { Canvas2DViewport } from './Canvas2DViewport';
 import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
 
 /**
+ * Canvas2DColorConfig - Color configuration for dark/light mode support
+ */
+export interface Canvas2DColorConfig {
+  grid: string;
+  axisX: string;
+  axisY: string;
+  axisZ: string;
+  axisLabel: string;
+  metaBlockBorder: string;
+  metaBlockBorderUnconfirmed: string;
+  metaBlockFill: string;
+  metaBlockArrow: string;
+  layerIndicator: string;
+  textSecondary: string;
+}
+
+/**
+ * Default dark mode colors
+ */
+export const DARK_MODE_COLORS: Canvas2DColorConfig = {
+  grid: '#444444',
+  axisX: '#e74c3c',
+  axisY: '#3498db',
+  axisZ: '#27ae60',
+  axisLabel: '#a0a0a0',
+  metaBlockBorder: '#2a2a2a',
+  metaBlockBorderUnconfirmed: '#4CAF50',
+  metaBlockFill: '#e0e0e0',
+  metaBlockArrow: '#1a1a1a',
+  layerIndicator: '#666666',
+  textSecondary: '#888888',
+};
+
+/**
+ * Default light mode colors
+ */
+export const LIGHT_MODE_COLORS: Canvas2DColorConfig = {
+  grid: '#cccccc',
+  axisX: '#e74c3c',
+  axisY: '#3498db',
+  axisZ: '#27ae60',
+  axisLabel: '#666666',
+  metaBlockBorder: '#000000',
+  metaBlockBorderUnconfirmed: '#4CAF50',
+  metaBlockFill: '#ffffff',
+  metaBlockArrow: '#000000',
+  layerIndicator: '#999999',
+  textSecondary: '#666666',
+};
+
+/**
  * Canvas2DRenderer - Pure rendering logic for 2D canvas
  *
  * Responsibilities:
@@ -19,10 +70,24 @@ import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
  * It reads from viewport and previewManager but never modifies them.
  */
 export class Canvas2DRenderer {
+  private colors: Canvas2DColorConfig = DARK_MODE_COLORS;
+
   constructor(
     private ctx: CanvasRenderingContext2D,
-    private canvas: HTMLCanvasElement
-  ) {}
+    private canvas: HTMLCanvasElement,
+    colors?: Canvas2DColorConfig
+  ) {
+    if (colors) {
+      this.colors = colors;
+    }
+  }
+
+  /**
+   * Update color configuration (e.g., when theme changes)
+   */
+  setColors(colors: Canvas2DColorConfig): void {
+    this.colors = colors;
+  }
 
   /**
    * Main render method - draws the entire canvas
@@ -70,7 +135,7 @@ export class Canvas2DRenderer {
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
-    this.ctx.strokeStyle = '#cccccc';
+    this.ctx.strokeStyle = this.colors.grid;
     this.ctx.lineWidth = 1;
 
     // Vertical lines
@@ -169,12 +234,12 @@ export class Canvas2DRenderer {
     const centerY = py + cellSize / 2;
 
     const isConfirmed = metaBlock.isConfirmed;
-    const strokeColor = isConfirmed ? '#000000' : '#4CAF50';
+    const strokeColor = isConfirmed ? this.colors.metaBlockBorder : this.colors.metaBlockBorderUnconfirmed;
     const strokeWidth = isConfirmed ? 2 : 3;
     const fillOpacity = isConfirmed ? opacity : opacity * 0.7;
 
-    // Draw white background
-    this.ctx.fillStyle = '#ffffff';
+    // Draw background
+    this.ctx.fillStyle = this.colors.metaBlockFill;
     this.ctx.globalAlpha = fillOpacity;
     this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
@@ -184,8 +249,8 @@ export class Canvas2DRenderer {
     this.ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
     // Draw directional arrow
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.fillStyle = strokeColor;
+    this.ctx.strokeStyle = this.colors.metaBlockArrow;
+    this.ctx.fillStyle = this.colors.metaBlockArrow;
     this.drawMetaBlockArrow(centerX, centerY, cellSize, metaBlock.direction, viewport);
     this.ctx.globalAlpha = 1.0;
   }
@@ -201,8 +266,8 @@ export class Canvas2DRenderer {
     _viewport: Canvas2DViewport
   ): void {
     const arrowSize = Math.min(cellSize * 0.6, 20);
-    this.ctx.strokeStyle = '#000000';
-    this.ctx.fillStyle = '#000000';
+    this.ctx.strokeStyle = this.colors.metaBlockArrow;
+    this.ctx.fillStyle = this.colors.metaBlockArrow;
     this.ctx.lineWidth = 2;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
@@ -281,7 +346,7 @@ export class Canvas2DRenderer {
     this.ctx.arc(depthX, depthY, 6, 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.fillText(axes.depth, depthX + 12, depthY + 5);
-    this.ctx.fillStyle = '#666';
+    this.ctx.fillStyle = this.colors.textSecondary;
     this.ctx.font = '12px sans-serif';
     this.ctx.fillText('(depth)', depthX + 12, depthY + 18);
 

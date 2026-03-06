@@ -1,4 +1,4 @@
-# Minecraft Magic Blueprint System
+# Structures
 
 A web-based 2D/3D editor for designing Minecraft structures using a pixel-art style interface.
 

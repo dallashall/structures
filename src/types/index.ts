@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the Minecraft Magic Blueprint System
+ * Core type definitions for the Structures editor
  */
 
 export interface Vector3D {

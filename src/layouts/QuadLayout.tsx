@@ -114,28 +114,41 @@ export function QuadLayout({
             position: 'absolute',
             top: 8,
             left: 8,
-            right: 8,
             zIndex: 10,
             pointerEvents: 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
           <Typography
             variant="body2"
             sx={{
               color: 'error.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'medium',
             }}
           >
             FRONT VIEW
           </Typography>
+        </Box>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               color: 'error.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'bold',
             }}
           >
@@ -173,28 +186,41 @@ export function QuadLayout({
             position: 'absolute',
             top: 8,
             left: 8,
-            right: 8,
             zIndex: 10,
             pointerEvents: 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
           <Typography
             variant="body2"
             sx={{
               color: 'primary.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'medium',
             }}
           >
             LEFT VIEW
           </Typography>
+        </Box>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               color: 'primary.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'bold',
             }}
           >
@@ -232,28 +258,41 @@ export function QuadLayout({
             position: 'absolute',
             top: 8,
             left: 8,
-            right: 8,
             zIndex: 10,
             pointerEvents: 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
           <Typography
             variant="body2"
             sx={{
               color: 'success.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'medium',
             }}
           >
             TOP VIEW
           </Typography>
+        </Box>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            pointerEvents: 'none',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               color: 'success.main',
-              textShadow: '0 0 4px rgba(255,255,255,0.8)',
               fontWeight: 'bold',
             }}
           >
@@ -286,21 +325,29 @@ export function QuadLayout({
           position: 'relative',
         }}
       >
-        <Typography
-          variant="body2"
+        <Box
           sx={{
             position: 'absolute',
             top: 8,
             left: 8,
             zIndex: 10,
             pointerEvents: 'none',
-            color: 'secondary.main',
-            textShadow: '0 0 4px rgba(255,255,255,0.8)',
-            fontWeight: 'medium',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
-          3D PREVIEW
-        </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'secondary.main',
+              fontWeight: 'medium',
+            }}
+          >
+            3D PREVIEW
+          </Typography>
+        </Box>
         <div ref={preview3DContainerRef} style={{ width: '100%', height: '100%' }}>
           <Preview3DView
             width={canvasSizes.preview3D.width}

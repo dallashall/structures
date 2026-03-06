@@ -84,7 +84,7 @@ export function WelcomeView({
         {/* Header */}
         <Box>
           <Typography variant="h3" component="h1">
-            Minecraft Magic Blueprint
+            Structures
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Design 3D Minecraft structures using a 2D pixel-art editor
@@ -120,14 +120,15 @@ export function WelcomeView({
             ) : projects.length === 0 ? (
               <Box
                 sx={{
-                  bgcolor: 'grey.100',
+                  bgcolor: 'background.paper',
                   borderRadius: 1,
-                  p: 2,
+                  p: 3,
                   border: 1,
-                  borderColor: 'grey.300',
+                  borderColor: 'divider',
+                  textAlign: 'center',
                 }}
               >
-                <Typography variant="body1">
+                <Typography variant="body1" color="text.secondary">
                   No projects yet. Create your first structure!
                 </Typography>
               </Box>
@@ -166,14 +167,15 @@ export function WelcomeView({
             ) : (
               <Box
                 sx={{
-                  bgcolor: 'grey.100',
+                  bgcolor: 'background.paper',
                   borderRadius: 1,
-                  p: 2,
+                  p: 3,
                   border: 1,
-                  borderColor: 'grey.300',
+                  borderColor: 'divider',
+                  textAlign: 'center',
                 }}
               >
-                <Typography variant="body1">
+                <Typography variant="body1" color="text.secondary">
                   Select a project to view details
                 </Typography>
               </Box>

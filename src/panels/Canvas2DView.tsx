@@ -52,7 +52,7 @@ export function Canvas2DView({
     };
   }, [viewType]);
 
-  // Handle resize
+  // Handle resize - controller handles all canvas manipulation
   React.useEffect(() => {
     controllerRef.current?.resize(width, height);
   }, [width, height]);
@@ -68,16 +68,15 @@ export function Canvas2DView({
   }, [isPlacementMode]);
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
+    <Box sx={{ width: "100%", height: "100%", bgcolor: "#1a1a1a" }}>
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
         style={{
           display: "block",
           width: `${width}px`,
           height: `${height}px`,
           boxSizing: "border-box",
+          imageRendering: "pixelated",
         }}
       />
     </Box>

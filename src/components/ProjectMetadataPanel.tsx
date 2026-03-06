@@ -48,11 +48,11 @@ export function ProjectMetadataPanel({
     <>
       <Box
         sx={{
-          bgcolor: 'grey.100',
+          bgcolor: 'background.paper',
           borderRadius: 1,
           p: 2,
           border: 1,
-          borderColor: 'grey.300',
+          borderColor: 'divider',
         }}
       >
         <Stack spacing={2}>
