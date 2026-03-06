@@ -1,7 +1,8 @@
 import type { PaintStrategy } from './strategies/PaintStrategy';
 import type { PaintBehavior } from './behaviors/PaintBehavior';
-import type { Vector3D, ViewType, LayerState } from '../../types';
+import type { Vector3D, ViewType, LayerState, DepthConfig } from '../../types';
 import { projectManager } from '../ProjectManager';
+import { editorStateManager } from '../EditorStateManager';
 import { CoordinateConverter } from './CoordinateConverter';
 
 /**
@@ -80,12 +81,22 @@ export class CanvasPainter {
       constrainAxis
     );
 
+    // Expand operations along depth axis if depth config is enabled
+    const depthConfig = editorStateManager.getDepthConfig();
+    const expandedOperations = this.expandOperationsWithDepth(
+      operations,
+      constrainAxis,
+      depthConfig,
+      project.dimensions,
+      viewType
+    );
+
     // Filter operations through behavior
     const getBlock = (pos: Vector3D) => {
       const blockData = projectManager.getBlock(pos);
       return blockData ? blockData.blockType : null;
     };
-    const filteredOperations = this.behavior.filter(operations, getBlock);
+    const filteredOperations = this.behavior.filter(expandedOperations, getBlock);
 
     // Apply filtered operations to project
     for (const operation of filteredOperations) {
@@ -120,6 +131,110 @@ export class CanvasPainter {
       case 'bottom':
         // Top/bottom views: looking along Z axis, constrain to active Z layer
         return { axis: 'z', value: activeLayers.z };
+    }
+  }
+
+  /**
+   * Expand operations along the depth axis based on depth configuration
+   *
+   * @param operations - Base operations from strategy
+   * @param constrainAxis - The depth axis to expand along
+   * @param depthConfig - Depth configuration
+   * @param dimensions - Project dimensions for bounds checking
+   * @param viewType - Current view type (to determine camera direction)
+   * @returns Expanded operations array
+   */
+  private expandOperationsWithDepth(
+    operations: { position: Vector3D; blockType: string | null }[],
+    constrainAxis: { axis: 'x' | 'y' | 'z'; value: number },
+    depthConfig: DepthConfig,
+    dimensions: { width: number; height: number; depth: number },
+    viewType: ViewType
+  ): { position: Vector3D; blockType: string | null }[] {
+    // If depth is not enabled, return operations unchanged
+    if (!depthConfig.enabled) {
+      return operations;
+    }
+
+    const expandedOperations: { position: Vector3D; blockType: string | null }[] = [];
+    const { axis, value: currentLayer } = constrainAxis;
+
+    // Get dimension bounds for the depth axis
+    const getMaxForAxis = (ax: 'x' | 'y' | 'z'): number => {
+      switch (ax) {
+        case 'x': return dimensions.width;
+        case 'y': return dimensions.height;
+        case 'z': return dimensions.depth;
+      }
+    };
+    const maxValue = getMaxForAxis(axis);
+
+    // Determine direction (away from camera) based on view type
+    const direction = this.getDepthDirection(viewType);
+
+    // Expand each operation along the depth axis
+    for (const operation of operations) {
+      let layersPainted = 0;
+
+      // Paint up to thickness layers in the away-from-camera direction
+      for (let i = 0; i < depthConfig.thickness; i++) {
+        const layer = currentLayer + (i * direction);
+
+        // Check bounds
+        if (layer < 0 || layer >= maxValue) {
+          break;
+        }
+
+        const expandedPosition: Vector3D = { ...operation.position };
+        expandedPosition[axis] = layer;
+
+        // Check if there's already a block at this position
+        const existingBlock = projectManager.getBlock(expandedPosition);
+
+        // For "until-collision" mode: stop if we hit a block (when painting, not erasing)
+        if (depthConfig.mode === 'until-collision' && operation.blockType !== null && existingBlock) {
+          break;
+        }
+
+        // For "through" mode: always paint regardless of existing blocks
+        expandedOperations.push({
+          position: expandedPosition,
+          blockType: operation.blockType,
+        });
+
+        layersPainted++;
+      }
+    }
+
+    return expandedOperations;
+  }
+
+  /**
+   * Get the depth direction (away from camera) based on view type
+   * Returns +1 for increasing layer numbers, -1 for decreasing
+   *
+   * Camera positions and away directions:
+   * - Front (looking North +Y): Camera at -Y, away = +Y (+1)
+   * - Back (looking South -Y): Camera at +Y, away = -Y (-1)
+   * - Left (looking East +X): Camera at -X, away = +X (+1)
+   * - Right (looking West -X): Camera at +X, away = -X (-1)
+   * - Top (looking Down -Z): Camera at +Z, away = -Z (-1)
+   * - Bottom (looking Up +Z): Camera at -Z, away = +Z (+1)
+   */
+  private getDepthDirection(viewType: ViewType): number {
+    switch (viewType) {
+      case 'front':
+        return 1;  // Y increases away from camera
+      case 'back':
+        return -1; // Y decreases away from camera
+      case 'left':
+        return 1;  // X increases away from camera
+      case 'right':
+        return -1; // X decreases away from camera
+      case 'top':
+        return -1; // Z decreases away from camera
+      case 'bottom':
+        return 1;  // Z increases away from camera
     }
   }
 }

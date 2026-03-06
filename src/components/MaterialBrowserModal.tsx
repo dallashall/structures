@@ -28,6 +28,7 @@ interface MaterialBrowserModalProps {
   quickSelectSlots: (string | null)[];
   selectedSlotIndex: number;
   onSelectSlot: (index: number) => void;
+  onAssignSlot: (index: number, blockId: string) => void;
 }
 
 // Category definitions (could be moved to BlockRegistry in the future)
@@ -59,6 +60,7 @@ export function MaterialBrowserModal({
   quickSelectSlots,
   selectedSlotIndex,
   onSelectSlot,
+  onAssignSlot,
 }: MaterialBrowserModalProps) {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     onTabChange(newValue);
@@ -69,7 +71,13 @@ export function MaterialBrowserModal({
   };
 
   const handleMaterialClick = (blockId: string) => {
-    onSelectMaterial(blockId);
+    // If a quick-select slot is selected, assign material to that slot
+    if (selectedSlotIndex !== -1) {
+      onAssignSlot(selectedSlotIndex, blockId);
+    } else {
+      // Otherwise, just select the material and close the browser
+      onSelectMaterial(blockId);
+    }
   };
 
   const handleSlotClick = (index: number) => {

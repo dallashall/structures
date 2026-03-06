@@ -67,6 +67,11 @@ class KeyboardShortcutManager extends EventEmitter {
     if (numberKeys.includes(key)) {
       event.preventDefault();
       const slotIndex = parseInt(key, 10) - 1;
+
+      // Always select the slot (even if empty)
+      editorStateManager.setSelectedQuickSelectSlot(slotIndex);
+
+      // If the slot has a material, also select that material
       const blockId = editorStateManager.getQuickSelectSlot(slotIndex);
       if (blockId) {
         editorStateManager.setSelectedBlock(blockId);

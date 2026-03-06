@@ -69,6 +69,7 @@ class EditorStateManager extends EventEmitter {
   private isPlacementMode = false;
   private isActionBarExpanded = true;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
+  private selectedQuickSelectSlotIndex: number = -1; // -1 means no slot selected
   private previewBlocks: PreviewBlock[] = [];
   private isMaterialBrowserOpen = false;
   private materialBrowserSearchQuery = '';
@@ -89,7 +90,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the layout mode (tabbed or quad-layout)
    */
-  setLayoutMode(mode: LayoutMode): void {
+  setLayoutMode = (mode: LayoutMode): void => {
     if (this.layoutMode !== mode) {
       this.layoutMode = mode;
       this.emit('layout:changed', mode);
@@ -106,7 +107,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the active view
    */
-  setActiveView(view: ViewType): void {
+  setActiveView = (view: ViewType): void => {
     if (this.activeView !== view) {
       this.activeView = view;
       this.emit('view:changed', view);
@@ -123,7 +124,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the active layer for a specific dimension
    */
-  setActiveLayer(dimension: 'x' | 'y' | 'z', layer: number): void {
+  setActiveLayer = (dimension: 'x' | 'y' | 'z', layer: number): void => {
     if (this.activeLayers[dimension] !== layer) {
       this.activeLayers[dimension] = layer;
       this.emit('layer:changed', dimension, layer);
@@ -147,7 +148,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the selected block ID
    */
-  setSelectedBlock(blockId: string | null): void {
+  setSelectedBlock = (blockId: string | null): void => {
     if (this.selectedBlockId !== blockId) {
       this.selectedBlockId = blockId;
       this.emit('block:selected', blockId);
@@ -164,7 +165,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the active tool
    */
-  setActiveTool(tool: ToolType): void {
+  setActiveTool = (tool: ToolType): void => {
     if (this.activeTool !== tool) {
       this.activeTool = tool;
       this.emit('tool:changed', tool);
@@ -181,7 +182,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the paint mode
    */
-  setPaintMode(mode: PaintMode): void {
+  setPaintMode = (mode: PaintMode): void => {
     if (this.paintMode !== mode) {
       this.paintMode = mode;
       this.emit('paintmode:changed', mode);
@@ -198,7 +199,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the paint behavior
    */
-  setPaintBehavior(behavior: PaintBehavior): void {
+  setPaintBehavior = (behavior: PaintBehavior): void => {
     if (this.paintBehavior !== behavior) {
       this.paintBehavior = behavior;
       this.emit('paintbehavior:changed', behavior);
@@ -215,7 +216,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the shape fill mode
    */
-  setShapeFillMode(mode: ShapeFillMode): void {
+  setShapeFillMode = (mode: ShapeFillMode): void => {
     if (this.shapeFillMode !== mode) {
       this.shapeFillMode = mode;
       this.emit('shapefillmode:changed', mode);
@@ -232,7 +233,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the depth configuration
    */
-  setDepthConfig(config: Partial<DepthConfig>): void {
+  setDepthConfig = (config: Partial<DepthConfig>): void => {
     this.depthConfig = { ...this.depthConfig, ...config };
     this.emit('depthconfig:changed', this.depthConfig);
   }
@@ -247,7 +248,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the circle draw mode
    */
-  setCircleDrawMode(mode: CircleDrawMode): void {
+  setCircleDrawMode = (mode: CircleDrawMode): void => {
     this.circleDrawMode = mode;
     // No event needed - used during interaction only
   }
@@ -262,7 +263,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the curve control state
    */
-  setCurveControlState(state: CurveControlState | null): void {
+  setCurveControlState = (state: CurveControlState | null): void => {
     this.curveControlState = state;
     this.emit('curvecontrol:changed', state);
   }
@@ -277,7 +278,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set placement mode (for meta block placement)
    */
-  setPlacementMode(isPlacementMode: boolean): void {
+  setPlacementMode = (isPlacementMode: boolean): void => {
     if (this.isPlacementMode !== isPlacementMode) {
       this.isPlacementMode = isPlacementMode;
       this.emit('placementmode:changed', isPlacementMode);
@@ -294,7 +295,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set action bar expanded state
    */
-  setActionBarExpanded(isExpanded: boolean): void {
+  setActionBarExpanded = (isExpanded: boolean): void => {
     if (this.isActionBarExpanded !== isExpanded) {
       this.isActionBarExpanded = isExpanded;
       this.emit('actionbar:changed', isExpanded);
@@ -311,7 +312,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set material browser open state
    */
-  setMaterialBrowserOpen(isOpen: boolean): void {
+  setMaterialBrowserOpen = (isOpen: boolean): void => {
     if (this.isMaterialBrowserOpen !== isOpen) {
       this.isMaterialBrowserOpen = isOpen;
       // Reset search and tab when opening
@@ -333,7 +334,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set material browser search query
    */
-  setMaterialBrowserSearchQuery(query: string): void {
+  setMaterialBrowserSearchQuery = (query: string): void => {
     this.materialBrowserSearchQuery = query;
     this.emit('materialbrowser:search:changed', query);
   }
@@ -348,7 +349,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set material browser selected tab
    */
-  setMaterialBrowserSelectedTab(tab: number): void {
+  setMaterialBrowserSelectedTab = (tab: number): void => {
     this.materialBrowserSelectedTab = tab;
     this.emit('materialbrowser:tab:changed', tab);
   }
@@ -363,7 +364,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set the active drag block (for drag-and-drop overlay)
    */
-  setActiveDragBlock(blockId: string | null): void {
+  setActiveDragBlock = (blockId: string | null): void => {
     if (this.activeDragBlockId !== blockId) {
       this.activeDragBlockId = blockId;
       this.emit('drag:changed', blockId);
@@ -380,7 +381,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Set a block ID in a quick-select slot
    */
-  setQuickSelectSlot(index: number, blockId: string | null): void {
+  setQuickSelectSlot = (index: number, blockId: string | null): void => {
     if (index < 0 || index >= 9) {
       console.warn(`Invalid quick-select slot index: ${index}`);
       return;
@@ -410,9 +411,26 @@ class EditorStateManager extends EventEmitter {
   }
 
   /**
+   * Set the selected quick-select slot index
+   */
+  setSelectedQuickSelectSlot = (index: number): void => {
+    if (index !== this.selectedQuickSelectSlotIndex) {
+      this.selectedQuickSelectSlotIndex = index;
+      this.emit('quickselect:slot:changed', index);
+    }
+  }
+
+  /**
+   * Get the selected quick-select slot index
+   */
+  getSelectedQuickSelectSlot(): number {
+    return this.selectedQuickSelectSlotIndex;
+  }
+
+  /**
    * Increment layer in a dimension (with bounds checking)
    */
-  incrementLayer(dimension: 'x' | 'y' | 'z', maxValue: number): void {
+  incrementLayer = (dimension: 'x' | 'y' | 'z', maxValue: number): void => {
     const current = this.activeLayers[dimension];
     if (current < maxValue - 1) {
       this.setActiveLayer(dimension, current + 1);
@@ -422,7 +440,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Decrement layer in a dimension (with bounds checking)
    */
-  decrementLayer(dimension: 'x' | 'y' | 'z'): void {
+  decrementLayer = (dimension: 'x' | 'y' | 'z'): void => {
     const current = this.activeLayers[dimension];
     if (current > 0) {
       this.setActiveLayer(dimension, current - 1);
@@ -433,7 +451,7 @@ class EditorStateManager extends EventEmitter {
    * Set preview blocks for ghost rendering
    * Used when dragging in outline/fill modes to show what will be placed
    */
-  setPreviewBlocks(blocks: PreviewBlock[]): void {
+  setPreviewBlocks = (blocks: PreviewBlock[]): void => {
     this.previewBlocks = blocks;
     this.emit('preview:changed', blocks);
   }
@@ -448,7 +466,7 @@ class EditorStateManager extends EventEmitter {
   /**
    * Clear preview blocks
    */
-  clearPreview(): void {
+  clearPreview = (): void => {
     if (this.previewBlocks.length > 0) {
       this.previewBlocks = [];
       this.emit('preview:changed', []);

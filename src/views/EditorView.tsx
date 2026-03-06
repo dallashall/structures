@@ -1,6 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
-import type { ViewType, LayoutMode, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
+import type { ViewType } from '../types';
 
 import { withProjectState, WithProjectStateProps } from '../hocs/withProjectState';
 import { withEditorState, WithEditorStateProps } from '../hocs/withEditorState';
@@ -59,6 +59,7 @@ function EditorViewComponent(props: EditorViewProps) {
     isMaterialBrowserOpen,
     materialBrowserSearchQuery,
     materialBrowserSelectedTab,
+    selectedQuickSelectSlot,
     activeDragBlock,
   } = props;
 
@@ -115,49 +116,26 @@ function EditorViewComponent(props: EditorViewProps) {
     console.log('Open project requested');
   };
 
-  const handleLayoutModeChange = (mode: LayoutMode) => {
-    editorStateManager.setLayoutMode(mode);
-  };
-
-  const handleLayerChange = (dimension: 'x' | 'y' | 'z', layer: number) => {
-    editorStateManager.setActiveLayer(dimension, layer);
-  };
-
-  const handleViewChange = (view: ViewType) => {
-    editorStateManager.setActiveView(view);
-  };
-
   const handleViewTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     editorStateManager.setActiveView(newValue as ViewType);
   };
 
   const handleQuickSelectSlot = (index: number) => {
+    // Always select the slot (even if empty)
+    editorStateManager.setSelectedQuickSelectSlot(index);
+
+    // If the slot has a material, also select that material
     const blockId = quickSelectSlots[index];
     if (blockId) {
       editorStateManager.setSelectedBlock(blockId);
     }
   };
 
-  const handleAssignSlot = (index: number) => {
-    if (selectedBlock) {
-      editorStateManager.setQuickSelectSlot(index, selectedBlock);
+  const handleAssignSlot = (index: number, blockId?: string) => {
+    const materialToAssign = blockId ?? selectedBlock;
+    if (materialToAssign) {
+      editorStateManager.setQuickSelectSlot(index, materialToAssign);
     }
-  };
-
-  const handlePaintModeChange = (mode: PaintMode) => {
-    editorStateManager.setPaintMode(mode);
-  };
-
-  const handlePaintBehaviorChange = (behavior: PaintBehavior) => {
-    editorStateManager.setPaintBehavior(behavior);
-  };
-
-  const handleShapeFillModeChange = (mode: ShapeFillMode) => {
-    editorStateManager.setShapeFillMode(mode);
-  };
-
-  const handleDepthConfigChange = (config: Partial<DepthConfig>) => {
-    editorStateManager.setDepthConfig(config);
   };
 
   const handleConfirmMetaBlockPlacement = () => {
@@ -165,26 +143,6 @@ function EditorViewComponent(props: EditorViewProps) {
     editorStateManager.setPlacementMode(false);
   };
 
-  const handleOpenMaterialBrowser = () => {
-    editorStateManager.setMaterialBrowserOpen(true);
-  };
-
-  const handleCloseMaterialBrowser = () => {
-    editorStateManager.setMaterialBrowserOpen(false);
-  };
-
-  const handleSelectMaterial = (blockId: string) => {
-    editorStateManager.setSelectedBlock(blockId);
-    editorStateManager.setMaterialBrowserOpen(false);
-  };
-
-  const handleMaterialBrowserSearchChange = (query: string) => {
-    editorStateManager.setMaterialBrowserSearchQuery(query);
-  };
-
-  const handleMaterialBrowserTabChange = (tab: number) => {
-    editorStateManager.setMaterialBrowserSelectedTab(tab);
-  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const blockId = event.active.data.current?.blockId;
@@ -215,9 +173,6 @@ function EditorViewComponent(props: EditorViewProps) {
     editorStateManager.setActiveDragBlock(null);
   };
 
-  const matchesSelectedBlock = (id: string | null) => id === selectedBlock;
-  const selectedSlotIndex = quickSelectSlots.findIndex(matchesSelectedBlock);
-
   return (
     <Box sx={{ height: '100%', overflow: 'hidden' }}>
       <Stack direction="column" sx={{ height: '100%' }}>
@@ -229,7 +184,7 @@ function EditorViewComponent(props: EditorViewProps) {
           onNewProject={handleNewProject}
           onSaveProject={handleSaveProject}
           onOpenProject={handleOpenProject}
-          onLayoutModeChange={handleLayoutModeChange}
+          onLayoutModeChange={editorStateManager.setLayoutMode}
         />
 
         {/* Tool Options Bar */}
@@ -238,9 +193,9 @@ function EditorViewComponent(props: EditorViewProps) {
           paintBehavior={paintBehavior}
           shapeFillMode={shapeFillMode}
           depthConfig={depthConfig}
-          onPaintBehaviorChange={handlePaintBehaviorChange}
-          onShapeFillModeChange={handleShapeFillModeChange}
-          onDepthConfigChange={handleDepthConfigChange}
+          onPaintBehaviorChange={editorStateManager.setPaintBehavior}
+          onShapeFillModeChange={editorStateManager.setShapeFillMode}
+          onDepthConfigChange={editorStateManager.setDepthConfig}
         />
 
         {/* Main Canvas Area - Switch between layout modes */}
@@ -259,13 +214,13 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={handleLayerChange}
-              onViewChange={handleViewChange}
+              onLayerChange={editorStateManager.setActiveLayer}
+              onViewChange={editorStateManager.setActiveView}
               onTabChange={handleViewTabChange}
-              onPaintModeChange={handlePaintModeChange}
-              onPaintBehaviorChange={handlePaintBehaviorChange}
-              onShapeFillModeChange={handleShapeFillModeChange}
-              onDepthConfigChange={handleDepthConfigChange}
+              onPaintModeChange={editorStateManager.setPaintMode}
+              onPaintBehaviorChange={editorStateManager.setPaintBehavior}
+              onShapeFillModeChange={editorStateManager.setShapeFillMode}
+              onDepthConfigChange={editorStateManager.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
               onConfirmPlacement={handleConfirmMetaBlockPlacement}
@@ -283,11 +238,11 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={handleLayerChange}
-              onPaintModeChange={handlePaintModeChange}
-              onPaintBehaviorChange={handlePaintBehaviorChange}
-              onShapeFillModeChange={handleShapeFillModeChange}
-              onDepthConfigChange={handleDepthConfigChange}
+              onLayerChange={editorStateManager.setActiveLayer}
+              onPaintModeChange={editorStateManager.setPaintMode}
+              onPaintBehaviorChange={editorStateManager.setPaintBehavior}
+              onShapeFillModeChange={editorStateManager.setShapeFillMode}
+              onDepthConfigChange={editorStateManager.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
               onConfirmPlacement={handleConfirmMetaBlockPlacement}
@@ -311,10 +266,10 @@ function EditorViewComponent(props: EditorViewProps) {
         {/* Material Quick Select Bar (floating at bottom) */}
         <MaterialQuickSelect
           slots={quickSelectSlots}
-          selectedSlotIndex={selectedSlotIndex}
+          selectedSlotIndex={selectedQuickSelectSlot}
           blocks={blocks}
           onSelectSlot={handleQuickSelectSlot}
-          onOpenBrowser={handleOpenMaterialBrowser}
+          onOpenBrowser={() => editorStateManager.setMaterialBrowserOpen(true)}
         />
 
         {/* Material Browser Modal */}
@@ -325,12 +280,13 @@ function EditorViewComponent(props: EditorViewProps) {
           searchQuery={materialBrowserSearchQuery}
           selectedTab={materialBrowserSelectedTab}
           quickSelectSlots={quickSelectSlots}
-          selectedSlotIndex={selectedSlotIndex}
-          onClose={handleCloseMaterialBrowser}
-          onSelectMaterial={handleSelectMaterial}
-          onSearchChange={handleMaterialBrowserSearchChange}
-          onTabChange={handleMaterialBrowserTabChange}
+          selectedSlotIndex={selectedQuickSelectSlot}
+          onClose={() => editorStateManager.setMaterialBrowserOpen(false)}
+          onSelectMaterial={editorStateManager.setSelectedBlock}
+          onSearchChange={editorStateManager.setMaterialBrowserSearchQuery}
+          onTabChange={editorStateManager.setMaterialBrowserSelectedTab}
           onSelectSlot={handleQuickSelectSlot}
+          onAssignSlot={handleAssignSlot}
         />
 
         {/* Drag Overlay - shows visual feedback while dragging */}

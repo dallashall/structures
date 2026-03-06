@@ -16,10 +16,10 @@ export function MetaBlockPlacementBanner({ onConfirm }: MetaBlockPlacementBanner
     <Box
       sx={{
         position: 'absolute',
-        bottom: 24,
+        bottom: 100,
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 100,
+        zIndex: 1100,
       }}
     >
       <Paper elevation={8} sx={{ p: 2 }}>
