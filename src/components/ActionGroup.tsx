@@ -1,5 +1,4 @@
-import React from 'react';
-import { ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { ToggleButtonGroup, ToggleButton } from "@mui/material";
 
 export interface ActionGroupItemProps {
   /** Unique key for this item */
@@ -7,7 +6,7 @@ export interface ActionGroupItemProps {
   /** Content to display */
   children: React.ReactNode;
   /** Accessible label */
-  'aria-label'?: string;
+  "aria-label"?: string;
 }
 
 /**
@@ -15,7 +14,11 @@ export interface ActionGroupItemProps {
  *
  * Used as children of ActionGroup to define selectable items.
  */
-export function ActionGroupItem({ itemKey, children, 'aria-label': ariaLabel }: ActionGroupItemProps) {
+export function ActionGroupItem({
+  itemKey,
+  children,
+  "aria-label": ariaLabel,
+}: ActionGroupItemProps) {
   return (
     <ToggleButton value={itemKey} aria-label={ariaLabel}>
       {children}
@@ -25,7 +28,7 @@ export function ActionGroupItem({ itemKey, children, 'aria-label': ariaLabel }: 
 
 interface ActionGroupProps {
   /** Selection mode */
-  selectionMode?: 'single' | 'multiple' | 'none';
+  selectionMode?: "single" | "multiple" | "none";
   /** Currently selected keys */
   selectedKeys?: Set<string>;
   /** Selection change handler */
@@ -33,11 +36,11 @@ interface ActionGroupProps {
   /** Child ActionGroupItem components */
   children: React.ReactNode;
   /** Visual density */
-  density?: 'compact' | 'default';
+  density?: "compact" | "default";
   /** Accessible label */
-  'aria-label': string;
+  "aria-label": string;
   /** Orientation */
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 /**
@@ -47,24 +50,24 @@ interface ActionGroupProps {
  * Used for material palette block selection and view mode selection.
  */
 export function ActionGroup({
-  selectionMode = 'single',
+  selectionMode = "single",
   selectedKeys = new Set(),
   onSelectionChange,
   children,
-  density = 'default',
-  'aria-label': ariaLabel,
-  orientation = 'horizontal',
+  density = "default",
+  "aria-label": ariaLabel,
+  orientation = "horizontal",
 }: ActionGroupProps) {
   const handleChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newValue: string | string[]
+    newValue: string | string[],
   ) => {
-    if (selectionMode === 'none' || !onSelectionChange) {
+    if (selectionMode === "none" || !onSelectionChange) {
       return;
     }
 
     let newKeys: Set<string>;
-    if (selectionMode === 'single') {
+    if (selectionMode === "single") {
       // For single selection, newValue is a string or null
       newKeys = newValue ? new Set([newValue as string]) : new Set();
     } else {
@@ -76,18 +79,19 @@ export function ActionGroup({
   };
 
   // Convert Set to array for MUI ToggleButtonGroup
-  const value = selectionMode === 'single'
-    ? Array.from(selectedKeys)[0] || null
-    : Array.from(selectedKeys);
+  const value =
+    selectionMode === "single"
+      ? Array.from(selectedKeys)[0] || null
+      : Array.from(selectedKeys);
 
   return (
     <ToggleButtonGroup
       value={value}
       onChange={handleChange}
-      exclusive={selectionMode === 'single'}
+      exclusive={selectionMode === "single"}
       aria-label={ariaLabel}
       orientation={orientation}
-      size={density === 'compact' ? 'small' : 'medium'}
+      size={density === "compact" ? "small" : "medium"}
     >
       {children}
     </ToggleButtonGroup>

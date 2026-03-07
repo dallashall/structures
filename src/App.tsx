@@ -1,33 +1,33 @@
-import React from 'react';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { WelcomeView } from './views/WelcomeView';
-import { EditorView } from './views/EditorView';
-import { NewProjectDialog } from './components/NewProjectDialog';
-import { ComponentPreview } from './preview/ComponentPreview';
-import { projectManager } from './core/ProjectManager';
-import { storageManager } from './core/StorageManager';
-import type { Dimensions } from './types';
+import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { useState, useEffect } from "react";
+import { WelcomeView } from "./views/WelcomeView";
+import { EditorView } from "./views/EditorView";
+import { NewProjectDialog } from "./components/NewProjectDialog";
+import { ComponentPreview } from "./preview/ComponentPreview";
+import { projectManager } from "./core/ProjectManager";
+import { storageManager } from "./core/StorageManager";
+import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
 const darkTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
     primary: {
-      main: '#4a9eff',
-      dark: '#3d8ae5',
+      main: "#4a9eff",
+      dark: "#3d8ae5",
     },
     secondary: {
-      main: '#ff9f40',
-      dark: '#e68a2e',
+      main: "#ff9f40",
+      dark: "#e68a2e",
     },
     background: {
-      default: '#1a1a1a',
-      paper: '#2a2a2a',
+      default: "#1a1a1a",
+      paper: "#2a2a2a",
     },
-    divider: '#3a3a3a',
+    divider: "#3a3a3a",
     text: {
-      primary: '#e0e0e0',
-      secondary: '#a0a0a0',
+      primary: "#e0e0e0",
+      secondary: "#a0a0a0",
     },
   },
   spacing: 8,
@@ -36,77 +36,91 @@ const darkTheme = createTheme({
   },
   typography: {
     // Default font for general text
-    fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontFamily:
+      '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 
     // Headers use Lexend
     h1: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
     h2: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
     h3: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
     h4: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
     h5: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
     h6: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
     },
 
     // Subtitle uses Lexend
     subtitle1: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
     subtitle2: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
     // Body text uses Chakra Petch (default)
     body1: {
-      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
     body2: {
-      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
     // Button text uses Chakra Petch
     button: {
-      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 600,
-      textTransform: 'none',
+      textTransform: "none",
     },
 
     // Caption uses Chakra Petch
     caption: {
-      fontFamily: '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily:
+        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
     // Overline uses Lexend (for labels)
     overline: {
-      fontFamily: '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      letterSpacing: '0.08em',
+      fontFamily:
+        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      letterSpacing: "0.08em",
     },
   },
   components: {
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          '&.Mui-selected': {
-            backgroundColor: '#4a9eff',
-            color: '#ffffff',
-            '&:hover': {
-              backgroundColor: '#3d8ae5',
+          "&.Mui-selected": {
+            backgroundColor: "#4a9eff",
+            color: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#3d8ae5",
             },
           },
         },
@@ -116,7 +130,7 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           // Input fields use Red Hat Mono for data entry
-          '& input': {
+          "& input": {
             fontFamily: '"Red Hat Mono", "Courier New", monospace',
             fontWeight: 500,
           },
@@ -135,7 +149,7 @@ const darkTheme = createTheme({
   },
 });
 
-type AppView = 'welcome' | 'editor';
+type AppView = "welcome" | "editor";
 
 /**
  * App - Root application component
@@ -147,20 +161,20 @@ type AppView = 'welcome' | 'editor';
  * Handles project creation and loading flow.
  */
 export function App() {
-  const [currentView, setCurrentView] = React.useState<AppView>('welcome');
-  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = React.useState(false);
-  const [isPreviewMode, setIsPreviewMode] = React.useState(false);
+  const [currentView, setCurrentView] = useState<AppView>("welcome");
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Check for preview mode in hash on mount and hash changes
-  React.useEffect(() => {
+  useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
-      setIsPreviewMode(hash.startsWith('#/preview'));
+      setIsPreviewMode(hash.startsWith("#/preview"));
     };
 
     checkHash();
-    window.addEventListener('hashchange', checkHash);
-    return () => window.removeEventListener('hashchange', checkHash);
+    window.addEventListener("hashchange", checkHash);
+    return () => window.removeEventListener("hashchange", checkHash);
   }, []);
 
   // Handle new project
@@ -172,7 +186,7 @@ export function App() {
   const handleCreateProject = (name: string, dimensions: Dimensions) => {
     projectManager.createProject(name, dimensions);
     setIsNewProjectDialogOpen(false);
-    setCurrentView('editor');
+    setCurrentView("editor");
   };
 
   // Handle open project from welcome screen
@@ -180,14 +194,14 @@ export function App() {
     const project = await storageManager.loadProject(projectId);
     if (project) {
       projectManager.loadProject(project);
-      setCurrentView('editor');
+      setCurrentView("editor");
     }
   };
 
   // Handle load from file
   const handleLoadFromFile = () => {
     // TODO: Implement file picker and import
-    console.log('Load from file not yet implemented');
+    console.log("Load from file not yet implemented");
   };
 
   // Handle close project dialog
@@ -208,7 +222,7 @@ export function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      {currentView === 'welcome' ? (
+      {currentView === "welcome" ? (
         <WelcomeView
           onNewProject={handleNewProject}
           onOpenProject={handleOpenProject}

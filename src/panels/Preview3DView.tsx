@@ -1,12 +1,19 @@
 import React from 'react';
-import { Box, IconButton, Tooltip, Stack, Typography, useTheme } from '@mui/material';
-import { Babylon3DController } from '../core/Babylon3DController';
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Stack,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import { Babylon3DController } from "../core/Babylon3DController";
 
 // Axis colors that work in dark/light mode
 const AXIS_COLORS = {
-  x: { main: '#e74c3c', hover: '#c0392b', bg: 'rgba(231, 76, 60, 0.1)' },
-  y: { main: '#3498db', hover: '#2980b9', bg: 'rgba(52, 152, 219, 0.1)' },
-  z: { main: '#27ae60', hover: '#229954', bg: 'rgba(39, 174, 96, 0.1)' },
+  x: { main: "#e74c3c", hover: "#c0392b", bg: "rgba(231, 76, 60, 0.1)" },
+  y: { main: "#3498db", hover: "#2980b9", bg: "rgba(52, 152, 219, 0.1)" },
+  z: { main: "#27ae60", hover: "#229954", bg: "rgba(39, 174, 96, 0.1)" },
 };
 
 interface Preview3DViewProps {
@@ -59,62 +66,81 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
   const handleToggleX = () => {
     const newVisibility = !xVisible;
     setXVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible('x', newVisibility);
+    controllerRef.current?.setAxisSliceVisible("x", newVisibility);
   };
 
   const handleToggleY = () => {
     const newVisibility = !yVisible;
     setYVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible('y', newVisibility);
+    controllerRef.current?.setAxisSliceVisible("y", newVisibility);
   };
 
   const handleToggleZ = () => {
     const newVisibility = !zVisible;
     setZVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible('z', newVisibility);
+    controllerRef.current?.setAxisSliceVisible("z", newVisibility);
   };
 
   return (
-    <Box sx={{ width: '100%', height: '100%', position: 'relative', bgcolor: '#1a1a1a' }}>
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        bgcolor: "#1a1a1a",
+      }}
+    >
       <canvas
         ref={canvasRef}
         style={{
-          display: 'block',
+          display: "block",
           width: `${width}px`,
           height: `${height}px`,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
 
       {/* Slice Guides Toggle Buttons */}
       <Box
         sx={{
-          position: 'absolute',
+          position: "absolute",
           top: 8,
           right: 8,
           zIndex: 10,
         }}
       >
-        <Stack direction="row" spacing={0.5} sx={{ bgcolor: 'rgba(0, 0, 0, 0.5)', borderRadius: 1, p: 0.5 }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{ bgcolor: "rgba(0, 0, 0, 0.5)", borderRadius: 1, p: 0.5 }}
+        >
           <Tooltip title="Toggle X Slice (Width)">
             <IconButton
               onClick={handleToggleX}
               size="small"
               sx={{
-                bgcolor: xVisible ? AXIS_COLORS.x.main : 'transparent',
-                color: xVisible ? theme.palette.getContrastText(AXIS_COLORS.x.main) : AXIS_COLORS.x.main,
+                bgcolor: xVisible ? AXIS_COLORS.x.main : "transparent",
+                color: xVisible
+                  ? theme.palette.getContrastText(AXIS_COLORS.x.main)
+                  : AXIS_COLORS.x.main,
                 border: 1,
                 borderColor: AXIS_COLORS.x.main,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: xVisible ? AXIS_COLORS.x.hover : AXIS_COLORS.x.bg,
                 },
                 minWidth: 24,
                 width: 24,
                 height: 24,
-                fontSize: '0.75rem',
+                fontSize: "0.75rem",
               }}
             >
-              <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.75rem' }}>X</Typography>
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                X
+              </Typography>
             </IconButton>
           </Tooltip>
 
@@ -123,20 +149,28 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               onClick={handleToggleY}
               size="small"
               sx={{
-                bgcolor: yVisible ? AXIS_COLORS.y.main : 'transparent',
-                color: yVisible ? theme.palette.getContrastText(AXIS_COLORS.y.main) : AXIS_COLORS.y.main,
+                bgcolor: yVisible ? AXIS_COLORS.y.main : "transparent",
+                color: yVisible
+                  ? theme.palette.getContrastText(AXIS_COLORS.y.main)
+                  : AXIS_COLORS.y.main,
                 border: 1,
                 borderColor: AXIS_COLORS.y.main,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: yVisible ? AXIS_COLORS.y.hover : AXIS_COLORS.y.bg,
                 },
                 minWidth: 24,
                 width: 24,
                 height: 24,
-                fontSize: '0.75rem',
+                fontSize: "0.75rem",
               }}
             >
-              <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.75rem' }}>Y</Typography>
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                Y
+              </Typography>
             </IconButton>
           </Tooltip>
 
@@ -145,20 +179,28 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               onClick={handleToggleZ}
               size="small"
               sx={{
-                bgcolor: zVisible ? AXIS_COLORS.z.main : 'transparent',
-                color: zVisible ? theme.palette.getContrastText(AXIS_COLORS.z.main) : AXIS_COLORS.z.main,
+                bgcolor: zVisible ? AXIS_COLORS.z.main : "transparent",
+                color: zVisible
+                  ? theme.palette.getContrastText(AXIS_COLORS.z.main)
+                  : AXIS_COLORS.z.main,
                 border: 1,
                 borderColor: AXIS_COLORS.z.main,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: zVisible ? AXIS_COLORS.z.hover : AXIS_COLORS.z.bg,
                 },
                 minWidth: 24,
                 width: 24,
                 height: 24,
-                fontSize: '0.75rem',
+                fontSize: "0.75rem",
               }}
             >
-              <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.75rem' }}>Z</Typography>
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                Z
+              </Typography>
             </IconButton>
           </Tooltip>
         </Stack>

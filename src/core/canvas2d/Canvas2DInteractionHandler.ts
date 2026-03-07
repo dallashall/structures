@@ -1,39 +1,53 @@
-import { editorStateManager } from '../EditorStateManager';
-import { projectManager } from '../ProjectManager';
 import type { Canvas2DViewport } from './Canvas2DViewport';
-import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
-import type { Canvas2DPaintHandler } from './Canvas2DPaintHandler';
+import type {
+  InteractionEventHandlers,
+  ModifierKeys,
+  GridPosition,
+  PixelPosition,
+} from './Canvas2DInteractionEvents';
 
 /**
- * Canvas2DInteractionHandler - Handles all user input events
+ * Canvas2DInteractionHandler - Generic input event handler
  *
  * Responsibilities:
- * - Mouse events (down, move, up, leave, wheel)
- * - Keyboard events (space, shift, alt)
- * - Cursor state management
- * - Coordinate interaction handlers (pan, paint, erase, zoom)
- * - Delegates to appropriate handlers (viewport, paintHandler, previewManager)
+ * - Capture raw DOM events (mouse, keyboard, wheel)
+ * - Track modifier key state
+ * - Track mouse state and interaction modes
+ * - Convert pixel coordinates to grid coordinates
+ * - Emit semantic interaction events
  *
- * This class translates raw DOM events into coordinated actions.
+ * Does NOT know about:
+ * - Previews
+ * - Painting
+ * - Placement mode
+ * - Rendering
+ * - Any domain-specific logic
+ *
+ * This is a pure interaction layer that can be reused for any grid-based canvas.
  */
 export class Canvas2DInteractionHandler {
-  // Interaction state
-  private isDraggingPan = false;
-  private isPainting = false;
-  private isErasing = false;
-  private lastMousePos = { x: 0, y: 0 };
+  // Modifier key state
+  private modifiers: ModifierKeys = {
+    space: false,
+    shift: false,
+    alt: false,
+    ctrl: false,
+    meta: false,
+  };
+
+  // Mouse state
+  private isDragging = false;
+  private dragButton: number | null = null;
+  private lastPixelPos: PixelPosition = { pixelX: 0, pixelY: 0 };
+  private lastGridPos: GridPosition | null = null;
+  private dragStartGridPos: GridPosition | null = null;
+  private isMouseInside = false; // Track if mouse is inside canvas
+
+  // Pan state
+  private isPanning = false;
+
+  // Zoom throttling
   private lastZoomTime = 0;
-
-  // Keyboard state
-  private spacebarHeld = false;
-  private shiftHeld = false;
-  private altHeld = false;
-
-  // Placement mode state
-  private isPlacementMode = false;
-
-  // Track last preview position to avoid unnecessary updates
-  private lastPreviewGridPos: { gridX: number; gridY: number } | null = null;
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
@@ -41,6 +55,7 @@ export class Canvas2DInteractionHandler {
     mouseDown: this.handleMouseDown.bind(this),
     mouseMove: this.handleMouseMove.bind(this),
     mouseUp: this.handleMouseUp.bind(this),
+    mouseEnter: this.handleMouseEnter.bind(this),
     mouseLeave: this.handleMouseLeave.bind(this),
     keyDown: this.handleKeyDown.bind(this),
     keyUp: this.handleKeyUp.bind(this),
@@ -49,12 +64,9 @@ export class Canvas2DInteractionHandler {
   constructor(
     private canvas: HTMLCanvasElement,
     private viewport: Canvas2DViewport,
-    private previewManager: Canvas2DPreviewManager,
-    private paintHandler: Canvas2DPaintHandler,
-    private onRender: () => void
+    private handlers: InteractionEventHandlers
   ) {
     this.attachEventListeners();
-    this.updateCursor();
   }
 
   /**
@@ -65,6 +77,7 @@ export class Canvas2DInteractionHandler {
     this.canvas.addEventListener('mousedown', this.boundHandlers.mouseDown);
     this.canvas.addEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.addEventListener('mouseup', this.boundHandlers.mouseUp);
+    this.canvas.addEventListener('mouseenter', this.boundHandlers.mouseEnter);
     this.canvas.addEventListener('mouseleave', this.boundHandlers.mouseLeave);
     window.addEventListener('keydown', this.boundHandlers.keyDown);
     window.addEventListener('keyup', this.boundHandlers.keyUp);
@@ -78,17 +91,24 @@ export class Canvas2DInteractionHandler {
     this.canvas.removeEventListener('mousedown', this.boundHandlers.mouseDown);
     this.canvas.removeEventListener('mousemove', this.boundHandlers.mouseMove);
     this.canvas.removeEventListener('mouseup', this.boundHandlers.mouseUp);
+    this.canvas.removeEventListener('mouseenter', this.boundHandlers.mouseEnter);
     this.canvas.removeEventListener('mouseleave', this.boundHandlers.mouseLeave);
     window.removeEventListener('keydown', this.boundHandlers.keyDown);
     window.removeEventListener('keyup', this.boundHandlers.keyUp);
   }
 
   /**
-   * Set placement mode (for meta block placement)
+   * Get current modifier key state
    */
-  setPlacementMode(isPlacementMode: boolean): void {
-    this.isPlacementMode = isPlacementMode;
-    this.updateCursor();
+  getModifiers(): ModifierKeys {
+    return { ...this.modifiers };
+  }
+
+  /**
+   * Check if mouse is inside canvas
+   */
+  isMouseInsideCanvas(): boolean {
+    return this.isMouseInside;
   }
 
   /**
@@ -104,8 +124,8 @@ export class Canvas2DInteractionHandler {
     if (timeSinceLastZoom < 30) return;
 
     const rect = this.canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
+    const pixelX = event.clientX - rect.left;
+    const pixelY = event.clientY - rect.top;
 
     // Normalize wheel delta
     let delta = event.deltaY;
@@ -121,12 +141,9 @@ export class Canvas2DInteractionHandler {
     const desiredChange = delta > 0 ? -0.15 : 0.15;
     const zoomChange = Math.sign(desiredChange) * Math.min(Math.abs(desiredChange), maxChangeThisFrame);
 
-    const changed = this.viewport.applyZoom(zoomChange, mouseX, mouseY);
+    this.lastZoomTime = now;
 
-    if (changed) {
-      this.lastZoomTime = now;
-      this.onRender();
-    }
+    this.handlers.onZoom?.(zoomChange, { pixelX, pixelY });
   }
 
   /**
@@ -136,62 +153,23 @@ export class Canvas2DInteractionHandler {
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
+    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
 
-    // Meta block placement mode
-    if (this.isPlacementMode && event.button === 0 && !event.shiftKey) {
-      this.placeMetaBlockAtPixel(pixelX, pixelY);
+    this.lastPixelPos = { pixelX, pixelY };
+
+    // Pan mode (space + left button OR middle button)
+    if ((event.button === 0 && this.modifiers.space) || event.button === 1) {
+      this.isPanning = true;
+      this.handlers.onPanStart?.({ pixelX, pixelY });
       return;
     }
 
-    // Pan mode
-    if ((event.button === 0 && this.spacebarHeld) || event.button === 1) {
-      this.isDraggingPan = true;
-      this.lastMousePos = { x: pixelX, y: pixelY };
-      this.canvas.style.cursor = 'grabbing';
-      return;
-    }
-
-    // Erase mode
-    if (event.button === 0 && this.shiftHeld) {
-      this.isErasing = true;
-      this.paintHandler.resetLastPaintedCell();
-      this.paintHandler.eraseAtPixel(pixelX, pixelY);
-      return;
-    }
-
-    // Paint mode
-    if (event.button === 0) {
-      const paintMode = editorStateManager.getPaintMode();
-
-      // Clear hover preview when starting to paint
-      this.previewManager.clearPointPreview();
-      this.lastPreviewGridPos = null;
-
-      // Outline mode: start drag
-      if (paintMode === 'outline') {
-        const gridCoords = this.viewport.pixelToGrid(pixelX, pixelY);
-        if (gridCoords) {
-          const { gridX, gridY } = gridCoords;
-          const position = this.viewport.gridToPosition(gridX, gridY);
-
-          // Start outline preview
-          this.previewManager.startOutlineDrag(gridX, gridY);
-
-          // Notify outline strategy that drag started
-          const strategy = this.paintHandler['canvasPainter']['strategy'];
-          if (strategy && 'startDrag' in strategy) {
-            (strategy as any).startDrag(position);
-          }
-        }
-      }
-
-      this.isPainting = true;
-      this.paintHandler.resetLastPaintedCell();
-
-      // Only paint immediately for non-outline modes
-      if (paintMode !== 'outline') {
-        this.paintHandler.paintAtPixel(pixelX, pixelY);
-      }
+    // Start drag
+    if (gridPos) {
+      this.isDragging = true;
+      this.dragButton = event.button;
+      this.dragStartGridPos = gridPos;
+      this.handlers.onDragStart?.(gridPos, event.button, this.modifiers);
     }
   }
 
@@ -202,65 +180,34 @@ export class Canvas2DInteractionHandler {
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
-
-    // Update last grid position for preview
-    const gridCoords = this.viewport.pixelToGrid(pixelX, pixelY);
-    if (gridCoords) {
-      this.previewManager.updateLastGridPosition(gridCoords.gridX, gridCoords.gridY);
-
-      // Show hover preview for point mode (when not actively interacting)
-      if (!this.isPainting && !this.isDraggingPan && !this.isErasing && !this.altHeld) {
-        const paintMode = editorStateManager.getPaintMode();
-        if (paintMode === 'point') {
-          // Only update if grid position changed (avoid flickering)
-          const gridChanged = !this.lastPreviewGridPos ||
-            this.lastPreviewGridPos.gridX !== gridCoords.gridX ||
-            this.lastPreviewGridPos.gridY !== gridCoords.gridY;
-
-          if (gridChanged) {
-            this.lastPreviewGridPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
-            this.previewManager.updatePointPreview(gridCoords.gridX, gridCoords.gridY);
-            this.onRender();
-          }
-        }
-      }
-    }
+    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
 
     // Handle panning
-    if (this.isDraggingPan) {
-      const deltaX = pixelX - this.lastMousePos.x;
-      const deltaY = pixelY - this.lastMousePos.y;
-
-      this.viewport.applyPan(deltaX, deltaY);
-
-      this.lastMousePos = { x: pixelX, y: pixelY };
-      this.onRender();
+    if (this.isPanning) {
+      const deltaX = pixelX - this.lastPixelPos.pixelX;
+      const deltaY = pixelY - this.lastPixelPos.pixelY;
+      this.lastPixelPos = { pixelX, pixelY };
+      this.handlers.onPanMove?.({ deltaX, deltaY });
       return;
     }
 
-    // Handle erasing
-    if (this.isErasing) {
-      this.paintHandler.eraseAtPixel(pixelX, pixelY);
+    // Handle dragging
+    if (this.isDragging && gridPos) {
+      this.handlers.onDragMove?.(gridPos, this.modifiers);
+      this.lastGridPos = gridPos;
       return;
     }
 
-    // Handle painting
-    if (this.isPainting) {
-      const paintMode = editorStateManager.getPaintMode();
+    // Handle hover (only if grid position changed)
+    if (gridPos) {
+      const gridChanged = !this.lastGridPos ||
+        this.lastGridPos.gridX !== gridPos.gridX ||
+        this.lastGridPos.gridY !== gridPos.gridY;
 
-      // Outline mode: update preview
-      if (paintMode === 'outline' && gridCoords) {
-        this.previewManager.updateOutlineDrag(gridCoords.gridX, gridCoords.gridY);
-        this.onRender();
-        return;
+      if (gridChanged) {
+        this.lastGridPos = gridPos;
+        this.handlers.onHover?.(gridPos, this.modifiers);
       }
-
-      // Point/fill mode: paint while dragging
-      if (gridCoords) {
-        this.previewManager.updatePointPreview(gridCoords.gridX, gridCoords.gridY);
-      }
-
-      this.paintHandler.paintAtPixel(pixelX, pixelY);
     }
   }
 
@@ -268,73 +215,117 @@ export class Canvas2DInteractionHandler {
    * Handle mouse up
    */
   private handleMouseUp(event: MouseEvent): void {
-    // Finalize outline mode
-    if (this.isPainting) {
-      const paintMode = editorStateManager.getPaintMode();
-      if (paintMode === 'outline') {
-        const rect = this.canvas.getBoundingClientRect();
-        const pixelX = event.clientX - rect.left;
-        const pixelY = event.clientY - rect.top;
+    const rect = this.canvas.getBoundingClientRect();
+    const pixelX = event.clientX - rect.left;
+    const pixelY = event.clientY - rect.top;
+    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
 
-        // End outline preview
-        this.previewManager.endOutlineDrag();
-
-        // Paint the final rectangle
-        this.paintHandler.paintAtPixel(pixelX, pixelY);
-
-        // End drag in strategy
-        const strategy = this.paintHandler['canvasPainter']['strategy'];
-        if (strategy && 'endDrag' in strategy) {
-          (strategy as any).endDrag();
-        }
-
-        this.onRender();
-      }
+    // End pan
+    if (this.isPanning) {
+      this.isPanning = false;
+      this.handlers.onPanEnd?.();
+      return;
     }
 
-    // Clear preview state
-    this.previewManager.clearPointPreview();
+    // End drag
+    if (this.isDragging && gridPos) {
+      this.handlers.onDragEnd?.(gridPos, this.modifiers);
 
-    this.isPainting = false;
-    this.isErasing = false;
-    this.isDraggingPan = false;
-    this.paintHandler.resetLastPaintedCell();
-    this.updateCursor();
+      // Check if it was a click (start and end on same cell)
+      if (this.dragStartGridPos &&
+          this.dragStartGridPos.gridX === gridPos.gridX &&
+          this.dragStartGridPos.gridY === gridPos.gridY &&
+          this.dragButton !== null) {
+        this.handlers.onClick?.(gridPos, this.dragButton, this.modifiers);
+      }
+
+      this.isDragging = false;
+      this.dragButton = null;
+      this.dragStartGridPos = null;
+    }
+  }
+
+  /**
+   * Handle mouse enter - update grid position immediately
+   */
+  private handleMouseEnter(event: MouseEvent): void {
+    this.isMouseInside = true;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const pixelX = event.clientX - rect.left;
+    const pixelY = event.clientY - rect.top;
+    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+
+    // Update grid position for Alt preview
+    if (gridPos) {
+      this.lastGridPos = gridPos;
+      this.handlers.onHover?.(gridPos, this.modifiers);
+    }
   }
 
   /**
    * Handle mouse leave
    */
   private handleMouseLeave(): void {
-    this.previewManager.clearAll();
-    this.previewManager.clearPointPreview();
-    this.lastPreviewGridPos = null;
+    this.isMouseInside = false;
 
-    this.isPainting = false;
-    this.isErasing = false;
-    this.isDraggingPan = false;
-    this.paintHandler.resetLastPaintedCell();
-    this.updateCursor();
-    this.onRender();
+    // End any active interactions
+    if (this.isPanning) {
+      this.handlers.onPanEnd?.();
+    }
+    if (this.isDragging && this.lastGridPos) {
+      this.handlers.onDragEnd?.(this.lastGridPos, this.modifiers);
+    }
+
+    this.isPanning = false;
+    this.isDragging = false;
+    this.dragButton = null;
+    this.dragStartGridPos = null;
+    this.lastGridPos = null;
+
+    this.handlers.onMouseLeave?.();
   }
 
   /**
    * Handle key down
    */
   private handleKeyDown(event: KeyboardEvent): void {
-    if (event.code === 'Space' && !event.repeat) {
+    if (event.repeat) return;
+
+    // ESC key: emit escape event (generic cancellation)
+    if (event.code === 'Escape') {
       event.preventDefault();
-      this.spacebarHeld = true;
-      this.updateCursor();
+      this.handlers.onEscape?.();
+      return;
+    }
+
+    let modifierChanged = false;
+
+    if (event.code === 'Space') {
+      event.preventDefault();
+      this.modifiers.space = true;
+      modifierChanged = true;
     }
     if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-      this.shiftHeld = true;
-      this.updateCursor();
+      this.modifiers.shift = true;
+      modifierChanged = true;
     }
-    if ((event.code === 'AltLeft' || event.code === 'AltRight') && !event.repeat) {
+    if (event.code === 'AltLeft' || event.code === 'AltRight') {
       event.preventDefault();
-      this.altHeld = true;
-      this.previewManager.activatePreviewKey();
+      this.modifiers.alt = true;
+      modifierChanged = true;
+    }
+    if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
+      this.modifiers.ctrl = true;
+      modifierChanged = true;
+    }
+    if (event.code === 'MetaLeft' || event.code === 'MetaRight') {
+      this.modifiers.meta = true;
+      modifierChanged = true;
+    }
+
+    if (modifierChanged) {
+      this.handlers.onModifierChange?.(this.modifiers);
     }
   }
 
@@ -342,63 +333,34 @@ export class Canvas2DInteractionHandler {
    * Handle key up
    */
   private handleKeyUp(event: KeyboardEvent): void {
+    let modifierChanged = false;
+
     if (event.code === 'Space') {
       event.preventDefault();
-      this.spacebarHeld = false;
-      this.isDraggingPan = false;
-      this.updateCursor();
+      this.modifiers.space = false;
+      this.isPanning = false; // End pan if space released
+      modifierChanged = true;
     }
     if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-      this.shiftHeld = false;
-      this.isErasing = false;
-      this.updateCursor();
+      this.modifiers.shift = false;
+      modifierChanged = true;
     }
     if (event.code === 'AltLeft' || event.code === 'AltRight') {
       event.preventDefault();
-      this.altHeld = false;
-      this.previewManager.deactivatePreviewKey();
+      this.modifiers.alt = false;
+      modifierChanged = true;
     }
-  }
-
-  /**
-   * Update cursor based on current state
-   */
-  private updateCursor(): void {
-    if (this.isDraggingPan) {
-      this.canvas.style.cursor = 'grabbing';
-    } else if (this.spacebarHeld) {
-      this.canvas.style.cursor = 'grab';
-    } else if (this.shiftHeld) {
-      this.canvas.style.cursor = 'not-allowed';
-    } else if (this.isPlacementMode) {
-      this.canvas.style.cursor = 'pointer';
-    } else {
-      this.canvas.style.cursor = 'crosshair';
+    if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
+      this.modifiers.ctrl = false;
+      modifierChanged = true;
     }
-  }
-
-  /**
-   * Place meta block at pixel coordinates
-   */
-  private placeMetaBlockAtPixel(pixelX: number, pixelY: number): void {
-    const project = projectManager.getProject();
-    if (!project) return;
-
-    const gridCoords = this.viewport.pixelToGrid(pixelX, pixelY);
-    if (!gridCoords) return;
-
-    const position = this.viewport.gridToPosition(gridCoords.gridX, gridCoords.gridY);
-
-    // Validate position
-    if (
-      position.x < 0 || position.x >= project.dimensions.width ||
-      position.y < 0 || position.y >= project.dimensions.height ||
-      position.z < 0 || position.z >= project.dimensions.depth
-    ) {
-      return;
+    if (event.code === 'MetaLeft' || event.code === 'MetaRight') {
+      this.modifiers.meta = false;
+      modifierChanged = true;
     }
 
-    // Update meta block position
-    projectManager.setMetaBlock(position);
+    if (modifierChanged) {
+      this.handlers.onModifierChange?.(this.modifiers);
+    }
   }
 }

@@ -1,8 +1,7 @@
-import React from 'react';
-import { Box } from '@mui/material';
-import { ActionGroup, ActionGroupItem } from './ActionGroup';
-import { ColorSwatch } from './ColorSwatch';
-import type { Block } from '../types';
+import { Box } from "@mui/material";
+import { ActionGroup, ActionGroupItem } from "./ActionGroup";
+import { ColorSwatch } from "./ColorSwatch";
+import type { Block } from "../types";
 
 interface QuickSelectPaletteProps {
   slots: (string | null)[];
@@ -10,7 +9,7 @@ interface QuickSelectPaletteProps {
   blocks: Block[]; // All blocks to look up by ID
   onSelectSlot: (index: number) => void;
   onAssignSlot?: (index: number) => void; // Assign currently selected block to this slot
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 /**
@@ -31,7 +30,7 @@ export function QuickSelectPalette({
   blocks,
   onSelectSlot,
   onAssignSlot,
-  orientation = 'horizontal',
+  orientation = "horizontal",
 }: QuickSelectPaletteProps) {
   const handleSelectionChange = (keys: Set<string>) => {
     if (keys.size > 0) {
@@ -74,7 +73,7 @@ export function QuickSelectPalette({
         key={index.toString()}
         onClick={(e) => handleSlotClick(index, e)}
         onContextMenu={(e) => handleSlotContextMenu(index, e)}
-        sx={{ position: 'relative' }}
+        sx={{ position: "relative" }}
       >
         <ActionGroupItem
           itemKey={index.toString()}
@@ -87,10 +86,10 @@ export function QuickSelectPalette({
               sx={{
                 width: 32,
                 height: 32,
-                bgcolor: 'grey.300',
+                bgcolor: "grey.300",
                 borderRadius: 0.5,
                 border: 1,
-                borderColor: 'grey.500',
+                borderColor: "grey.500",
               }}
             />
           )}

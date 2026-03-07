@@ -4,9 +4,6 @@ import { LayerControls } from '../components/LayerControls';
 import { QuadLayout } from '../layouts/QuadLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
-import { QuickSelectPalette } from '../components/QuickSelectPalette';
-import { FullPaletteMenu } from '../components/FullPaletteMenu';
-import { editorStateManager } from '../core/EditorStateManager';
 
 interface QuadEditorViewProps {
   project: Project;
@@ -41,24 +38,22 @@ export function QuadEditorView({
   activeLayers,
   selectedBlock,
   paintMode,
-  paintBehavior,
-  shapeFillMode,
-  depthConfig,
+  paintBehavior: _paintBehavior,
+  shapeFillMode: _shapeFillMode,
+  depthConfig: _depthConfig,
   isPlacementMode,
-  isActionBarExpanded,
-  quickSelectSlots,
-  blocks,
+  isActionBarExpanded: _isActionBarExpanded,
+  quickSelectSlots: _quickSelectSlots,
+  blocks: _blocks,
   onLayerChange,
   onPaintModeChange,
-  onPaintBehaviorChange,
-  onShapeFillModeChange,
-  onDepthConfigChange,
-  onQuickSelectSlot,
-  onAssignSlot,
+  onPaintBehaviorChange: _onPaintBehaviorChange,
+  onShapeFillModeChange: _onShapeFillModeChange,
+  onDepthConfigChange: _onDepthConfigChange,
+  onQuickSelectSlot: _onQuickSelectSlot,
+  onAssignSlot: _onAssignSlot,
   onConfirmPlacement,
 }: QuadEditorViewProps) {
-  const selectedSlotIndex = quickSelectSlots.findIndex((id) => id === selectedBlock);
-
   return (
     <>
       {/* Layer Controls / Tab Bar */}

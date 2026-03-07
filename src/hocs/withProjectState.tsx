@@ -1,6 +1,7 @@
 import React from 'react';
-import { projectManager } from '../core/ProjectManager';
-import type { Project } from '../types';
+import { projectManager } from "../core/ProjectManager";
+import { modelHistory } from "../core/ModelHistory";
+import type { Project } from "../types";
 
 /**
  * Props injected by withProjectState HOC
@@ -10,13 +11,13 @@ export interface WithProjectStateProps {
 }
 
 /**
- * Higher-Order Component that subscribes to ProjectManager events
+ * Higher-Order Component that subscribes to ProjectManager and ModelHistory events
  * and provides current project state to wrapped component.
  *
  * Subscribes to:
- * - project:created
- * - project:loaded
- * - project:changed
+ * - project:created (ProjectManager)
+ * - project:loaded (ProjectManager)
+ * - model:updated (ModelHistory)
  *
  * Injects props:
  * - project: Project | null - The current project state
@@ -25,11 +26,11 @@ export interface WithProjectStateProps {
  * const EnhancedComponent = withProjectState(MyComponent);
  */
 export function withProjectState<P extends object>(
-  Component: React.ComponentType<P & WithProjectStateProps>
+  Component: React.ComponentType<P & WithProjectStateProps>,
 ) {
   return function WithProjectState(props: P) {
     const [project, setProject] = React.useState<Project | null>(
-      projectManager.getProject()
+      projectManager.getProject(),
     );
 
     React.useEffect(() => {
@@ -41,39 +42,27 @@ export function withProjectState<P extends object>(
         setProject(loadedProject);
       };
 
-      const handleProjectChanged = () => {
-        // Create a new object reference to force React re-render
+      const handleModelUpdated = () => {
+        // Model updated - get fresh computed state from projectManager
         const currentProject = projectManager.getProject();
         if (currentProject) {
-          // Shallow copy to create new reference
+          // Shallow copy to create new reference for React re-render
           setProject({ ...currentProject });
         }
       };
 
-      const handleWindowProjectChanged = (event: Event) => {
-        const customEvent = event as CustomEvent<{ project: Project }>;
-        // Create a new object reference from window event
-        setProject({ ...customEvent.detail.project });
-      };
+      // Subscribe to project lifecycle events
+      projectManager.on("project:created", handleProjectCreated);
+      projectManager.on("project:loaded", handleProjectLoaded);
 
-      // Subscribe to EventEmitter events (for project create/load)
-      projectManager.on('project:created', handleProjectCreated);
-      projectManager.on('project:loaded', handleProjectLoaded);
-      projectManager.on('project:changed', handleProjectChanged);
-
-      // Also listen to window events for cross-module updates
-      window.addEventListener('project:changed', handleWindowProjectChanged);
-      window.addEventListener('block:added', handleWindowProjectChanged);
-      window.addEventListener('block:removed', handleWindowProjectChanged);
+      // Subscribe to model updates (replaces 'project:changed')
+      modelHistory.on("model:updated", handleModelUpdated);
 
       // Cleanup
       return () => {
-        projectManager.off('project:created', handleProjectCreated);
-        projectManager.off('project:loaded', handleProjectLoaded);
-        projectManager.off('project:changed', handleProjectChanged);
-        window.removeEventListener('project:changed', handleWindowProjectChanged);
-        window.removeEventListener('block:added', handleWindowProjectChanged);
-        window.removeEventListener('block:removed', handleWindowProjectChanged);
+        projectManager.off("project:created", handleProjectCreated);
+        projectManager.off("project:loaded", handleProjectLoaded);
+        modelHistory.off("model:updated", handleModelUpdated);
       };
     }, []);
 

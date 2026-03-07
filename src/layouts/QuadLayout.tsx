@@ -1,11 +1,11 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography } from "@mui/material";
 
-import type { Project, LayerState, Vector3D } from '../types';
+import type { Project, LayerState, Vector3D } from "../types";
 
-import { Canvas2DView } from '../panels/Canvas2DView';
-import { Preview3DView } from '../panels/Preview3DView';
-import { projectManager } from '../core/ProjectManager';
+import { Canvas2DView } from "../panels/Canvas2DView";
+import { Preview3DView } from "../panels/Preview3DView";
+import { projectManager } from "../core/ProjectManager";
 
 interface QuadLayoutProps {
   project: Project;
@@ -75,14 +75,17 @@ export function QuadLayout({
     };
 
     updateSizes();
-    window.addEventListener('resize', updateSizes);
-    return () => window.removeEventListener('resize', updateSizes);
+    window.addEventListener("resize", updateSizes);
+    return () => window.removeEventListener("resize", updateSizes);
   }, []);
 
   // Handlers for block placement/removal (shared across all views)
-  const handleBlockPlaced = React.useCallback((position: Vector3D, blockType: string) => {
-    projectManager.setBlock(position, blockType);
-  }, []);
+  const handleBlockPlaced = React.useCallback(
+    (position: Vector3D, blockType: string) => {
+      projectManager.setBlock(position, blockType);
+    },
+    [],
+  );
 
   const handleBlockRemoved = React.useCallback((position: Vector3D) => {
     projectManager.removeBlock(position);
@@ -91,32 +94,32 @@ export function QuadLayout({
   return (
     <Box
       sx={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        height: '100%',
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gridTemplateRows: "1fr 1fr",
+        height: "100%",
         gap: 1,
       }}
     >
       {/* Front View */}
       <Box
         sx={{
-          bgcolor: 'grey.50',
+          bgcolor: "grey.50",
           border: 2,
-          borderColor: 'error.main',
+          borderColor: "error.main",
           borderRadius: 1,
-          overflow: 'hidden',
-          position: 'relative',
+          overflow: "hidden",
+          position: "relative",
         }}
       >
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             left: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -125,8 +128,8 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'error.main',
-              fontWeight: 'medium',
+              color: "error.main",
+              fontWeight: "medium",
             }}
           >
             FRONT VIEW
@@ -134,12 +137,12 @@ export function QuadLayout({
         </Box>
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             right: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -148,14 +151,14 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'error.main',
-              fontWeight: 'bold',
+              color: "error.main",
+              fontWeight: "bold",
             }}
           >
             Y: {activeLayers.y}
           </Typography>
         </Box>
-        <div ref={frontContainerRef} style={{ width: '100%', height: '100%' }}>
+        <div ref={frontContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="front"
             project={project}
@@ -173,22 +176,22 @@ export function QuadLayout({
       {/* Left View */}
       <Box
         sx={{
-          bgcolor: 'grey.50',
+          bgcolor: "grey.50",
           border: 2,
-          borderColor: 'primary.main',
+          borderColor: "primary.main",
           borderRadius: 1,
-          overflow: 'hidden',
-          position: 'relative',
+          overflow: "hidden",
+          position: "relative",
         }}
       >
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             left: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -197,8 +200,8 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'primary.main',
-              fontWeight: 'medium',
+              color: "primary.main",
+              fontWeight: "medium",
             }}
           >
             LEFT VIEW
@@ -206,12 +209,12 @@ export function QuadLayout({
         </Box>
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             right: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -220,14 +223,14 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'primary.main',
-              fontWeight: 'bold',
+              color: "primary.main",
+              fontWeight: "bold",
             }}
           >
             X: {activeLayers.x}
           </Typography>
         </Box>
-        <div ref={leftContainerRef} style={{ width: '100%', height: '100%' }}>
+        <div ref={leftContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="left"
             project={project}
@@ -245,22 +248,22 @@ export function QuadLayout({
       {/* Top View */}
       <Box
         sx={{
-          bgcolor: 'grey.50',
+          bgcolor: "grey.50",
           border: 2,
-          borderColor: 'success.main',
+          borderColor: "success.main",
           borderRadius: 1,
-          overflow: 'hidden',
-          position: 'relative',
+          overflow: "hidden",
+          position: "relative",
         }}
       >
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             left: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -269,8 +272,8 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'success.main',
-              fontWeight: 'medium',
+              color: "success.main",
+              fontWeight: "medium",
             }}
           >
             TOP VIEW
@@ -278,12 +281,12 @@ export function QuadLayout({
         </Box>
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             right: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -292,14 +295,14 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'success.main',
-              fontWeight: 'bold',
+              color: "success.main",
+              fontWeight: "bold",
             }}
           >
             Z: {activeLayers.z}
           </Typography>
         </Box>
-        <div ref={topContainerRef} style={{ width: '100%', height: '100%' }}>
+        <div ref={topContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="top"
             project={project}
@@ -317,22 +320,22 @@ export function QuadLayout({
       {/* 3D Preview */}
       <Box
         sx={{
-          bgcolor: 'grey.50',
+          bgcolor: "grey.50",
           border: 2,
-          borderColor: 'secondary.main',
+          borderColor: "secondary.main",
           borderRadius: 1,
-          overflow: 'hidden',
-          position: 'relative',
+          overflow: "hidden",
+          position: "relative",
         }}
       >
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 8,
             left: 8,
             zIndex: 10,
-            pointerEvents: 'none',
-            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: "none",
+            bgcolor: "rgba(0, 0, 0, 0.5)",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -341,14 +344,17 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: 'secondary.main',
-              fontWeight: 'medium',
+              color: "secondary.main",
+              fontWeight: "medium",
             }}
           >
             3D PREVIEW
           </Typography>
         </Box>
-        <div ref={preview3DContainerRef} style={{ width: '100%', height: '100%' }}>
+        <div
+          ref={preview3DContainerRef}
+          style={{ width: "100%", height: "100%" }}
+        >
           <Preview3DView
             width={canvasSizes.preview3D.width}
             height={canvasSizes.preview3D.height}

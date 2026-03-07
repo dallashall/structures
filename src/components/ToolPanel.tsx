@@ -1,13 +1,18 @@
-import React from 'react';
-import { Box, ToggleButton, ToggleButtonGroup, Tooltip, Divider } from '@mui/material';
+import {
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Divider,
+} from "@mui/material";
 import {
   Brush,
   FormatColorFill,
   BorderOuter,
   Circle,
   Timeline,
-} from '@mui/icons-material';
-import type { PaintMode } from '../types';
+} from "@mui/icons-material";
+import type { PaintMode } from "../types";
 
 interface ToolPanelProps {
   paintMode: PaintMode;
@@ -23,7 +28,7 @@ interface ToolPanelProps {
 export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
   const handleModeChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newMode: PaintMode | null
+    newMode: PaintMode | null,
   ) => {
     if (newMode !== null) {
       onPaintModeChange(newMode);
@@ -34,13 +39,13 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
     <Box
       sx={{
         width: 100,
-        height: '100%',
-        bgcolor: 'background.paper',
+        height: "100%",
+        bgcolor: "background.paper",
         borderRight: 1,
-        borderColor: 'divider',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
+        borderColor: "divider",
+        display: "flex",
+        flexDirection: "column",
+        overflowY: "auto",
         py: 1,
       }}
     >
@@ -51,20 +56,20 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
         onChange={handleModeChange}
         orientation="vertical"
         sx={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
           gap: 0.5,
           px: 0.5,
-          '& .MuiToggleButton-root': {
+          "& .MuiToggleButton-root": {
             width: 40,
             height: 40,
             border: 1,
-            borderColor: 'divider',
+            borderColor: "divider",
             borderRadius: 1,
-            '&.Mui-selected': {
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              borderColor: 'primary.main',
+            "&.Mui-selected": {
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+              borderColor: "primary.main",
             },
           },
         }}
@@ -95,7 +100,7 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
 
         <Tooltip title="Arch (A)" placement="right">
           <ToggleButton value="arch" aria-label="Arch mode">
-            <Box sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>⌒</Box>
+            <Box sx={{ fontSize: "1.2rem", fontWeight: "bold" }}>⌒</Box>
           </ToggleButton>
         </Tooltip>
 

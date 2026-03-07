@@ -1,7 +1,7 @@
 import { EventEmitter } from './EventEmitter';
 import { editorStateManager } from './EditorStateManager';
 import { projectManager } from './ProjectManager';
-import type { Dimensions } from '../types';
+import type { Project } from '../types';
 
 /**
  * KeyboardShortcutManager - Global keyboard shortcut handling
@@ -12,7 +12,7 @@ import type { Dimensions } from '../types';
 class KeyboardShortcutManager extends EventEmitter {
   private static instance: KeyboardShortcutManager;
   private isListening = false;
-  private currentProject: { dimensions: Dimensions } | null = null;
+  private currentProject: Project | null = null;
   private isPlacementMode = false;
 
   private constructor() {

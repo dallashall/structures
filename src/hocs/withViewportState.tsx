@@ -1,6 +1,6 @@
 import React from 'react';
-import { viewportManager } from '../core/ViewportManager';
-import type { CameraState } from '../types';
+import { viewportManager } from "../core/ViewportManager";
+import type { CameraState } from "../types";
 
 export interface WithViewportStateProps {
   camera: CameraState;
@@ -13,11 +13,11 @@ export interface WithViewportStateProps {
  * Subscribes to ViewportManager events and updates on changes.
  */
 export function withViewportState<P extends object>(
-  Component: React.ComponentType<P & WithViewportStateProps>
+  Component: React.ComponentType<P & WithViewportStateProps>,
 ) {
   return function WithViewportState(props: P) {
     const [camera, setCamera] = React.useState<CameraState>(
-      viewportManager.getCamera()
+      viewportManager.getCamera(),
     );
 
     React.useEffect(() => {
@@ -25,10 +25,10 @@ export function withViewportState<P extends object>(
         setCamera(updatedCamera);
       };
 
-      viewportManager.on('camera:changed', handleCameraChanged);
+      viewportManager.on("camera:changed", handleCameraChanged);
 
       return () => {
-        viewportManager.off('camera:changed', handleCameraChanged);
+        viewportManager.off("camera:changed", handleCameraChanged);
       };
     }, []);
 

@@ -1,16 +1,10 @@
-import React from 'react';
-import {
-  Box,
-  Stack,
-  Typography,
-  Button,
-  Divider,
-} from '@mui/material';
-import { Add, FolderOpen } from '@mui/icons-material';
-import { storageManager } from '../core/StorageManager';
-import { ProjectCard } from '../components/ProjectCard';
-import { ProjectMetadataPanel } from '../components/ProjectMetadataPanel';
-import type { ProjectMetadata } from '../types';
+import { Box, Stack, Typography, Button, Divider } from "@mui/material";
+import { useState, useEffect } from "react";
+import { Add, FolderOpen } from "@mui/icons-material";
+import { storageManager } from "../core/StorageManager";
+import { ProjectCard } from "../components/ProjectCard";
+import { ProjectMetadataPanel } from "../components/ProjectMetadataPanel";
+import type { ProjectMetadata } from "../types";
 
 interface WelcomeViewProps {
   onNewProject: () => void;
@@ -35,14 +29,14 @@ export function WelcomeView({
   onOpenProject,
   onLoadFromFile,
 }: WelcomeViewProps) {
-  const [projects, setProjects] = React.useState<ProjectMetadata[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(
-    null
+  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null,
   );
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load projects on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const loadProjects = async () => {
       setIsLoading(true);
       const projectList = await storageManager.listProjects();
@@ -79,8 +73,8 @@ export function WelcomeView({
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   return (
-    <Box sx={{ p: 4, height: '100%', overflow: 'hidden' }}>
-      <Stack spacing={3} sx={{ height: '100%' }}>
+    <Box sx={{ p: 4, height: "100%", overflow: "hidden" }}>
+      <Stack spacing={3} sx={{ height: "100%" }}>
         {/* Header */}
         <Box>
           <Typography variant="h3" component="h1">
@@ -112,20 +106,20 @@ export function WelcomeView({
         </Stack>
 
         {/* Content Area */}
-        <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
+        <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: "hidden" }}>
           {/* Project Grid */}
-          <Box sx={{ flex: 2, overflow: 'auto' }}>
+          <Box sx={{ flex: 2, overflow: "auto" }}>
             {isLoading ? (
               <Typography variant="body1">Loading projects...</Typography>
             ) : projects.length === 0 ? (
               <Box
                 sx={{
-                  bgcolor: 'background.paper',
+                  bgcolor: "background.paper",
                   borderRadius: 1,
                   p: 3,
                   border: 1,
-                  borderColor: 'divider',
-                  textAlign: 'center',
+                  borderColor: "divider",
+                  textAlign: "center",
                 }}
               >
                 <Typography variant="body1" color="text.secondary">
@@ -135,8 +129,8 @@ export function WelcomeView({
             ) : (
               <Box
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
                   gap: 2,
                 }}
               >
@@ -167,12 +161,12 @@ export function WelcomeView({
             ) : (
               <Box
                 sx={{
-                  bgcolor: 'background.paper',
+                  bgcolor: "background.paper",
                   borderRadius: 1,
                   p: 3,
                   border: 1,
-                  borderColor: 'divider',
-                  textAlign: 'center',
+                  borderColor: "divider",
+                  textAlign: "center",
                 }}
               >
                 <Typography variant="body1" color="text.secondary">

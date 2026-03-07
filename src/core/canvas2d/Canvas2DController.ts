@@ -1,5 +1,7 @@
 import type { ViewType } from '../../types';
 import { projectManager } from '../ProjectManager';
+import { modelHistory } from '../ModelHistory';
+import { draftingService } from '../DraftingService';
 import { editorStateManager } from '../EditorStateManager';
 import { CanvasPainter } from '../painting/CanvasPainter';
 import { PointPaintStrategy } from '../painting/strategies/PointPaintStrategy';
@@ -13,7 +15,7 @@ import { Canvas2DViewport } from './Canvas2DViewport';
 import { Canvas2DRenderer } from './Canvas2DRenderer';
 import { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
 import { Canvas2DPaintHandler } from './Canvas2DPaintHandler';
-import { Canvas2DInteractionHandler } from './Canvas2DInteractionHandlerV2';
+import { Canvas2DInteractionHandler } from './Canvas2DInteractionHandler';
 import type { GridPosition, ModifierKeys } from './Canvas2DInteractionEvents';
 
 /**
@@ -48,6 +50,7 @@ export class Canvas2DController {
     editorChanged: this.render.bind(this),
     paintModeChanged: this.handlePaintModeChanged.bind(this),
     paintBehaviorChanged: this.handlePaintBehaviorChanged.bind(this),
+    deleteModeChanged: this.handleDeleteModeChanged.bind(this),
   };
 
   constructor(
@@ -87,6 +90,7 @@ export class Canvas2DController {
         onPanMove: this.handlePanMove.bind(this),
         onPanEnd: this.handlePanEnd.bind(this),
         onModifierChange: this.handleModifierChange.bind(this),
+        onEscape: this.handleEscape.bind(this),
       }
     );
 
@@ -102,22 +106,43 @@ export class Canvas2DController {
    * Subscribe to singleton events
    */
   private subscribeToEvents(): void {
-    projectManager.on('project:changed', this.boundHandlers.projectChanged);
-    projectManager.on('block:added', this.boundHandlers.projectChanged);
+    // Model updates from ModelHistory (replaces 'project:changed')
+    modelHistory.on('model:updated', this.boundHandlers.projectChanged);
+
+    // Specific block events
+    projectManager.on('block:placed', this.boundHandlers.projectChanged);
     projectManager.on('block:removed', this.boundHandlers.projectChanged);
+
+    // DraftingService events for shared preview state
+    draftingService.on('draft:updated', this.boundHandlers.projectChanged);
+    draftingService.on('draft:finalized', this.boundHandlers.projectChanged);
+    draftingService.on('draft:cancelled', this.boundHandlers.projectChanged);
+
+    // Editor state changes
     editorStateManager.on('block:selected', this.boundHandlers.editorChanged);
     editorStateManager.on('layer:changed', this.boundHandlers.editorChanged);
     editorStateManager.on('paintmode:changed', this.boundHandlers.paintModeChanged);
     editorStateManager.on('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorStateManager.on('deletemode:changed', this.boundHandlers.deleteModeChanged);
   }
 
   /**
    * Unsubscribe from singleton events
    */
   private unsubscribeFromEvents(): void {
-    projectManager.off('project:changed', this.boundHandlers.projectChanged);
-    projectManager.off('block:added', this.boundHandlers.projectChanged);
+    // Model updates
+    modelHistory.off('model:updated', this.boundHandlers.projectChanged);
+
+    // Specific block events
+    projectManager.off('block:placed', this.boundHandlers.projectChanged);
     projectManager.off('block:removed', this.boundHandlers.projectChanged);
+
+    // DraftingService events
+    draftingService.off('draft:updated', this.boundHandlers.projectChanged);
+    draftingService.off('draft:finalized', this.boundHandlers.projectChanged);
+    draftingService.off('draft:cancelled', this.boundHandlers.projectChanged);
+
+    // Editor state changes
     editorStateManager.off('block:selected', this.boundHandlers.editorChanged);
     editorStateManager.off('layer:changed', this.boundHandlers.editorChanged);
     editorStateManager.off('paintmode:changed', this.boundHandlers.paintModeChanged);
@@ -176,8 +201,8 @@ export class Canvas2DController {
   private handleHover(position: GridPosition, modifiers: ModifierKeys): void {
     const paintMode = editorStateManager.getPaintMode();
 
-    // Point mode: show preview
-    if (paintMode === 'point' && !modifiers.shift && !modifiers.alt) {
+    // Point mode: show preview (both paint and delete modes)
+    if (paintMode === 'point' && !modifiers.alt) {
       this.previewManager.updatePointPreview(position.gridX, position.gridY);
       this.render();
     }
@@ -189,9 +214,9 @@ export class Canvas2DController {
   /**
    * Handle click - domain logic
    */
-  private handleClick(position: GridPosition, button: number, modifiers: ModifierKeys): void {
+  private handleClick(position: GridPosition, button: number, _modifiers: ModifierKeys): void {
     // Placement mode: place meta block
-    if (this.isPlacementMode && button === 0 && !modifiers.shift) {
+    if (this.isPlacementMode && button === 0) {
       this.placeMetaBlock(position);
       return;
     }
@@ -202,23 +227,11 @@ export class Canvas2DController {
   /**
    * Handle drag start - domain logic
    */
-  private handleDragStart(position: GridPosition, button: number, modifiers: ModifierKeys): void {
-    // Erase mode (shift + left button)
-    if (button === 0 && modifiers.shift) {
-      this.paintHandler.resetLastPaintedCell();
-      // Erase at this position
-      const activeLayers = editorStateManager.getActiveLayers();
-      this.canvasPainter.paint(
-        position.gridX,
-        position.gridY,
-        this.viewport.getViewType(),
-        activeLayers,
-        null // null = erase
-      );
-      return;
-    }
+  private handleDragStart(position: GridPosition, button: number, _modifiers: ModifierKeys): void {
+    // BEGIN DRAFT MODE - collect all paint operations into single CompoundEvent
+    this.paintHandler.beginDraft();
 
-    // Paint mode
+    // Paint mode (delete modifier will handle erase if needed)
     if (button === 0) {
       const paintMode = editorStateManager.getPaintMode();
 
@@ -257,7 +270,7 @@ export class Canvas2DController {
   /**
    * Handle drag move - domain logic
    */
-  private handleDragMove(position: GridPosition, modifiers: ModifierKeys): void {
+  private handleDragMove(position: GridPosition, _modifiers: ModifierKeys): void {
     const paintMode = editorStateManager.getPaintMode();
 
     // Outline mode: update preview
@@ -267,19 +280,18 @@ export class Canvas2DController {
       return;
     }
 
-    // Point/fill mode while dragging: paint
-    if (!modifiers.shift) {
-      const activeLayers = editorStateManager.getActiveLayers();
-      const selectedBlock = editorStateManager.getSelectedBlock();
-      if (selectedBlock) {
-        this.canvasPainter.paint(
-          position.gridX,
-          position.gridY,
-          this.viewport.getViewType(),
-          activeLayers,
-          selectedBlock
-        );
-      }
+    // Point/fill mode while dragging: paint with selected block
+    // Delete modifier will transform to erase if delete mode is enabled
+    const activeLayers = editorStateManager.getActiveLayers();
+    const selectedBlock = editorStateManager.getSelectedBlock();
+    if (selectedBlock) {
+      this.canvasPainter.paint(
+        position.gridX,
+        position.gridY,
+        this.viewport.getViewType(),
+        activeLayers,
+        selectedBlock
+      );
     }
   }
 
@@ -293,7 +305,8 @@ export class Canvas2DController {
     if (paintMode === 'outline') {
       this.previewManager.endOutlineDrag();
 
-      // Paint final outline
+      // Paint outline with selected block
+      // Delete modifier will transform to erase if delete mode is enabled
       const activeLayers = editorStateManager.getActiveLayers();
       const selectedBlock = editorStateManager.getSelectedBlock();
       if (selectedBlock) {
@@ -315,7 +328,10 @@ export class Canvas2DController {
       this.render();
     }
 
+    // FINALIZE DRAFT MODE - create single CompoundEvent from all operations
+    this.paintHandler.finalizeDraft();
     this.paintHandler.resetLastPaintedCell();
+    this.render();
   }
 
   /**
@@ -366,11 +382,13 @@ export class Canvas2DController {
    * Handle modifier change - domain logic
    */
   private handleModifierChange(modifiers: ModifierKeys): void {
-    // Update cursor based on modifiers
+    const deleteMode = editorStateManager.getDeleteMode();
+
+    // Update cursor based on modifiers and delete mode
     if (modifiers.space) {
       this.cursorState = 'grab';
-    } else if (modifiers.shift) {
-      this.cursorState = 'not-allowed';
+    } else if (deleteMode) {
+      this.cursorState = 'not-allowed'; // Erase cursor
     } else {
       this.cursorState = this.getDefaultCursor();
     }
@@ -384,6 +402,23 @@ export class Canvas2DController {
       this.previewManager.deactivatePreviewKey();
       this.render();
     }
+  }
+
+  /**
+   * Handle escape key - cancel current operation
+   */
+  private handleEscape(): void {
+    // Cancel draft mode (discard collected paint operations and draft event)
+    this.paintHandler.cancelDraft();
+
+    // Clear all previews
+    this.previewManager.clearAll();
+
+    // Reset paint state
+    this.paintHandler.resetLastPaintedCell();
+
+    // Re-render to remove previews
+    this.render();
   }
 
   // ============================================================================
@@ -439,6 +474,19 @@ export class Canvas2DController {
   private handlePaintBehaviorChanged(behavior: string): void {
     const behaviorImpl = this.createBehaviorForType(behavior as any);
     this.paintHandler.updateBehavior(behaviorImpl);
+  }
+
+  /**
+   * Handle delete mode change
+   * Updates cursor when delete mode is toggled
+   */
+  private handleDeleteModeChanged(): void {
+    // Update cursor to reflect delete mode
+    const modifiers = this.interactionHandler.getModifiers();
+    this.handleModifierChange(modifiers);
+
+    // Re-render to update any affected visuals
+    this.render();
   }
 
   /**

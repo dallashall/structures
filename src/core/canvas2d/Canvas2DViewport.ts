@@ -211,4 +211,73 @@ export class Canvas2DViewport {
   getViewType(): ViewType {
     return this.viewType;
   }
+
+  /**
+   * Get axis labels for current view
+   * Returns which world axes map to horizontal, vertical, and depth for this view
+   */
+  getAxesForView(): { horizontal: string; vertical: string; depth: string } {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return { horizontal: 'X', vertical: 'Z', depth: 'Y' };
+      case 'left':
+      case 'right':
+        return { horizontal: 'Y', vertical: 'Z', depth: 'X' };
+      case 'top':
+      case 'bottom':
+        return { horizontal: 'X', vertical: 'Y', depth: 'Z' };
+    }
+  }
+
+  /**
+   * Convert layer value to grid position for a given axis
+   * Returns null if the axis is the depth axis (not visible in this view)
+   */
+  getGridPositionForLayer(
+    axis: string,
+    layerValue: number,
+    dimensions: Dimensions
+  ): number | null {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        if (axis === 'X') return layerValue;
+        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
+        return null; // Y is depth axis
+      case 'left':
+      case 'right':
+        if (axis === 'Y') return layerValue;
+        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
+        return null; // X is depth axis
+      case 'top':
+      case 'bottom':
+        if (axis === 'X') return layerValue;
+        if (axis === 'Y') return dimensions.height - 1 - layerValue;
+        return null; // Z is depth axis
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Calculate distance from a 3D position to the active layer
+   * Returns distance along the depth axis for this view
+   */
+  getLayerDistance(
+    position: Vector3D,
+    activeLayers: { x: number; y: number; z: number }
+  ): number {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return Math.abs(position.y - activeLayers.y);
+      case 'left':
+      case 'right':
+        return Math.abs(position.x - activeLayers.x);
+      case 'top':
+      case 'bottom':
+        return Math.abs(position.z - activeLayers.z);
+    }
+  }
 }

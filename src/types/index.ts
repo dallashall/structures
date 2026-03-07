@@ -124,3 +124,21 @@ export interface ExportConfig {
 
 // Utility type for event handlers
 export type EventHandler<T = any> = (...args: T[]) => void;
+
+// Re-export event types for event sourcing
+export type {
+  BaseEvent,
+  ProjectEvent,
+  ProjectCreatedEvent,
+  BlockPlacedEvent,
+  BlockRemovedEvent,
+  MetaBlockPlacedEvent,
+  MetaBlockConfirmedEvent,
+  DimensionExpandedEvent,
+  DimensionShrunkEvent,
+  ProjectRenamedEvent,
+  CompoundEvent,
+  ProjectDataEvent,
+  Snapshot,
+  VersionPointer,
+} from '../events/types';

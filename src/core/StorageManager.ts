@@ -1,5 +1,6 @@
 import { EventEmitter } from './EventEmitter';
 import type { Project, ProjectMetadata } from '../types';
+import { modelHistory } from './ModelHistory';
 
 export type SaveState = 'saved' | 'pending' | 'saving';
 
@@ -33,7 +34,15 @@ class StorageManager extends EventEmitter {
 
   private constructor() {
     super();
+    this.loadModelHistory();
     this.setupProjectListeners();
+  }
+
+  /**
+   * Load model history from localStorage on initialization
+   */
+  private loadModelHistory(): void {
+    modelHistory.load();
   }
 
   static getInstance(): StorageManager {
@@ -97,6 +106,9 @@ class StorageManager extends EventEmitter {
 
       // Update metadata
       await this.updateMetadata(project);
+
+      // Persist event store alongside project
+      modelHistory.persist();
 
       // Ensure minimum visible duration
       const elapsed = Date.now() - startTime;

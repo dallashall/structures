@@ -11,11 +11,11 @@ import {
   Stack,
   Typography,
   InputAdornment,
-} from '@mui/material';
-import { Apps, Search } from '@mui/icons-material';
-import { DialogTrigger } from './DialogTrigger';
-import { ColorSwatch } from './ColorSwatch';
-import type { Block } from '../types';
+} from "@mui/material";
+import { Apps, Search } from "@mui/icons-material";
+import { DialogTrigger } from "./DialogTrigger";
+import { ColorSwatch } from "./ColorSwatch";
+import type { Block } from "../types";
 
 interface FullPaletteMenuProps {
   blocks: Block[];
@@ -40,7 +40,7 @@ export function FullPaletteMenu({
   selectedBlockId,
   onSelectBlock,
 }: FullPaletteMenuProps) {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Find the selected block
   const selectedBlock = selectedBlockId
@@ -53,20 +53,20 @@ export function FullPaletteMenu({
 
   const handleBlockClick = (blockId: string, close: () => void) => {
     onSelectBlock(blockId);
-    setSearchQuery(''); // Reset search
+    setSearchQuery(""); // Reset search
     close();
   };
 
   // Filter blocks by search query
   const filteredBlocks = searchQuery.trim()
     ? blocks.filter((block) =>
-        block.name.toLowerCase().includes(searchQuery.toLowerCase())
+        block.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : blocks;
 
   // Group blocks by category
   const categories = Array.from(
-    new Set(filteredBlocks.map((block) => block.category))
+    new Set(filteredBlocks.map((block) => block.category)),
   ).sort();
 
   const getBlocksByCategory = (category: string): Block[] => {
@@ -96,7 +96,7 @@ export function FullPaletteMenu({
             <Stack
               spacing={2}
               sx={{
-                height: '70vh',
+                height: "70vh",
                 minHeight: 400,
               }}
             >
@@ -119,7 +119,7 @@ export function FullPaletteMenu({
               />
 
               {/* Block Grid by Category */}
-              <Box sx={{ overflow: 'auto', flex: 1 }}>
+              <Box sx={{ overflow: "auto", flex: 1 }}>
                 {categories.length === 0 ? (
                   <Typography variant="body2">No blocks found</Typography>
                 ) : (
@@ -127,22 +127,23 @@ export function FullPaletteMenu({
                     const categoryBlocks = getBlocksByCategory(category);
 
                     const renderBlock = (block: Block) => {
-                      const handleClick = () => handleBlockClick(block.id, close);
+                      const handleClick = () =>
+                        handleBlockClick(block.id, close);
 
                       return (
                         <Box
                           key={block.id}
                           onClick={handleClick}
                           sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
                             gap: 0.5,
-                            cursor: 'pointer',
+                            cursor: "pointer",
                             p: 1,
                             borderRadius: 1,
-                            '&:hover': {
-                              bgcolor: 'action.hover',
+                            "&:hover": {
+                              bgcolor: "action.hover",
                             },
                           }}
                         >
@@ -151,10 +152,10 @@ export function FullPaletteMenu({
                             variant="caption"
                             sx={{
                               fontSize: 11,
-                              textAlign: 'center',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              width: '100%',
+                              textAlign: "center",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              width: "100%",
                             }}
                           >
                             {block.name}
@@ -170,11 +171,11 @@ export function FullPaletteMenu({
                         </Typography>
                         <Box
                           sx={{
-                            display: 'grid',
+                            display: "grid",
                             gridTemplateColumns: {
-                              xs: 'repeat(4, 1fr)',
-                              sm: 'repeat(6, 1fr)',
-                              md: 'repeat(8, 1fr)',
+                              xs: "repeat(4, 1fr)",
+                              sm: "repeat(6, 1fr)",
+                              md: "repeat(8, 1fr)",
                             },
                             gap: 1,
                           }}

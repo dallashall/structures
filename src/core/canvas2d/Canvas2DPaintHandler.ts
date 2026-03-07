@@ -103,4 +103,25 @@ export class Canvas2DPaintHandler {
   updateBehavior(behavior: any): void {
     this.canvasPainter.setBehavior(behavior);
   }
+
+  /**
+   * Begin draft mode - collect operations without creating events
+   */
+  beginDraft(): void {
+    this.canvasPainter.beginDraft();
+  }
+
+  /**
+   * Finalize draft - create single CompoundEvent with all operations
+   */
+  finalizeDraft(description?: string): void {
+    this.canvasPainter.finalizeDraft(description);
+  }
+
+  /**
+   * Cancel draft - discard all collected operations
+   */
+  cancelDraft(): void {
+    this.canvasPainter.cancelDraft();
+  }
 }

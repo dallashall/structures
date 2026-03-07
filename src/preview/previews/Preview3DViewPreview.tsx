@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, Typography, Button, Stack } from '@mui/material';
-import { Preview3DView } from '../../panels/Preview3DView';
-import { projectManager } from '../../core/ProjectManager';
-import { blockRegistry } from '../../core/BlockRegistry';
+import { Box, Typography, Button, Stack } from "@mui/material";
+import { Preview3DView } from "../../panels/Preview3DView";
+import { projectManager } from "../../core/ProjectManager";
+import { blockRegistry } from "../../core/BlockRegistry";
 
 /**
  * Preview3DView Preview
@@ -14,7 +14,7 @@ export function Preview3DViewPreview() {
 
   const handleInitialize = () => {
     // Create a sample project
-    projectManager.createProject('3D Preview Test', {
+    projectManager.createProject("3D Preview Test", {
       width: 10,
       height: 10,
       depth: 10,
@@ -22,8 +22,10 @@ export function Preview3DViewPreview() {
 
     // Get a few block types
     const blocks = blockRegistry.getAllBlocks();
-    const stoneBlock = blocks.find((b) => b.category === 'stone')?.id || blocks[0]?.id;
-    const woodBlock = blocks.find((b) => b.category === 'wood')?.id || blocks[1]?.id;
+    const stoneBlock =
+      blocks.find((b) => b.category === "stone")?.id || blocks[0]?.id;
+    const woodBlock =
+      blocks.find((b) => b.category === "wood")?.id || blocks[1]?.id;
 
     // Add some sample blocks to create a simple structure
     if (stoneBlock) {
@@ -71,17 +73,24 @@ export function Preview3DViewPreview() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1">Preview3DView</Typography>
+      <Typography variant="h4" component="h1">
+        Preview3DView
+      </Typography>
       <Typography variant="body1" sx={{ mb: 4 }}>
-        BabylonJS 3D viewer with orbit camera controls. Use mouse to rotate (left drag), pan (right drag), and zoom (scroll).
+        BabylonJS 3D viewer with orbit camera controls. Use mouse to rotate
+        (left drag), pan (right drag), and zoom (scroll).
       </Typography>
 
       <Stack spacing={2} sx={{ mt: 6 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
           <Button variant="contained" onClick={handleInitialize}>
             Initialize Sample Structure
           </Button>
-          <Button variant="outlined" onClick={handleClear} disabled={!isInitialized}>
+          <Button
+            variant="outlined"
+            onClick={handleClear}
+            disabled={!isInitialized}
+          >
             Clear Blocks
           </Button>
           {!isInitialized && (
@@ -91,7 +100,9 @@ export function Preview3DViewPreview() {
           )}
         </Box>
 
-        <Box sx={{ width: 800, height: 600, border: 1, borderColor: 'grey.300' }}>
+        <Box
+          sx={{ width: 800, height: 600, border: 1, borderColor: "grey.300" }}
+        >
           <Preview3DView width={800} height={600} />
         </Box>
 

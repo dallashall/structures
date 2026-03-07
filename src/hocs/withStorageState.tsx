@@ -1,5 +1,5 @@
 import React from 'react';
-import { storageManager, SaveState } from '../core/StorageManager';
+import { storageManager, SaveState } from "../core/StorageManager";
 
 /**
  * Props injected by withStorageState HOC
@@ -18,11 +18,11 @@ export interface WithStorageStateProps {
  * - 'saving' - Currently saving to storage
  */
 export function withStorageState<P extends object>(
-  Component: React.ComponentType<P & WithStorageStateProps>
+  Component: React.ComponentType<P & WithStorageStateProps>,
 ) {
   return function WithStorageState(props: P) {
     const [saveState, setSaveState] = React.useState<SaveState>(
-      storageManager.getSaveState()
+      storageManager.getSaveState(),
     );
 
     React.useEffect(() => {
@@ -32,10 +32,10 @@ export function withStorageState<P extends object>(
       };
 
       // Listen to window custom event instead of EventEmitter
-      window.addEventListener('save:state-changed', handleStateChanged);
+      window.addEventListener("save:state-changed", handleStateChanged);
 
       return () => {
-        window.removeEventListener('save:state-changed', handleStateChanged);
+        window.removeEventListener("save:state-changed", handleStateChanged);
       };
     }, []);
 

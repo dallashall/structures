@@ -15,6 +15,7 @@ You are conducting a **post-implementation architectural audit** of recently cha
 
 Read these files to understand the principles:
 - `/Users/dallashall/code/mc/structures/CLAUDE.md` - Core architectural rules and coding standards
+- `/Users/dallashall/code/mc/structures/.claude/skills/ARCHITECTURE_PATTERNS.md` - Core patterns (Event Sourcing, DraftingService, Tool system)
 - `/Users/dallashall/code/mc/structures/MACRO_COMPONENTS.md` - Component architecture and data flow specifications
 
 ### Step 2: Identify Changed Files
@@ -68,6 +69,81 @@ For each changed file, read it completely and check for violations:
    - Search for: `.on(`, `addEventListener` in regular components
    - Only allowed in HOCs
    - **FIX:** Create/use HOC to inject state as props
+
+7. **Generic Event Names** ⚠️ CRITICAL ARCHITECTURE VIOLATION
+   - Search for: `.emit('.*:changed`, `.emit('.*:updated`, `.emit('.*:modified`, `.emit('.*:loaded`
+   - Events MUST be specific and convey meaning
+   - **FORBIDDEN:** `:changed`, `:updated`, `:modified`, `:loaded` suffixes
+   - **REQUIRED:** Specific action names like `:created`, `:renamed`, `:placed`, `:removed`
+   - **FIX:** Replace generic events with specific event names that convey exactly what changed
+   - **Example violations:**
+     - ❌ `this.emit('project:changed', project)` → ✅ `this.emit('project:renamed', { previousName, newName })`
+     - ❌ `this.emit('editor:updated', state)` → ✅ `this.emit('layer:changed', { axis, layer })`
+     - ❌ `this.emit('draft:changed', event)` → ✅ `this.emit('draft:updated', event)` (if updating draft)
+     - ❌ `projectManager.on('project:changed', ...)` → ✅ Subscribe to specific events like `'block:placed'`, `'project:renamed'`
+
+8. **Conflating Event Sourcing and Event-Driven Patterns** ⚠️ CRITICAL ARCHITECTURE VIOLATION
+   - **Event Sourcing** = Persisted events in ModelHistory for state reconstruction
+   - **Event-Driven** = Ephemeral notifications via EventEmitter for loose coupling
+   - **Commands** = Imperative method calls (setBlock, createProject, etc.)
+   - These are THREE DISTINCT PATTERNS that must not be mixed
+   - **Check for violations:**
+     - Look for persisted events (with `eventId`, `version`, `timestamp`) being emitted as notifications
+     - Look for EventEmitter notifications being used for state reconstruction
+     - Look for notification events being persisted to ModelHistory
+   - **Example violations:**
+     - ❌ `modelHistory.on('event:appended', (e) => this.emit(e.type, e))` - Broadcasting persisted events
+     - ❌ `const state = emittedEvents.reduce(reducer, null)` - Using notifications for state
+     - ❌ `modelHistory.appendEvent(notificationEvent)` - Persisting notifications
+   - **CORRECT Pattern:**
+     ```typescript
+     // 1. Command: User calls method
+     draftingService.finalize();
+
+     // 2. Event Sourcing: Persist to ModelHistory
+     modelHistory.write(blocks);  // Creates event internally
+
+     // 3. Event-Driven: Emit notification (separate from persisted event)
+     this.emit('model:updated');
+
+     // 4. State: Computed from ModelHistory, not from notifications
+     const model = modelHistory.replay(projectId);
+     ```
+
+9. **Putting Preview State in ModelHistory** ⚠️ CRITICAL ARCHITECTURE VIOLATION
+   - **Preview/Draft state is ephemeral** - NOT part of model history
+   - **Must use DraftingService** for preview state
+   - Preview is shared across views but NOT persisted
+   - **Check for violations:**
+     - Look for draft/preview events in ModelHistory/EventStore
+     - Look for `setDraftEvent()` methods on history classes
+     - Look for preview blocks stored alongside persisted model state
+   - **Example violations:**
+     - ❌ `modelHistory.setDraftEvent(previewEvent)` - Preview isn't historical
+     - ❌ `eventStore.replayEvents()` including draft events
+     - ❌ Preview blocks in same structure as model blocks
+   - **CORRECT Pattern:**
+     ```typescript
+     // Preview managed separately
+     draftingService.start();
+     draftingService.set(previewBlocks);  // Ephemeral
+     draftingService.finalize();  // Persists to ModelHistory
+
+     // Rendering combines both
+     const model = modelHistory.replay();  // Persisted
+     const preview = draftingService.getPreview();  // Ephemeral
+     render(model.blocks.concat(preview));
+     ```
+
+10. **Using "Manager" or "Controller" in Names** ⚠️ ARCHITECTURE SMELL
+    - These names signal ambiguous purpose or doing too many things
+    - **Check for:**
+      - Classes named `*Manager` or `*Controller`
+    - **Suggest alternatives based on actual responsibility:**
+      - ❌ `ProjectManager` → ✅ `ModelHistory` (manages event history)
+      - ❌ `EditorStateManager` → ✅ `EditorState` (holds UI state)
+      - ❌ `Canvas2DController` → ✅ `Canvas2D` or specific tool names
+    - **Exception:** May be acceptable if truly coordinating between systems, but scrutinize
 
 #### ⚠️ MODERATE VIOLATIONS (Should fix)
 
@@ -146,6 +222,29 @@ grep -r "useEffect" src/components/ src/layouts/ src/panels/ src/views/
 ```bash
 # Find inline style objects
 grep -r "style={{" src/
+```
+
+**Detect generic event names:**
+```bash
+# Find forbidden generic event suffixes
+grep -r "\.emit('.*:changed'" src/
+grep -r "\.emit('.*:updated'" src/
+grep -r "\.emit('.*:modified'" src/
+grep -r "\.emit('.*:loaded'" src/
+grep -r "\.on('.*:changed'" src/
+grep -r "\.on('.*:updated'" src/
+```
+
+**Detect pattern conflation:**
+```bash
+# Find potential mixing of Event Sourcing and Event-Driven
+grep -r "eventStore\.on.*emit" src/  # EventStore events being re-emitted
+grep -r "\.reduce.*emitted" src/     # Using emitted events for state
+grep -r "appendEvent.*emit" src/     # Check if emitted events are being persisted
+
+# Find persisted events in emit calls (look for eventId, version, timestamp)
+grep -r "\.emit.*eventId" src/
+grep -r "\.emit.*version.*:" src/
 ```
 
 ### Step 5: Generate Audit Report
@@ -276,7 +375,8 @@ Check:
 - Has `private constructor()`
 - Has `static getInstance(): ClassName`
 - Has `private static instance: ClassName`
-- Emits events on state changes
+- Emits specific events on state changes (NO generic `:changed`, `:updated`, `:modified` events)
+- Event names follow `<entity>:<specific-action>` pattern (e.g., `block:placed`, `project:renamed`)
 
 ### After Creating/Editing HOCs
 

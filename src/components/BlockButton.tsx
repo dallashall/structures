@@ -1,7 +1,6 @@
-import React from 'react';
-import { Tooltip, Box } from '@mui/material';
-import { ColorSwatch } from './ColorSwatch';
-import type { Block } from '../types';
+import { Tooltip, Box } from "@mui/material";
+import { ColorSwatch } from "./ColorSwatch";
+import type { Block } from "../types";
 
 interface BlockButtonProps {
   block: Block;
@@ -22,7 +21,7 @@ export function BlockButton({ block, isSelected, onClick }: BlockButtonProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onClick(block.id);
     }
@@ -37,19 +36,19 @@ export function BlockButton({ block, isSelected, onClick }: BlockButtonProps) {
         onKeyDown={handleKeyDown}
         aria-label={`Select ${block.name}`}
         sx={{
-          display: 'inline-block',
-          cursor: 'pointer',
+          display: "inline-block",
+          cursor: "pointer",
           border: isSelected ? 3 : 2,
-          borderColor: isSelected ? 'primary.main' : 'grey.800',
+          borderColor: isSelected ? "primary.main" : "grey.800",
           borderRadius: 1,
           boxShadow: isSelected
-            ? '0 0 0 2px rgba(0, 120, 212, 0.3)'
-            : '0 1px 2px rgba(0, 0, 0, 0.2)',
-          transition: 'all 0.2s ease',
-          outline: 'none',
-          '&:focus-visible': {
-            outline: '2px solid',
-            outlineColor: 'primary.main',
+            ? "0 0 0 2px rgba(0, 120, 212, 0.3)"
+            : "0 1px 2px rgba(0, 0, 0, 0.2)",
+          transition: "all 0.2s ease",
+          outline: "none",
+          "&:focus-visible": {
+            outline: "2px solid",
+            outlineColor: "primary.main",
             outlineOffset: 2,
           },
         }}

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,10 +12,11 @@ import {
   Button,
   Typography,
   SelectChangeEvent,
-} from '@mui/material';
-import { Form } from './Form';
-import { NumberField } from './NumberField';
-import type { Dimensions } from '../types';
+} from "@mui/material";
+import { useState } from "react";
+import { Form } from "./Form";
+import { NumberField } from "./NumberField";
+import type { Dimensions } from "../types";
 
 interface NewProjectDialogProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ interface NewProjectDialogProps {
   onCreate: (name: string, dimensions: Dimensions) => void;
 }
 
-type PresetOption = 'small' | 'medium' | 'large' | 'custom';
+type PresetOption = "small" | "medium" | "large" | "custom";
 
 /**
  * NewProjectDialog - Dialog for creating new projects
@@ -43,11 +43,11 @@ export function NewProjectDialog({
   onClose,
   onCreate,
 }: NewProjectDialogProps) {
-  const [name, setName] = React.useState('');
-  const [preset, setPreset] = React.useState<PresetOption>('small');
-  const [customWidth, setCustomWidth] = React.useState(16);
-  const [customHeight, setCustomHeight] = React.useState(16);
-  const [customDepth, setCustomDepth] = React.useState(16);
+  const [name, setName] = useState("");
+  const [preset, setPreset] = useState<PresetOption>("small");
+  const [customWidth, setCustomWidth] = useState(16);
+  const [customHeight, setCustomHeight] = useState(16);
+  const [customDepth, setCustomDepth] = useState(16);
 
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
@@ -78,8 +78,8 @@ export function NewProjectDialog({
     onCreate(name, dimensions);
 
     // Reset form
-    setName('');
-    setPreset('small');
+    setName("");
+    setPreset("small");
     setCustomWidth(16);
     setCustomHeight(16);
     setCustomDepth(16);
@@ -87,8 +87,8 @@ export function NewProjectDialog({
 
   const handleCancel = () => {
     // Reset form
-    setName('');
-    setPreset('small');
+    setName("");
+    setPreset("small");
     setCustomWidth(16);
     setCustomHeight(16);
     setCustomDepth(16);
@@ -98,13 +98,13 @@ export function NewProjectDialog({
 
   const getDimensions = (): Dimensions => {
     switch (preset) {
-      case 'small':
+      case "small":
         return { width: 16, height: 16, depth: 16 };
-      case 'medium':
+      case "medium":
         return { width: 32, height: 32, depth: 32 };
-      case 'large':
+      case "large":
         return { width: 64, height: 64, depth: 64 };
-      case 'custom':
+      case "custom":
         return {
           width: customWidth,
           height: customHeight,
@@ -147,7 +147,7 @@ export function NewProjectDialog({
             </Select>
           </FormControl>
 
-          {preset === 'custom' && (
+          {preset === "custom" && (
             <>
               <NumberField
                 label="Width"
@@ -173,7 +173,7 @@ export function NewProjectDialog({
             </>
           )}
 
-          <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+          <Typography variant="body2" sx={{ fontStyle: "italic" }}>
             Note: Dimensions can be changed later as you build.
           </Typography>
         </Form>

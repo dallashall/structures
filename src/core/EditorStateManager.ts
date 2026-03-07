@@ -64,6 +64,7 @@ class EditorStateManager extends EventEmitter {
     thickness: 1,
     mode: 'through',
   };
+  private deleteMode = false; // Toggle for delete mode (erases blocks instead of placing)
   private circleDrawMode: CircleDrawMode = 'center-radius';
   private curveControlState: CurveControlState | null = null;
   private isPlacementMode = false;
@@ -243,6 +244,21 @@ class EditorStateManager extends EventEmitter {
    */
   getDepthConfig(): DepthConfig {
     return { ...this.depthConfig };
+  }
+
+  /**
+   * Toggle delete mode (erases blocks instead of placing)
+   */
+  setDeleteMode = (enabled: boolean): void => {
+    this.deleteMode = enabled;
+    this.emit('deletemode:changed', enabled);
+  }
+
+  /**
+   * Get the current delete mode state
+   */
+  getDeleteMode(): boolean {
+    return this.deleteMode;
   }
 
   /**

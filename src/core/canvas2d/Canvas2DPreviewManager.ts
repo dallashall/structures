@@ -60,21 +60,40 @@ export class Canvas2DPreviewManager {
 
   /**
    * Update point mode hover preview (both 2D and 3D)
+   * In delete mode, shows the existing block that will be removed
+   * In paint mode, shows the block that will be placed
    */
   updatePointPreview(gridX: number, gridY: number): void {
     this.pointPreviewCell = { gridX, gridY };
 
-    // Also update 3D preview
-    const selectedBlock = editorStateManager.getSelectedBlock();
-    if (selectedBlock) {
-      const position = this.viewport.gridToPosition(gridX, gridY);
-      const previewBlocks = [{
-        position,
-        blockType: selectedBlock,
-      }];
-      editorStateManager.setPreviewBlocks(previewBlocks);
+    const position = this.viewport.gridToPosition(gridX, gridY);
+    const deleteMode = editorStateManager.getDeleteMode();
+
+    if (deleteMode) {
+      // Delete mode: show existing block that will be removed (if any)
+      const existingBlock = projectManager.getBlock(position);
+      if (existingBlock) {
+        const previewBlocks = [{
+          position,
+          blockType: existingBlock.blockType,
+        }];
+        editorStateManager.setPreviewBlocks(previewBlocks);
+      } else {
+        // No block to delete at this position
+        editorStateManager.clearPreview();
+      }
     } else {
-      editorStateManager.clearPreview();
+      // Paint mode: show block that will be placed
+      const selectedBlock = editorStateManager.getSelectedBlock();
+      if (selectedBlock) {
+        const previewBlocks = [{
+          position,
+          blockType: selectedBlock,
+        }];
+        editorStateManager.setPreviewBlocks(previewBlocks);
+      } else {
+        editorStateManager.clearPreview();
+      }
     }
   }
 

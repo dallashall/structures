@@ -1,14 +1,11 @@
 import React from 'react';
-import { Popover } from '@mui/material';
+import { Popover } from "@mui/material";
 
 interface DialogTriggerProps {
   /** Type of overlay */
-  type: 'modal' | 'popover';
+  type: "modal" | "popover";
   /** Children: [trigger element, dialog render function] */
-  children: [
-    React.ReactElement,
-    (close: () => void) => React.ReactElement
-  ];
+  children: [React.ReactElement, (close: () => void) => React.ReactElement];
 }
 
 /**
@@ -31,7 +28,7 @@ export function DialogTrigger({ type, children }: DialogTriggerProps) {
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
     setIsOpen(true);
-    if (type === 'popover') {
+    if (type === "popover") {
       setAnchorEl(event.currentTarget);
     }
   };
@@ -49,7 +46,7 @@ export function DialogTrigger({ type, children }: DialogTriggerProps) {
   // Render dialog with close function
   const dialog = dialogRenderFn(handleClose);
 
-  if (type === 'modal') {
+  if (type === "modal") {
     // For modal dialogs, wrap in MUI Dialog
     return (
       <>
@@ -67,12 +64,12 @@ export function DialogTrigger({ type, children }: DialogTriggerProps) {
           anchorEl={anchorEl}
           onClose={handleClose}
           anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'left',
+            vertical: "bottom",
+            horizontal: "left",
           }}
           transformOrigin={{
-            vertical: 'top',
-            horizontal: 'left',
+            vertical: "top",
+            horizontal: "left",
           }}
         >
           {dialog}

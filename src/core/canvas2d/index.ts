@@ -17,4 +17,4 @@
  * - Canvas2DInteractionHandler - Generic input handling (no domain logic)
  */
 
-export { Canvas2DController } from './Canvas2DControllerV3';
+export { Canvas2DController } from './Canvas2DController';

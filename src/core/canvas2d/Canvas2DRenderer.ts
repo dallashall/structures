@@ -1,9 +1,11 @@
-import type { Dimensions, Vector3D } from '../../types';
+import type { Dimensions } from '../../types';
 import { projectManager } from '../ProjectManager';
 import { blockRegistry } from '../BlockRegistry';
 import { editorStateManager } from '../EditorStateManager';
+import { draftingService } from '../DraftingService';
 import type { Canvas2DViewport } from './Canvas2DViewport';
 import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
+import { getOpacityForDistance, getColorForAxis, getLayerForAxis } from './renderingUtils';
 
 /**
  * Canvas2DColorConfig - Color configuration for dark/light mode support
@@ -181,8 +183,8 @@ export class Canvas2DRenderer {
       }
 
       // Calculate layer distance and opacity
-      const distance = this.getLayerDistance(blockData.position, activeLayers, viewport);
-      const opacity = this.getOpacityForDistance(distance);
+      const distance = viewport.getLayerDistance(blockData.position, activeLayers);
+      const opacity = getOpacityForDistance(distance);
 
       // Don't render if 3+ layers away
       if (opacity === 0.0) return;
@@ -217,8 +219,8 @@ export class Canvas2DRenderer {
 
     const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
     const metaBlock = project.metaBlock;
-    const distance = this.getLayerDistance(metaBlock.position, activeLayers, viewport);
-    const opacity = this.getOpacityForDistance(distance);
+    const distance = viewport.getLayerDistance(metaBlock.position, activeLayers);
+    const opacity = getOpacityForDistance(distance);
 
     if (opacity === 0.0) return;
 
@@ -288,7 +290,7 @@ export class Canvas2DRenderer {
     const arrowLength = 40;
     const arrowHeadSize = 8;
 
-    const axes = this.getAxesForView(viewport);
+    const axes = viewport.getAxesForView();
     const originX = padding;
     const originY = height - padding;
 
@@ -297,7 +299,7 @@ export class Canvas2DRenderer {
     this.ctx.font = 'bold 14px sans-serif';
 
     // Horizontal axis
-    const hColor = this.getColorForAxis(axes.horizontal);
+    const hColor = getColorForAxis(axes.horizontal);
     this.ctx.strokeStyle = hColor;
     this.ctx.fillStyle = hColor;
     this.ctx.beginPath();
@@ -317,7 +319,7 @@ export class Canvas2DRenderer {
     this.ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
 
     // Vertical axis
-    const vColor = this.getColorForAxis(axes.vertical);
+    const vColor = getColorForAxis(axes.vertical);
     this.ctx.strokeStyle = vColor;
     this.ctx.fillStyle = vColor;
     this.ctx.beginPath();
@@ -339,7 +341,7 @@ export class Canvas2DRenderer {
     // Depth indicator
     const depthX = originX + arrowLength + 60;
     const depthY = originY;
-    const dColor = this.getColorForAxis(axes.depth);
+    const dColor = getColorForAxis(axes.depth);
     this.ctx.strokeStyle = dColor;
     this.ctx.fillStyle = dColor;
     this.ctx.beginPath();
@@ -364,16 +366,16 @@ export class Canvas2DRenderer {
     const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
     const cellSize = viewport.getCellSize();
     const pan = viewport.getPan();
-    const axes = this.getAxesForView(viewport);
+    const axes = viewport.getAxesForView();
 
     this.ctx.save();
 
     // Horizontal layer indicator
     if (axes.vertical !== axes.depth) {
       const axisName = axes.vertical;
-      const layerValue = this.getLayerForAxis(axisName, activeLayers);
-      const color = this.getColorForAxis(axisName);
-      const gridPos = this.getGridPositionForLayer(axisName, layerValue, dimensions, viewport);
+      const layerValue = getLayerForAxis(axisName, activeLayers);
+      const color = getColorForAxis(axisName);
+      const gridPos = viewport.getGridPositionForLayer(axisName, layerValue, dimensions);
 
       if (gridPos !== null && gridPos >= 0 && gridPos < gridHeight) {
         const py = pan.y + gridPos * cellSize;
@@ -413,9 +415,9 @@ export class Canvas2DRenderer {
     // Vertical layer indicator
     if (axes.horizontal !== axes.depth) {
       const axisName = axes.horizontal;
-      const layerValue = this.getLayerForAxis(axisName, activeLayers);
-      const color = this.getColorForAxis(axisName);
-      const gridPos = this.getGridPositionForLayer(axisName, layerValue, dimensions, viewport);
+      const layerValue = getLayerForAxis(axisName, activeLayers);
+      const color = getColorForAxis(axisName);
+      const gridPos = viewport.getGridPositionForLayer(axisName, layerValue, dimensions);
 
       if (gridPos !== null && gridPos >= 0 && gridPos < gridWidth) {
         const px = pan.x + gridPos * cellSize;
@@ -526,8 +528,13 @@ export class Canvas2DRenderer {
   }
 
   /**
-   * Draw shared preview blocks from EditorStateManager
-   * This allows all canvases to render preview computed by the active canvas
+   * Draw shared preview blocks from EditorStateManager and DraftingService
+   *
+   * Two types of preview:
+   * 1. EditorStateManager: Local 2D-specific preview (outline drag, point hover, Alt key preview)
+   * 2. DraftingService: Shared painting preview (draft blocks during painting, shared across ALL views)
+   *
+   * In delete mode, preview blocks are shown with a red tint to indicate removal.
    */
   private drawSharedPreview(
     viewport: Canvas2DViewport,
@@ -536,14 +543,22 @@ export class Canvas2DRenderer {
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
-    const previewBlocks = editorStateManager.getPreviewBlocks();
-    if (!previewBlocks || previewBlocks.length === 0) return;
+    // Combine preview blocks from both sources
+    const editorPreview = editorStateManager.getPreviewBlocks() || [];
+    const draftPreview = draftingService.getPreview() || [];
+
+    // Combine both arrays
+    const allPreviewBlocks = [...editorPreview, ...draftPreview];
+
+    if (allPreviewBlocks.length === 0) return;
+
+    const deleteMode = editorStateManager.getDeleteMode();
 
     this.ctx.save();
-    this.ctx.globalAlpha = 0.5;
+    this.ctx.globalAlpha = 0.7; // Preview blocks at 70% opacity for visibility
 
     // Render each preview block
-    for (const previewBlock of previewBlocks) {
+    for (const previewBlock of allPreviewBlocks) {
       if (!previewBlock.blockType) continue;
 
       const block = blockRegistry.getBlock(previewBlock.blockType);
@@ -563,8 +578,15 @@ export class Canvas2DRenderer {
       const px = pan.x + gridPos.gridX * cellSize;
       const py = pan.y + gridPos.gridY * cellSize;
 
+      // Draw block with normal color
       this.ctx.fillStyle = block.color;
       this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+      // If in delete mode, overlay red tint to indicate removal
+      if (deleteMode) {
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)'; // Red overlay at 40% opacity
+        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+      }
     }
 
     this.ctx.restore();
@@ -607,102 +629,5 @@ export class Canvas2DRenderer {
     this.ctx.globalAlpha = 0.8;
     this.ctx.strokeRect(px + 2, py + 2, cellSize - 4, cellSize - 4);
     this.ctx.restore();
-  }
-
-  // Helper methods
-
-  private getLayerDistance(
-    position: Vector3D,
-    activeLayers: { x: number; y: number; z: number },
-    viewport: Canvas2DViewport
-  ): number {
-    const viewType = viewport.getViewType();
-    switch (viewType) {
-      case 'front':
-      case 'back':
-        return Math.abs(position.y - activeLayers.y);
-      case 'left':
-      case 'right':
-        return Math.abs(position.x - activeLayers.x);
-      case 'top':
-      case 'bottom':
-        return Math.abs(position.z - activeLayers.z);
-    }
-  }
-
-  private getOpacityForDistance(distance: number): number {
-    if (distance === 0) return 1.0;
-    if (distance === 1) return 0.3;
-    if (distance === 2) return 0.1;
-    return 0.0;
-  }
-
-  private getAxesForView(viewport: Canvas2DViewport): { horizontal: string; vertical: string; depth: string } {
-    const viewType = viewport.getViewType();
-    switch (viewType) {
-      case 'front':
-      case 'back':
-        return { horizontal: 'X', vertical: 'Z', depth: 'Y' };
-      case 'left':
-      case 'right':
-        return { horizontal: 'Y', vertical: 'Z', depth: 'X' };
-      case 'top':
-      case 'bottom':
-        return { horizontal: 'X', vertical: 'Y', depth: 'Z' };
-    }
-  }
-
-  private getColorForAxis(axis: string): string {
-    switch (axis) {
-      case 'X':
-        return '#e74c3c'; // Red
-      case 'Y':
-        return '#3498db'; // Blue
-      case 'Z':
-        return '#27ae60'; // Green
-      default:
-        return '#000000';
-    }
-  }
-
-  private getLayerForAxis(axis: string, activeLayers: { x: number; y: number; z: number }): number {
-    switch (axis) {
-      case 'X':
-        return activeLayers.x;
-      case 'Y':
-        return activeLayers.y;
-      case 'Z':
-        return activeLayers.z;
-      default:
-        return 0;
-    }
-  }
-
-  private getGridPositionForLayer(
-    axis: string,
-    layerValue: number,
-    dimensions: Dimensions,
-    viewport: Canvas2DViewport
-  ): number | null {
-    const viewType = viewport.getViewType();
-    switch (viewType) {
-      case 'front':
-      case 'back':
-        if (axis === 'X') return layerValue;
-        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
-        return null;
-      case 'left':
-      case 'right':
-        if (axis === 'Y') return layerValue;
-        if (axis === 'Z') return dimensions.depth - 1 - layerValue;
-        return null;
-      case 'top':
-      case 'bottom':
-        if (axis === 'X') return layerValue;
-        if (axis === 'Y') return dimensions.height - 1 - layerValue;
-        return null;
-      default:
-        return null;
-    }
   }
 }

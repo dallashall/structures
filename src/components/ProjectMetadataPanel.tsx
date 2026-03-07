@@ -9,9 +9,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from '@mui/material';
-import { Delete } from '@mui/icons-material';
-import type { ProjectMetadata } from '../types';
+} from "@mui/material";
+import { Delete } from "@mui/icons-material";
+import type { ProjectMetadata } from "../types";
 
 interface ProjectMetadataPanelProps {
   project: ProjectMetadata;
@@ -48,11 +48,11 @@ export function ProjectMetadataPanel({
     <>
       <Box
         sx={{
-          bgcolor: 'background.paper',
+          bgcolor: "background.paper",
           borderRadius: 1,
           p: 2,
           border: 1,
-          borderColor: 'divider',
+          borderColor: "divider",
         }}
       >
         <Stack spacing={2}>
@@ -68,7 +68,7 @@ export function ProjectMetadataPanel({
               <strong>Modified:</strong> {project.modified.toLocaleDateString()}
             </Typography>
             <Typography variant="body2">
-              <strong>Dimensions:</strong> {project.dimensions.width} ×{' '}
+              <strong>Dimensions:</strong> {project.dimensions.width} ×{" "}
               {project.dimensions.height} × {project.dimensions.depth}
             </Typography>
             <Typography variant="body2">
@@ -100,13 +100,17 @@ export function ProjectMetadataPanel({
         <DialogTitle>Delete Project</DialogTitle>
         <DialogContent>
           <Typography variant="body1">
-            Are you sure you want to delete &quot;{project.name}&quot;? This action cannot
-            be undone.
+            Are you sure you want to delete &quot;{project.name}&quot;? This
+            action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDeleteCancel}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm}>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteConfirm}
+          >
             Delete
           </Button>
         </DialogActions>

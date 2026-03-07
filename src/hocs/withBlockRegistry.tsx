@@ -1,6 +1,6 @@
 import React from 'react';
-import { blockRegistry } from '../core/BlockRegistry';
-import type { Block } from '../types';
+import { blockRegistry } from "../core/BlockRegistry";
+import type { Block } from "../types";
 
 /**
  * Props injected by withBlockRegistry HOC
@@ -27,11 +27,11 @@ export interface WithBlockRegistryProps {
  * const EnhancedComponent = withBlockRegistry(MyComponent);
  */
 export function withBlockRegistry<P extends object>(
-  Component: React.ComponentType<P & WithBlockRegistryProps>
+  Component: React.ComponentType<P & WithBlockRegistryProps>,
 ) {
   return function WithBlockRegistry(props: P) {
     const [blocks, setBlocks] = React.useState<Block[]>(
-      blockRegistry.getAllBlocks()
+      blockRegistry.getAllBlocks(),
     );
 
     React.useEffect(() => {
@@ -40,11 +40,11 @@ export function withBlockRegistry<P extends object>(
       };
 
       // Subscribe to events
-      blockRegistry.on('registry:updated', handleRegistryUpdated);
+      blockRegistry.on("registry:updated", handleRegistryUpdated);
 
       // Cleanup
       return () => {
-        blockRegistry.off('registry:updated', handleRegistryUpdated);
+        blockRegistry.off("registry:updated", handleRegistryUpdated);
       };
     }, []);
 

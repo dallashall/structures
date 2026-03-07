@@ -1,16 +1,15 @@
-import React from 'react';
 import {
   Box,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-} from '@mui/material';
-import type { ShapeFillMode } from '../types';
+} from "@mui/material";
+import type { ShapeFillMode } from "../types";
 
 interface ShapeFillModeControlProps {
   shapeFillMode: ShapeFillMode;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 /**
@@ -22,23 +21,30 @@ interface ShapeFillModeControlProps {
 export function ShapeFillModeControl({
   shapeFillMode,
   onShapeFillModeChange,
-  orientation = 'vertical',
+  orientation = "vertical",
 }: ShapeFillModeControlProps) {
   const handleChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newMode: ShapeFillMode | null
+    newMode: ShapeFillMode | null,
   ) => {
     if (newMode !== null) {
       onShapeFillModeChange(newMode);
     }
   };
 
-  const isHorizontal = orientation === 'horizontal';
+  const isHorizontal = orientation === "horizontal";
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       {isHorizontal && (
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: "0.75rem",
+            color: "text.secondary",
+            whiteSpace: "nowrap",
+          }}
+        >
           Fill:
         </Typography>
       )}
@@ -46,14 +52,14 @@ export function ShapeFillModeControl({
         <Typography
           variant="caption"
           sx={{
-            display: 'block',
+            display: "block",
             mb: 0.5,
             px: 0.5,
-            color: 'text.secondary',
-            fontWeight: 'bold',
-            fontSize: '0.7rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            color: "text.secondary",
+            fontWeight: "bold",
+            fontSize: "0.7rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
           }}
         >
           Fill Mode
@@ -67,17 +73,17 @@ export function ShapeFillModeControl({
         fullWidth={!isHorizontal}
         size="small"
         sx={{
-          '& .MuiToggleButton-root': {
+          "& .MuiToggleButton-root": {
             py: isHorizontal ? 0.5 : 1,
             px: isHorizontal ? 1 : 1.5,
-            fontSize: isHorizontal ? '0.7rem' : '0.75rem',
+            fontSize: isHorizontal ? "0.7rem" : "0.75rem",
             border: 1,
-            borderColor: 'divider',
-            '&.Mui-selected': {
-              bgcolor: 'secondary.main',
-              color: 'secondary.contrastText',
-              '&:hover': {
-                bgcolor: 'secondary.dark',
+            borderColor: "divider",
+            "&.Mui-selected": {
+              bgcolor: "secondary.main",
+              color: "secondary.contrastText",
+              "&:hover": {
+                bgcolor: "secondary.dark",
               },
             },
           },

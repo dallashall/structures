@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   ToggleButton,
@@ -6,7 +5,7 @@ import {
   Typography,
   Divider,
   Tooltip,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Brush,
   FormatColorFill,
@@ -16,10 +15,15 @@ import {
   Edit,
   SwapHoriz,
   FilterAlt,
-} from '@mui/icons-material';
-import type { PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
-import { ShapeFillModeControl } from './ShapeFillModeControl';
-import { DepthPaintingControl } from './DepthPaintingControl';
+} from "@mui/icons-material";
+import type {
+  PaintMode,
+  PaintBehavior,
+  ShapeFillMode,
+  DepthConfig,
+} from "../types";
+import { ShapeFillModeControl } from "./ShapeFillModeControl";
+import { DepthPaintingControl } from "./DepthPaintingControl";
 
 interface PaintControlsProps {
   paintMode: PaintMode;
@@ -30,7 +34,7 @@ interface PaintControlsProps {
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 /**
@@ -53,11 +57,11 @@ export function PaintControls({
   onPaintBehaviorChange,
   onShapeFillModeChange,
   onDepthConfigChange,
-  orientation = 'vertical',
+  orientation = "vertical",
 }: PaintControlsProps) {
   const handleModeChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newMode: PaintMode | null
+    newMode: PaintMode | null,
   ) => {
     if (newMode !== null) {
       onPaintModeChange(newMode);
@@ -66,7 +70,7 @@ export function PaintControls({
 
   const handleBehaviorChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newBehavior: PaintBehavior | null
+    newBehavior: PaintBehavior | null,
   ) => {
     if (newBehavior !== null) {
       onPaintBehaviorChange(newBehavior);
@@ -74,15 +78,17 @@ export function PaintControls({
   };
 
   // Check if current mode is a shape mode that supports fill
-  const isShapeMode = ['outline', 'circle', 'arch', 'curve'].includes(paintMode);
+  const isShapeMode = ["outline", "circle", "arch", "curve"].includes(
+    paintMode,
+  );
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         gap: 1.5,
-        width: '100%',
+        width: "100%",
       }}
     >
       {/* Paint Mode Section */}
@@ -90,14 +96,14 @@ export function PaintControls({
         <Typography
           variant="caption"
           sx={{
-            display: 'block',
+            display: "block",
             mb: 0.5,
             px: 0.5,
-            color: 'text.secondary',
-            fontWeight: 'bold',
-            fontSize: '0.7rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            color: "text.secondary",
+            fontWeight: "bold",
+            fontSize: "0.7rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
           }}
         >
           Paint Mode
@@ -110,16 +116,16 @@ export function PaintControls({
           fullWidth
           size="small"
           sx={{
-            '& .MuiToggleButton-root': {
+            "& .MuiToggleButton-root": {
               py: 1,
               px: 1.5,
               border: 1,
-              borderColor: 'divider',
-              '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': {
-                  bgcolor: 'primary.dark',
+              borderColor: "divider",
+              "&.Mui-selected": {
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": {
+                  bgcolor: "primary.dark",
                 },
               },
             },
@@ -131,7 +137,10 @@ export function PaintControls({
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="fill" aria-label="Fill mode">
-            <Tooltip title="Fill - Flood fill connected regions" placement="left">
+            <Tooltip
+              title="Fill - Flood fill connected regions"
+              placement="left"
+            >
               <FormatColorFill fontSize="small" />
             </Tooltip>
           </ToggleButton>
@@ -141,13 +150,16 @@ export function PaintControls({
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="circle" aria-label="Circle mode">
-            <Tooltip title="Circle - Draw circles (Shift: bbox, Ctrl: 1:1)" placement="left">
+            <Tooltip
+              title="Circle - Draw circles (Shift: bbox, Ctrl: 1:1)"
+              placement="left"
+            >
               <Circle fontSize="small" />
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="arch" aria-label="Arch mode">
             <Tooltip title="Arch - Draw curved arches" placement="left">
-              <Box sx={{ fontSize: 'small' }}>⌒</Box>
+              <Box sx={{ fontSize: "small" }}>⌒</Box>
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="curve" aria-label="Curve mode">
@@ -184,14 +196,14 @@ export function PaintControls({
         <Typography
           variant="caption"
           sx={{
-            display: 'block',
+            display: "block",
             mb: 0.5,
             px: 0.5,
-            color: 'text.secondary',
-            fontWeight: 'bold',
-            fontSize: '0.7rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            color: "text.secondary",
+            fontWeight: "bold",
+            fontSize: "0.7rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
           }}
         >
           Behavior
@@ -204,17 +216,17 @@ export function PaintControls({
           fullWidth
           size="small"
           sx={{
-            '& .MuiToggleButton-root': {
+            "& .MuiToggleButton-root": {
               py: 1,
               px: 1.5,
               border: 1,
-              borderColor: 'divider',
-              fontSize: '0.7rem',
-              '&.Mui-selected': {
-                bgcolor: 'secondary.main',
-                color: 'secondary.contrastText',
-                '&:hover': {
-                  bgcolor: 'secondary.dark',
+              borderColor: "divider",
+              fontSize: "0.7rem",
+              "&.Mui-selected": {
+                bgcolor: "secondary.main",
+                color: "secondary.contrastText",
+                "&:hover": {
+                  bgcolor: "secondary.dark",
                 },
               },
             },
@@ -222,21 +234,33 @@ export function PaintControls({
         >
           <ToggleButton value="normal" aria-label="Normal behavior">
             <Tooltip title="Normal - Paint anywhere" placement="left">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Edit fontSize="small" />
               </Box>
             </Tooltip>
           </ToggleButton>
-          <ToggleButton value="only-replace" aria-label="Only replace existing blocks">
-            <Tooltip title="Only Replace - Only paint over existing blocks" placement="left">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <ToggleButton
+            value="only-replace"
+            aria-label="Only replace existing blocks"
+          >
+            <Tooltip
+              title="Only Replace - Only paint over existing blocks"
+              placement="left"
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <SwapHoriz fontSize="small" />
               </Box>
             </Tooltip>
           </ToggleButton>
-          <ToggleButton value="selective-replace" aria-label="Selective replace">
-            <Tooltip title="Selective - Only replace specific block type" placement="left">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <ToggleButton
+            value="selective-replace"
+            aria-label="Selective replace"
+          >
+            <Tooltip
+              title="Selective - Only replace specific block type"
+              placement="left"
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <FilterAlt fontSize="small" />
               </Box>
             </Tooltip>

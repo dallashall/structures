@@ -1,12 +1,17 @@
-import React from 'react';
-import { Box, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
-import { Edit, SwapHoriz, FilterAlt } from '@mui/icons-material';
-import type { PaintBehavior } from '../types';
+import {
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Edit, SwapHoriz, FilterAlt } from "@mui/icons-material";
+import type { PaintBehavior } from "../types";
 
 interface PaintBehaviorControlProps {
   paintBehavior: PaintBehavior;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
 }
 
 /**
@@ -22,11 +27,11 @@ interface PaintBehaviorControlProps {
 export function PaintBehaviorControl({
   paintBehavior,
   onPaintBehaviorChange,
-  orientation = 'horizontal',
+  orientation = "horizontal",
 }: PaintBehaviorControlProps) {
   const handleChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newBehavior: PaintBehavior | null
+    newBehavior: PaintBehavior | null,
   ) => {
     if (newBehavior !== null) {
       onPaintBehaviorChange(newBehavior);
@@ -34,8 +39,11 @@ export function PaintBehaviorControl({
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <Typography
+        variant="caption"
+        sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+      >
         Behavior:
       </Typography>
       <ToggleButtonGroup
@@ -45,10 +53,10 @@ export function PaintBehaviorControl({
         orientation={orientation}
         size="small"
         sx={{
-          '& .MuiToggleButton-root': {
+          "& .MuiToggleButton-root": {
             px: 1,
             py: 0.5,
-            fontSize: '0.7rem',
+            fontSize: "0.7rem",
           },
         }}
       >
@@ -63,7 +71,10 @@ export function PaintBehaviorControl({
           </ToggleButton>
         </Tooltip>
         <Tooltip title="Selective Replace - Replace specific block type">
-          <ToggleButton value="selective-replace" aria-label="Selective replace behavior">
+          <ToggleButton
+            value="selective-replace"
+            aria-label="Selective replace behavior"
+          >
             <FilterAlt fontSize="small" />
           </ToggleButton>
         </Tooltip>

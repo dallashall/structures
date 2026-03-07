@@ -1,5 +1,4 @@
-import React from 'react';
-import { Box } from '@mui/material';
+import { Box } from "@mui/material";
 
 interface FormProps {
   /** Form content */
@@ -26,8 +25,8 @@ export function Form({ children, onSubmit }: FormProps) {
       component="form"
       onSubmit={handleSubmit}
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         gap: 2, // 16px spacing
       }}
     >

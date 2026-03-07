@@ -15,6 +15,8 @@ import {
   ElasticEase,
 } from '@babylonjs/core';
 import { projectManager } from './ProjectManager';
+import { modelHistory } from './ModelHistory';
+import { draftingService } from './DraftingService';
 import { blockRegistry } from './BlockRegistry';
 import { editorStateManager } from './EditorStateManager';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
@@ -94,17 +96,21 @@ export class Babylon3DController {
     // Setup slice plane visualizer
     this.setupSlicePlanes();
 
-    // Subscribe to project events
-    // Note: We only listen to project:loaded for full rebuilds
-    // and block:added/removed for incremental updates to avoid flickering
+    // Subscribe to model events
+    modelHistory.on('model:updated', this.boundHandlers.projectChanged);
     projectManager.on('project:loaded', this.boundHandlers.projectChanged);
-    projectManager.on('block:added', this.boundHandlers.blockAdded);
+    projectManager.on('block:placed', this.boundHandlers.blockAdded);
     projectManager.on('block:removed', this.boundHandlers.blockRemoved);
+
+    // Subscribe to DraftingService for shared painting preview
+    draftingService.on('draft:updated', this.boundHandlers.previewChanged);
+    draftingService.on('draft:finalized', this.boundHandlers.previewChanged);
+    draftingService.on('draft:cancelled', this.boundHandlers.previewChanged);
 
     // Subscribe to editor state events for active layer highlighting
     editorStateManager.on('layer:changed', this.boundHandlers.layerChanged);
 
-    // Subscribe to preview events for ghost block rendering
+    // Subscribe to preview events for local 2D preview (outline, point hover)
     editorStateManager.on('preview:changed', this.boundHandlers.previewChanged);
 
     // Subscribe to viewport events (future: sync camera state)
@@ -124,9 +130,13 @@ export class Babylon3DController {
 
   destroy(): void {
     // Unsubscribe from events
+    modelHistory.off('model:updated', this.boundHandlers.projectChanged);
     projectManager.off('project:loaded', this.boundHandlers.projectChanged);
-    projectManager.off('block:added', this.boundHandlers.blockAdded);
+    projectManager.off('block:placed', this.boundHandlers.blockAdded);
     projectManager.off('block:removed', this.boundHandlers.blockRemoved);
+    draftingService.off('draft:updated', this.boundHandlers.previewChanged);
+    draftingService.off('draft:finalized', this.boundHandlers.previewChanged);
+    draftingService.off('draft:cancelled', this.boundHandlers.previewChanged);
     editorStateManager.off('layer:changed', this.boundHandlers.layerChanged);
     editorStateManager.off('preview:changed', this.boundHandlers.previewChanged);
     window.removeEventListener('resize', this.boundHandlers.resize);
@@ -641,26 +651,50 @@ export class Babylon3DController {
   /**
    * Handle preview blocks changed event
    * Creates/updates ghost preview meshes
+   *
+   * Fetches preview from both sources:
+   * 1. EditorStateManager: Local 2D-specific preview (outline drag, point hover)
+   * 2. DraftingService: Shared painting preview (draft blocks during painting)
+   *
+   * Uses diffing to only update changed meshes (prevents flashing and improves performance)
    */
-  private handlePreviewChanged(previewBlocks: import('../core/EditorStateManager').PreviewBlock[]): void {
-    // Clear existing preview meshes
-    this.clearPreviewMeshes();
+  private handlePreviewChanged(): void {
+    // Combine preview blocks from both sources
+    const editorPreview = editorStateManager.getPreviewBlocks() || [];
+    const draftPreview = draftingService.getPreview() || [];
+    const allPreviewBlocks = [...editorPreview, ...draftPreview];
 
-    // If no preview blocks, we're done
-    if (previewBlocks.length === 0) {
-      return;
+    // Build set of new preview positions
+    const newPreviewKeys = new Set(
+      allPreviewBlocks.map((b) => `${b.position.x},${b.position.y},${b.position.z}`)
+    );
+
+    // Remove preview meshes that are no longer in preview
+    for (const key of this.previewMeshes.keys()) {
+      if (!newPreviewKeys.has(key)) {
+        const mesh = this.previewMeshes.get(key)!;
+        mesh.dispose();
+        this.previewMeshes.delete(key);
+      }
     }
 
-    // Create ghost meshes for each preview block
-    for (const previewBlock of previewBlocks) {
+    // Add/update preview meshes for new blocks
+    for (const previewBlock of allPreviewBlocks) {
       if (!previewBlock.blockType) continue; // Skip null block types
 
-      this.createPreviewMesh(previewBlock);
+      const key = `${previewBlock.position.x},${previewBlock.position.y},${previewBlock.position.z}`;
+
+      // Only create if doesn't exist (keeps existing meshes, prevents flashing)
+      if (!this.previewMeshes.has(key)) {
+        this.createPreviewMesh(previewBlock);
+      }
+      // Note: If mesh exists, we keep it (no need to update material since block types don't change during stroke)
     }
   }
 
   /**
    * Create a ghost/preview mesh (semi-transparent)
+   * In delete mode, shows red tint to indicate removal
    */
   private createPreviewMesh(previewBlock: import('../core/EditorStateManager').PreviewBlock): void {
     const key = `${previewBlock.position.x},${previewBlock.position.y},${previewBlock.position.z}`;
@@ -685,8 +719,11 @@ export class Babylon3DController {
     };
     box.position = this.toBabylonVector(centeredPos);
 
-    // Apply ghost material (semi-transparent)
-    box.material = this.getGhostMaterial(block.color);
+    // Apply ghost material (semi-transparent, with red tint if delete mode)
+    const deleteMode = editorStateManager.getDeleteMode();
+    box.material = deleteMode
+      ? this.getDeleteGhostMaterial(block.color)
+      : this.getGhostMaterial(block.color);
 
     // Store reference
     this.previewMeshes.set(key, box);
@@ -718,12 +755,39 @@ export class Babylon3DController {
   }
 
   /**
-   * Clear all preview meshes
+   * Get or create a delete ghost material (semi-transparent with red tint)
+   * Used to show blocks that will be removed in delete mode
    */
-  private clearPreviewMeshes(): void {
-    for (const mesh of this.previewMeshes.values()) {
-      mesh.dispose();
+  private getDeleteGhostMaterial(color: string): StandardMaterial {
+    const deleteKey = `delete_${color}`;
+
+    // Check cache
+    if (this.ghostMaterials.has(deleteKey)) {
+      return this.ghostMaterials.get(deleteKey)!;
     }
-    this.previewMeshes.clear();
+
+    // Parse hex color
+    const r = parseInt(color.substring(1, 3), 16) / 255;
+    const g = parseInt(color.substring(3, 5), 16) / 255;
+    const b = parseInt(color.substring(5, 7), 16) / 255;
+
+    // Create material with red tint
+    const material = new StandardMaterial(`ghost_delete_${color}`, this.scene);
+
+    // Mix original color with red (60% original, 40% red)
+    material.diffuseColor = new Color3(
+      r * 0.6 + 1.0 * 0.4,  // Add red tint
+      g * 0.6,               // Reduce green
+      b * 0.6                // Reduce blue
+    );
+
+    material.specularColor = new Color3(0.3, 0.1, 0.1); // Reddish specular
+    material.emissiveColor = new Color3(0.2, 0, 0); // Slight red glow
+    material.alpha = 0.6; // Slightly more opaque for delete preview
+    material.transparencyMode = 2; // Alpha blend mode
+
+    this.ghostMaterials.set(deleteKey, material);
+    return material;
   }
+
 }

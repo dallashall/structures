@@ -1,5 +1,4 @@
-import React from 'react';
-import { Box, Stack, Typography, Button, Link as MuiLink } from '@mui/material';
+import { Box, Stack, Typography, Button, Link as MuiLink } from "@mui/material";
 
 interface PreviewRoute {
   name: string;
@@ -39,10 +38,10 @@ export function PreviewLayout({
     return (
       <Box key={route.path} sx={{ mb: 0.5 }}>
         <Button
-          variant={isActive ? 'contained' : 'text'}
+          variant={isActive ? "contained" : "text"}
           onClick={handleClick}
           fullWidth
-          sx={{ justifyContent: 'flex-start' }}
+          sx={{ justifyContent: "flex-start" }}
         >
           {route.name}
         </Button>
@@ -51,16 +50,16 @@ export function PreviewLayout({
   };
 
   return (
-    <Stack direction="row" sx={{ height: '100vh' }}>
+    <Stack direction="row" sx={{ height: "100vh" }}>
       {/* Sidebar Navigation */}
       <Box
         sx={{
           width: 300,
-          bgcolor: 'grey.50',
+          bgcolor: "grey.50",
           borderRight: 1,
-          borderColor: 'divider',
+          borderColor: "divider",
           p: 2,
-          overflow: 'auto',
+          overflow: "auto",
         }}
       >
         <Box sx={{ mb: 2 }}>
@@ -84,7 +83,7 @@ export function PreviewLayout({
           >
             Components
           </Typography>
-          <Box sx={{ listStyle: 'none', pl: 0 }}>
+          <Box sx={{ listStyle: "none", pl: 0 }}>
             {routes.map(renderNavItem)}
           </Box>
         </nav>
@@ -95,8 +94,8 @@ export function PreviewLayout({
         sx={{
           flex: 1,
           p: 5,
-          overflow: 'auto',
-          bgcolor: 'grey.50',
+          overflow: "auto",
+          bgcolor: "grey.50",
         }}
       >
         {children}

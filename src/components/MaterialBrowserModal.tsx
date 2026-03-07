@@ -145,7 +145,7 @@ export function MaterialBrowserModal({
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
-        <Typography variant="h6">Material Browser</Typography>
+        Material Browser
         <IconButton onClick={onClose} size="small" aria-label="Close">
           <Close />
         </IconButton>

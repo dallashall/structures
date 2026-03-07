@@ -39,10 +39,15 @@ These classes manage business logic and state outside the React render cycle. Th
 - `setMetaBlock(position: Vector3D, direction: Direction): void`
 
 **Events:**
-- `project:changed` - Emitted when project data changes
-- `project:loaded` - Emitted when a project is loaded
-- `block:added` - Emitted when a block is placed
+- `project:created` - Emitted when a new project is created
+- `project:loaded` - Emitted when a project is loaded from storage
+- `project:renamed` - Emitted when project name changes
+- `project:dimensions-expanded` - Emitted when dimensions are expanded
+- `project:dimensions-shrunk` - Emitted when dimensions are shrunk
+- `block:placed` - Emitted when a block is placed (formerly `block:added`)
 - `block:removed` - Emitted when a block is removed
+- `meta-block:placed` - Emitted when meta block position is set
+- `meta-block:confirmed` - Emitted when meta block is confirmed
 
 ---
 
@@ -60,7 +65,8 @@ These classes manage business logic and state outside the React render cycle. Th
 - `registerBlock(block: Block): void`
 
 **Events:**
-- `registry:updated` - Emitted when blocks are added/modified
+- `block:registered` - Emitted when a block is added to the registry
+- `blocks:loaded` - Emitted when initial block data is loaded
 
 **Initial Data:**
 - Loads predefined set of common Minecraft blocks on initialization
@@ -107,7 +113,10 @@ These classes manage business logic and state outside the React render cycle. Th
 - `resetCamera(): void`
 
 **Events:**
-- `camera:changed` - Emitted when camera state changes
+- `camera:moved` - Emitted when camera position/target changes
+- `camera:rotated` - Emitted when camera rotation changes
+- `camera:zoomed` - Emitted when camera zoom level changes
+- `camera:reset` - Emitted when camera is reset to default
 
 ---
 
@@ -145,7 +154,7 @@ HOCs bridge singletons and components by subscribing to events and passing data 
 **Props Injected:**
 - `project: Project | null`
 
-**Subscribes To:** `ProjectManager` - `project:changed`, `project:loaded`
+**Subscribes To:** `ProjectManager` - `project:created`, `project:loaded`, `project:renamed`, `block:placed`, `block:removed`, `meta-block:placed`, `meta-block:confirmed`
 
 ---
 
@@ -175,7 +184,7 @@ HOCs bridge singletons and components by subscribing to events and passing data 
 - `blocks: Block[]`
 - `getBlock: (blockId: string) => Block | null`
 
-**Subscribes To:** `BlockRegistry` - `registry:updated`
+**Subscribes To:** `BlockRegistry` - `block:registered`, `blocks:loaded`
 
 ---
 
@@ -188,7 +197,7 @@ HOCs bridge singletons and components by subscribing to events and passing data 
 **Props Injected:**
 - `camera: { position: Vector3D, target: Vector3D }`
 
-**Subscribes To:** `ViewportManager` - `camera:changed`
+**Subscribes To:** `ViewportManager` - `camera:moved`, `camera:rotated`, `camera:zoomed`, `camera:reset`
 
 ---
 

@@ -5,9 +5,6 @@ import { LayerControls } from '../components/LayerControls';
 import { TabbedLayout } from '../layouts/TabbedLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
-import { QuickSelectPalette } from '../components/QuickSelectPalette';
-import { FullPaletteMenu } from '../components/FullPaletteMenu';
-import { editorStateManager } from '../core/EditorStateManager';
 
 interface TabbedEditorViewProps {
   project: Project;
@@ -46,26 +43,24 @@ export function TabbedEditorView({
   activeLayers,
   selectedBlock,
   paintMode,
-  paintBehavior,
-  shapeFillMode,
-  depthConfig,
+  paintBehavior: _paintBehavior,
+  shapeFillMode: _shapeFillMode,
+  depthConfig: _depthConfig,
   isPlacementMode,
-  isActionBarExpanded,
-  quickSelectSlots,
-  blocks,
+  isActionBarExpanded: _isActionBarExpanded,
+  quickSelectSlots: _quickSelectSlots,
+  blocks: _blocks,
   onLayerChange,
   onViewChange,
   onTabChange,
   onPaintModeChange,
-  onPaintBehaviorChange,
-  onShapeFillModeChange,
-  onDepthConfigChange,
-  onQuickSelectSlot,
-  onAssignSlot,
+  onPaintBehaviorChange: _onPaintBehaviorChange,
+  onShapeFillModeChange: _onShapeFillModeChange,
+  onDepthConfigChange: _onDepthConfigChange,
+  onQuickSelectSlot: _onQuickSelectSlot,
+  onAssignSlot: _onAssignSlot,
   onConfirmPlacement,
 }: TabbedEditorViewProps) {
-  const selectedSlotIndex = quickSelectSlots.findIndex((id) => id === selectedBlock);
-
   return (
     <TabContext value={activeView}>
       {/* Layer Controls / Tab Bar */}

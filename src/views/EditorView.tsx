@@ -1,28 +1,45 @@
-import { Box, Stack } from '@mui/material';
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
-import type { ViewType } from '../types';
-
-import { withProjectState, WithProjectStateProps } from '../hocs/withProjectState';
-import { withEditorState, WithEditorStateProps } from '../hocs/withEditorState';
-import { withBlockRegistry, WithBlockRegistryProps } from '../hocs/withBlockRegistry';
-import { withStorageState, WithStorageStateProps } from '../hocs/withStorageState';
-import { withMaterialBrowserState, WithMaterialBrowserStateProps } from '../hocs/withMaterialBrowserState';
-
-import { Toolbar } from '../layouts/Toolbar';
-import { ToolOptionsBar } from '../components/ToolOptionsBar';
-import { MetaBlockPlacementModal } from '../components/MetaBlockPlacementModal';
-import { MaterialQuickSelect } from '../components/MaterialQuickSelect';
-import { MaterialBrowserModal } from '../components/MaterialBrowserModal';
-import { ColorSwatch } from '../components/ColorSwatch';
-import { TabbedEditorView } from './TabbedEditorView';
-import { QuadEditorView } from './QuadEditorView';
-
-import { projectManager } from '../core/ProjectManager';
-import { editorStateManager } from '../core/EditorStateManager';
-import { storageManager } from '../core/StorageManager';
-import { Canvas2DController } from '../core/canvas2d';
-import { keyboardShortcutManager } from '../core/KeyboardShortcutManager';
 import React from 'react';
+import { Box, Stack } from "@mui/material";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import type { ViewType } from "../types";
+
+import {
+  withProjectState,
+  WithProjectStateProps,
+} from "../hocs/withProjectState";
+import { withEditorState, WithEditorStateProps } from "../hocs/withEditorState";
+import {
+  withBlockRegistry,
+  WithBlockRegistryProps,
+} from "../hocs/withBlockRegistry";
+import {
+  withStorageState,
+  WithStorageStateProps,
+} from "../hocs/withStorageState";
+import {
+  withMaterialBrowserState,
+  WithMaterialBrowserStateProps,
+} from "../hocs/withMaterialBrowserState";
+
+import { Toolbar } from "../layouts/Toolbar";
+import { ToolOptionsBar } from "../components/ToolOptionsBar";
+import { MetaBlockPlacementModal } from "../components/MetaBlockPlacementModal";
+import { MaterialQuickSelect } from "../components/MaterialQuickSelect";
+import { MaterialBrowserModal } from "../components/MaterialBrowserModal";
+import { ColorSwatch } from "../components/ColorSwatch";
+import { TabbedEditorView } from "./TabbedEditorView";
+import { QuadEditorView } from "./QuadEditorView";
+
+import { projectManager } from "../core/ProjectManager";
+import { editorStateManager } from "../core/EditorStateManager";
+import { storageManager } from "../core/StorageManager";
+import { Canvas2DController } from "../core/canvas2d";
+import { keyboardShortcutManager } from "../core/KeyboardShortcutManager";
 
 /**
  * EditorView - Main editor orchestrator
@@ -34,7 +51,8 @@ import React from 'react';
  * - Provides event handlers to child views
  */
 interface EditorViewProps
-  extends WithProjectStateProps,
+  extends
+    WithProjectStateProps,
     WithEditorStateProps,
     WithBlockRegistryProps,
     WithStorageStateProps,
@@ -53,6 +71,7 @@ function EditorViewComponent(props: EditorViewProps) {
     paintBehavior,
     shapeFillMode,
     depthConfig,
+    deleteMode,
     isPlacementMode,
     isActionBarExpanded,
     saveState,
@@ -74,7 +93,8 @@ function EditorViewComponent(props: EditorViewProps) {
 
   // Derive modal visibility from meta block confirmation status
   // Hide modal when in placement mode (user clicked "Got it") or when meta block is confirmed
-  const showMetaBlockModal = !projectManager.isMetaBlockConfirmed() && !isPlacementMode;
+  const showMetaBlockModal =
+    !projectManager.isMetaBlockConfirmed() && !isPlacementMode;
 
   // Handle meta block modal close (enter placement mode)
   const handleMetaBlockModalClose = () => {
@@ -90,20 +110,28 @@ function EditorViewComponent(props: EditorViewProps) {
       handleConfirmMetaBlockPlacement();
     };
 
-    keyboardShortcutManager.on('confirmMetaBlockPlacement', handleConfirmPlacement);
+    keyboardShortcutManager.on(
+      "confirmMetaBlockPlacement",
+      handleConfirmPlacement,
+    );
 
     return () => {
-      keyboardShortcutManager.off('confirmMetaBlockPlacement', handleConfirmPlacement);
+      keyboardShortcutManager.off(
+        "confirmMetaBlockPlacement",
+        handleConfirmPlacement,
+      );
       keyboardShortcutManager.stopListening();
     };
   }, []);
 
   // Get the actual Block object for the active drag block ID
-  const activeDragBlockObject = activeDragBlock ? blocks.find((b) => b.id === activeDragBlock) ?? null : null;
+  const activeDragBlockObject = activeDragBlock
+    ? (blocks.find((b) => b.id === activeDragBlock) ?? null)
+    : null;
 
   // Handlers
   const handleNewProject = () => {
-    console.log('New project requested');
+    console.log("New project requested");
   };
 
   const handleSaveProject = () => {
@@ -113,10 +141,13 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleOpenProject = () => {
-    console.log('Open project requested');
+    console.log("Open project requested");
   };
 
-  const handleViewTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+  const handleViewTabChange = (
+    _event: React.SyntheticEvent,
+    newValue: string,
+  ) => {
     editorStateManager.setActiveView(newValue as ViewType);
   };
 
@@ -143,7 +174,6 @@ function EditorViewComponent(props: EditorViewProps) {
     editorStateManager.setPlacementMode(false);
   };
 
-
   const handleDragStart = (event: DragStartEvent) => {
     const blockId = event.active.data.current?.blockId;
     if (blockId) {
@@ -164,7 +194,7 @@ function EditorViewComponent(props: EditorViewProps) {
     // Extract slot index from drop target
     const slotIndex = over.data.current?.slotIndex;
 
-    if (blockId && typeof slotIndex === 'number') {
+    if (blockId && typeof slotIndex === "number") {
       editorStateManager.setQuickSelectSlot(slotIndex, blockId);
     }
   };
@@ -174,8 +204,8 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   return (
-    <Box sx={{ height: '100%', overflow: 'hidden' }}>
-      <Stack direction="column" sx={{ height: '100%' }}>
+    <Box sx={{ height: "100%", overflow: "hidden" }}>
+      <Stack direction="column" sx={{ height: "100%" }}>
         {/* Toolbar */}
         <Toolbar
           projectName={project.name}
@@ -193,14 +223,26 @@ function EditorViewComponent(props: EditorViewProps) {
           paintBehavior={paintBehavior}
           shapeFillMode={shapeFillMode}
           depthConfig={depthConfig}
+          deleteMode={deleteMode}
           onPaintBehaviorChange={editorStateManager.setPaintBehavior}
           onShapeFillModeChange={editorStateManager.setShapeFillMode}
           onDepthConfigChange={editorStateManager.setDepthConfig}
+          onDeleteModeChange={editorStateManager.setDeleteMode}
         />
 
         {/* Main Canvas Area - Switch between layout modes */}
-        <Box sx={{ flex: 1, overflow: 'hidden', height: '100%', minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-          {layoutMode === 'tabbed' ? (
+        <Box
+          sx={{
+            flex: 1,
+            overflow: "hidden",
+            height: "100%",
+            minHeight: 0,
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {layoutMode === "tabbed" ? (
             <TabbedEditorView
               project={project}
               activeView={activeView}
@@ -296,15 +338,15 @@ function EditorViewComponent(props: EditorViewProps) {
               sx={{
                 width: 60,
                 height: 60,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'background.paper',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "background.paper",
                 border: 2,
-                borderColor: 'primary.main',
+                borderColor: "primary.main",
                 borderRadius: 1,
                 boxShadow: 4,
-                cursor: 'grabbing',
+                cursor: "grabbing",
               }}
             >
               <ColorSwatch color={activeDragBlockObject.color} size="L" />
@@ -320,10 +362,6 @@ function EditorViewComponent(props: EditorViewProps) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const EditorView = withMaterialBrowserState(
   withStorageState(
-    withBlockRegistry(
-      withEditorState(
-        withProjectState(EditorViewComponent)
-      )
-    )
-  )
+    withBlockRegistry(withEditorState(withProjectState(EditorViewComponent))),
+  ),
 ) as any;

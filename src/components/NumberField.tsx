@@ -1,6 +1,5 @@
-import React from 'react';
-import { TextField, IconButton, Stack } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { TextField, IconButton, Stack } from "@mui/material";
+import { KeyboardArrowUp, KeyboardArrowDown } from "@mui/icons-material";
 
 interface NumberFieldProps {
   /** Label for the field */

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Tab, Box, Typography } from '@mui/material';
-import { TabContext, TabList, TabPanel } from '@mui/lab';
+import { Tab, Box, Typography } from "@mui/material";
+import { TabContext, TabList, TabPanel } from "@mui/lab";
 
-import type { ViewType, Project, LayerState, Vector3D } from '../types';
+import type { ViewType, Project, LayerState, Vector3D } from "../types";
 
-import { Canvas2DView } from '../panels/Canvas2DView';
-import { Preview3DView } from '../panels/Preview3DView';
-import { projectManager } from '../core/ProjectManager';
+import { Canvas2DView } from "../panels/Canvas2DView";
+import { Preview3DView } from "../panels/Preview3DView";
+import { projectManager } from "../core/ProjectManager";
 
 interface TabbedLayoutProps {
   activeView: ViewType;
@@ -35,8 +35,14 @@ export function TabbedLayout({
 }: TabbedLayoutProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const preview3DContainerRef = React.useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = React.useState({ width: 800, height: 600 });
-  const [preview3DSize, setPreview3DSize] = React.useState({ width: 800, height: 600 });
+  const [canvasSize, setCanvasSize] = React.useState({
+    width: 800,
+    height: 600,
+  });
+  const [preview3DSize, setPreview3DSize] = React.useState({
+    width: 800,
+    height: 600,
+  });
 
   // Measure container size for canvas dimensions
   React.useEffect(() => {
@@ -52,14 +58,17 @@ export function TabbedLayout({
     };
 
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
 
   // Handlers for block placement/removal
-  const handleBlockPlaced = React.useCallback((position: Vector3D, blockType: string) => {
-    projectManager.setBlock(position, blockType);
-  }, []);
+  const handleBlockPlaced = React.useCallback(
+    (position: Vector3D, blockType: string) => {
+      projectManager.setBlock(position, blockType);
+    },
+    [],
+  );
 
   const handleBlockRemoved = React.useCallback((position: Vector3D) => {
     projectManager.removeBlock(position);
@@ -69,19 +78,27 @@ export function TabbedLayout({
     onViewChange(newValue);
   };
 
-  const views = ['front', 'back', 'left', 'right', 'top', 'bottom', '3d'] as const;
+  const views = [
+    "front",
+    "back",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "3d",
+  ] as const;
 
   // Get the depth coordinate for the current view
-  const getDepthLabel = (view: ViewType | '3d'): string | null => {
+  const getDepthLabel = (view: ViewType | "3d"): string | null => {
     switch (view) {
-      case 'front':
-      case 'back':
+      case "front":
+      case "back":
         return `Y: ${activeLayers.y}`;
-      case 'left':
-      case 'right':
+      case "left":
+      case "right":
         return `X: ${activeLayers.x}`;
-      case 'top':
-      case 'bottom':
+      case "top":
+      case "bottom":
         return `Z: ${activeLayers.z}`;
       default:
         return null;
@@ -91,7 +108,7 @@ export function TabbedLayout({
   return (
     <TabContext value={activeView}>
       {renderTabBar && (
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <TabList onChange={handleTabChange} aria-label="View tabs">
             <Tab label="Front" value="front" />
             <Tab label="Back" value="back" />
@@ -104,9 +121,20 @@ export function TabbedLayout({
         </Box>
       )}
       {views.map((view) => (
-        <TabPanel key={view} value={view} sx={{ p: 0, height: renderTabBar ? 'calc(100% - 48px)' : '100%', position: 'relative' }}>
-          {view === '3d' ? (
-            <div ref={preview3DContainerRef} style={{ width: '100%', height: '100%' }}>
+        <TabPanel
+          key={view}
+          value={view}
+          sx={{
+            p: 0,
+            height: renderTabBar ? "calc(100% - 48px)" : "100%",
+            position: "relative",
+          }}
+        >
+          {view === "3d" ? (
+            <div
+              ref={preview3DContainerRef}
+              style={{ width: "100%", height: "100%" }}
+            >
               <Preview3DView
                 width={preview3DSize.width}
                 height={preview3DSize.height}
@@ -118,29 +146,29 @@ export function TabbedLayout({
               {getDepthLabel(view) && (
                 <Box
                   sx={{
-                    position: 'absolute',
+                    position: "absolute",
                     top: 8,
                     right: 8,
                     zIndex: 10,
-                    pointerEvents: 'none',
+                    pointerEvents: "none",
                   }}
                 >
                   <Typography
                     variant="body2"
                     sx={{
-                      color: 'text.primary',
-                      bgcolor: 'rgba(255, 255, 255, 0.9)',
+                      color: "text.primary",
+                      bgcolor: "rgba(255, 255, 255, 0.9)",
                       px: 1,
                       py: 0.5,
                       borderRadius: 1,
-                      fontWeight: 'bold',
+                      fontWeight: "bold",
                     }}
                   >
                     {getDepthLabel(view)}
                   </Typography>
                 </Box>
               )}
-              <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+              <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
                 <Canvas2DView
                   viewType={view}
                   project={project}

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   Accordion,
@@ -11,9 +10,9 @@ import {
   RadioGroup,
   Typography,
   Chip,
-} from '@mui/material';
-import { ExpandMore } from '@mui/icons-material';
-import type { DepthConfig } from '../types';
+} from "@mui/material";
+import { ExpandMore } from "@mui/icons-material";
+import type { DepthConfig } from "../types";
 
 interface DepthPaintingControlProps {
   depthConfig: DepthConfig;
@@ -37,19 +36,21 @@ export function DepthPaintingControl({
   };
 
   const handleThicknessChange = (_event: Event, value: number | number[]) => {
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       onDepthConfigChange({ thickness: value });
     }
   };
 
   const handleModeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onDepthConfigChange({ mode: event.target.value as 'through' | 'until-collision' });
+    onDepthConfigChange({
+      mode: event.target.value as "through" | "until-collision",
+    });
   };
 
   // Compact horizontal layout for toolbar
   if (compact) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <FormControlLabel
           control={
             <Checkbox
@@ -59,7 +60,10 @@ export function DepthPaintingControl({
             />
           }
           label={
-            <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+            <Typography
+              variant="caption"
+              sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+            >
               Depth
             </Typography>
           }
@@ -67,8 +71,18 @@ export function DepthPaintingControl({
         />
         {depthConfig.enabled && (
           <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 80 }}>
-              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                minWidth: 80,
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ fontSize: "0.7rem", color: "text.secondary" }}
+              >
                 {depthConfig.thickness}L
               </Typography>
               <Slider
@@ -82,9 +96,16 @@ export function DepthPaintingControl({
             </Box>
             <Chip
               size="small"
-              label={depthConfig.mode === 'through' ? 'Through' : 'Until Hit'}
-              onClick={() => onDepthConfigChange({ mode: depthConfig.mode === 'through' ? 'until-collision' : 'through' })}
-              sx={{ height: '20px', fontSize: '0.65rem', cursor: 'pointer' }}
+              label={depthConfig.mode === "through" ? "Through" : "Until Hit"}
+              onClick={() =>
+                onDepthConfigChange({
+                  mode:
+                    depthConfig.mode === "through"
+                      ? "until-collision"
+                      : "through",
+                })
+              }
+              sx={{ height: "20px", fontSize: "0.65rem", cursor: "pointer" }}
             />
           </>
         )}
@@ -97,19 +118,19 @@ export function DepthPaintingControl({
     <Box>
       <Accordion
         sx={{
-          boxShadow: 'none',
-          '&:before': { display: 'none' },
-          bgcolor: 'transparent',
+          boxShadow: "none",
+          "&:before": { display: "none" },
+          bgcolor: "transparent",
         }}
       >
         <AccordionSummary
           expandIcon={<ExpandMore />}
           sx={{
             px: 0.5,
-            minHeight: 'auto',
-            '& .MuiAccordionSummary-content': {
+            minHeight: "auto",
+            "& .MuiAccordionSummary-content": {
               my: 1,
-              alignItems: 'center',
+              alignItems: "center",
               gap: 1,
             },
           }}
@@ -117,20 +138,24 @@ export function DepthPaintingControl({
           <Typography
             variant="caption"
             sx={{
-              color: 'text.secondary',
-              fontWeight: 'bold',
-              fontSize: '0.7rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
+              color: "text.secondary",
+              fontWeight: "bold",
+              fontSize: "0.7rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
             }}
           >
             Depth Painting
           </Typography>
           <Chip
             size="small"
-            label={depthConfig.enabled ? `${depthConfig.thickness} layers` : 'Disabled'}
-            color={depthConfig.enabled ? 'success' : 'default'}
-            sx={{ height: '18px', fontSize: '0.65rem' }}
+            label={
+              depthConfig.enabled
+                ? `${depthConfig.thickness} layers`
+                : "Disabled"
+            }
+            color={depthConfig.enabled ? "success" : "default"}
+            sx={{ height: "18px", fontSize: "0.65rem" }}
           />
         </AccordionSummary>
         <AccordionDetails sx={{ px: 0.5, pt: 0 }}>
@@ -143,7 +168,7 @@ export function DepthPaintingControl({
               />
             }
             label={
-              <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+              <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
                 Enable depth painting
               </Typography>
             }
@@ -153,9 +178,10 @@ export function DepthPaintingControl({
             <Typography
               variant="caption"
               gutterBottom
-              sx={{ fontSize: '0.75rem', color: 'text.secondary' }}
+              sx={{ fontSize: "0.75rem", color: "text.secondary" }}
             >
-              Thickness: {depthConfig.thickness} {depthConfig.thickness === 1 ? 'layer' : 'layers'}
+              Thickness: {depthConfig.thickness}{" "}
+              {depthConfig.thickness === 1 ? "layer" : "layers"}
             </Typography>
             <Slider
               value={depthConfig.thickness}
@@ -163,29 +189,26 @@ export function DepthPaintingControl({
               min={1}
               max={10}
               marks={[
-                { value: 1, label: '1' },
-                { value: 5, label: '5' },
-                { value: 10, label: '10' },
+                { value: 1, label: "1" },
+                { value: 5, label: "5" },
+                { value: 10, label: "10" },
               ]}
               disabled={!depthConfig.enabled}
               size="small"
               sx={{
-                '& .MuiSlider-markLabel': {
-                  fontSize: '0.65rem',
+                "& .MuiSlider-markLabel": {
+                  fontSize: "0.65rem",
                 },
               }}
             />
           </Box>
 
-          <RadioGroup
-            value={depthConfig.mode}
-            onChange={handleModeChange}
-          >
+          <RadioGroup value={depthConfig.mode} onChange={handleModeChange}>
             <FormControlLabel
               value="through"
               control={<Radio size="small" />}
               label={
-                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
                   Paint through all layers
                 </Typography>
               }
@@ -195,7 +218,7 @@ export function DepthPaintingControl({
               value="until-collision"
               control={<Radio size="small" />}
               label={
-                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
                   Stop at existing blocks
                 </Typography>
               }

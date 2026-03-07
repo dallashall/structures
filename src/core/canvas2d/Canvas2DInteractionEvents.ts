@@ -92,6 +92,11 @@ export interface InteractionEventHandlers {
   onModifierChange?: (modifiers: ModifierKeys) => void;
 
   /**
+   * Escape key pressed (generic cancellation)
+   */
+  onEscape?: () => void;
+
+  /**
    * Render requested (when state changes requiring redraw)
    */
   onRenderRequested?: () => void;

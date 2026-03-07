@@ -1,5 +1,18 @@
 import { EventEmitter } from './EventEmitter';
 import type { Project, Dimensions, Vector3D, BlockData, MetaBlock } from '../types';
+import { modelHistory } from './ModelHistory';
+import { generateUUID } from '../utils/uuid';
+import { getSessionId } from '../utils/sessionId';
+import type {
+  ProjectCreatedEvent,
+  BlockPlacedEvent,
+  BlockRemovedEvent,
+  MetaBlockPlacedEvent,
+  MetaBlockConfirmedEvent,
+  DimensionExpandedEvent,
+  DimensionShrunkEvent,
+  ProjectRenamedEvent,
+} from '../events/types';
 
 /**
  * ProjectManager - Manages current project state, blocks, and meta block
@@ -13,11 +26,14 @@ import type { Project, Dimensions, Vector3D, BlockData, MetaBlock } from '../typ
  * Events:
  * - project:created - When a new project is created
  * - project:loaded - When a project is loaded
- * - project:changed - When project data changes
- * - block:added - When a block is placed
+ * - project:renamed - When project is renamed
+ * - model:updated - When model state changes (from ModelHistory)
+ * - block:placed - When a block is placed
  * - block:removed - When a block is removed
  * - metablock:placed - When meta block is placed
- * - dimensions:changed - When dimensions are expanded/shrunk
+ * - metablock:confirmed - When meta block is confirmed
+ * - dimensions:expanded - When dimensions are expanded
+ * - dimensions:shrunk - When dimensions are shrunk
  */
 class ProjectManager extends EventEmitter {
   private static instance: ProjectManager;
@@ -25,6 +41,19 @@ class ProjectManager extends EventEmitter {
 
   private constructor() {
     super();
+
+    // Listen for model updates from ModelHistory
+    modelHistory.on('model:updated', this.handleModelUpdated.bind(this));
+  }
+
+  /**
+   * Handle model updated - recompute state and emit changes
+   */
+  private handleModelUpdated(): void {
+    if (!this.currentProject) return;
+
+    // Emit model:updated so views can refresh
+    this.emit('model:updated', this.getProject());
   }
 
   static getInstance(): ProjectManager {
@@ -39,8 +68,10 @@ class ProjectManager extends EventEmitter {
    */
   createProject(name: string, dimensions: Dimensions): void {
     const now = new Date();
+    const projectId = this.generateId();
+
     this.currentProject = {
-      id: this.generateId(),
+      id: projectId,
       name,
       dimensions,
       metaBlock: {
@@ -53,6 +84,21 @@ class ProjectManager extends EventEmitter {
       modified: now,
     };
 
+    // DUAL-WRITE: Append ProjectCreated event
+    const event: ProjectCreatedEvent = {
+      type: 'project:created',
+      eventId: generateUUID(),
+      timestamp: now.getTime(),
+      sessionId: getSessionId(),
+      projectId: projectId,
+      version: -1, // Will be assigned by ModelHistory
+      payload: {
+        name,
+        dimensions,
+      },
+    };
+    modelHistory.appendEvent(event);
+
     // Note: Meta block position is initialized but not confirmed yet
     // The user will place and confirm it as their first action
     this.emit('project:created', this.currentProject);
@@ -63,14 +109,26 @@ class ProjectManager extends EventEmitter {
    */
   loadProject(project: Project): void {
     this.currentProject = project;
+
     this.emit('project:loaded', this.currentProject);
   }
 
   /**
    * Get the current project
+   *
+   * Returns computed state from event journal:
+   * state = eventsSinceLastSnapshot.reduce(applyEvent, lastSnapshot)
    */
   getProject(): Project | null {
-    return this.currentProject;
+    if (!this.currentProject) {
+      return null;
+    }
+
+    // Compute state from ModelHistory events
+    const computedState = modelHistory.replayEvents(this.currentProject.id);
+
+    // Return computed state as the authoritative source of truth
+    return computedState;
   }
 
   /**
@@ -81,18 +139,33 @@ class ProjectManager extends EventEmitter {
       return;
     }
 
+    const previousName = this.currentProject.name;
+    const nameChanged = updates.name !== undefined && updates.name !== previousName;
+
     this.currentProject = {
       ...this.currentProject,
       ...updates,
       modified: new Date(),
     };
 
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append ProjectRenamed event if name changed
+    if (nameChanged && updates.name) {
+      const event: ProjectRenamedEvent = {
+        type: 'project:renamed',
+        eventId: generateUUID(),
+        timestamp: Date.now(),
+        sessionId: getSessionId(),
+        projectId: this.currentProject.id,
+        version: -1,
+        payload: {
+          previousName,
+          newName: updates.name,
+        },
+      };
+      modelHistory.appendEvent(event);
 
-    // Dispatch window event for cross-module communication
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+      this.emit('project:renamed', { previousName, newName: updates.name });
+    }
   }
 
   /**
@@ -103,6 +176,10 @@ class ProjectManager extends EventEmitter {
       return;
     }
 
+    console.log(`ProjectManager.setBlock() called at ${position.x},${position.y},${position.z}`);
+
+    const previousBlockType = this.getBlock(position)?.blockType;
+
     const key = this.positionToKey(position);
     const blockData: BlockData = {
       position,
@@ -112,16 +189,23 @@ class ProjectManager extends EventEmitter {
     this.currentProject.blocks.set(key, blockData);
     this.currentProject.modified = new Date();
 
-    this.emit('block:added', blockData);
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append BlockPlaced event
+    const event: BlockPlacedEvent = {
+      type: 'block:placed',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      projectId: this.currentProject.id,
+      version: -1,
+      payload: {
+        position,
+        blockType,
+        previousBlockType,
+      },
+    };
+    modelHistory.appendEvent(event);
 
-    // Dispatch window events for cross-module communication
-    window.dispatchEvent(new CustomEvent('block:added', {
-      detail: { project: this.currentProject, block: blockData }
-    }));
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+    this.emit('block:placed', blockData);
   }
 
   /**
@@ -133,44 +217,56 @@ class ProjectManager extends EventEmitter {
     }
 
     const key = this.positionToKey(position);
+    const existingBlock = this.getBlock(position);
     const existed = this.currentProject.blocks.delete(key);
 
-    if (existed) {
+    if (existed && existingBlock) {
       this.currentProject.modified = new Date();
-      this.emit('block:removed', position);
-      this.emit('project:changed', this.currentProject);
 
-      // Dispatch window events for cross-module communication
-      window.dispatchEvent(new CustomEvent('block:removed', {
-        detail: { project: this.currentProject, position }
-      }));
-      window.dispatchEvent(new CustomEvent('project:changed', {
-        detail: { project: this.currentProject }
-      }));
+      // DUAL-WRITE: Append BlockRemoved event
+      const event: BlockRemovedEvent = {
+        type: 'block:removed',
+        eventId: generateUUID(),
+        timestamp: Date.now(),
+        sessionId: getSessionId(),
+        projectId: this.currentProject.id,
+        version: -1,
+        payload: {
+          position,
+          blockType: existingBlock.blockType,
+        },
+      };
+      modelHistory.appendEvent(event);
+
+      this.emit('block:removed', position);
     }
   }
 
   /**
    * Get block at the given position
+   * Returns computed state from ModelHistory
    */
   getBlock(position: Vector3D): BlockData | null {
-    if (!this.currentProject) {
+    const project = this.getProject();
+    if (!project) {
       return null;
     }
 
     const key = this.positionToKey(position);
-    return this.currentProject.blocks.get(key) || null;
+    return project.blocks.get(key) || null;
   }
 
   /**
    * Get all blocks in the project
+   * Returns computed state from ModelHistory
    */
   getAllBlocks(): BlockData[] {
-    if (!this.currentProject) {
+    const project = this.getProject();
+    if (!project) {
       return [];
     }
 
-    return Array.from(this.currentProject.blocks.values());
+    return Array.from(project.blocks.values());
   }
 
   /**
@@ -182,6 +278,8 @@ class ProjectManager extends EventEmitter {
       return;
     }
 
+    const previousPosition = this.currentProject.metaBlock.position;
+
     this.currentProject.metaBlock = {
       position,
       direction: 'north', // Always north
@@ -189,12 +287,22 @@ class ProjectManager extends EventEmitter {
     };
     this.currentProject.modified = new Date();
 
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append MetaBlockPlaced event
+    const event: MetaBlockPlacedEvent = {
+      type: 'metablock:placed',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      projectId: this.currentProject.id,
+      version: -1,
+      payload: {
+        position,
+        previousPosition,
+      },
+    };
+    modelHistory.appendEvent(event);
 
-    // Dispatch window event for cross-module communication
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+    // Don't emit event here - metablock placement is ephemeral until confirmed
   }
 
   /**
@@ -208,13 +316,21 @@ class ProjectManager extends EventEmitter {
     this.currentProject.metaBlock.isConfirmed = true;
     this.currentProject.modified = new Date();
 
-    this.emit('metablock:placed', this.currentProject.metaBlock);
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append MetaBlockConfirmed event
+    const event: MetaBlockConfirmedEvent = {
+      type: 'metablock:confirmed',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      projectId: this.currentProject.id,
+      version: -1,
+      payload: {
+        position: this.currentProject.metaBlock.position,
+      },
+    };
+    modelHistory.appendEvent(event);
 
-    // Dispatch window event for cross-module communication
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+    this.emit('metablock:confirmed', this.currentProject.metaBlock);
   }
 
   /**
@@ -260,6 +376,7 @@ class ProjectManager extends EventEmitter {
     }
 
     const { dimensions } = this.currentProject;
+    const previousDimensions = { ...dimensions };
     const newDimensions = { ...dimensions };
     const shift: Vector3D = { x: 0, y: 0, z: 0 };
 
@@ -317,13 +434,24 @@ class ProjectManager extends EventEmitter {
     this.currentProject.dimensions = newDimensions;
     this.currentProject.modified = new Date();
 
-    this.emit('dimensions:changed', newDimensions);
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append DimensionExpanded event
+    const event: DimensionExpandedEvent = {
+      type: 'dimension:expanded',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      projectId: this.currentProject.id,
+      version: -1,
+      payload: {
+        direction,
+        previousDimensions,
+        newDimensions,
+        shift,
+      },
+    };
+    modelHistory.appendEvent(event);
 
-    // Dispatch window event for cross-module communication
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+    this.emit('dimensions:expanded', { direction, previousDimensions, newDimensions });
   }
 
   /**
@@ -337,6 +465,7 @@ class ProjectManager extends EventEmitter {
     }
 
     const { dimensions } = this.currentProject;
+    const previousDimensions = { ...dimensions };
     const newDimensions = { ...dimensions };
     const shift: Vector3D = { x: 0, y: 0, z: 0 };
 
@@ -372,6 +501,7 @@ class ProjectManager extends EventEmitter {
 
     // Filter and shift blocks
     const newBlocks = new Map<string, BlockData>();
+    const removedBlocks: BlockData[] = [];
 
     this.currentProject.blocks.forEach((block) => {
       const newPos: Vector3D = {
@@ -394,6 +524,9 @@ class ProjectManager extends EventEmitter {
           ...block,
           position: newPos,
         });
+      } else {
+        // Track removed blocks for undo
+        removedBlocks.push(block);
       }
     });
 
@@ -411,13 +544,25 @@ class ProjectManager extends EventEmitter {
     this.currentProject.dimensions = newDimensions;
     this.currentProject.modified = new Date();
 
-    this.emit('dimensions:changed', newDimensions);
-    this.emit('project:changed', this.currentProject);
+    // DUAL-WRITE: Append DimensionShrunk event
+    const event: DimensionShrunkEvent = {
+      type: 'dimension:shrunk',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+      projectId: this.currentProject.id,
+      version: -1,
+      payload: {
+        direction,
+        previousDimensions,
+        newDimensions,
+        shift,
+        removedBlocks,
+      },
+    };
+    modelHistory.appendEvent(event);
 
-    // Dispatch window event for cross-module communication
-    window.dispatchEvent(new CustomEvent('project:changed', {
-      detail: { project: this.currentProject }
-    }));
+    this.emit('dimensions:shrunk', { direction, previousDimensions, newDimensions, removedBlocks });
   }
 
   /**

@@ -3,7 +3,16 @@ import type { PaintBehavior } from './behaviors/PaintBehavior';
 import type { Vector3D, ViewType, LayerState, DepthConfig } from '../../types';
 import { projectManager } from '../ProjectManager';
 import { editorStateManager } from '../EditorStateManager';
+import { modelHistory } from '../ModelHistory';
+import { draftingService } from '../DraftingService';
 import { CoordinateConverter } from './CoordinateConverter';
+
+interface PaintOperation {
+  position: Vector3D;
+  blockType: string | null;
+  previousBlockType?: string;
+  isDelete?: boolean; // True for delete operations (stores the block being removed)
+}
 
 /**
  * CanvasPainter - Orchestrates painting operations
@@ -22,6 +31,13 @@ export class CanvasPainter {
   private strategy: PaintStrategy;
   private behavior: PaintBehavior;
 
+  // Draft mode: collect operations instead of executing immediately
+  private isDraftMode = false;
+  private draftOperations: PaintOperation[] = [];
+
+  // Track painted positions during draft to prevent duplicates
+  private draftPositionsMap: Map<string, PaintOperation> = new Map();
+
   constructor(strategy: PaintStrategy, behavior: PaintBehavior) {
     this.strategy = strategy;
     this.behavior = behavior;
@@ -39,6 +55,71 @@ export class CanvasPainter {
    */
   setBehavior(behavior: PaintBehavior): void {
     this.behavior = behavior;
+  }
+
+  /**
+   * Begin draft mode - collect operations without executing
+   */
+  beginDraft(): void {
+    console.log('CanvasPainter: beginDraft() called');
+    this.isDraftMode = true;
+    this.draftOperations = [];
+    this.draftPositionsMap.clear();
+  }
+
+  /**
+   * Finalize draft - persist all operations to ModelHistory
+   */
+  finalizeDraft(_description?: string): void {
+    console.log(`CanvasPainter: finalizeDraft() called - isDraftMode: ${this.isDraftMode}, operations: ${this.draftOperations.length}`);
+
+    if (!this.isDraftMode || this.draftOperations.length === 0) {
+      this.isDraftMode = false;
+      this.draftOperations = [];
+      draftingService.cancel();
+      return;
+    }
+
+    const project = projectManager.getProject();
+    if (!project) {
+      this.isDraftMode = false;
+      this.draftOperations = [];
+      draftingService.cancel();
+      return;
+    }
+
+    // Prepare blocks for ModelHistory
+    // For delete operations, pass blockType as null so ModelHistory creates BlockRemovedEvent
+    // For paint operations, pass the blockType so ModelHistory creates BlockPlacedEvent
+    const blocks = this.draftOperations.map(op => ({
+      position: op.position,
+      blockType: op.isDelete ? null : op.blockType, // null signals delete to ModelHistory
+      previousBlockType: op.previousBlockType
+    }));
+
+    // Set current project ID for ModelHistory
+    modelHistory.setCurrentProjectId(project.id);
+
+    // Persist to ModelHistory (creates CompoundEvent internally)
+    modelHistory.write(blocks);
+
+    // Clear preview from DraftingService
+    draftingService.cancel();
+
+    // Clear draft state
+    this.isDraftMode = false;
+    this.draftOperations = [];
+    this.draftPositionsMap.clear();
+  }
+
+  /**
+   * Cancel draft - discard all collected operations
+   */
+  cancelDraft(): void {
+    this.isDraftMode = false;
+    this.draftOperations = [];
+    this.draftPositionsMap.clear();
+    draftingService.cancel();
   }
 
   /**
@@ -98,16 +179,105 @@ export class CanvasPainter {
     };
     const filteredOperations = this.behavior.filter(expandedOperations, getBlock);
 
-    // Apply filtered operations to project
-    for (const operation of filteredOperations) {
-      if (operation.blockType === null) {
-        // null = erase
-        projectManager.removeBlock(operation.position);
-      } else {
-        // Paint with block type
-        projectManager.setBlock(operation.position, operation.blockType);
+    // Apply delete modifier (transforms operations if delete mode enabled)
+    const finalOperations = this.applyDeleteModifier(filteredOperations);
+
+    // Apply filtered operations
+    if (this.isDraftMode) {
+      // Draft mode: collect operations and update DraftingService preview
+      // Use Map to deduplicate by position (prevent opacity stacking)
+      console.log(`CanvasPainter: Draft mode - collecting ${finalOperations.length} operations`);
+
+      const deleteMode = editorStateManager.getDeleteMode();
+
+      for (const operation of finalOperations) {
+        const posKey = `${operation.position.x},${operation.position.y},${operation.position.z}`;
+
+        // Only add if this position hasn't been painted in this stroke yet
+        if (!this.draftPositionsMap.has(posKey)) {
+          const existingBlock = projectManager.getBlock(operation.position);
+          const previousBlockType = existingBlock?.blockType;
+
+          // Delete modifier has already transformed operations if needed
+          // In delete mode: operation.blockType is the existing block
+          // In paint mode: operation.blockType is the selected block
+          const paintOp: PaintOperation = {
+            position: operation.position,
+            blockType: operation.blockType,
+            previousBlockType,
+            isDelete: deleteMode,
+          };
+          this.draftPositionsMap.set(posKey, paintOp);
+          this.draftOperations.push(paintOp);
+        }
+      }
+
+      // Update DraftingService with preview blocks (ephemeral, shared across views)
+      // All operations now have blockType set (including deletes which store the block being removed)
+      // The renderer will apply red tint for delete operations based on deleteMode state
+      const previewBlocks = this.draftOperations.map(op => ({
+        position: op.position,
+        blockType: op.blockType!,
+      }));
+
+      draftingService.set(previewBlocks);
+    } else {
+      // Normal mode: execute immediately (creates events per operation)
+      console.log(`CanvasPainter: Normal mode - executing ${finalOperations.length} operations immediately`);
+
+      const deleteMode = editorStateManager.getDeleteMode();
+
+      for (const operation of finalOperations) {
+        if (deleteMode) {
+          // Delete mode: remove blocks
+          projectManager.removeBlock(operation.position);
+        } else {
+          // Paint mode: place blocks
+          if (operation.blockType !== null) {
+            projectManager.setBlock(operation.position, operation.blockType);
+          }
+        }
       }
     }
+  }
+
+  /**
+   * Apply delete modifier - transforms operations if delete mode is enabled
+   * This is a pure modifier function that converts paint operations to delete operations
+   * In delete mode, replaces the blockType with the existing block at that position
+   * @param operations - Operations from strategy + depth + behavior
+   * @returns Transformed operations (delete modifier applied if enabled)
+   */
+  private applyDeleteModifier(
+    operations: { position: Vector3D; blockType: string | null }[]
+  ): { position: Vector3D; blockType: string | null }[] {
+    const deleteMode = editorStateManager.getDeleteMode();
+
+    // If delete mode not enabled, return operations unchanged
+    if (!deleteMode) {
+      return operations;
+    }
+
+    // Delete mode: transform operations to target existing blocks for deletion
+    const transformedOperations: { position: Vector3D; blockType: string | null }[] = [];
+
+    for (const operation of operations) {
+      // Look up existing block at this position
+      const existingBlock = projectManager.getBlock(operation.position);
+
+      // Only add if there's a block to delete
+      // The blockType is set to the existing block (for preview)
+      // It will be converted to null when finalizing to ModelHistory
+      if (existingBlock) {
+        transformedOperations.push({
+          position: operation.position,
+          blockType: existingBlock.blockType, // Store actual block for preview
+        });
+      }
+      // If no block exists, skip (nothing to delete)
+    }
+
+    return transformedOperations;
   }
 
   /**
