@@ -1,4 +1,5 @@
 import type { Block, Project, ViewType, LayoutMode } from '../types';
+import { BlockIndex } from '../core/BlockIndex';
 
 /**
  * Mock Minecraft blocks for component testing
@@ -107,7 +108,7 @@ export const mockProject: Project = {
     direction: 'north',
     isConfirmed: true,
   },
-  blocks: new Map(),
+  blocks: new BlockIndex(),
   created: new Date('2026-03-01T10:00:00Z'),
   modified: new Date('2026-03-01T14:30:00Z'),
 };

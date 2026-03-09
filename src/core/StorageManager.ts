@@ -1,5 +1,6 @@
 import { EventEmitter } from './EventEmitter';
 import type { Project, ProjectMetadata } from '../types';
+import { BlockIndex } from './BlockIndex';
 import { modelHistory } from './ModelHistory';
 
 export type SaveState = 'saved' | 'pending' | 'saving';
@@ -248,8 +249,8 @@ class StorageManager extends EventEmitter {
    * Serialize project to JSON string
    */
   private serializeProject(project: Project): string {
-    // Convert Map to array for serialization
-    const blocksArray = Array.from(project.blocks.entries());
+    // Convert BlockIndex to array for serialization
+    const blocksArray = project.blocks.toArray();
 
     const serializable = {
       ...project,
@@ -265,13 +266,18 @@ class StorageManager extends EventEmitter {
   private deserializeProject(jsonString: string): Project {
     const parsed = JSON.parse(jsonString);
 
-    // Convert blocks array back to Map
-    const blocksMap = new Map(parsed.blocks);
+    // Convert blocks array back to BlockIndex
+    const blocksIndex = new BlockIndex();
+    if (Array.isArray(parsed.blocks)) {
+      for (const block of parsed.blocks) {
+        blocksIndex.set(block.position, block);
+      }
+    }
 
     // Convert date strings back to Date objects
     return {
       ...parsed,
-      blocks: blocksMap,
+      blocks: blocksIndex,
       created: new Date(parsed.created),
       modified: new Date(parsed.modified),
     };

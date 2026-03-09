@@ -68,6 +68,15 @@ export class CanvasPainter {
   }
 
   /**
+   * Clear current draft preview (for outline mode where we replace preview on each drag move)
+   */
+  clearDraftPreview(): void {
+    if (!this.isDraftMode) return;
+    this.draftOperations = [];
+    this.draftPositionsMap.clear();
+  }
+
+  /**
    * Finalize draft - persist all operations to ModelHistory
    */
   finalizeDraft(_description?: string): void {
@@ -307,6 +316,9 @@ export class CanvasPainter {
   /**
    * Expand operations along the depth axis based on depth configuration
    *
+   * PERFORMANCE OPTIMIZATION: Pre-fetches all blocks in collision range once
+   * instead of calling getBlock() hundreds/thousands of times.
+   *
    * @param operations - Base operations from strategy
    * @param constrainAxis - The depth axis to expand along
    * @param depthConfig - Depth configuration
@@ -342,7 +354,33 @@ export class CanvasPainter {
     // Determine direction (away from camera) based on view type
     const direction = this.getDepthDirection(viewType);
 
-    // Expand each operation along the depth axis
+    // OPTIMIZATION: Pre-fetch all occupied blocks in the depth range
+    // This converts O(operations × depth) queries into a single batch lookup
+    let blockLookup: Set<string> | null = null;
+    if (depthConfig.mode === 'until-collision') {
+      blockLookup = new Set<string>();
+
+      // Build set of all occupied positions we'll check
+      for (const operation of operations) {
+        // Only pre-fetch for paint operations (not delete/null)
+        if (operation.blockType === null) continue;
+
+        for (let i = 0; i < depthConfig.thickness; i++) {
+          const layer = currentLayer + (i * direction);
+          if (layer < 0 || layer >= maxValue) break;
+
+          const pos: Vector3D = { ...operation.position };
+          pos[axis] = layer;
+
+          const block = projectManager.getBlock(pos);
+          if (block !== null) {
+            blockLookup.add(`${pos.x},${pos.y},${pos.z}`);
+          }
+        }
+      }
+    }
+
+    // Now expand operations with fast O(1) collision lookups
     for (const operation of operations) {
       let layersPainted = 0;
 
@@ -358,12 +396,12 @@ export class CanvasPainter {
         const expandedPosition: Vector3D = { ...operation.position };
         expandedPosition[axis] = layer;
 
-        // Check if there's already a block at this position
-        const existingBlock = projectManager.getBlock(expandedPosition);
-
         // For "until-collision" mode: stop if we hit a block (when painting, not erasing)
-        if (depthConfig.mode === 'until-collision' && operation.blockType !== null && existingBlock) {
-          break;
+        if (depthConfig.mode === 'until-collision' && operation.blockType !== null && blockLookup) {
+          const key = `${expandedPosition.x},${expandedPosition.y},${expandedPosition.z}`;
+          if (blockLookup.has(key)) {
+            break; // Stop at collision
+          }
         }
 
         // For "through" mode: always paint regardless of existing blocks

@@ -5,19 +5,13 @@
  * It takes current state and an event, and returns the new state.
  */
 
-import type { Project, Vector3D, BlockData } from '../types';
+import type { Project, Vector3D } from '../types';
+import { BlockIndex } from '../core/BlockIndex';
 import type {
   ProjectDataEvent,
   DimensionExpandedEvent,
   DimensionShrunkEvent,
 } from '../events/types';
-
-/**
- * Convert 3D position to string key for Map storage
- */
-function positionToKey(position: Vector3D): string {
-  return `${position.x},${position.y},${position.z}`;
-}
 
 /**
  * Apply dimension expansion to state
@@ -38,7 +32,7 @@ function applyDimensionExpansion(
   }
 
   // Shift all blocks
-  const newBlocks = new Map<string, BlockData>();
+  const newBlocks = new BlockIndex();
 
   state.blocks.forEach((block) => {
     const newPos: Vector3D = {
@@ -46,8 +40,7 @@ function applyDimensionExpansion(
       y: block.position.y + shift.y,
       z: block.position.z + shift.z,
     };
-    const newKey = positionToKey(newPos);
-    newBlocks.set(newKey, {
+    newBlocks.set(newPos, {
       ...block,
       position: newPos,
     });
@@ -82,7 +75,7 @@ function applyDimensionShrink(
   const { newDimensions, shift } = event.payload;
 
   // Filter and shift blocks
-  const newBlocks = new Map<string, BlockData>();
+  const newBlocks = new BlockIndex();
 
   state.blocks.forEach((block) => {
     const newPos: Vector3D = {
@@ -100,8 +93,7 @@ function applyDimensionShrink(
       newPos.z >= 0 &&
       newPos.z < newDimensions.depth
     ) {
-      const newKey = positionToKey(newPos);
-      newBlocks.set(newKey, {
+      newBlocks.set(newPos, {
         ...block,
         position: newPos,
       });
@@ -148,7 +140,7 @@ export function projectReducer(
           direction: 'north',
           isConfirmed: false,
         },
-        blocks: new Map(),
+        blocks: new BlockIndex(),
         created: new Date(event.timestamp),
         modified: new Date(event.timestamp),
       };
@@ -156,9 +148,14 @@ export function projectReducer(
     case 'block:placed': {
       if (!state) return null;
 
-      const newBlocks = new Map(state.blocks);
-      const key = positionToKey(event.payload.position);
-      newBlocks.set(key, {
+      // Clone BlockIndex by creating new one and copying all blocks
+      const newBlocks = new BlockIndex();
+      state.blocks.forEach((block) => {
+        newBlocks.set(block.position, block);
+      });
+
+      // Add new block
+      newBlocks.set(event.payload.position, {
         position: event.payload.position,
         blockType: event.payload.blockType,
       });
@@ -173,9 +170,14 @@ export function projectReducer(
     case 'block:removed': {
       if (!state) return null;
 
-      const newBlocks = new Map(state.blocks);
-      const key = positionToKey(event.payload.position);
-      newBlocks.delete(key);
+      // Clone BlockIndex by creating new one and copying all blocks except the removed one
+      const newBlocks = new BlockIndex();
+      state.blocks.forEach((block) => {
+        newBlocks.set(block.position, block);
+      });
+
+      // Remove block
+      newBlocks.delete(event.payload.position);
 
       return {
         ...state,

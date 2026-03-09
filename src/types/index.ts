@@ -2,6 +2,8 @@
  * Core type definitions for the Structures editor
  */
 
+import type { BlockIndex } from '../core/BlockIndex';
+
 export interface Vector3D {
   x: number;
   y: number;
@@ -84,7 +86,7 @@ export interface Project {
   name: string;
   dimensions: Dimensions;
   metaBlock: MetaBlock;
-  blocks: Map<string, BlockData>; // Key format: "x,y,z"
+  blocks: BlockIndex; // Efficient block storage with layer-based queries
   created: Date;
   modified: Date;
 }

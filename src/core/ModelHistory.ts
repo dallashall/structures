@@ -62,6 +62,13 @@ class ModelHistory extends EventEmitter {
   }
 
   /**
+   * Get current project ID
+   */
+  getCurrentProjectId(): string | null {
+    return this.currentProjectId;
+  }
+
+  /**
    * Write blocks to model history (creates compound event internally)
    * This is the public API for persisting model changes
    */

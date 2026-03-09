@@ -1,5 +1,131 @@
 # Architecture Patterns and Decisions
 
+## Core Architecture: Command/Projection Pattern
+
+This application follows **Event Sourcing + CQRS** architecture. All state changes flow through a single direction:
+
+```
+User Action → Command → Validation → Event → Projection → UI
+```
+
+### The Universal Flow
+
+#### Write Side (Commands)
+
+Every user action follows this flow:
+
+1. **User interacts** with UI or API
+2. **Command fires** - represents user intent (e.g., "PlaceBlock", "ShrinkDimensions")
+3. **Command handler:**
+   - Queries current state from projections
+   - Applies business rules to validate
+   - If valid: appends event to shared log, emits notification async
+   - If invalid: rejects with error
+4. **Event persisted** to shared event log
+
+#### Read Side (Projections)
+
+Projections materialize state from events:
+
+1. **Events replayed** to build materialized views
+2. **UI reads** from projections (never from commands)
+3. **Projections update** when new events appended
+
+### Example: ShrinkDimensions Command
+
+```typescript
+// Command handler (write side)
+class ShrinkDimensionsCommand {
+  constructor(
+    private eventLog: EventLog,
+    private blockProjection: BlockProjection
+  ) {}
+
+  execute(direction: 'x+' | 'x-' | ...): Result<void, Error> {
+    // 1. Query current state from projection
+    const blocks = this.blockProjection.getBlocks();
+    const currentDimensions = this.blockProjection.getDimensions();
+
+    // 2. Apply business rules
+    const newDimensions = calculateNewDimensions(currentDimensions, direction);
+    const orphanedBlocks = findOrphanedBlocks(blocks, newDimensions);
+
+    if (orphanedBlocks.length > 0) {
+      // 3a. Reject if invalid
+      return Err(new Error(`Cannot shrink: would orphan ${orphanedBlocks.length} blocks`));
+    }
+
+    // 3b. Append event if valid
+    const event: DimensionShrunkEvent = {
+      type: 'dimension:shrunk',
+      eventId: generateUUID(),
+      timestamp: Date.now(),
+      payload: { direction, newDimensions }
+    };
+
+    this.eventLog.append(event);
+
+    // 4. Emit notification async (after event persisted)
+    this.eventLog.emit('event:appended');
+
+    return Ok(void);
+  }
+}
+```
+
+```typescript
+// Projection (read side)
+class BlockProjection {
+  private blocks: BlockIndex = new BlockIndex();
+  private dimensions: Dimensions;
+
+  constructor(private eventLog: EventLog) {
+    // Materialize initial state from events
+    this.rebuild();
+
+    // Update when new events appended
+    eventLog.on('event:appended', () => this.rebuild());
+  }
+
+  private rebuild(): void {
+    const events = this.eventLog.getEvents();
+
+    // Replay only block events to build block index
+    for (const event of events) {
+      switch (event.type) {
+        case 'block:placed':
+          this.blocks.set(event.payload.position, event.payload.blockType);
+          break;
+        case 'block:removed':
+          this.blocks.delete(event.payload.position);
+          break;
+        // Ignore non-block events
+      }
+    }
+  }
+
+  // Read methods (used by UI and commands)
+  getBlocks(): BlockIndex {
+    return this.blocks;
+  }
+}
+```
+
+### Benefits of This Pattern
+
+✅ **Single direction data flow** - Eliminates sync bugs
+✅ **Clear separation** - Commands validate, projections materialize
+✅ **Testability** - Commands and projections are isolated
+✅ **Performance** - Projections cache materialized state
+✅ **Time travel** - Replay events to any point
+✅ **Audit log** - All changes recorded as events
+
+### Key Insight
+
+**Commands** own business logic and handle writes.
+**Projections** own materialized state and handle reads.
+**Never mix them** - no "managers" that do both.
+
 ## Core Principles
 
 ### 1. Avoid "Manager" and "Controller" Anti-Patterns
@@ -43,6 +169,146 @@ The application has distinct concerns that must not be conflated:
 - **What:** Pure visualization combining model + preview
 - **Formula:** `render(modelBlocks + previewBlocks)`
 - **No state:** Just draws what it's given
+
+## Shared Event Log Architecture
+
+### The Single Event Log
+
+All events append to one shared log:
+
+```typescript
+// Shared event log contains ALL events
+EventLog = [
+  { type: 'project:created', payload: { name, dimensions } },
+  { type: 'block:placed', payload: { position, blockType } },
+  { type: 'block:placed', payload: { position, blockType } },
+  { type: 'dimension:expanded', payload: { direction } },
+  { type: 'metablock:placed', payload: { position, direction } },
+  { type: 'block:removed', payload: { position } },
+  // ...
+]
+```
+
+### Multiple Projections from One Log
+
+Different projections consume different events:
+
+```typescript
+// BlockProjection - consumes block events
+class BlockProjection {
+  private blocks: BlockIndex = new BlockIndex();
+
+  rebuild(events: Event[]): void {
+    for (const event of events) {
+      switch (event.type) {
+        case 'block:placed':
+          this.blocks.set(event.payload.position, event.payload.blockType);
+          break;
+        case 'block:removed':
+          this.blocks.delete(event.payload.position);
+          break;
+        // Ignores: project:created, dimension:expanded, metablock:placed, etc.
+      }
+    }
+  }
+
+  getBlocks(): BlockIndex {
+    return this.blocks;
+  }
+}
+
+// MetadataProjection - consumes project/dimension/metablock events
+class MetadataProjection {
+  private metadata: ProjectMetadata;
+
+  rebuild(events: Event[]): void {
+    for (const event of events) {
+      switch (event.type) {
+        case 'project:created':
+          this.metadata = {
+            id: event.projectId,
+            name: event.payload.name,
+            dimensions: event.payload.dimensions,
+            created: event.timestamp,
+            modified: event.timestamp
+          };
+          break;
+        case 'project:renamed':
+          this.metadata.name = event.payload.newName;
+          this.metadata.modified = event.timestamp;
+          break;
+        case 'dimension:expanded':
+          this.metadata.dimensions = event.payload.newDimensions;
+          break;
+        case 'metablock:placed':
+          this.metadata.metaBlock = event.payload;
+          break;
+        // Ignores: block:placed, block:removed
+      }
+    }
+  }
+
+  getMetadata(): ProjectMetadata {
+    return this.metadata;
+  }
+}
+
+// ProjectView - combines multiple projections
+class ProjectView {
+  constructor(
+    private blockProjection: BlockProjection,
+    private metadataProjection: MetadataProjection
+  ) {}
+
+  getProject(): Project {
+    return {
+      ...this.metadataProjection.getMetadata(),
+      blocks: this.blockProjection.getBlocks()
+    };
+  }
+}
+```
+
+### Concerns vs. Data Types
+
+**BlockProjection** is concerned with **block history** (placement/removal).
+It doesn't care about dimensions changing or metablock placement.
+
+**MetadataProjection** is concerned with **project metadata** (name, dimensions, metablock).
+It doesn't care about individual blocks being placed/removed.
+
+**Dimensions** are metadata (describe the bounds), not model data (the blocks themselves).
+Expanding dimensions doesn't change existing blocks - just changes the valid range.
+Shrinking dimensions might orphan blocks - **ShrinkDimensionsCommand queries BlockProjection to prevent this**.
+
+### Command Example: ShrinkDimensions
+
+```typescript
+class ShrinkDimensionsCommand {
+  execute(direction: Direction): Result<void, Error> {
+    // 1. Query BlockProjection to check for orphans
+    const blocks = this.blockProjection.getBlocks();
+    const currentDimensions = this.metadataProjection.getMetadata().dimensions;
+    const newDimensions = calculateNewDimensions(currentDimensions, direction);
+
+    // 2. Business rule: don't orphan blocks
+    if (wouldOrphanBlocks(blocks, newDimensions)) {
+      return Err(new Error('Cannot shrink: would orphan blocks'));
+    }
+
+    // 3. Append event
+    this.eventLog.append({
+      type: 'dimension:shrunk',
+      payload: { direction, newDimensions }
+    });
+
+    return Ok(void);
+  }
+}
+```
+
+**Key insight:** Commands query projections for validation, but don't modify them directly.
+Projections rebuild from events.
 
 ## Three Distinct Patterns
 

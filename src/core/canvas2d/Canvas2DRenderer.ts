@@ -161,37 +161,60 @@ export class Canvas2DRenderer {
 
   /**
    * Draw all blocks in the project
+   *
+   * OPTIMIZATION: Uses layer-based queries instead of iterating all blocks.
+   * Only queries blocks within ±2 layers of the active layer (opacity range).
+   * This is O(blocks in visible layers) instead of O(all blocks).
    */
   private drawBlocks(
     dimensions: Dimensions,
     viewport: Canvas2DViewport,
     activeLayers: { x: number; y: number; z: number }
   ): void {
-    const project = projectManager.getProject();
-    if (!project) return;
-
     const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
     const cellSize = viewport.getCellSize();
     const pan = viewport.getPan();
 
-    project.blocks.forEach((blockData) => {
+    // Determine which axis is the depth axis for this view
+    const axes = viewport.getAxesForView();
+    const depthAxis = axes.depth.toLowerCase() as 'x' | 'y' | 'z';
+    const activeLayer = getLayerForAxis(axes.depth, activeLayers);
+
+    // Query blocks in visible layer range (±2 for opacity falloff)
+    // Distance 0: 100%, distance 1: 30%, distance 2: 10%, distance 3+: 0%
+    const minLayer = Math.max(0, activeLayer - 2);
+    const maxLayer = activeLayer + 2;
+
+    const visibleBlocks: Array<{ blockData: any; distance: number }> = [];
+
+    // Collect blocks from all visible layers
+    for (let layer = minLayer; layer <= maxLayer; layer++) {
+      const blocksAtLayer = projectManager.getBlocksAtLayer(depthAxis, layer);
+      const distance = Math.abs(layer - activeLayer);
+
+      for (const blockData of blocksAtLayer) {
+        visibleBlocks.push({ blockData, distance });
+      }
+    }
+
+    // Render visible blocks
+    for (const { blockData, distance } of visibleBlocks) {
       const { gridX, gridY } = viewport.positionToGrid(blockData.position);
 
       // Check bounds
       if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
-        return;
+        continue;
       }
 
-      // Calculate layer distance and opacity
-      const distance = viewport.getLayerDistance(blockData.position, activeLayers);
+      // Calculate opacity
       const opacity = getOpacityForDistance(distance);
 
       // Don't render if 3+ layers away
-      if (opacity === 0.0) return;
+      if (opacity === 0.0) continue;
 
       // Get block color
       const block = blockRegistry.getBlock(blockData.blockType);
-      if (!block) return;
+      if (!block) continue;
 
       // Draw block
       const px = pan.x + gridX * cellSize;
@@ -201,7 +224,7 @@ export class Canvas2DRenderer {
       this.ctx.globalAlpha = opacity;
       this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       this.ctx.globalAlpha = 1.0;
-    });
+    }
   }
 
   /**

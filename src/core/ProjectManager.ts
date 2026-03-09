@@ -1,5 +1,6 @@
 import { EventEmitter } from './EventEmitter';
 import type { Project, Dimensions, Vector3D, BlockData, MetaBlock } from '../types';
+import { BlockIndex } from './BlockIndex';
 import { modelHistory } from './ModelHistory';
 import { generateUUID } from '../utils/uuid';
 import { getSessionId } from '../utils/sessionId';
@@ -39,6 +40,10 @@ class ProjectManager extends EventEmitter {
   private static instance: ProjectManager;
   private currentProject: Project | null = null;
 
+  // PERFORMANCE: Cache computed state to avoid replaying events on every getProject() call
+  // Only recompute when ModelHistory actually changes (on 'model:updated' event)
+  private cachedComputedState: Project | null = null;
+
   private constructor() {
     super();
 
@@ -48,12 +53,18 @@ class ProjectManager extends EventEmitter {
 
   /**
    * Handle model updated - recompute state and emit changes
+   *
+   * PERFORMANCE: This is the ONLY place we replay events.
+   * The result is cached for subsequent getProject() calls.
    */
   private handleModelUpdated(): void {
     if (!this.currentProject) return;
 
-    // Emit model:updated so views can refresh
-    this.emit('model:updated', this.getProject());
+    // Recompute state from ModelHistory and cache it
+    this.cachedComputedState = modelHistory.replayEvents(this.currentProject.id);
+
+    // Emit model:updated with cached state
+    this.emit('model:updated', this.cachedComputedState);
   }
 
   static getInstance(): ProjectManager {
@@ -79,7 +90,7 @@ class ProjectManager extends EventEmitter {
         direction: 'north', // Fixed direction as per UX decisions
         isConfirmed: false, // User must place and confirm
       },
-      blocks: new Map(),
+      blocks: new BlockIndex(),
       created: now,
       modified: now,
     };
@@ -101,6 +112,10 @@ class ProjectManager extends EventEmitter {
 
     // Note: Meta block position is initialized but not confirmed yet
     // The user will place and confirm it as their first action
+
+    // Initialize cache with newly created project
+    this.cachedComputedState = this.currentProject;
+
     this.emit('project:created', this.currentProject);
   }
 
@@ -110,25 +125,22 @@ class ProjectManager extends EventEmitter {
   loadProject(project: Project): void {
     this.currentProject = project;
 
-    this.emit('project:loaded', this.currentProject);
+    // Initialize cache by replaying events
+    this.cachedComputedState = modelHistory.replayEvents(project.id);
+
+    this.emit('project:loaded', this.cachedComputedState);
   }
 
   /**
    * Get the current project
    *
-   * Returns computed state from event journal:
-   * state = eventsSinceLastSnapshot.reduce(applyEvent, lastSnapshot)
+   * PERFORMANCE: Returns cached computed state.
+   * State is recomputed only when ModelHistory changes (on 'model:updated' event).
+   * This prevents replaying 50+ events on every mousemove/render.
    */
   getProject(): Project | null {
-    if (!this.currentProject) {
-      return null;
-    }
-
-    // Compute state from ModelHistory events
-    const computedState = modelHistory.replayEvents(this.currentProject.id);
-
-    // Return computed state as the authoritative source of truth
-    return computedState;
+    // Return cached state (updated on model:updated event)
+    return this.cachedComputedState;
   }
 
   /**
@@ -180,13 +192,13 @@ class ProjectManager extends EventEmitter {
 
     const previousBlockType = this.getBlock(position)?.blockType;
 
-    const key = this.positionToKey(position);
     const blockData: BlockData = {
       position,
       blockType,
     };
 
-    this.currentProject.blocks.set(key, blockData);
+    // BlockIndex handles both Map storage and layer indices atomically
+    this.currentProject.blocks.set(position, blockData);
     this.currentProject.modified = new Date();
 
     // DUAL-WRITE: Append BlockPlaced event
@@ -216,9 +228,8 @@ class ProjectManager extends EventEmitter {
       return;
     }
 
-    const key = this.positionToKey(position);
     const existingBlock = this.getBlock(position);
-    const existed = this.currentProject.blocks.delete(key);
+    const existed = this.currentProject.blocks.delete(position);
 
     if (existed && existingBlock) {
       this.currentProject.modified = new Date();
@@ -252,8 +263,7 @@ class ProjectManager extends EventEmitter {
       return null;
     }
 
-    const key = this.positionToKey(position);
-    return project.blocks.get(key) || null;
+    return project.blocks.get(position);
   }
 
   /**
@@ -266,7 +276,7 @@ class ProjectManager extends EventEmitter {
       return [];
     }
 
-    return Array.from(project.blocks.values());
+    return project.blocks.toArray();
   }
 
   /**
@@ -406,7 +416,7 @@ class ProjectManager extends EventEmitter {
 
     // If shifting needed (x-, y-, z-), update all block positions
     if (shift.x !== 0 || shift.y !== 0 || shift.z !== 0) {
-      const newBlocks = new Map<string, BlockData>();
+      const newBlocks = new BlockIndex();
 
       this.currentProject.blocks.forEach((block) => {
         const newPos: Vector3D = {
@@ -414,8 +424,7 @@ class ProjectManager extends EventEmitter {
           y: block.position.y + shift.y,
           z: block.position.z + shift.z,
         };
-        const newKey = this.positionToKey(newPos);
-        newBlocks.set(newKey, {
+        newBlocks.set(newPos, {
           ...block,
           position: newPos,
         });
@@ -500,7 +509,7 @@ class ProjectManager extends EventEmitter {
     }
 
     // Filter and shift blocks
-    const newBlocks = new Map<string, BlockData>();
+    const newBlocks = new BlockIndex();
     const removedBlocks: BlockData[] = [];
 
     this.currentProject.blocks.forEach((block) => {
@@ -519,8 +528,7 @@ class ProjectManager extends EventEmitter {
         newPos.z >= 0 &&
         newPos.z < newDimensions.depth
       ) {
-        const newKey = this.positionToKey(newPos);
-        newBlocks.set(newKey, {
+        newBlocks.set(newPos, {
           ...block,
           position: newPos,
         });
@@ -566,10 +574,14 @@ class ProjectManager extends EventEmitter {
   }
 
   /**
-   * Convert 3D position to string key for Map storage
+   * Get all blocks at a specific layer
+   * Delegates to BlockIndex for efficient layer-based querying
    */
-  private positionToKey(position: Vector3D): string {
-    return `${position.x},${position.y},${position.z}`;
+  getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): BlockData[] {
+    const project = this.getProject();
+    if (!project) return [];
+
+    return project.blocks.getBlocksAtLayer(axis, layer);
   }
 
   /**

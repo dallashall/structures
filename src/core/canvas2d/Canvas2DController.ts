@@ -273,15 +273,13 @@ export class Canvas2DController {
   private handleDragMove(position: GridPosition, _modifiers: ModifierKeys): void {
     const paintMode = editorStateManager.getPaintMode();
 
-    // Outline mode: update preview
+    // Outline mode: clear preview before repainting (replace, not accumulate)
     if (paintMode === 'outline') {
-      this.previewManager.updateOutlineDrag(position.gridX, position.gridY);
-      this.render();
-      return;
+      this.canvasPainter.clearDraftPreview();
     }
 
-    // Point/fill mode while dragging: paint with selected block
-    // Delete modifier will transform to erase if delete mode is enabled
+    // All paint modes (point, fill, outline) use the same paint pipeline
+    // This ensures depth modifier, delete modifier, and DraftingService preview work consistently
     const activeLayers = editorStateManager.getActiveLayers();
     const selectedBlock = editorStateManager.getSelectedBlock();
     if (selectedBlock) {
@@ -298,28 +296,12 @@ export class Canvas2DController {
   /**
    * Handle drag end - domain logic
    */
-  private handleDragEnd(position: GridPosition, _modifiers: ModifierKeys): void {
+  private handleDragEnd(_position: GridPosition, _modifiers: ModifierKeys): void {
     const paintMode = editorStateManager.getPaintMode();
 
     // Outline mode: finalize
     if (paintMode === 'outline') {
-      this.previewManager.endOutlineDrag();
-
-      // Paint outline with selected block
-      // Delete modifier will transform to erase if delete mode is enabled
-      const activeLayers = editorStateManager.getActiveLayers();
-      const selectedBlock = editorStateManager.getSelectedBlock();
-      if (selectedBlock) {
-        this.canvasPainter.paint(
-          position.gridX,
-          position.gridY,
-          this.viewport.getViewType(),
-          activeLayers,
-          selectedBlock
-        );
-      }
-
-      // End drag in strategy
+      // End drag in strategy (clears dragStart state)
       const strategy = this.canvasPainter['strategy'];
       if (strategy && 'endDrag' in strategy) {
         (strategy as any).endDrag();
