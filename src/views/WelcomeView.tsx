@@ -1,10 +1,9 @@
 import { Box, Stack, Typography, Button, Divider } from "@mui/material";
 import { useState, useEffect } from "react";
 import { Add, FolderOpen } from "@mui/icons-material";
-import { storageManager } from "../core/StorageManager";
+import { storage } from "../core/Storage";
 import { ProjectCard } from "../components/ProjectCard";
-import { ProjectMetadataPanel } from "../components/ProjectMetadataPanel";
-import type { ProjectMetadata } from "../types";
+import type { StorageMetadata } from "../types";
 
 interface WelcomeViewProps {
   onNewProject: () => void;
@@ -29,7 +28,7 @@ export function WelcomeView({
   onOpenProject,
   onLoadFromFile,
 }: WelcomeViewProps) {
-  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
+  const [projects, setProjects] = useState<StorageMetadata[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
@@ -39,7 +38,7 @@ export function WelcomeView({
   useEffect(() => {
     const loadProjects = async () => {
       setIsLoading(true);
-      const projectList = await storageManager.listProjects();
+      const projectList = await storage.listProjects();
       setProjects(projectList);
       setIsLoading(false);
     };
@@ -51,23 +50,14 @@ export function WelcomeView({
     setSelectedProjectId(projectId);
   };
 
-  const handleOpenProject = () => {
-    if (selectedProjectId) {
-      onOpenProject(selectedProjectId);
-    }
+  const handleOpenProjectById = (projectId: string) => {
+    onOpenProject(projectId);
   };
 
-  const handleDeleteProject = async () => {
-    if (!selectedProjectId) {
-      return;
-    }
-
-    await storageManager.deleteProject(selectedProjectId);
-
-    // Refresh project list
-    const projectList = await storageManager.listProjects();
+  const handleDeleteProjectById = (projectId: string) => {
+    storage.deleteProject(projectId);
+    const projectList = storage.listProjects();
     setProjects(projectList);
-    setSelectedProjectId(null);
   };
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
@@ -153,11 +143,18 @@ export function WelcomeView({
           {/* Metadata Panel */}
           <Box sx={{ flex: 1 }}>
             {selectedProject ? (
-              <ProjectMetadataPanel
-                project={selectedProject}
-                onOpen={handleOpenProject}
-                onDelete={handleDeleteProject}
-              />
+              <Box sx={{ p: 2 }}>
+                <Typography variant="h6">{selectedProject.name}</Typography>
+                <Typography variant="body2">
+                  Created: {selectedProject.created.toLocaleDateString()}
+                </Typography>
+                <Button onClick={() => handleOpenProjectById(selectedProject.id)}>
+                  Open
+                </Button>
+                <Button onClick={() => handleDeleteProjectById(selectedProject.id)}>
+                  Delete
+                </Button>
+              </Box>
             ) : (
               <Box
                 sx={{

@@ -1,7 +1,7 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
 import { ShapeUtils } from './ShapeUtils';
-import { editorStateManager } from '../../EditorStateManager';
+import { editorState } from '../../EditorState';
 
 /**
  * ArchPaintStrategy - Pure curved arch painting
@@ -87,7 +87,7 @@ export class ArchPaintStrategy implements PaintStrategy {
     );
 
     // Get positions based on fill mode
-    const shapeFillMode = editorStateManager.getShapeFillMode();
+    const shapeFillMode = editorState.getShapeFillMode();
     let positions: Vector3D[];
 
     if (shapeFillMode === 'filled') {
@@ -111,7 +111,7 @@ export class ArchPaintStrategy implements PaintStrategy {
     }
 
     // Apply depth if enabled
-    const depthConfig = editorStateManager.getDepthConfig();
+    const depthConfig = editorState.getDepthConfig();
     if (depthConfig.enabled) {
       const constrainAxis = ShapeUtils.getPerpendicularAxis(plane);
       positions = ShapeUtils.applyDepth(

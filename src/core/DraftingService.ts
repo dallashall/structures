@@ -4,16 +4,16 @@
  * Responsibilities:
  * - Hold preview blocks during active drawing interactions
  * - Share preview state across 2D and 3D views
- * - Finalize preview by persisting to ModelHistory
+ * - Finalize preview by persisting to EventLog
  * - Cancel preview without persisting
  *
- * Key distinction: Preview state is EPHEMERAL (not persisted to ModelHistory).
+ * Key distinction: Preview state is EPHEMERAL (not persisted to EventLog).
  * Only when finalize() is called does the preview become part of the model history.
  */
 
 import { EventEmitter } from './EventEmitter';
+import { eventLog } from './EventLog';
 import type { Vector3D } from '../types';
-import { modelHistory } from './ModelHistory';
 
 export interface PreviewBlock {
   position: Vector3D;
@@ -57,24 +57,22 @@ class DraftingService extends EventEmitter {
   }
 
   /**
-   * Finalize draft - persist to ModelHistory and clear preview
+   * Finalize draft - persist to EventLog and clear preview
    */
-  finalize(): void {
+  async finalize(): Promise<void> {
     if (this.previewBlocks.length === 0) {
       this.previewBlocks = [];
       this.emit('draft:cancelled');
       return;
     }
 
-    // Convert preview blocks to format expected by ModelHistory.write()
-    const blocks = this.previewBlocks.map(block => ({
-      position: block.position,
-      blockType: block.blockType,
-      // previousBlockType will be determined by ProjectManager.getBlock()
-    }));
-
-    // Persist to ModelHistory (creates CompoundEvent internally)
-    modelHistory.write(blocks);
+    // Persist each block to EventLog as model:blockPlaced
+    for (const block of this.previewBlocks) {
+      await eventLog.append('model:blockPlaced', {
+        position: block.position,
+        blockType: block.blockType,
+      });
+    }
 
     // Clear preview
     this.previewBlocks = [];

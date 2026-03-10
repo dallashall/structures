@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Add, Save, FolderOpen } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
-import type { SaveState } from '../core/StorageManager';
+import type { SaveState } from '../core/Storage';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
 
 interface ToolbarProps {

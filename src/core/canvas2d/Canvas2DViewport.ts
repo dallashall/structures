@@ -1,6 +1,6 @@
 import type { ViewType, Vector3D, Dimensions } from '../../types';
-import { editorStateManager } from '../EditorStateManager';
-import { projectManager } from '../ProjectManager';
+import { editorState } from '../EditorState';
+import { projectView } from '../../projections/ProjectView';
 
 /**
  * Canvas2DViewport - Manages viewport state and coordinate conversions
@@ -30,7 +30,7 @@ export class Canvas2DViewport {
   ) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
-    this.initializePan();
+    void this.initializePan();
   }
 
   /**
@@ -39,7 +39,7 @@ export class Canvas2DViewport {
   setCanvasSize(width: number, height: number): void {
     this.canvasWidth = width;
     this.canvasHeight = height;
-    this.initializePan();
+    void this.initializePan();
   }
 
   /**
@@ -47,14 +47,14 @@ export class Canvas2DViewport {
    */
   setViewType(viewType: ViewType): void {
     this.viewType = viewType;
-    this.initializePan();
+    void this.initializePan();
   }
 
   /**
    * Initialize pan to center the grid
    */
-  private initializePan(): void {
-    const project = projectManager.getProject();
+  private async initializePan(): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) return;
 
     const { gridWidth, gridHeight } = this.getGridDimensions(project.dimensions);
@@ -85,8 +85,8 @@ export class Canvas2DViewport {
   /**
    * Convert pixel coordinates to grid coordinates
    */
-  pixelToGrid(pixelX: number, pixelY: number): { gridX: number; gridY: number } | null {
-    const project = projectManager.getProject();
+  async pixelToGrid(pixelX: number, pixelY: number): Promise<{ gridX: number; gridY: number } | null> {
+    const project = await projectView.getProject();
     if (!project) return null;
 
     const { gridWidth, gridHeight } = this.getGridDimensions(project.dimensions);
@@ -103,11 +103,32 @@ export class Canvas2DViewport {
   }
 
   /**
+   * Convert grid coordinates to 3D world position (synchronous)
+   */
+  gridToPositionSync(gridX: number, gridY: number): Vector3D {
+    const activeLayers = editorState.getActiveLayers();
+    const project = projectView.getCached();
+    if (!project) return { x: 0, y: 0, z: 0 };
+
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return { x: gridX, y: activeLayers.y, z: project.dimensions.depth - 1 - gridY };
+      case 'left':
+      case 'right':
+        return { x: activeLayers.x, y: gridX, z: project.dimensions.depth - 1 - gridY };
+      case 'top':
+      case 'bottom':
+        return { x: gridX, y: project.dimensions.height - 1 - gridY, z: activeLayers.z };
+    }
+  }
+
+  /**
    * Convert grid coordinates to 3D world position
    */
-  gridToPosition(gridX: number, gridY: number): Vector3D {
-    const activeLayers = editorStateManager.getActiveLayers();
-    const project = projectManager.getProject();
+  async gridToPosition(gridX: number, gridY: number): Promise<Vector3D> {
+    const activeLayers = editorState.getActiveLayers();
+    const project = await projectView.getProject();
     if (!project) return { x: 0, y: 0, z: 0 };
 
     switch (this.viewType) {
@@ -126,8 +147,8 @@ export class Canvas2DViewport {
   /**
    * Convert 3D world position to grid coordinates (for rendering)
    */
-  positionToGrid(position: Vector3D): { gridX: number; gridY: number } {
-    const project = projectManager.getProject();
+  async positionToGrid(position: Vector3D): Promise<{ gridX: number; gridY: number }> {
+    const project = await projectView.getProject();
     if (!project) return { gridX: 0, gridY: 0 };
 
     switch (this.viewType) {
@@ -140,6 +161,24 @@ export class Canvas2DViewport {
       case 'top':
       case 'bottom':
         return { gridX: position.x, gridY: project.dimensions.height - 1 - position.y };
+    }
+  }
+
+  /**
+   * Convert 3D position to 2D grid coordinates (synchronous)
+   * Used in render loops where dimensions are already known
+   */
+  positionToGridSync(position: Vector3D, dimensions: Dimensions): { gridX: number; gridY: number } {
+    switch (this.viewType) {
+      case 'front':
+      case 'back':
+        return { gridX: position.x, gridY: dimensions.depth - 1 - position.z };
+      case 'left':
+      case 'right':
+        return { gridX: position.y, gridY: dimensions.depth - 1 - position.z };
+      case 'top':
+      case 'bottom':
+        return { gridX: position.x, gridY: dimensions.height - 1 - position.y };
     }
   }
 

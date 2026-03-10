@@ -1,6 +1,7 @@
 import React from 'react';
-import { projectManager } from "../core/ProjectManager";
-import { modelHistory } from "../core/ModelHistory";
+import { projectView } from "../projections/ProjectView";
+import { blockProjection } from "../projections/BlockProjection";
+import { metadataProjection } from "../projections/MetadataProjection";
 import type { Project } from "../types";
 
 /**
@@ -11,16 +12,20 @@ export interface WithProjectStateProps {
 }
 
 /**
- * Higher-Order Component that subscribes to ProjectManager and ModelHistory events
- * and provides current project state to wrapped component.
+ * Higher-Order Component that subscribes to projections and provides
+ * current project state to wrapped component.
+ *
+ * Linear flow architecture:
+ * - Subscribes to rebuild events from both projections
+ * - Queries state via ProjectView.getProject()
+ * - No cascading events, just signal → query
  *
  * Subscribes to:
- * - project:created (ProjectManager)
- * - project:loaded (ProjectManager)
- * - model:updated (ModelHistory)
+ * - blocks:rebuilt (BlockProjection) - Blocks changed
+ * - metadata:rebuilt (MetadataProjection) - Metadata changed
  *
  * Injects props:
- * - project: Project | null - The current project state
+ * - project: Project | null - The complete project state
  *
  * @example
  * const EnhancedComponent = withProjectState(MyComponent);
@@ -29,40 +34,41 @@ export function withProjectState<P extends object>(
   Component: React.ComponentType<P & WithProjectStateProps>,
 ) {
   return function WithProjectState(props: P) {
-    const [project, setProject] = React.useState<Project | null>(
-      projectManager.getProject(),
-    );
+    const [project, setProject] = React.useState<Project | null>(null);
 
+    // Initial load
     React.useEffect(() => {
-      const handleProjectCreated = (newProject: Project) => {
-        setProject(newProject);
-      };
+      let isMounted = true;
 
-      const handleProjectLoaded = (loadedProject: Project) => {
-        setProject(loadedProject);
-      };
-
-      const handleModelUpdated = () => {
-        // Model updated - get fresh computed state from projectManager
-        const currentProject = projectManager.getProject();
-        if (currentProject) {
-          // Shallow copy to create new reference for React re-render
-          setProject({ ...currentProject });
+      const loadProject = async () => {
+        const proj = await projectView.getProject();
+        if (isMounted) {
+          setProject(proj);
         }
       };
 
-      // Subscribe to project lifecycle events
-      projectManager.on("project:created", handleProjectCreated);
-      projectManager.on("project:loaded", handleProjectLoaded);
+      loadProject();
 
-      // Subscribe to model updates (replaces 'project:changed')
-      modelHistory.on("model:updated", handleModelUpdated);
+      return () => {
+        isMounted = false;
+      };
+    }, []);
+
+    // Subscribe to updates
+    React.useEffect(() => {
+      const handleProjectionCalculated = async () => {
+        const proj = await projectView.getProject();
+        setProject(proj);
+      };
+
+      // Subscribe to both projections
+      blockProjection.on("blocks:rebuilt", handleProjectionCalculated);
+      metadataProjection.on("metadata:rebuilt", handleProjectionCalculated);
 
       // Cleanup
       return () => {
-        projectManager.off("project:created", handleProjectCreated);
-        projectManager.off("project:loaded", handleProjectLoaded);
-        modelHistory.off("model:updated", handleModelUpdated);
+        blockProjection.off("blocks:rebuilt", handleProjectionCalculated);
+        metadataProjection.off("metadata:rebuilt", handleProjectionCalculated);
       };
     }, []);
 

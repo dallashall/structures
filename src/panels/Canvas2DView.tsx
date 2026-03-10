@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
-import type { ViewType, Project, LayerState, Vector3D } from "../types";
-import { Canvas2DController } from "../core/canvas2d";
+import type { ViewType, Project, LayerState } from "../types";
+import { Canvas2D } from "../core/canvas2d";
 
 interface Canvas2DViewProps {
   viewType: ViewType;
@@ -11,12 +11,10 @@ interface Canvas2DViewProps {
   height: number;
   selectedBlockId: string | null;
   isPlacementMode: boolean;
-  onBlockPlaced: (position: Vector3D, blockType: string) => void;
-  onBlockRemoved: (position: Vector3D) => void;
 }
 
 /**
- * Canvas2DView - Thin React wrapper for Canvas2DController
+ * Canvas2DView - Thin React wrapper for Canvas2D
  *
  * Pure TypeScript controller handles all rendering and interactions.
  * This component just mounts/unmounts the controller and provides the canvas element.
@@ -24,9 +22,9 @@ interface Canvas2DViewProps {
  * ARCHITECTURAL NOTE:
  * This component is technically an HOC for the native HTML canvas element.
  * It uses React hooks (useEffect, useRef) to manage the lifecycle of the
- * Canvas2DController and sync props to it. This is an accepted exception to
+ * Canvas2D and sync props to it. This is an accepted exception to
  * the "minimal hooks" rule because:
- * - All business logic lives in the Canvas2DController singleton
+ * - All business logic lives in the Canvas2D singleton
  * - The component only handles React ↔ DOM lifecycle management
  * - It's a bridge between React's declarative props and imperative canvas APIs
  */
@@ -37,13 +35,13 @@ export function Canvas2DView({
   isPlacementMode,
 }: Canvas2DViewProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const controllerRef = React.useRef<Canvas2DController | null>(null);
+  const controllerRef = React.useRef<Canvas2D | null>(null);
 
   // Create and mount controller
   React.useEffect(() => {
     if (!canvasRef.current) return;
 
-    const controller = new Canvas2DController(canvasRef.current, viewType);
+    const controller = new Canvas2D(canvasRef.current, viewType);
     controllerRef.current = controller;
 
     return () => {

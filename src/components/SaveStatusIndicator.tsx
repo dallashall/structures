@@ -1,6 +1,6 @@
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { CheckCircle, Schedule } from '@mui/icons-material';
-import type { SaveState } from '../core/StorageManager';
+import type { SaveState } from '../core/Storage';
 
 interface SaveStatusIndicatorProps {
   saveState: SaveState;
@@ -17,7 +17,7 @@ interface SaveStatusIndicatorProps {
  * Uses MUI components for consistent theming.
  */
 export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
-  const getStatusConfig = () => {
+  const getStatusConfig = (): { icon: React.ReactNode; text: string; color: string } => {
     switch (saveState) {
       case 'saved':
         return {
@@ -33,9 +33,21 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
         };
       case 'saving':
         return {
-          icon: <CircularProgress size={18} thickness={5} />,  // Match icon size: 18px
+          icon: <CircularProgress size={18} thickness={5} />,
           text: 'Saving...',
           color: 'info.main',
+        };
+      case 'error':
+        return {
+          icon: <Schedule sx={{ fontSize: 18 }} />,
+          text: 'Error',
+          color: 'error.main',
+        };
+      default:
+        return {
+          icon: <Schedule sx={{ fontSize: 18 }} />,
+          text: 'Idle',
+          color: 'text.secondary',
         };
     }
   };

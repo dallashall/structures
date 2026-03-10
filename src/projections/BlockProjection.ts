@@ -1,46 +1,50 @@
+/**
+ * BlockProjection - Optimized block index for rendering
+ *
+ * Maintains snapshot of:
+ * - BlockIndex (optimized for spatial queries)
+ *
+ * Rebuilds incrementally from snapshot when new model:blockPlaced/model:blockRemoved events arrive.
+ * Creates new snapshot every 15 events to optimize replay performance.
+ *
+ * This projection is optimized for rendering queries:
+ * - getBlocksAtLayer(axis, layer) - fast spatial queries
+ * - getBlock(position) - fast position lookups
+ */
+
 import { EventEmitter } from '../core/EventEmitter';
-import { modelHistory } from '../core/ModelHistory';
-import { eventLog } from '../core/EventLog';
+import { eventLog, type Event } from '../core/EventLog';
 import { BlockIndex } from '../core/BlockIndex';
 import type { Vector3D, BlockData } from '../types';
 
+const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
+
+interface BlockSnapshot {
+  latestEventId: number;
+  blocks: BlockIndex;
+}
+
 /**
- * BlockProjection - Materializes block model from ModelHistory
- *
- * Consumes events from ModelHistory:
- * - block:placed → adds block to index
- * - block:removed → removes block from index
- * - compound → processes child events
- *
- * Also subscribes to EventLog for dimension changes:
- * - dimension:expanded → shifts blocks if needed
- * - dimension:shrunk → shifts blocks if needed
- *
- * This is a READ MODEL (projection) - it materializes state from events.
- * It does not handle commands or append events.
- *
- * Cross-cutting concern: Dimension events live in EventLog (metadata)
- * but affect BlockProjection (must shift blocks when dimensions change).
+ * BlockProjection singleton
  */
 class BlockProjection extends EventEmitter {
   private static instance: BlockProjection;
-  private blocks: BlockIndex = new BlockIndex();
+
+  private snapshot: BlockSnapshot = {
+    latestEventId: 0,
+    blocks: new BlockIndex(),
+  };
+
+  private eventsSinceSnapshot = 0;
 
   private constructor() {
     super();
 
-    // Rebuild when ModelHistory changes (block events)
-    modelHistory.on('model:updated', () => this.rebuildFromModelHistory());
+    // Listen to event log
+    eventLog.on('event:appended', this.handleEvent.bind(this));
 
-    // Listen for dimension changes from EventLog (cross-cutting concern)
-    eventLog.on('event:appended', (event) => {
-      if (event.type === 'dimension:expanded' || event.type === 'dimension:shrunk') {
-        this.handleDimensionChange(event);
-      }
-    });
-
-    // Initial rebuild
-    this.rebuildFromModelHistory();
+    // Initial rebuild from event log
+    this.rebuild();
   }
 
   static getInstance(): BlockProjection {
@@ -51,70 +55,166 @@ class BlockProjection extends EventEmitter {
   }
 
   /**
-   * Rebuild blocks from ModelHistory events
+   * Handle new event from log
    */
-  private rebuildFromModelHistory(): void {
-    const events = modelHistory.replayEvents(modelHistory.getCurrentProjectId() || '');
+  private handleEvent(event: Event): void {
+    // Only process block events (both single and bulk)
+    const blockEventTypes = [
+      'model:blockPlaced',
+      'model:blockRemoved',
+      'model:blocksPlaced',
+      'model:blocksRemoved',
+    ];
 
-    // Get blocks from replayed state
-    if (events) {
-      this.blocks = events.blocks;
-    } else {
-      this.blocks = new BlockIndex();
+    if (!blockEventTypes.includes(event.type)) {
+      return;
     }
 
-    this.emit('blocks:updated');
+    // Apply event to snapshot
+    this.applyEvent(event);
+    this.eventsSinceSnapshot++;
+
+    // Create new snapshot if threshold reached
+    if (this.eventsSinceSnapshot >= SNAPSHOT_THRESHOLD) {
+      this.createSnapshot();
+      this.eventsSinceSnapshot = 0;
+    }
+
+    // Notify listeners
+    this.emit('blocks:rebuilt');
   }
 
   /**
-   * Handle dimension change from EventLog (cross-cutting concern)
+   * Apply single event to snapshot
    */
-  private handleDimensionChange(
-    event: { type: 'dimension:expanded' | 'dimension:shrunk'; payload: { shift: Vector3D } }
-  ): void {
-    const { shift } = event.payload;
-
-    // If shift is needed, move all blocks
-    if (shift.x !== 0 || shift.y !== 0 || shift.z !== 0) {
-      const newBlocks = new BlockIndex();
-
-      this.blocks.forEach((block) => {
-        const newPos: Vector3D = {
-          x: block.position.x + shift.x,
-          y: block.position.y + shift.y,
-          z: block.position.z + shift.z,
-        };
-
-        newBlocks.set(newPos, {
-          ...block,
-          position: newPos,
+  private applyEvent(event: Event): void {
+    switch (event.type) {
+      case 'model:blockPlaced': {
+        const data = event.data as { position: Vector3D; blockType: string };
+        this.snapshot.blocks.set(data.position, {
+          position: data.position,
+          blockType: data.blockType,
         });
-      });
+        this.snapshot.latestEventId = event.id!;
+        break;
+      }
 
-      this.blocks = newBlocks;
-      this.emit('blocks:updated');
+      case 'model:blockRemoved': {
+        const data = event.data as { position: Vector3D };
+        this.snapshot.blocks.delete(data.position);
+        this.snapshot.latestEventId = event.id!;
+        break;
+      }
+
+      case 'model:blocksPlaced': {
+        const data = event.data as { blocks: Array<{ position: Vector3D; blockType: string }> };
+        for (const block of data.blocks) {
+          this.snapshot.blocks.set(block.position, {
+            position: block.position,
+            blockType: block.blockType,
+          });
+        }
+        this.snapshot.latestEventId = event.id!;
+        break;
+      }
+
+      case 'model:blocksRemoved': {
+        const data = event.data as { positions: Vector3D[] };
+        for (const position of data.positions) {
+          this.snapshot.blocks.delete(position);
+        }
+        this.snapshot.latestEventId = event.id!;
+        break;
+      }
     }
   }
 
   /**
-   * Get current block index
+   * Rebuild from event log (from snapshot forward)
    */
-  getBlocks(): BlockIndex {
-    return this.blocks;
+  private async rebuild(): Promise<void> {
+    const events = await eventLog.getEvents({
+      fromId: this.snapshot.latestEventId + 1,
+      types: ['model:blockPlaced', 'model:blockRemoved'],
+    });
+
+    for (const event of events) {
+      this.applyEvent(event);
+    }
+
+    this.emit('blocks:rebuilt');
   }
 
   /**
-   * Get block at position (convenience method)
+   * Create snapshot (persist to localStorage for fast startup)
    */
-  getBlock(position: Vector3D): BlockData | null {
-    return this.blocks.get(position);
+  private createSnapshot(): void {
+    try {
+      const serialized = JSON.stringify({
+        latestEventId: this.snapshot.latestEventId,
+        blocks: this.snapshot.blocks.toArray(),
+      });
+      localStorage.setItem('block-snapshot', serialized);
+    } catch (error) {
+      console.error('Failed to create block snapshot:', error);
+    }
   }
 
   /**
-   * Get blocks at layer (convenience method)
+   * Ensure projection is fresh by applying any new events
+   * This guarantees reads always return latest state
+   *
+   * OPTIMIZED: Returns instantly (O(1)) if no new events since last check
    */
-  getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): BlockData[] {
-    return this.blocks.getBlocksAtLayer(axis, layer);
+  async ensureFresh(): Promise<void> {
+    const latestEventId = await eventLog.getLatestEventId();
+
+    // No new events? Return instantly (O(1) version check)
+    if (latestEventId === this.snapshot.latestEventId) {
+      return;
+    }
+
+    // New events exist - fetch and apply
+    const events = await eventLog.getEvents({
+      fromId: this.snapshot.latestEventId + 1,
+      types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
+    });
+
+    for (const event of events) {
+      this.applyEvent(event);
+    }
+  }
+
+  /**
+   * Get cached blocks (synchronous, no freshness check)
+   * Use this in render loops where ensureFresh() was already called
+   */
+  getCached(): BlockIndex {
+    return this.snapshot.blocks;
+  }
+
+  /**
+   * Get current block index (always fresh)
+   */
+  async getBlocks(): Promise<BlockIndex> {
+    await this.ensureFresh();
+    return this.snapshot.blocks;
+  }
+
+  /**
+   * Get block at position (always fresh)
+   */
+  async getBlock(position: Vector3D): Promise<BlockData | null> {
+    await this.ensureFresh();
+    return this.snapshot.blocks.get(position);
+  }
+
+  /**
+   * Get blocks at layer (always fresh)
+   */
+  async getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): Promise<BlockData[]> {
+    await this.ensureFresh();
+    return this.snapshot.blocks.getBlocksAtLayer(axis, layer);
   }
 }
 

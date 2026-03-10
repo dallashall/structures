@@ -3,14 +3,6 @@ import { Canvas2DView } from '../../panels/Canvas2DView';
 import { mockProject } from '../mockData';
 
 export function Canvas2DViewPreview() {
-  const handleBlockPlaced = () => {
-    console.log('Block placed in preview');
-  };
-
-  const handleBlockRemoved = () => {
-    console.log('Block removed in preview');
-  };
-
   return (
     <Box>
       <Typography variant="h4" component="h1">Canvas2DView</Typography>
@@ -29,8 +21,6 @@ export function Canvas2DViewPreview() {
             height={400}
             selectedBlockId="stone"
             isPlacementMode={false}
-            onBlockPlaced={handleBlockPlaced}
-            onBlockRemoved={handleBlockRemoved}
           />
         </Box>
       </Box>

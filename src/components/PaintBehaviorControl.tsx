@@ -5,7 +5,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Edit, SwapHoriz, FilterAlt } from "@mui/icons-material";
+import { Edit, SwapHoriz, FilterAlt, BorderColor } from "@mui/icons-material";
 import type { PaintBehavior } from "../types";
 
 interface PaintBehaviorControlProps {
@@ -21,6 +21,7 @@ interface PaintBehaviorControlProps {
  * - Normal: Paint anywhere (even in air)
  * - Only-Replace: Paint only over existing blocks
  * - Selective-Replace: Replace only specific block types
+ * - Delete: Erase blocks instead of placing
  *
  * Supports both horizontal and vertical orientations for flexible layout.
  */
@@ -76,6 +77,11 @@ export function PaintBehaviorControl({
             aria-label="Selective replace behavior"
           >
             <FilterAlt fontSize="small" />
+          </ToggleButton>
+        </Tooltip>
+        <Tooltip title="Erase - Remove blocks">
+          <ToggleButton value="delete" aria-label="Erase behavior">
+            <BorderColor fontSize="small" />
           </ToggleButton>
         </Tooltip>
       </ToggleButtonGroup>

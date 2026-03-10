@@ -11,24 +11,24 @@ import {
   DialogActions,
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
-import type { ProjectMetadata } from "../types";
+import type { StorageMetadata } from "../types";
 
-interface ProjectMetadataPanelProps {
-  project: ProjectMetadata;
+interface StorageMetadataPanelProps {
+  project: StorageMetadata;
   onOpen: () => void;
   onDelete: () => void;
 }
 
 /**
- * ProjectMetadataPanel - Shows detailed info for selected project
+ * StorageMetadataPanel - Shows detailed info for selected project
  *
  * Displays project metadata and provides actions to open or delete the project.
  */
-export function ProjectMetadataPanel({
+export function StorageMetadataPanel({
   project,
   onOpen,
   onDelete,
-}: ProjectMetadataPanelProps) {
+}: StorageMetadataPanelProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
   const handleDeleteClick = () => {

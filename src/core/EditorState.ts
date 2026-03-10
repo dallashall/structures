@@ -22,7 +22,7 @@ export interface PreviewBlock {
 }
 
 /**
- * EditorStateManager - Manages UI state for the editor
+ * EditorState - Manages UI state for the editor
  *
  * Singleton class that handles:
  * - Layout mode (tabbed vs quad-layout)
@@ -48,8 +48,8 @@ export interface PreviewBlock {
  * - quickselect:changed - When quick-select slots change
  * - preview:changed - When preview blocks change (for ghost rendering)
  */
-class EditorStateManager extends EventEmitter {
-  private static instance: EditorStateManager;
+class EditorState extends EventEmitter {
+  private static instance: EditorState;
 
   private layoutMode: LayoutMode = 'quad';
   private activeView: ViewType = 'front';
@@ -60,11 +60,10 @@ class EditorStateManager extends EventEmitter {
   private paintBehavior: PaintBehavior = 'normal';
   private shapeFillMode: ShapeFillMode = 'outline';
   private depthConfig: DepthConfig = {
-    enabled: false,
+    enabled: true,
     thickness: 1,
     mode: 'through',
   };
-  private deleteMode = false; // Toggle for delete mode (erases blocks instead of placing)
   private circleDrawMode: CircleDrawMode = 'center-radius';
   private curveControlState: CurveControlState | null = null;
   private isPlacementMode = false;
@@ -81,11 +80,11 @@ class EditorStateManager extends EventEmitter {
     super();
   }
 
-  static getInstance(): EditorStateManager {
-    if (!EditorStateManager.instance) {
-      EditorStateManager.instance = new EditorStateManager();
+  static getInstance(): EditorState {
+    if (!EditorState.instance) {
+      EditorState.instance = new EditorState();
     }
-    return EditorStateManager.instance;
+    return EditorState.instance;
   }
 
   /**
@@ -247,18 +246,11 @@ class EditorStateManager extends EventEmitter {
   }
 
   /**
-   * Toggle delete mode (erases blocks instead of placing)
-   */
-  setDeleteMode = (enabled: boolean): void => {
-    this.deleteMode = enabled;
-    this.emit('deletemode:changed', enabled);
-  }
-
-  /**
    * Get the current delete mode state
+   * Delete mode is now part of paint behavior
    */
   getDeleteMode(): boolean {
-    return this.deleteMode;
+    return this.paintBehavior === 'delete';
   }
 
   /**
@@ -491,4 +483,4 @@ class EditorStateManager extends EventEmitter {
 }
 
 // Export singleton instance
-export const editorStateManager = EditorStateManager.getInstance();
+export const editorState = EditorState.getInstance();

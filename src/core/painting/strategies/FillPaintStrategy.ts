@@ -1,6 +1,7 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
-import { projectManager } from '../../ProjectManager';
+import { projectView } from '../../../projections/ProjectView';
+import { blockProjection } from '../../../projections/BlockProjection';
 
 /**
  * FillPaintStrategy - Flood fill painting
@@ -12,12 +13,12 @@ import { projectManager } from '../../ProjectManager';
  * Uses stack-based approach (not recursion) to avoid stack overflow on large fills.
  */
 export class FillPaintStrategy implements PaintStrategy {
-  calculateOperations(
+  async calculateOperations(
     startPosition: Vector3D,
     selectedBlockId: string | null,
     dimensions: Dimensions,
     constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
-  ): PaintOperation[] {
+  ): Promise<PaintOperation[]> {
     // Validate start position
     if (
       startPosition.x < 0 || startPosition.x >= dimensions.width ||
@@ -27,11 +28,11 @@ export class FillPaintStrategy implements PaintStrategy {
       return [];
     }
 
-    const project = projectManager.getProject();
+    const project = await projectView.getProject();
     if (!project) return [];
 
     // Get the block type at start position (what we're filling over)
-    const startBlock = projectManager.getBlock(startPosition);
+    const startBlock = await blockProjection.getBlock(startPosition);
     const targetBlockType = startBlock ? startBlock.blockType : null;
 
     // If trying to fill with the same block type, no-op
@@ -64,7 +65,7 @@ export class FillPaintStrategy implements PaintStrategy {
       }
 
       // Check if current block matches target type
-      const currentBlock = projectManager.getBlock(current);
+      const currentBlock = await blockProjection.getBlock(current);
       const currentBlockType = currentBlock ? currentBlock.blockType : null;
 
       if (currentBlockType !== targetBlockType) {

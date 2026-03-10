@@ -35,11 +35,8 @@ import { ColorSwatch } from "../components/ColorSwatch";
 import { TabbedEditorView } from "./TabbedEditorView";
 import { QuadEditorView } from "./QuadEditorView";
 
-import { projectManager } from "../core/ProjectManager";
-import { editorStateManager } from "../core/EditorStateManager";
-import { storageManager } from "../core/StorageManager";
-import { Canvas2DController } from "../core/canvas2d";
-import { keyboardShortcutManager } from "../core/KeyboardShortcutManager";
+import { editorState } from "../core/EditorState";
+import { confirmMetaBlockCommand } from "../commands/ConfirmMetaBlockCommand";
 
 /**
  * EditorView - Main editor orchestrator
@@ -71,7 +68,6 @@ function EditorViewComponent(props: EditorViewProps) {
     paintBehavior,
     shapeFillMode,
     depthConfig,
-    deleteMode,
     isPlacementMode,
     isActionBarExpanded,
     saveState,
@@ -93,36 +89,17 @@ function EditorViewComponent(props: EditorViewProps) {
 
   // Derive modal visibility from meta block confirmation status
   // Hide modal when in placement mode (user clicked "Got it") or when meta block is confirmed
+  const metaBlock = project?.metaBlock;
   const showMetaBlockModal =
-    !projectManager.isMetaBlockConfirmed() && !isPlacementMode;
+    metaBlock ? !metaBlock.isConfirmed && !isPlacementMode : false;
 
   // Handle meta block modal close (enter placement mode)
   const handleMetaBlockModalClose = () => {
-    editorStateManager.setPlacementMode(true);
+    editorState.setPlacementMode(true);
   };
 
-  // Start keyboard shortcut manager on mount
-  React.useEffect(() => {
-    keyboardShortcutManager.startListening();
-
-    // Subscribe to meta block placement confirmation from keyboard
-    const handleConfirmPlacement = () => {
-      handleConfirmMetaBlockPlacement();
-    };
-
-    keyboardShortcutManager.on(
-      "confirmMetaBlockPlacement",
-      handleConfirmPlacement,
-    );
-
-    return () => {
-      keyboardShortcutManager.off(
-        "confirmMetaBlockPlacement",
-        handleConfirmPlacement,
-      );
-      keyboardShortcutManager.stopListening();
-    };
-  }, []);
+  // TODO: Add keyboard shortcuts directly (no manager pattern)
+  // For now, metablock placement can be confirmed via UI button
 
   // Get the actual Block object for the active drag block ID
   const activeDragBlockObject = activeDragBlock
@@ -135,9 +112,9 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleSaveProject = () => {
-    if (project) {
-      storageManager.exportProject(project);
-    }
+    // TODO: Implement export command
+    // Project is automatically saved to EventLog (IndexedDB)
+    console.log("Export not yet implemented");
   };
 
   const handleOpenProject = () => {
@@ -148,36 +125,37 @@ function EditorViewComponent(props: EditorViewProps) {
     _event: React.SyntheticEvent,
     newValue: string,
   ) => {
-    editorStateManager.setActiveView(newValue as ViewType);
+    editorState.setActiveView(newValue as ViewType);
   };
 
   const handleQuickSelectSlot = (index: number) => {
     // Always select the slot (even if empty)
-    editorStateManager.setSelectedQuickSelectSlot(index);
+    editorState.setSelectedQuickSelectSlot(index);
 
     // If the slot has a material, also select that material
     const blockId = quickSelectSlots[index];
     if (blockId) {
-      editorStateManager.setSelectedBlock(blockId);
+      editorState.setSelectedBlock(blockId);
     }
   };
 
   const handleAssignSlot = (index: number, blockId?: string) => {
     const materialToAssign = blockId ?? selectedBlock;
     if (materialToAssign) {
-      editorStateManager.setQuickSelectSlot(index, materialToAssign);
+      editorState.setQuickSelectSlot(index, materialToAssign);
     }
   };
 
   const handleConfirmMetaBlockPlacement = () => {
-    Canvas2DController.confirmAllPlacements();
-    editorStateManager.setPlacementMode(false);
+    void confirmMetaBlockCommand.execute();
+    // Don't toggle placement mode - let the confirmation event update the projection
+    // The modal will hide automatically when metaBlock.isConfirmed becomes true
   };
 
   const handleDragStart = (event: DragStartEvent) => {
     const blockId = event.active.data.current?.blockId;
     if (blockId) {
-      editorStateManager.setActiveDragBlock(blockId);
+      editorState.setActiveDragBlock(blockId);
     }
   };
 
@@ -185,7 +163,7 @@ function EditorViewComponent(props: EditorViewProps) {
     const { active, over } = event;
 
     // Clear the active drag block
-    editorStateManager.setActiveDragBlock(null);
+    editorState.setActiveDragBlock(null);
 
     if (!over) return;
 
@@ -195,12 +173,12 @@ function EditorViewComponent(props: EditorViewProps) {
     const slotIndex = over.data.current?.slotIndex;
 
     if (blockId && typeof slotIndex === "number") {
-      editorStateManager.setQuickSelectSlot(slotIndex, blockId);
+      editorState.setQuickSelectSlot(slotIndex, blockId);
     }
   };
 
   const handleDragCancel = () => {
-    editorStateManager.setActiveDragBlock(null);
+    editorState.setActiveDragBlock(null);
   };
 
   return (
@@ -214,7 +192,7 @@ function EditorViewComponent(props: EditorViewProps) {
           onNewProject={handleNewProject}
           onSaveProject={handleSaveProject}
           onOpenProject={handleOpenProject}
-          onLayoutModeChange={editorStateManager.setLayoutMode}
+          onLayoutModeChange={editorState.setLayoutMode}
         />
 
         {/* Tool Options Bar */}
@@ -223,11 +201,9 @@ function EditorViewComponent(props: EditorViewProps) {
           paintBehavior={paintBehavior}
           shapeFillMode={shapeFillMode}
           depthConfig={depthConfig}
-          deleteMode={deleteMode}
-          onPaintBehaviorChange={editorStateManager.setPaintBehavior}
-          onShapeFillModeChange={editorStateManager.setShapeFillMode}
-          onDepthConfigChange={editorStateManager.setDepthConfig}
-          onDeleteModeChange={editorStateManager.setDeleteMode}
+          onPaintBehaviorChange={editorState.setPaintBehavior}
+          onShapeFillModeChange={editorState.setShapeFillMode}
+          onDepthConfigChange={editorState.setDepthConfig}
         />
 
         {/* Main Canvas Area - Switch between layout modes */}
@@ -256,13 +232,13 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={editorStateManager.setActiveLayer}
-              onViewChange={editorStateManager.setActiveView}
+              onLayerChange={editorState.setActiveLayer}
+              onViewChange={editorState.setActiveView}
               onTabChange={handleViewTabChange}
-              onPaintModeChange={editorStateManager.setPaintMode}
-              onPaintBehaviorChange={editorStateManager.setPaintBehavior}
-              onShapeFillModeChange={editorStateManager.setShapeFillMode}
-              onDepthConfigChange={editorStateManager.setDepthConfig}
+              onPaintModeChange={editorState.setPaintMode}
+              onPaintBehaviorChange={editorState.setPaintBehavior}
+              onShapeFillModeChange={editorState.setShapeFillMode}
+              onDepthConfigChange={editorState.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
               onConfirmPlacement={handleConfirmMetaBlockPlacement}
@@ -280,11 +256,11 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={editorStateManager.setActiveLayer}
-              onPaintModeChange={editorStateManager.setPaintMode}
-              onPaintBehaviorChange={editorStateManager.setPaintBehavior}
-              onShapeFillModeChange={editorStateManager.setShapeFillMode}
-              onDepthConfigChange={editorStateManager.setDepthConfig}
+              onLayerChange={editorState.setActiveLayer}
+              onPaintModeChange={editorState.setPaintMode}
+              onPaintBehaviorChange={editorState.setPaintBehavior}
+              onShapeFillModeChange={editorState.setShapeFillMode}
+              onDepthConfigChange={editorState.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
               onConfirmPlacement={handleConfirmMetaBlockPlacement}
@@ -311,7 +287,7 @@ function EditorViewComponent(props: EditorViewProps) {
           selectedSlotIndex={selectedQuickSelectSlot}
           blocks={blocks}
           onSelectSlot={handleQuickSelectSlot}
-          onOpenBrowser={() => editorStateManager.setMaterialBrowserOpen(true)}
+          onOpenBrowser={() => editorState.setMaterialBrowserOpen(true)}
         />
 
         {/* Material Browser Modal */}
@@ -323,10 +299,10 @@ function EditorViewComponent(props: EditorViewProps) {
           selectedTab={materialBrowserSelectedTab}
           quickSelectSlots={quickSelectSlots}
           selectedSlotIndex={selectedQuickSelectSlot}
-          onClose={() => editorStateManager.setMaterialBrowserOpen(false)}
-          onSelectMaterial={editorStateManager.setSelectedBlock}
-          onSearchChange={editorStateManager.setMaterialBrowserSearchQuery}
-          onTabChange={editorStateManager.setMaterialBrowserSelectedTab}
+          onClose={() => editorState.setMaterialBrowserOpen(false)}
+          onSelectMaterial={editorState.setSelectedBlock}
+          onSearchChange={editorState.setMaterialBrowserSearchQuery}
+          onTabChange={editorState.setMaterialBrowserSelectedTab}
           onSelectSlot={handleQuickSelectSlot}
           onAssignSlot={handleAssignSlot}
         />

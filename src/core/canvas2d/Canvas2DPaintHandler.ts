@@ -1,5 +1,5 @@
 import { CanvasPainter } from '../painting/CanvasPainter';
-import { editorStateManager } from '../EditorStateManager';
+import { editorState } from '../EditorState';
 import type { Canvas2DViewport } from './Canvas2DViewport';
 
 /**
@@ -25,8 +25,8 @@ export class Canvas2DPaintHandler {
   /**
    * Paint at pixel coordinates
    */
-  paintAtPixel(pixelX: number, pixelY: number): void {
-    const gridCoords = this.viewport.pixelToGrid(pixelX, pixelY);
+  async paintAtPixel(pixelX: number, pixelY: number): Promise<void> {
+    const gridCoords = await this.viewport.pixelToGrid(pixelX, pixelY);
     if (!gridCoords) return;
 
     const { gridX, gridY } = gridCoords;
@@ -37,8 +37,8 @@ export class Canvas2DPaintHandler {
     this.lastPaintedCell = cellKey;
 
     // Get selected block and active layers
-    const selectedBlock = editorStateManager.getSelectedBlock();
-    const activeLayers = editorStateManager.getActiveLayers();
+    const selectedBlock = editorState.getSelectedBlock();
+    const activeLayers = editorState.getActiveLayers();
 
     // Don't paint if no block is selected (except for erase mode which uses null)
     if (!selectedBlock) {
@@ -59,8 +59,8 @@ export class Canvas2DPaintHandler {
   /**
    * Erase at pixel coordinates
    */
-  eraseAtPixel(pixelX: number, pixelY: number): void {
-    const gridCoords = this.viewport.pixelToGrid(pixelX, pixelY);
+  async eraseAtPixel(pixelX: number, pixelY: number): Promise<void> {
+    const gridCoords = await this.viewport.pixelToGrid(pixelX, pixelY);
     if (!gridCoords) return;
 
     const { gridX, gridY } = gridCoords;
@@ -71,7 +71,7 @@ export class Canvas2DPaintHandler {
     this.lastPaintedCell = cellKey;
 
     // Get active layers
-    const activeLayers = editorStateManager.getActiveLayers();
+    const activeLayers = editorState.getActiveLayers();
 
     // Delegate to CanvasPainter with null blockId (erase mode)
     this.canvasPainter.paint(
@@ -114,8 +114,8 @@ export class Canvas2DPaintHandler {
   /**
    * Finalize draft - create single CompoundEvent with all operations
    */
-  finalizeDraft(description?: string): void {
-    this.canvasPainter.finalizeDraft(description);
+  async finalizeDraft(description?: string): Promise<void> {
+    await this.canvasPainter.finalizeDraft(description);
   }
 
   /**

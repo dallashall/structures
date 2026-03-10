@@ -1,7 +1,7 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
 import { ShapeUtils } from './ShapeUtils';
-import { editorStateManager } from '../../EditorStateManager';
+import { editorState } from '../../EditorState';
 
 /**
  * CurvePaintStrategy - Bezier curve painting
@@ -29,7 +29,7 @@ export class CurvePaintStrategy implements PaintStrategy {
     this.dragStart = position;
     // Initialize curve control state with default gentle curve
     // Will be updated when we know the end position
-    editorStateManager.setCurveControlState(null);
+    editorState.setCurveControlState(null);
   }
 
   /**
@@ -37,7 +37,7 @@ export class CurvePaintStrategy implements PaintStrategy {
    */
   endDrag(): void {
     this.dragStart = null;
-    editorStateManager.setCurveControlState(null);
+    editorState.setCurveControlState(null);
   }
 
   /**
@@ -75,11 +75,11 @@ export class CurvePaintStrategy implements PaintStrategy {
     }
 
     // Get or create control points
-    let curveState = editorStateManager.getCurveControlState();
+    let curveState = editorState.getCurveControlState();
     if (!curveState) {
       // Initialize default control points for gentle curve
       curveState = this.createDefaultControlPoints(this.dragStart, endPosition);
-      editorStateManager.setCurveControlState(curveState);
+      editorState.setCurveControlState(curveState);
     }
 
     // Determine plane
@@ -97,7 +97,7 @@ export class CurvePaintStrategy implements PaintStrategy {
     );
 
     // Apply depth if enabled
-    const depthConfig = editorStateManager.getDepthConfig();
+    const depthConfig = editorState.getDepthConfig();
     let finalPositions = positions;
 
     if (depthConfig.enabled) {
@@ -153,14 +153,14 @@ export class CurvePaintStrategy implements PaintStrategy {
 
   /**
    * Update control point based on modifier key and position
-   * Called from Canvas2DController when modifier keys are held during drag
+   * Called from Canvas2D when modifier keys are held during drag
    */
   updateControlPoint(
     controlPointIndex: 1 | 2,
     gridX: number,
     gridY: number
   ): void {
-    const curveState = editorStateManager.getCurveControlState();
+    const curveState = editorState.getCurveControlState();
     if (!curveState) return;
 
     if (controlPointIndex === 1) {
@@ -169,7 +169,7 @@ export class CurvePaintStrategy implements PaintStrategy {
       curveState.controlPoint2 = { x: gridX, y: gridY };
     }
 
-    editorStateManager.setCurveControlState(curveState);
+    editorState.setCurveControlState(curveState);
   }
 
   /**

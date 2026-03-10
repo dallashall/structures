@@ -1,7 +1,8 @@
 import type { Dimensions } from '../../types';
-import { projectManager } from '../ProjectManager';
+import { projectView } from '../../projections/ProjectView';
+import { blockProjection } from '../../projections/BlockProjection';
 import { blockRegistry } from '../BlockRegistry';
-import { editorStateManager } from '../EditorStateManager';
+import { editorState } from '../EditorState';
 import { draftingService } from '../DraftingService';
 import type { Canvas2DViewport } from './Canvas2DViewport';
 import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
@@ -95,12 +96,12 @@ export class Canvas2DRenderer {
    * Main render method - draws the entire canvas
    */
   render(viewport: Canvas2DViewport, previewManager: Canvas2DPreviewManager): void {
-    const project = projectManager.getProject();
+    const project = projectView.getCached();
     if (!project) return;
 
     const { width, height } = this.canvas;
     const { gridWidth, gridHeight } = viewport.getGridDimensions(project.dimensions);
-    const activeLayers = editorStateManager.getActiveLayers();
+    const activeLayers = editorState.getActiveLayers();
     const cellSize = viewport.getCellSize();
     const pan = viewport.getPan();
 
@@ -125,7 +126,7 @@ export class Canvas2DRenderer {
     // Draw previews
     this.drawOutlinePreview(previewManager, viewport, gridWidth, gridHeight, cellSize, pan);
     this.drawPointPreview(previewManager, gridWidth, gridHeight, cellSize, pan);
-    this.drawSharedPreview(viewport, gridWidth, gridHeight, cellSize, pan);
+    this.drawSharedPreview(viewport, project.dimensions, gridWidth, gridHeight, cellSize, pan);
   }
 
   /**
@@ -187,9 +188,10 @@ export class Canvas2DRenderer {
 
     const visibleBlocks: Array<{ blockData: any; distance: number }> = [];
 
-    // Collect blocks from all visible layers
+    // Collect blocks from all visible layers (synchronous cached read)
+    const blockIndex = blockProjection.getCached();
     for (let layer = minLayer; layer <= maxLayer; layer++) {
-      const blocksAtLayer = projectManager.getBlocksAtLayer(depthAxis, layer);
+      const blocksAtLayer = blockIndex.getBlocksAtLayer(depthAxis, layer);
       const distance = Math.abs(layer - activeLayer);
 
       for (const blockData of blocksAtLayer) {
@@ -197,9 +199,9 @@ export class Canvas2DRenderer {
       }
     }
 
-    // Render visible blocks
+    // Render visible blocks (synchronous)
     for (const { blockData, distance } of visibleBlocks) {
-      const { gridX, gridY } = viewport.positionToGrid(blockData.position);
+      const { gridX, gridY } = viewport.positionToGridSync(blockData.position, dimensions);
 
       // Check bounds
       if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
@@ -237,7 +239,7 @@ export class Canvas2DRenderer {
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
-    const project = projectManager.getProject();
+    const project = projectView.getCached();
     if (!project?.metaBlock) return;
 
     const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
@@ -247,7 +249,7 @@ export class Canvas2DRenderer {
 
     if (opacity === 0.0) return;
 
-    const { gridX, gridY } = viewport.positionToGrid(metaBlock.position);
+    const { gridX, gridY } = viewport.positionToGridSync(metaBlock.position, dimensions);
 
     if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
       return;
@@ -490,7 +492,7 @@ export class Canvas2DRenderer {
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
-    const selectedBlock = editorStateManager.getSelectedBlock();
+    const selectedBlock = editorState.getSelectedBlock();
     if (!selectedBlock) return;
 
     const block = blockRegistry.getBlock(selectedBlock);
@@ -561,13 +563,14 @@ export class Canvas2DRenderer {
    */
   private drawSharedPreview(
     viewport: Canvas2DViewport,
+    dimensions: Dimensions,
     gridWidth: number,
     gridHeight: number,
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
     // Combine preview blocks from both sources
-    const editorPreview = editorStateManager.getPreviewBlocks() || [];
+    const editorPreview = editorState.getPreviewBlocks() || [];
     const draftPreview = draftingService.getPreview() || [];
 
     // Combine both arrays
@@ -575,7 +578,7 @@ export class Canvas2DRenderer {
 
     if (allPreviewBlocks.length === 0) return;
 
-    const deleteMode = editorStateManager.getDeleteMode();
+    const deleteMode = editorState.getDeleteMode();
 
     this.ctx.save();
     this.ctx.globalAlpha = 0.7; // Preview blocks at 70% opacity for visibility
@@ -588,7 +591,7 @@ export class Canvas2DRenderer {
       if (!block) continue;
 
       // Convert 3D position to 2D grid coordinates
-      const gridPos = viewport.positionToGrid(previewBlock.position);
+      const gridPos = viewport.positionToGridSync(previewBlock.position, dimensions);
 
       // Check if within visible grid
       if (
@@ -625,7 +628,7 @@ export class Canvas2DRenderer {
     cellSize: number,
     pan: { x: number; y: number }
   ): void {
-    const selectedBlock = editorStateManager.getSelectedBlock();
+    const selectedBlock = editorState.getSelectedBlock();
     if (!selectedBlock) return;
 
     const block = blockRegistry.getBlock(selectedBlock);

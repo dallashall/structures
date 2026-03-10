@@ -1,8 +1,11 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from "@mui/material";
 import { Preview3DView } from "../../panels/Preview3DView";
-import { projectManager } from "../../core/ProjectManager";
+import { createProjectCommand } from "../../commands/CreateProjectCommand";
+import { projectView } from "../../projections/ProjectView";
+import { blockProjection } from "../../projections/BlockProjection";
 import { blockRegistry } from "../../core/BlockRegistry";
+import type { Vector3D } from "../../types";
 
 /**
  * Preview3DView Preview
@@ -14,7 +17,7 @@ export function Preview3DViewPreview() {
 
   const handleInitialize = () => {
     // Create a sample project
-    projectManager.createProject("3D Preview Test", {
+    createProjectCommand.execute("3D Preview Test", {
       width: 10,
       height: 10,
       depth: 10,
@@ -27,12 +30,15 @@ export function Preview3DViewPreview() {
     const woodBlock =
       blocks.find((b) => b.category === "wood")?.id || blocks[1]?.id;
 
+    // Collect all blocks to place
+    const blocksToPlace: Array<{ position: Vector3D; blockType: string }> = [];
+
     // Add some sample blocks to create a simple structure
     if (stoneBlock) {
       // Create a floor
       for (let x = 2; x < 8; x++) {
         for (let y = 2; y < 8; y++) {
-          projectManager.setBlock({ x, y, z: 0 }, stoneBlock);
+          blocksToPlace.push({ position: { x, y, z: 0 }, blockType: stoneBlock });
         }
       }
 
@@ -40,34 +46,46 @@ export function Preview3DViewPreview() {
       for (let z = 1; z < 5; z++) {
         // Front and back walls
         for (let x = 2; x < 8; x++) {
-          projectManager.setBlock({ x, y: 2, z }, stoneBlock);
-          projectManager.setBlock({ x, y: 7, z }, stoneBlock);
+          blocksToPlace.push({ position: { x, y: 2, z }, blockType: stoneBlock });
+          blocksToPlace.push({ position: { x, y: 7, z }, blockType: stoneBlock });
         }
         // Left and right walls
         for (let y = 2; y < 8; y++) {
-          projectManager.setBlock({ x: 2, y, z }, stoneBlock);
-          projectManager.setBlock({ x: 7, y, z }, stoneBlock);
+          blocksToPlace.push({ position: { x: 2, y, z }, blockType: stoneBlock });
+          blocksToPlace.push({ position: { x: 7, y, z }, blockType: stoneBlock });
         }
       }
     }
 
     if (woodBlock) {
       // Add a wooden door frame
-      projectManager.setBlock({ x: 5, y: 2, z: 1 }, woodBlock);
-      projectManager.setBlock({ x: 5, y: 2, z: 2 }, woodBlock);
-      projectManager.setBlock({ x: 5, y: 2, z: 3 }, woodBlock);
+      blocksToPlace.push({ position: { x: 5, y: 2, z: 1 }, blockType: woodBlock });
+      blocksToPlace.push({ position: { x: 5, y: 2, z: 2 }, blockType: woodBlock });
+      blocksToPlace.push({ position: { x: 5, y: 2, z: 3 }, blockType: woodBlock });
+    }
+
+    // Write all blocks at once
+    if (blocksToPlace.length > 0) {
+      // TODO: Use command pattern instead of modelHistory
+      console.log('Preview: would place', blocksToPlace.length, 'blocks');
     }
 
     setIsInitialized(true);
   };
 
-  const handleClear = () => {
-    const project = projectManager.getProject();
+  const handleClear = async () => {
+    const project = await projectView.getProject();
     if (project) {
-      const blocks = projectManager.getAllBlocks();
-      blocks.forEach((block) => {
-        projectManager.removeBlock(block.position);
-      });
+      const allBlocks = (await blockProjection.getBlocks()).toArray();
+      const blocksToRemove = allBlocks.map(block => ({
+        position: block.position,
+        blockType: null, // null = remove
+        previousBlockType: block.blockType,
+      }));
+      if (blocksToRemove.length > 0) {
+        // TODO: Use command pattern instead of modelHistory
+        console.log('Preview: would remove', blocksToRemove.length, 'blocks');
+      }
     }
   };
 

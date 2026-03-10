@@ -14,16 +14,17 @@ import {
   EasingFunction,
   ElasticEase,
 } from '@babylonjs/core';
-import { projectManager } from './ProjectManager';
-import { modelHistory } from './ModelHistory';
+import { projectView } from '../projections/ProjectView';
+import { blockProjection } from '../projections/BlockProjection';
+import { modelProjection } from '../projections/ModelProjection';
 import { draftingService } from './DraftingService';
 import { blockRegistry } from './BlockRegistry';
-import { editorStateManager } from './EditorStateManager';
+import { editorState } from './EditorState';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import type { Vector3D, BlockData } from '../types';
 
 /**
- * Babylon3DController - Pure TypeScript BabylonJS controller
+ * Babylon3D - Pure TypeScript BabylonJS controller
  *
  * Handles all 3D rendering, camera controls, and scene management.
  * No React - just DOM and BabylonJS.
@@ -37,7 +38,7 @@ import type { Vector3D, BlockData } from '../types';
  * - Our Y → Babylon -Z (negated for handedness conversion)
  * - Our Z → Babylon Y
  */
-export class Babylon3DController {
+export class Babylon3D {
   private canvas: HTMLCanvasElement;
   private engine: Engine;
   private scene: Scene;
@@ -59,11 +60,9 @@ export class Babylon3DController {
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
-    projectChanged: this.updateScene.bind(this),
-    blockAdded: this.handleBlockAdded.bind(this),
-    blockRemoved: this.handleBlockRemoved.bind(this),
+    tick: this.updateScene.bind(this),
+    previewChanged: this.updatePreviewMeshes.bind(this),
     layerChanged: this.updateBlockBrightness.bind(this),
-    previewChanged: this.handlePreviewChanged.bind(this),
     resize: this.handleResize.bind(this),
   };
 
@@ -81,8 +80,8 @@ export class Babylon3DController {
     // Dark background for professional editor aesthetic
     this.scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
 
-    // Setup camera
-    this.camera = this.setupCamera();
+    // Setup camera with defaults
+    this.camera = this.setupCameraSync();
 
     // Setup lighting
     this.setupLighting();
@@ -96,49 +95,52 @@ export class Babylon3DController {
     // Setup slice plane visualizer
     this.setupSlicePlanes();
 
-    // Subscribe to model events
-    modelHistory.on('model:updated', this.boundHandlers.projectChanged);
-    projectManager.on('project:loaded', this.boundHandlers.projectChanged);
-    projectManager.on('block:placed', this.boundHandlers.blockAdded);
-    projectManager.on('block:removed', this.boundHandlers.blockRemoved);
+    // Subscribe to projection changes (only update when model changes)
+    blockProjection.on('blocks:rebuilt', this.boundHandlers.tick);
+    modelProjection.on('model:rebuilt', this.boundHandlers.tick);
 
-    // Subscribe to DraftingService for shared painting preview
+    // Subscribe to preview state (hover + painting draft)
     draftingService.on('draft:updated', this.boundHandlers.previewChanged);
     draftingService.on('draft:finalized', this.boundHandlers.previewChanged);
     draftingService.on('draft:cancelled', this.boundHandlers.previewChanged);
+    editorState.on('preview:changed', this.boundHandlers.previewChanged);
 
     // Subscribe to editor state events for active layer highlighting
-    editorStateManager.on('layer:changed', this.boundHandlers.layerChanged);
-
-    // Subscribe to preview events for local 2D preview (outline, point hover)
-    editorStateManager.on('preview:changed', this.boundHandlers.previewChanged);
-
-    // Subscribe to viewport events (future: sync camera state)
-    // viewportManager.on('camera:changed', this.handleCameraChanged);
+    editorState.on('layer:changed', this.boundHandlers.layerChanged);
 
     // Handle window resize
     window.addEventListener('resize', this.boundHandlers.resize);
 
-    // Start render loop
+    // Start BabylonJS render loop (WebGL rendering at 60fps)
+    // This handles smooth WebGL rendering - scene updates happen reactively above
     this.engine.runRenderLoop(() => {
       this.scene.render();
     });
+  }
 
-    // Initial scene update
-    this.updateScene();
+  /**
+   * Initialize with async project data
+   * Call this after construction
+   */
+  async init(): Promise<void> {
+    await this.updateCameraTarget();
+    await this.updateSlicePlanes();
+    await this.updateScene();
   }
 
   destroy(): void {
-    // Unsubscribe from events
-    modelHistory.off('model:updated', this.boundHandlers.projectChanged);
-    projectManager.off('project:loaded', this.boundHandlers.projectChanged);
-    projectManager.off('block:placed', this.boundHandlers.blockAdded);
-    projectManager.off('block:removed', this.boundHandlers.blockRemoved);
+    // Unsubscribe from projection events
+    blockProjection.off('blocks:rebuilt', this.boundHandlers.tick);
+    modelProjection.off('model:rebuilt', this.boundHandlers.tick);
+
+    // Unsubscribe from preview events
     draftingService.off('draft:updated', this.boundHandlers.previewChanged);
     draftingService.off('draft:finalized', this.boundHandlers.previewChanged);
     draftingService.off('draft:cancelled', this.boundHandlers.previewChanged);
-    editorStateManager.off('layer:changed', this.boundHandlers.layerChanged);
-    editorStateManager.off('preview:changed', this.boundHandlers.previewChanged);
+    editorState.off('preview:changed', this.boundHandlers.previewChanged);
+
+    // Unsubscribe from editor state
+    editorState.off('layer:changed', this.boundHandlers.layerChanged);
     window.removeEventListener('resize', this.boundHandlers.resize);
 
     // Dispose slice plane visualizer
@@ -153,11 +155,10 @@ export class Babylon3DController {
   }
 
   /**
-   * Setup camera with orbit controls
+   * Setup camera with orbit controls (synchronous with default dimensions)
    */
-  private setupCamera(): ArcRotateCamera {
-    const project = projectManager.getProject();
-    const dimensions = project?.dimensions || { width: 10, height: 10, depth: 10 };
+  private setupCameraSync(): ArcRotateCamera {
+    const dimensions = { width: 10, height: 10, depth: 10 };
 
     // Calculate center of build area in Babylon coordinates
     const center = this.toBabylonVector({
@@ -196,6 +197,22 @@ export class Babylon3DController {
   }
 
   /**
+   * Update camera target based on project dimensions (async)
+   */
+  private async updateCameraTarget(): Promise<void> {
+    const project = await projectView.getProject();
+    if (!project) return;
+
+    const center = this.toBabylonVector({
+      x: project.dimensions.width / 2,
+      y: project.dimensions.depth / 2,
+      z: project.dimensions.height / 2,
+    });
+
+    this.camera.setTarget(center);
+  }
+
+  /**
    * Setup scene lighting
    */
   private setupLighting(): void {
@@ -213,10 +230,8 @@ export class Babylon3DController {
    * Setup ground grid for spatial reference
    */
   private setupGrid(): void {
-    const project = projectManager.getProject();
-    if (!project) return;
-
-    const { width, depth } = project.dimensions;
+    // Use default dimensions for grid (will be large enough for any project)
+    const { width, depth } = { width: 50, depth: 50 };
 
     // Create a simple grid using lines
     const gridSize = Math.max(width, depth) * 2;
@@ -276,7 +291,24 @@ export class Babylon3DController {
    * Shows translucent planes marking the active 2D slice positions
    */
   private setupSlicePlanes(): void {
-    const project = projectManager.getProject();
+    // Use default dimensions (will be updated in init())
+    const dimensions = { width: 10, height: 10, depth: 10 };
+
+    // Dispose old visualizer if it exists
+    this.slicePlaneVisualizer?.destroy();
+
+    // Create new visualizer with current project dimensions
+    this.slicePlaneVisualizer = new SlicePlaneVisualizer(
+      this.scene,
+      dimensions
+    );
+  }
+
+  /**
+   * Update slice planes with actual project dimensions
+   */
+  private async updateSlicePlanes(): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) return;
 
     // Dispose old visualizer if it exists
@@ -470,18 +502,18 @@ export class Babylon3DController {
   /**
    * Update entire scene based on current project state
    */
-  private updateScene(): void {
-    const project = projectManager.getProject();
+  private async updateScene(): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) {
       // Clear all blocks
       this.clearAllBlocks();
       return;
     }
 
-    // Get all blocks from project
-    const blocks = projectManager.getAllBlocks();
+    // Get all blocks from projection
+    const blocks = (await blockProjection.getBlocks()).toArray();
     const blockKeys = new Set(
-      blocks.map((b) => `${b.position.x},${b.position.y},${b.position.z}`)
+      blocks.map((b: BlockData) => `${b.position.x},${b.position.y},${b.position.z}`)
     );
 
     // Remove meshes that no longer exist in project (no animation for bulk updates)
@@ -498,35 +530,25 @@ export class Babylon3DController {
     }
 
     // Update grid if dimensions changed
-    this.updateGrid();
+    await this.updateGrid();
 
     // Focus camera on structure
-    this.focusCameraOnStructure();
+    await this.focusCameraOnStructure();
+
+    // Update preview meshes
+    this.updatePreviewMeshes();
   }
 
-  /**
-   * Handle block added event (with animation)
-   */
-  private handleBlockAdded(blockData: BlockData): void {
-    this.createBlockMesh(blockData, true);
-  }
-
-  /**
-   * Handle block removed event (with animation)
-   */
-  private handleBlockRemoved(position: Vector3D): void {
-    this.removeBlockMesh(position, true);
-  }
 
   /**
    * Update brightness of all blocks when active layer changes
    */
-  private updateBlockBrightness(): void {
-    const project = projectManager.getProject();
+  private async updateBlockBrightness(): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) return;
 
     // Update brightness for all blocks
-    project.blocks.forEach((blockData) => {
+    project.blocks.forEach((blockData: BlockData) => {
       const key = `${blockData.position.x},${blockData.position.y},${blockData.position.z}`;
       const mesh = this.blockMeshes.get(key);
       if (mesh) {
@@ -540,7 +562,7 @@ export class Babylon3DController {
    * Blocks on any active layer appear much brighter
    */
   private updateMeshBrightness(mesh: Mesh, position: Vector3D): void {
-    const activeLayers = editorStateManager.getActiveLayers();
+    const activeLayers = editorState.getActiveLayers();
 
     // Check if block is on any active layer
     const isOnActiveLayer =
@@ -580,7 +602,7 @@ export class Babylon3DController {
   /**
    * Update grid based on current project dimensions
    */
-  private updateGrid(): void {
+  private async updateGrid(): Promise<void> {
     // Remove old grid
     const oldGrid = this.scene.getMeshByName('grid');
     oldGrid?.dispose();
@@ -589,7 +611,7 @@ export class Babylon3DController {
     this.setupGrid();
 
     // Update slice planes with new dimensions
-    const project = projectManager.getProject();
+    const project = await projectView.getProject();
     if (project) {
       this.slicePlaneVisualizer?.updateDimensions(project.dimensions);
     }
@@ -598,8 +620,8 @@ export class Babylon3DController {
   /**
    * Focus camera on the structure
    */
-  private focusCameraOnStructure(): void {
-    const project = projectManager.getProject();
+  private async focusCameraOnStructure(): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) return;
 
     const { width, height, depth } = project.dimensions;
@@ -658,9 +680,9 @@ export class Babylon3DController {
    *
    * Uses diffing to only update changed meshes (prevents flashing and improves performance)
    */
-  private handlePreviewChanged(): void {
+  private updatePreviewMeshes(): void {
     // Combine preview blocks from both sources
-    const editorPreview = editorStateManager.getPreviewBlocks() || [];
+    const editorPreview = editorState.getPreviewBlocks() || [];
     const draftPreview = draftingService.getPreview() || [];
     const allPreviewBlocks = [...editorPreview, ...draftPreview];
 
@@ -696,7 +718,7 @@ export class Babylon3DController {
    * Create a ghost/preview mesh (semi-transparent)
    * In delete mode, shows red tint to indicate removal
    */
-  private createPreviewMesh(previewBlock: import('../core/EditorStateManager').PreviewBlock): void {
+  private createPreviewMesh(previewBlock: import('../core/EditorState').PreviewBlock): void {
     const key = `${previewBlock.position.x},${previewBlock.position.y},${previewBlock.position.z}`;
 
     // Get block definition
@@ -720,7 +742,7 @@ export class Babylon3DController {
     box.position = this.toBabylonVector(centeredPos);
 
     // Apply ghost material (semi-transparent, with red tint if delete mode)
-    const deleteMode = editorStateManager.getDeleteMode();
+    const deleteMode = editorState.getDeleteMode();
     box.material = deleteMode
       ? this.getDeleteGhostMaterial(block.color)
       : this.getGhostMaterial(block.color);

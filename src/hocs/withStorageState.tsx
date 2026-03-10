@@ -1,5 +1,5 @@
 import React from 'react';
-import { storageManager, SaveState } from "../core/StorageManager";
+import { storage, SaveState } from "../core/Storage";
 
 /**
  * Props injected by withStorageState HOC
@@ -22,7 +22,7 @@ export function withStorageState<P extends object>(
 ) {
   return function WithStorageState(props: P) {
     const [saveState, setSaveState] = React.useState<SaveState>(
-      storageManager.getSaveState(),
+      storage.getSaveState(),
     );
 
     React.useEffect(() => {

@@ -1,10 +1,11 @@
 import type { PaintStrategy } from './strategies/PaintStrategy';
 import type { PaintBehavior } from './behaviors/PaintBehavior';
 import type { Vector3D, ViewType, LayerState, DepthConfig } from '../../types';
-import { projectManager } from '../ProjectManager';
-import { editorStateManager } from '../EditorStateManager';
-import { modelHistory } from '../ModelHistory';
+import { projectView } from '../../projections/ProjectView';
+import { blockProjection } from '../../projections/BlockProjection';
+import { editorState } from '../EditorState';
 import { draftingService } from '../DraftingService';
+import { eventLog } from '../EventLog';
 import { CoordinateConverter } from './CoordinateConverter';
 
 interface PaintOperation {
@@ -23,7 +24,7 @@ interface PaintOperation {
  * - ProjectManager (executes the actual painting)
  *
  * This class follows the composition pattern from SlicePlaneVisualizer:
- * - Uses singleton projectManager (similar to SlicePlaneVisualizer using editorStateManager)
+ * - Uses singleton projectManager (similar to SlicePlaneVisualizer using editorState)
  * - Delegates to strategy and behavior
  * - Thin orchestration layer
  */
@@ -79,7 +80,7 @@ export class CanvasPainter {
   /**
    * Finalize draft - persist all operations to ModelHistory
    */
-  finalizeDraft(_description?: string): void {
+  async finalizeDraft(_description?: string): Promise<void> {
     console.log(`CanvasPainter: finalizeDraft() called - isDraftMode: ${this.isDraftMode}, operations: ${this.draftOperations.length}`);
 
     if (!this.isDraftMode || this.draftOperations.length === 0) {
@@ -89,7 +90,7 @@ export class CanvasPainter {
       return;
     }
 
-    const project = projectManager.getProject();
+    const project = await projectView.getProject();
     if (!project) {
       this.isDraftMode = false;
       this.draftOperations = [];
@@ -97,20 +98,27 @@ export class CanvasPainter {
       return;
     }
 
-    // Prepare blocks for ModelHistory
-    // For delete operations, pass blockType as null so ModelHistory creates BlockRemovedEvent
-    // For paint operations, pass the blockType so ModelHistory creates BlockPlacedEvent
-    const blocks = this.draftOperations.map(op => ({
-      position: op.position,
-      blockType: op.isDelete ? null : op.blockType, // null signals delete to ModelHistory
-      previousBlockType: op.previousBlockType
-    }));
+    // Persist operations to EventLog as BULK events
+    // Separate into deletes and placements for efficient bulk operations
+    const deleteOps = this.draftOperations.filter(op => op.isDelete || op.blockType === null);
+    const placeOps = this.draftOperations.filter(op => !op.isDelete && op.blockType !== null);
 
-    // Set current project ID for ModelHistory
-    modelHistory.setCurrentProjectId(project.id);
+    // Bulk delete event (if any)
+    if (deleteOps.length > 0) {
+      await eventLog.append('model:blocksRemoved', {
+        positions: deleteOps.map(op => op.position),
+      });
+    }
 
-    // Persist to ModelHistory (creates CompoundEvent internally)
-    modelHistory.write(blocks);
+    // Bulk place event (if any)
+    if (placeOps.length > 0) {
+      await eventLog.append('model:blocksPlaced', {
+        blocks: placeOps.map(op => ({
+          position: op.position,
+          blockType: op.blockType!,
+        })),
+      });
+    }
 
     // Clear preview from DraftingService
     draftingService.cancel();
@@ -147,7 +155,7 @@ export class CanvasPainter {
     activeLayers: LayerState,
     selectedBlockId: string | null
   ): void {
-    const project = projectManager.getProject();
+    const project = projectView.getCached();
     if (!project) return;
 
     // Convert grid coordinates to 3D world position
@@ -163,16 +171,19 @@ export class CanvasPainter {
     // Each 2D view constrains one axis to the current layer value
     const constrainAxis = this.getConstrainedAxis(viewType, activeLayers);
 
-    // Calculate operations from strategy
-    const operations = this.strategy.calculateOperations(
+    // Calculate operations from strategy (synchronous for outline/point)
+    let operations: { position: Vector3D; blockType: string | null }[];
+    const strategyResult = this.strategy.calculateOperations(
       position,
       selectedBlockId,
       project.dimensions,
       constrainAxis
     );
+    // Handle both sync (outline/point) and async (fill) strategies
+    operations = strategyResult instanceof Promise ? [] : strategyResult;
 
     // Expand operations along depth axis if depth config is enabled
-    const depthConfig = editorStateManager.getDepthConfig();
+    const depthConfig = editorState.getDepthConfig();
     const expandedOperations = this.expandOperationsWithDepth(
       operations,
       constrainAxis,
@@ -181,12 +192,12 @@ export class CanvasPainter {
       viewType
     );
 
-    // Filter operations through behavior
+    // Filter operations through behavior (synchronous)
     const getBlock = (pos: Vector3D) => {
-      const blockData = projectManager.getBlock(pos);
+      const blockData = blockProjection.getCached().get(pos);
       return blockData ? blockData.blockType : null;
     };
-    const filteredOperations = this.behavior.filter(expandedOperations, getBlock);
+    const filteredOperations = this.behavior.filterSync(expandedOperations, getBlock);
 
     // Apply delete modifier (transforms operations if delete mode enabled)
     const finalOperations = this.applyDeleteModifier(filteredOperations);
@@ -197,14 +208,14 @@ export class CanvasPainter {
       // Use Map to deduplicate by position (prevent opacity stacking)
       console.log(`CanvasPainter: Draft mode - collecting ${finalOperations.length} operations`);
 
-      const deleteMode = editorStateManager.getDeleteMode();
+      const deleteMode = editorState.getDeleteMode();
 
       for (const operation of finalOperations) {
         const posKey = `${operation.position.x},${operation.position.y},${operation.position.z}`;
 
         // Only add if this position hasn't been painted in this stroke yet
         if (!this.draftPositionsMap.has(posKey)) {
-          const existingBlock = projectManager.getBlock(operation.position);
+          const existingBlock = blockProjection.getCached().get(operation.position);
           const previousBlockType = existingBlock?.blockType;
 
           // Delete modifier has already transformed operations if needed
@@ -231,22 +242,26 @@ export class CanvasPainter {
 
       draftingService.set(previewBlocks);
     } else {
-      // Normal mode: execute immediately (creates events per operation)
+      // Normal mode: execute immediately via EventLog (fire-and-forget async)
       console.log(`CanvasPainter: Normal mode - executing ${finalOperations.length} operations immediately`);
 
-      const deleteMode = editorStateManager.getDeleteMode();
+      const deleteMode = editorState.getDeleteMode();
 
-      for (const operation of finalOperations) {
-        if (deleteMode) {
-          // Delete mode: remove blocks
-          projectManager.removeBlock(operation.position);
-        } else {
-          // Paint mode: place blocks
-          if (operation.blockType !== null) {
-            projectManager.setBlock(operation.position, operation.blockType);
+      // Execute operations immediately via EventLog (async, but don't block paint)
+      (async () => {
+        for (const operation of finalOperations) {
+          if (deleteMode) {
+            await eventLog.append('model:blockRemoved', {
+              position: operation.position,
+            });
+          } else {
+            await eventLog.append('model:blockPlaced', {
+              position: operation.position,
+              blockType: operation.blockType!,
+            });
           }
         }
-      }
+      })();
     }
   }
 
@@ -260,7 +275,7 @@ export class CanvasPainter {
   private applyDeleteModifier(
     operations: { position: Vector3D; blockType: string | null }[]
   ): { position: Vector3D; blockType: string | null }[] {
-    const deleteMode = editorStateManager.getDeleteMode();
+    const deleteMode = editorState.getDeleteMode();
 
     // If delete mode not enabled, return operations unchanged
     if (!deleteMode) {
@@ -269,10 +284,11 @@ export class CanvasPainter {
 
     // Delete mode: transform operations to target existing blocks for deletion
     const transformedOperations: { position: Vector3D; blockType: string | null }[] = [];
+    const cachedBlocks = blockProjection.getCached();
 
     for (const operation of operations) {
-      // Look up existing block at this position
-      const existingBlock = projectManager.getBlock(operation.position);
+      // Look up existing block at this position (synchronous)
+      const existingBlock = cachedBlocks.get(operation.position);
 
       // Only add if there's a block to delete
       // The blockType is set to the existing block (for preview)
@@ -354,11 +370,12 @@ export class CanvasPainter {
     // Determine direction (away from camera) based on view type
     const direction = this.getDepthDirection(viewType);
 
-    // OPTIMIZATION: Pre-fetch all occupied blocks in the depth range
+    // OPTIMIZATION: Pre-fetch all occupied blocks in the depth range (synchronous)
     // This converts O(operations × depth) queries into a single batch lookup
     let blockLookup: Set<string> | null = null;
     if (depthConfig.mode === 'until-collision') {
       blockLookup = new Set<string>();
+      const cachedBlocks = blockProjection.getCached();
 
       // Build set of all occupied positions we'll check
       for (const operation of operations) {
@@ -372,7 +389,7 @@ export class CanvasPainter {
           const pos: Vector3D = { ...operation.position };
           pos[axis] = layer;
 
-          const block = projectManager.getBlock(pos);
+          const block = cachedBlocks.get(pos);
           if (block !== null) {
             blockLookup.add(`${pos.x},${pos.y},${pos.z}`);
           }

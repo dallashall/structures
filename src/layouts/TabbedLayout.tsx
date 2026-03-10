@@ -2,11 +2,10 @@ import React from 'react';
 import { Tab, Box, Typography } from "@mui/material";
 import { TabContext, TabList, TabPanel } from "@mui/lab";
 
-import type { ViewType, Project, LayerState, Vector3D } from "../types";
+import type { ViewType, Project, LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
-import { projectManager } from "../core/ProjectManager";
 
 interface TabbedLayoutProps {
   activeView: ViewType;
@@ -60,18 +59,6 @@ export function TabbedLayout({
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
-
-  // Handlers for block placement/removal
-  const handleBlockPlaced = React.useCallback(
-    (position: Vector3D, blockType: string) => {
-      projectManager.setBlock(position, blockType);
-    },
-    [],
-  );
-
-  const handleBlockRemoved = React.useCallback((position: Vector3D) => {
-    projectManager.removeBlock(position);
   }, []);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
@@ -177,8 +164,6 @@ export function TabbedLayout({
                   height={canvasSize.height}
                   selectedBlockId={selectedBlockId}
                   isPlacementMode={isPlacementMode}
-                  onBlockPlaced={handleBlockPlaced}
-                  onBlockRemoved={handleBlockRemoved}
                 />
               </div>
             </>

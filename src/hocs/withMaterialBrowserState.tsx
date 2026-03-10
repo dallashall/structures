@@ -1,5 +1,5 @@
 import React from 'react';
-import { editorStateManager } from "../core/EditorStateManager";
+import { editorState } from "../core/EditorState";
 
 export interface WithMaterialBrowserStateProps {
   isMaterialBrowserOpen: boolean;
@@ -18,13 +18,13 @@ export function withMaterialBrowserState<P extends object>(
 ) {
   return function WithMaterialBrowserState(props: P) {
     const [isMaterialBrowserOpen, setIsMaterialBrowserOpen] = React.useState(
-      editorStateManager.getMaterialBrowserOpen(),
+      editorState.getMaterialBrowserOpen(),
     );
     const [searchQuery, setSearchQuery] = React.useState(
-      editorStateManager.getMaterialBrowserSearchQuery(),
+      editorState.getMaterialBrowserSearchQuery(),
     );
     const [selectedTab, setSelectedTab] = React.useState(
-      editorStateManager.getMaterialBrowserSelectedTab(),
+      editorState.getMaterialBrowserSelectedTab(),
     );
 
     React.useEffect(() => {
@@ -40,26 +40,26 @@ export function withMaterialBrowserState<P extends object>(
         setSelectedTab(tab);
       };
 
-      editorStateManager.on(
+      editorState.on(
         "materialbrowser:changed",
         handleMaterialBrowserChange,
       );
-      editorStateManager.on(
+      editorState.on(
         "materialbrowser:search:changed",
         handleSearchChange,
       );
-      editorStateManager.on("materialbrowser:tab:changed", handleTabChange);
+      editorState.on("materialbrowser:tab:changed", handleTabChange);
 
       return () => {
-        editorStateManager.off(
+        editorState.off(
           "materialbrowser:changed",
           handleMaterialBrowserChange,
         );
-        editorStateManager.off(
+        editorState.off(
           "materialbrowser:search:changed",
           handleSearchChange,
         );
-        editorStateManager.off("materialbrowser:tab:changed", handleTabChange);
+        editorState.off("materialbrowser:tab:changed", handleTabChange);
       };
     }, []);
 

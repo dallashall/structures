@@ -1,7 +1,7 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
 import { ShapeUtils } from './ShapeUtils';
-import { editorStateManager } from '../../EditorStateManager';
+import { editorState } from '../../EditorState';
 
 /**
  * CirclePaintStrategy - Circle painting with multiple draw modes
@@ -67,7 +67,7 @@ export class CirclePaintStrategy implements PaintStrategy {
     }
 
     // Get circle parameters based on draw mode
-    const drawMode = editorStateManager.getCircleDrawMode();
+    const drawMode = editorState.getCircleDrawMode();
     const { center, radius } = this.calculateCircleParams(
       this.dragStart,
       endPosition,
@@ -83,7 +83,7 @@ export class CirclePaintStrategy implements PaintStrategy {
     const plane = ShapeUtils.determinePlane(this.dragStart, endPosition);
 
     // Get positions based on fill mode
-    const shapeFillMode = editorStateManager.getShapeFillMode();
+    const shapeFillMode = editorState.getShapeFillMode();
     let positions: Vector3D[];
 
     if (shapeFillMode === 'filled') {
@@ -93,7 +93,7 @@ export class CirclePaintStrategy implements PaintStrategy {
     }
 
     // Apply depth if enabled
-    const depthConfig = editorStateManager.getDepthConfig();
+    const depthConfig = editorState.getDepthConfig();
     if (depthConfig.enabled) {
       const constrainAxis = ShapeUtils.getPerpendicularAxis(plane);
       positions = ShapeUtils.applyDepth(

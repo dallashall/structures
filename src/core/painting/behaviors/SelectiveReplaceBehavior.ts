@@ -22,7 +22,27 @@ export class SelectiveReplaceBehavior implements PaintBehavior {
     this.targetBlockType = blockType;
   }
 
-  filter(
+  async filter(
+    operations: PaintOperation[],
+    getBlock: (position: Vector3D) => Promise<string | null>
+  ): Promise<PaintOperation[]> {
+    // If no target set, behave like normal (no filtering)
+    if (this.targetBlockType === null) {
+      return operations;
+    }
+
+    const results: PaintOperation[] = [];
+    for (const op of operations) {
+      const existingBlock = await getBlock(op.position);
+      // Only allow if existing block matches target type
+      if (existingBlock === this.targetBlockType) {
+        results.push(op);
+      }
+    }
+    return results;
+  }
+
+  filterSync(
     operations: PaintOperation[],
     getBlock: (position: Vector3D) => string | null
   ): PaintOperation[] {
@@ -31,10 +51,14 @@ export class SelectiveReplaceBehavior implements PaintBehavior {
       return operations;
     }
 
-    return operations.filter((op) => {
+    const results: PaintOperation[] = [];
+    for (const op of operations) {
       const existingBlock = getBlock(op.position);
       // Only allow if existing block matches target type
-      return existingBlock === this.targetBlockType;
-    });
+      if (existingBlock === this.targetBlockType) {
+        results.push(op);
+      }
+    }
+    return results;
   }
 }

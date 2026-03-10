@@ -7,7 +7,7 @@ import {
   Vector3,
   LinesMesh,
 } from '@babylonjs/core';
-import { editorStateManager } from '../EditorStateManager';
+import { editorState } from '../EditorState';
 import type { Dimensions, LayerState } from '../../types';
 
 /**
@@ -61,14 +61,14 @@ export class SlicePlaneVisualizer {
     this.createAllPlanes();
 
     // Subscribe to layer changes
-    editorStateManager.on('layer:changed', this.boundLayerChanged);
+    editorState.on('layer:changed', this.boundLayerChanged);
   }
 
   /**
    * Cleanup resources and event listeners
    */
   destroy(): void {
-    editorStateManager.off('layer:changed', this.boundLayerChanged);
+    editorState.off('layer:changed', this.boundLayerChanged);
 
     this.disposePlanes(this.xPlanes);
     this.disposePlanes(this.yPlanes);
@@ -149,7 +149,7 @@ export class SlicePlaneVisualizer {
    * Create all slice planes for all axes
    */
   private createAllPlanes(): void {
-    const activeLayers = editorStateManager.getActiveLayers();
+    const activeLayers = editorState.getActiveLayers();
 
     // Dispose old planes and lines
     this.disposePlanes(this.xPlanes);
@@ -454,7 +454,7 @@ export class SlicePlaneVisualizer {
    * Handle layer change event from EditorStateManager
    */
   private handleLayerChanged(dimension: 'x' | 'y' | 'z', layer: number): void {
-    const activeLayers = editorStateManager.getActiveLayers();
+    const activeLayers = editorState.getActiveLayers();
 
     // Update only the affected planes
     switch (dimension) {

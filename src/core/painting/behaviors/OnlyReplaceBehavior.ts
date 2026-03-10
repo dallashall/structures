@@ -11,14 +11,33 @@ import type { Vector3D } from '../../../types';
  * Use case: Replace existing blocks without filling empty space.
  */
 export class OnlyReplaceBehavior implements PaintBehavior {
-  filter(
+  async filter(
+    operations: PaintOperation[],
+    getBlock: (position: Vector3D) => Promise<string | null>
+  ): Promise<PaintOperation[]> {
+    const results: PaintOperation[] = [];
+    for (const op of operations) {
+      const existingBlock = await getBlock(op.position);
+      // Only allow if there's an existing block (not null/empty)
+      if (existingBlock !== null) {
+        results.push(op);
+      }
+    }
+    return results;
+  }
+
+  filterSync(
     operations: PaintOperation[],
     getBlock: (position: Vector3D) => string | null
   ): PaintOperation[] {
-    return operations.filter((op) => {
+    const results: PaintOperation[] = [];
+    for (const op of operations) {
       const existingBlock = getBlock(op.position);
       // Only allow if there's an existing block (not null/empty)
-      return existingBlock !== null;
-    });
+      if (existingBlock !== null) {
+        results.push(op);
+      }
+    }
+    return results;
   }
 }

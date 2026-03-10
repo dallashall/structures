@@ -7,7 +7,7 @@
  * - Viewport, Renderer, PreviewManager, PaintHandler: Focused modules
  *
  * Exports:
- * - Canvas2DController (v3) - Main orchestrator with clean layering
+ * - Canvas2D (v3) - Main orchestrator with clean layering
  *
  * Internal modules (not exported):
  * - Canvas2DViewport - View state & coordinates
@@ -17,4 +17,4 @@
  * - Canvas2DInteractionHandler - Generic input handling (no domain logic)
  */
 
-export { Canvas2DController } from './Canvas2DController';
+export { Canvas2D } from './Canvas2D';

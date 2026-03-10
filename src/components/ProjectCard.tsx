@@ -1,8 +1,8 @@
 import { Box, Typography } from '@mui/material';
-import type { ProjectMetadata } from '../types';
+import type { StorageMetadata } from '../types';
 
 interface ProjectCardProps {
-  project: ProjectMetadata;
+  project: StorageMetadata;
   isSelected: boolean;
   onClick: () => void;
 }

@@ -1,5 +1,6 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
+import { editorState } from '../../EditorState';
 
 /**
  * OutlinePaintStrategy - Rectangle outline painting
@@ -60,13 +61,24 @@ export class OutlinePaintStrategy implements PaintStrategy {
       ];
     }
 
-    // Calculate rectangle outline from dragStart to endPosition
-    return this.calculateRectangleOutline(
-      this.dragStart,
-      endPosition,
-      selectedBlockId,
-      dimensions
-    );
+    // Check shape fill mode - outline or filled
+    const shapeFillMode = editorState.getShapeFillMode();
+
+    if (shapeFillMode === 'filled') {
+      return this.calculateRectangleFilled(
+        this.dragStart,
+        endPosition,
+        selectedBlockId,
+        dimensions
+      );
+    } else {
+      return this.calculateRectangleOutline(
+        this.dragStart,
+        endPosition,
+        selectedBlockId,
+        dimensions
+      );
+    }
   }
 
   /**
@@ -156,6 +168,70 @@ export class OutlinePaintStrategy implements PaintStrategy {
       // For now, just return the two corner points
       operations.push({ position: start, blockType: selectedBlockId });
       operations.push({ position: end, blockType: selectedBlockId });
+    }
+
+    return operations;
+  }
+
+  /**
+   * Calculate filled rectangle
+   * Returns all positions within the rectangle bounds
+   */
+  private calculateRectangleFilled(
+    start: Vector3D,
+    end: Vector3D,
+    selectedBlockId: string | null,
+    dimensions: Dimensions
+  ): PaintOperation[] {
+    const operations: PaintOperation[] = [];
+
+    // Calculate rectangle bounds
+    const minX = Math.max(0, Math.min(start.x, end.x));
+    const maxX = Math.min(dimensions.width - 1, Math.max(start.x, end.x));
+    const minY = Math.max(0, Math.min(start.y, end.y));
+    const maxY = Math.min(dimensions.height - 1, Math.max(start.y, end.y));
+    const minZ = Math.max(0, Math.min(start.z, end.z));
+    const maxZ = Math.min(dimensions.depth - 1, Math.max(start.z, end.z));
+
+    // Determine which plane we're drawing on (based on which dimension is constant)
+    const isXConstant = start.x === end.x;
+    const isYConstant = start.y === end.y;
+    const isZConstant = start.z === end.z;
+
+    if (isXConstant) {
+      // Drawing in YZ plane (front/back view)
+      const x = start.x;
+      for (let y = minY; y <= maxY; y++) {
+        for (let z = minZ; z <= maxZ; z++) {
+          operations.push({ position: { x, y, z }, blockType: selectedBlockId });
+        }
+      }
+    } else if (isYConstant) {
+      // Drawing in XZ plane (left/right view)
+      const y = start.y;
+      for (let x = minX; x <= maxX; x++) {
+        for (let z = minZ; z <= maxZ; z++) {
+          operations.push({ position: { x, y, z }, blockType: selectedBlockId });
+        }
+      }
+    } else if (isZConstant) {
+      // Drawing in XY plane (top/bottom view)
+      const z = start.z;
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          operations.push({ position: { x, y, z }, blockType: selectedBlockId });
+        }
+      }
+    } else {
+      // 3D rectangle - not on a single plane
+      // Fill the entire 3D volume
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          for (let z = minZ; z <= maxZ; z++) {
+            operations.push({ position: { x, y, z }, blockType: selectedBlockId });
+          }
+        }
+      }
     }
 
     return operations;

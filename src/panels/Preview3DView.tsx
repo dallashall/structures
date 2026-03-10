@@ -7,7 +7,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { Babylon3DController } from "../core/Babylon3DController";
+import { Babylon3D } from "../core/Babylon3D";
 
 // Axis colors that work in dark/light mode
 const AXIS_COLORS = {
@@ -22,7 +22,7 @@ interface Preview3DViewProps {
 }
 
 /**
- * Preview3DView - Thin React wrapper for Babylon3DController
+ * Preview3DView - Thin React wrapper for Babylon3D
  *
  * Pure TypeScript controller handles all BabylonJS rendering and interactions.
  * This component just mounts/unmounts the controller and provides the canvas element.
@@ -30,15 +30,15 @@ interface Preview3DViewProps {
  * ARCHITECTURAL NOTE:
  * This component is technically an HOC for the native HTML canvas element.
  * It uses React hooks (useEffect, useRef) to manage the lifecycle of the
- * Babylon3DController and sync props to it. This is an accepted exception to
+ * Babylon3D and sync props to it. This is an accepted exception to
  * the "minimal hooks" rule because:
- * - All business logic lives in the Babylon3DController class
+ * - All business logic lives in the Babylon3D class
  * - The component only handles React ↔ DOM lifecycle management
  * - It's a bridge between React's declarative props and imperative BabylonJS APIs
  */
 export function Preview3DView({ width, height }: Preview3DViewProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const controllerRef = React.useRef<Babylon3DController | null>(null);
+  const controllerRef = React.useRef<Babylon3D | null>(null);
   const theme = useTheme();
   const [xVisible, setXVisible] = React.useState(true);
   const [yVisible, setYVisible] = React.useState(true);
@@ -48,8 +48,11 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
   React.useEffect(() => {
     if (!canvasRef.current) return;
 
-    const controller = new Babylon3DController(canvasRef.current);
+    const controller = new Babylon3D(canvasRef.current);
     controllerRef.current = controller;
+
+    // Initialize with async project data
+    void controller.init();
 
     return () => {
       controller.destroy();

@@ -15,10 +15,22 @@ export interface PaintBehavior {
    * Filter paint operations based on behavior rules
    *
    * @param operations - Proposed operations from strategy
-   * @param getBlock - Function to query existing block at position
-   * @returns Filtered operations that should be executed
+   * @param getBlock - Function to query existing block at position (async)
+   * @returns Promise of filtered operations that should be executed
    */
   filter(
+    operations: PaintOperation[],
+    getBlock: (position: Vector3D) => Promise<string | null>
+  ): Promise<PaintOperation[]>;
+
+  /**
+   * Filter paint operations based on behavior rules (synchronous)
+   *
+   * @param operations - Proposed operations from strategy
+   * @param getBlock - Function to query existing block at position (synchronous)
+   * @returns Filtered operations that should be executed
+   */
+  filterSync(
     operations: PaintOperation[],
     getBlock: (position: Vector3D) => string | null
   ): PaintOperation[];

@@ -27,8 +27,8 @@ export type ViewType = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
 // Painting modes
 export type PaintMode = 'point' | 'fill' | 'outline' | 'circle' | 'arch' | 'curve';
 
-// Painting behaviors (especially for fill mode)
-export type PaintBehavior = 'normal' | 'only-replace' | 'selective-replace';
+// Painting behaviors (modifiers that affect how painting works)
+export type PaintBehavior = 'normal' | 'only-replace' | 'selective-replace' | 'delete';
 
 // Shape fill modes (separate from paint behavior)
 export type ShapeFillMode = 'outline' | 'filled';
@@ -81,17 +81,34 @@ export interface MetaBlock {
   isConfirmed: boolean; // Whether the user has finalized this position
 }
 
-export interface Project {
-  id: string;
-  name: string;
+// Model state (for rendering)
+export interface Model {
   dimensions: Dimensions;
   metaBlock: MetaBlock;
   blocks: BlockIndex; // Efficient block storage with layer-based queries
+}
+
+// Metadata (project info)
+export interface Metadata {
+  id: string;
+  name: string;
   created: Date;
   modified: Date;
 }
 
-export interface ProjectMetadata {
+// Project (combines Model + Metadata for UI components)
+export interface Project {
+  id: string;
+  name: string;
+  created: Date;
+  modified: Date;
+  dimensions: Dimensions;
+  metaBlock: MetaBlock;
+  blocks: BlockIndex;
+}
+
+// Storage metadata (for project browser)
+export interface StorageMetadata {
   id: string;
   name: string;
   created: Date;

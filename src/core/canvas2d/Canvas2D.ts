@@ -1,8 +1,9 @@
 import type { ViewType } from '../../types';
-import { projectManager } from '../ProjectManager';
-import { modelHistory } from '../ModelHistory';
-import { draftingService } from '../DraftingService';
-import { editorStateManager } from '../EditorStateManager';
+import { projectView } from '../../projections/ProjectView';
+import { editorState } from '../EditorState';
+import { renderLoop } from '../RenderLoop';
+import { setMetaBlockCommand } from '../../commands/SetMetaBlockCommand';
+import { confirmMetaBlockCommand } from '../../commands/ConfirmMetaBlockCommand';
 import { CanvasPainter } from '../painting/CanvasPainter';
 import { PointPaintStrategy } from '../painting/strategies/PointPaintStrategy';
 import { FillPaintStrategy } from '../painting/strategies/FillPaintStrategy';
@@ -19,7 +20,7 @@ import { Canvas2DInteractionHandler } from './Canvas2DInteractionHandler';
 import type { GridPosition, ModifierKeys } from './Canvas2DInteractionEvents';
 
 /**
- * Canvas2DController - Orchestrates 2D canvas with proper separation of concerns
+ * Canvas2D - Orchestrates 2D canvas with proper separation of concerns
  *
  * Architecture:
  * - InteractionHandler: Generic input events (no domain knowledge)
@@ -32,7 +33,7 @@ import type { GridPosition, ModifierKeys } from './Canvas2DInteractionEvents';
  * - Click + placement mode = place meta block
  * - etc.
  */
-export class Canvas2DController {
+export class Canvas2D {
   private viewport: Canvas2DViewport;
   private renderer: Canvas2DRenderer;
   private previewManager: Canvas2DPreviewManager;
@@ -46,8 +47,7 @@ export class Canvas2DController {
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
-    projectChanged: this.render.bind(this),
-    editorChanged: this.render.bind(this),
+    tick: this.render.bind(this),
     paintModeChanged: this.handlePaintModeChanged.bind(this),
     paintBehaviorChanged: this.handlePaintBehaviorChanged.bind(this),
     deleteModeChanged: this.handleDeleteModeChanged.bind(this),
@@ -67,8 +67,8 @@ export class Canvas2DController {
     this.renderer = new Canvas2DRenderer(ctx, canvas);
 
     // Create painting system
-    const initialStrategy = this.createStrategyForMode(editorStateManager.getPaintMode());
-    const initialBehavior = this.createBehaviorForType(editorStateManager.getPaintBehavior());
+    const initialStrategy = this.createStrategyForMode(editorState.getPaintMode());
+    const initialBehavior = this.createBehaviorForType(editorState.getPaintBehavior());
     this.canvasPainter = new CanvasPainter(initialStrategy, initialBehavior);
 
     this.paintHandler = new Canvas2DPaintHandler(this.viewport, this.canvasPainter);
@@ -98,7 +98,7 @@ export class Canvas2DController {
     this.subscribeToEvents();
 
     // Initial render
-    this.render();
+    void this.render();
     this.updateCursor();
   }
 
@@ -106,47 +106,28 @@ export class Canvas2DController {
    * Subscribe to singleton events
    */
   private subscribeToEvents(): void {
-    // Model updates from ModelHistory (replaces 'project:changed')
-    modelHistory.on('model:updated', this.boundHandlers.projectChanged);
+    // Subscribe to shared render loop (all views render together)
+    renderLoop.register();
+    renderLoop.on('tick', this.boundHandlers.tick);
 
-    // Specific block events
-    projectManager.on('block:placed', this.boundHandlers.projectChanged);
-    projectManager.on('block:removed', this.boundHandlers.projectChanged);
-
-    // DraftingService events for shared preview state
-    draftingService.on('draft:updated', this.boundHandlers.projectChanged);
-    draftingService.on('draft:finalized', this.boundHandlers.projectChanged);
-    draftingService.on('draft:cancelled', this.boundHandlers.projectChanged);
-
-    // Editor state changes
-    editorStateManager.on('block:selected', this.boundHandlers.editorChanged);
-    editorStateManager.on('layer:changed', this.boundHandlers.editorChanged);
-    editorStateManager.on('paintmode:changed', this.boundHandlers.paintModeChanged);
-    editorStateManager.on('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
-    editorStateManager.on('deletemode:changed', this.boundHandlers.deleteModeChanged);
+    // Editor state changes (for mode-specific behavior)
+    editorState.on('paintmode:changed', this.boundHandlers.paintModeChanged);
+    editorState.on('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorState.on('deletemode:changed', this.boundHandlers.deleteModeChanged);
   }
 
   /**
    * Unsubscribe from singleton events
    */
   private unsubscribeFromEvents(): void {
-    // Model updates
-    modelHistory.off('model:updated', this.boundHandlers.projectChanged);
-
-    // Specific block events
-    projectManager.off('block:placed', this.boundHandlers.projectChanged);
-    projectManager.off('block:removed', this.boundHandlers.projectChanged);
-
-    // DraftingService events
-    draftingService.off('draft:updated', this.boundHandlers.projectChanged);
-    draftingService.off('draft:finalized', this.boundHandlers.projectChanged);
-    draftingService.off('draft:cancelled', this.boundHandlers.projectChanged);
+    // Unsubscribe from shared render loop
+    renderLoop.off('tick', this.boundHandlers.tick);
+    renderLoop.unregister();
 
     // Editor state changes
-    editorStateManager.off('block:selected', this.boundHandlers.editorChanged);
-    editorStateManager.off('layer:changed', this.boundHandlers.editorChanged);
-    editorStateManager.off('paintmode:changed', this.boundHandlers.paintModeChanged);
-    editorStateManager.off('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorState.off('paintmode:changed', this.boundHandlers.paintModeChanged);
+    editorState.off('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorState.off('deletemode:changed', this.boundHandlers.deleteModeChanged);
   }
 
   /**
@@ -162,7 +143,7 @@ export class Canvas2DController {
    */
   setViewType(viewType: ViewType): void {
     this.viewport.setViewType(viewType);
-    this.render();
+    void this.render();
   }
 
   /**
@@ -171,7 +152,7 @@ export class Canvas2DController {
   setPlacementMode(isPlacementMode: boolean): void {
     this.isPlacementMode = isPlacementMode;
     this.updateCursor();
-    this.render();
+    void this.render();
   }
 
   /**
@@ -181,11 +162,12 @@ export class Canvas2DController {
     this.canvas.width = width;
     this.canvas.height = height;
     this.viewport.setCanvasSize(width, height);
-    this.render();
+    void this.render();
   }
 
   /**
-   * Render the canvas
+   * Render the canvas (called on every tick)
+   * Uses cached projection state (ensureFresh called by RenderLoop)
    */
   private render(): void {
     this.renderer.render(this.viewport, this.previewManager);
@@ -199,12 +181,12 @@ export class Canvas2DController {
    * Handle hover - domain logic decides what to do based on mode
    */
   private handleHover(position: GridPosition, modifiers: ModifierKeys): void {
-    const paintMode = editorStateManager.getPaintMode();
+    const paintMode = editorState.getPaintMode();
 
     // Point mode: show preview (both paint and delete modes)
     if (paintMode === 'point' && !modifiers.alt) {
       this.previewManager.updatePointPreview(position.gridX, position.gridY);
-      this.render();
+      void this.render();
     }
 
     // Update last grid position for preview key
@@ -214,10 +196,10 @@ export class Canvas2DController {
   /**
    * Handle click - domain logic
    */
-  private handleClick(position: GridPosition, button: number, _modifiers: ModifierKeys): void {
+  private async handleClick(position: GridPosition, button: number, _modifiers: ModifierKeys): Promise<void> {
     // Placement mode: place meta block
     if (this.isPlacementMode && button === 0) {
-      this.placeMetaBlock(position);
+      await this.placeMetaBlock(position);
       return;
     }
 
@@ -233,14 +215,14 @@ export class Canvas2DController {
 
     // Paint mode (delete modifier will handle erase if needed)
     if (button === 0) {
-      const paintMode = editorStateManager.getPaintMode();
+      const paintMode = editorState.getPaintMode();
 
       // Clear hover preview
       this.previewManager.clearPointPreview();
 
       // Outline mode: start outline preview
       if (paintMode === 'outline') {
-        const worldPos = this.viewport.gridToPosition(position.gridX, position.gridY);
+        const worldPos = this.viewport.gridToPositionSync(position.gridX, position.gridY);
         this.previewManager.startOutlineDrag(position.gridX, position.gridY);
 
         // Notify strategy
@@ -253,8 +235,8 @@ export class Canvas2DController {
 
       // Point/fill mode: paint immediately
       this.paintHandler.resetLastPaintedCell();
-      const activeLayers = editorStateManager.getActiveLayers();
-      const selectedBlock = editorStateManager.getSelectedBlock();
+      const activeLayers = editorState.getActiveLayers();
+      const selectedBlock = editorState.getSelectedBlock();
       if (selectedBlock) {
         this.canvasPainter.paint(
           position.gridX,
@@ -271,7 +253,7 @@ export class Canvas2DController {
    * Handle drag move - domain logic
    */
   private handleDragMove(position: GridPosition, _modifiers: ModifierKeys): void {
-    const paintMode = editorStateManager.getPaintMode();
+    const paintMode = editorState.getPaintMode();
 
     // Outline mode: clear preview before repainting (replace, not accumulate)
     if (paintMode === 'outline') {
@@ -280,8 +262,8 @@ export class Canvas2DController {
 
     // All paint modes (point, fill, outline) use the same paint pipeline
     // This ensures depth modifier, delete modifier, and DraftingService preview work consistently
-    const activeLayers = editorStateManager.getActiveLayers();
-    const selectedBlock = editorStateManager.getSelectedBlock();
+    const activeLayers = editorState.getActiveLayers();
+    const selectedBlock = editorState.getSelectedBlock();
     if (selectedBlock) {
       this.canvasPainter.paint(
         position.gridX,
@@ -296,24 +278,26 @@ export class Canvas2DController {
   /**
    * Handle drag end - domain logic
    */
-  private handleDragEnd(_position: GridPosition, _modifiers: ModifierKeys): void {
-    const paintMode = editorStateManager.getPaintMode();
+  private async handleDragEnd(_position: GridPosition, _modifiers: ModifierKeys): Promise<void> {
+    const paintMode = editorState.getPaintMode();
 
-    // Outline mode: finalize
+    // Outline mode: end drag in strategy (clears dragStart state)
     if (paintMode === 'outline') {
-      // End drag in strategy (clears dragStart state)
       const strategy = this.canvasPainter['strategy'];
       if (strategy && 'endDrag' in strategy) {
         (strategy as any).endDrag();
       }
-
-      this.render();
     }
 
     // FINALIZE DRAFT MODE - create single CompoundEvent from all operations
-    this.paintHandler.finalizeDraft();
+    // IMPORTANT: Await to ensure preview is cleared before rendering
+    await this.paintHandler.finalizeDraft();
     this.paintHandler.resetLastPaintedCell();
-    this.render();
+
+    // Clear preview manager state
+    this.previewManager.clearAll();
+
+    void this.render();
   }
 
   /**
@@ -322,7 +306,7 @@ export class Canvas2DController {
   private handleMouseLeave(): void {
     this.previewManager.clearAll();
     this.paintHandler.resetLastPaintedCell();
-    this.render();
+    void this.render();
   }
 
   /**
@@ -331,7 +315,7 @@ export class Canvas2DController {
   private handleZoom(delta: number, center: { pixelX: number; pixelY: number }): void {
     const changed = this.viewport.applyZoom(delta, center.pixelX, center.pixelY);
     if (changed) {
-      this.render();
+      void this.render();
     }
   }
 
@@ -348,7 +332,7 @@ export class Canvas2DController {
    */
   private handlePanMove(delta: { deltaX: number; deltaY: number }): void {
     this.viewport.applyPan(delta.deltaX, delta.deltaY);
-    this.render();
+    void this.render();
   }
 
   /**
@@ -364,7 +348,7 @@ export class Canvas2DController {
    * Handle modifier change - domain logic
    */
   private handleModifierChange(modifiers: ModifierKeys): void {
-    const deleteMode = editorStateManager.getDeleteMode();
+    const deleteMode = editorState.getDeleteMode();
 
     // Update cursor based on modifiers and delete mode
     if (modifiers.space) {
@@ -379,10 +363,10 @@ export class Canvas2DController {
     // Alt key: activate preview ONLY if mouse is inside this canvas
     if (modifiers.alt && this.interactionHandler.isMouseInsideCanvas()) {
       this.previewManager.activatePreviewKey();
-      this.render();
+      void this.render();
     } else if (!modifiers.alt) {
       this.previewManager.deactivatePreviewKey();
-      this.render();
+      void this.render();
     }
   }
 
@@ -400,7 +384,7 @@ export class Canvas2DController {
     this.paintHandler.resetLastPaintedCell();
 
     // Re-render to remove previews
-    this.render();
+    void this.render();
   }
 
   // ============================================================================
@@ -410,11 +394,11 @@ export class Canvas2DController {
   /**
    * Place meta block at grid position
    */
-  private placeMetaBlock(position: GridPosition): void {
-    const project = projectManager.getProject();
+  private async placeMetaBlock(position: GridPosition): Promise<void> {
+    const project = await projectView.getProject();
     if (!project) return;
 
-    const worldPos = this.viewport.gridToPosition(position.gridX, position.gridY);
+    const worldPos = await this.viewport.gridToPosition(position.gridX, position.gridY);
 
     // Validate position
     if (
@@ -425,7 +409,7 @@ export class Canvas2DController {
       return;
     }
 
-    projectManager.setMetaBlock(worldPos);
+    setMetaBlockCommand.execute(worldPos);
   }
 
   /**
@@ -468,7 +452,7 @@ export class Canvas2DController {
     this.handleModifierChange(modifiers);
 
     // Re-render to update any affected visuals
-    this.render();
+    void this.render();
   }
 
   /**
@@ -507,6 +491,6 @@ export class Canvas2DController {
    * Confirm all meta block placements (static method for multi-controller coordination)
    */
   static confirmAllPlacements(): void {
-    projectManager.confirmMetaBlock();
+    confirmMetaBlockCommand.execute();
   }
 }

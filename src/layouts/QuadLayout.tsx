@@ -1,11 +1,10 @@
 import React from 'react';
 import { Box, Typography } from "@mui/material";
 
-import type { Project, LayerState, Vector3D } from "../types";
+import type { Project, LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
-import { projectManager } from "../core/ProjectManager";
 
 interface QuadLayoutProps {
   project: Project;
@@ -77,18 +76,6 @@ export function QuadLayout({
     updateSizes();
     window.addEventListener("resize", updateSizes);
     return () => window.removeEventListener("resize", updateSizes);
-  }, []);
-
-  // Handlers for block placement/removal (shared across all views)
-  const handleBlockPlaced = React.useCallback(
-    (position: Vector3D, blockType: string) => {
-      projectManager.setBlock(position, blockType);
-    },
-    [],
-  );
-
-  const handleBlockRemoved = React.useCallback((position: Vector3D) => {
-    projectManager.removeBlock(position);
   }, []);
 
   return (
@@ -167,8 +154,6 @@ export function QuadLayout({
             height={canvasSizes.front.height}
             selectedBlockId={selectedBlockId}
             isPlacementMode={isPlacementMode}
-            onBlockPlaced={handleBlockPlaced}
-            onBlockRemoved={handleBlockRemoved}
           />
         </div>
       </Box>
@@ -239,8 +224,6 @@ export function QuadLayout({
             height={canvasSizes.left.height}
             selectedBlockId={selectedBlockId}
             isPlacementMode={isPlacementMode}
-            onBlockPlaced={handleBlockPlaced}
-            onBlockRemoved={handleBlockRemoved}
           />
         </div>
       </Box>
@@ -311,8 +294,6 @@ export function QuadLayout({
             height={canvasSizes.top.height}
             selectedBlockId={selectedBlockId}
             isPlacementMode={isPlacementMode}
-            onBlockPlaced={handleBlockPlaced}
-            onBlockRemoved={handleBlockRemoved}
           />
         </div>
       </Box>

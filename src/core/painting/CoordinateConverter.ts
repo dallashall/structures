@@ -4,7 +4,7 @@ import type { Vector3D, Dimensions, ViewType, LayerState } from '../../types';
  * CoordinateConverter - Shared coordinate transformation utilities
  *
  * Handles conversion between 2D grid coordinates and 3D world positions.
- * Extracted from Canvas2DController to avoid duplication and enable reuse.
+ * Extracted from Canvas2D to avoid duplication and enable reuse.
  *
  * Coordinate System:
  * - Our system: Z-up, right-handed (X=width, Y=height, Z=depth)

@@ -35,5 +35,5 @@ export interface PaintStrategy {
     selectedBlockId: string | null,
     dimensions: Dimensions,
     constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
-  ): PaintOperation[];
+  ): PaintOperation[] | Promise<PaintOperation[]>;
 }

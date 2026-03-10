@@ -9,7 +9,15 @@ import type { Vector3D } from '../../../types';
  * Allows painting anywhere, regardless of existing block state.
  */
 export class NormalBehavior implements PaintBehavior {
-  filter(
+  async filter(
+    operations: PaintOperation[],
+    _getBlock: (position: Vector3D) => Promise<string | null>
+  ): Promise<PaintOperation[]> {
+    // No filtering - all operations are allowed
+    return operations;
+  }
+
+  filterSync(
     operations: PaintOperation[],
     _getBlock: (position: Vector3D) => string | null
   ): PaintOperation[] {

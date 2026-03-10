@@ -1,28 +1,23 @@
-import { EventEmitter } from '../core/EventEmitter';
-import { blockProjection } from './BlockProjection';
 import { metadataProjection } from './MetadataProjection';
+import { modelProjection } from './ModelProjection';
 import type { Project } from '../types';
 
 /**
- * ProjectView - Combines BlockProjection + MetadataProjection
+ * ProjectView - Combines ModelProjection + MetadataProjection
  *
  * Provides complete Project state by combining:
- * - Metadata (from EventLog via MetadataProjection)
- * - Blocks (from ModelHistory via BlockProjection)
+ * - Metadata (id, name, created, modified)
+ * - Model (dimensions, metaBlock, blocks)
  *
- * This is the main read interface for the complete project state.
- * Components should subscribe to 'project:updated' and call getProject().
+ * This is a convenience layer for querying complete project state.
+ * Components should subscribe to individual projections for updates.
+ *
+ * Reads are always fresh - projections check EventLog for new events before returning.
  */
-class ProjectView extends EventEmitter {
+class ProjectView {
   private static instance: ProjectView;
 
-  private constructor() {
-    super();
-
-    // Re-emit when either projection updates
-    blockProjection.on('blocks:updated', () => this.emitUpdate());
-    metadataProjection.on('metadata:updated', () => this.emitUpdate());
-  }
+  private constructor() {}
 
   static getInstance(): ProjectView {
     if (!ProjectView.instance) {
@@ -31,21 +26,35 @@ class ProjectView extends EventEmitter {
     return ProjectView.instance;
   }
 
-  private emitUpdate(): void {
-    const project = this.getProject();
-    this.emit('project:updated', project);
-  }
-
   /**
-   * Get complete project state (metadata + blocks)
+   * Get complete project state (metadata + model)
+   * Always fresh - reads latest from both projections
    */
-  getProject(): Project | null {
-    const metadata = metadataProjection.getMetadata();
+  async getProject(): Promise<Project | null> {
+    const metadata = await metadataProjection.getMetadata();
     if (!metadata) return null;
+
+    const model = await modelProjection.getModel();
 
     return {
       ...metadata,
-      blocks: blockProjection.getBlocks(),
+      ...model,
+    };
+  }
+
+  /**
+   * Get cached project state (synchronous)
+   * Use in render loops where projections are guaranteed fresh
+   */
+  getCached(): Project | null {
+    const metadata = metadataProjection.getCached();
+    if (!metadata) return null;
+
+    const model = modelProjection.getCached();
+
+    return {
+      ...metadata,
+      ...model,
     };
   }
 }

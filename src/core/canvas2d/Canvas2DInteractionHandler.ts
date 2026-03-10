@@ -149,11 +149,11 @@ export class Canvas2DInteractionHandler {
   /**
    * Handle mouse down
    */
-  private handleMouseDown(event: MouseEvent): void {
+  private async handleMouseDown(event: MouseEvent): Promise<void> {
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
-    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+    const gridPos = await this.viewport.pixelToGrid(pixelX, pixelY);
 
     this.lastPixelPos = { pixelX, pixelY };
 
@@ -176,11 +176,11 @@ export class Canvas2DInteractionHandler {
   /**
    * Handle mouse move
    */
-  private handleMouseMove(event: MouseEvent): void {
+  private async handleMouseMove(event: MouseEvent): Promise<void> {
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
-    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+    const gridPos = await this.viewport.pixelToGrid(pixelX, pixelY);
 
     // Handle panning
     if (this.isPanning) {
@@ -214,11 +214,11 @@ export class Canvas2DInteractionHandler {
   /**
    * Handle mouse up
    */
-  private handleMouseUp(event: MouseEvent): void {
+  private async handleMouseUp(event: MouseEvent): Promise<void> {
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
-    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+    const gridPos = await this.viewport.pixelToGrid(pixelX, pixelY);
 
     // End pan
     if (this.isPanning) {
@@ -248,13 +248,13 @@ export class Canvas2DInteractionHandler {
   /**
    * Handle mouse enter - update grid position immediately
    */
-  private handleMouseEnter(event: MouseEvent): void {
+  private async handleMouseEnter(event: MouseEvent): Promise<void> {
     this.isMouseInside = true;
 
     const rect = this.canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
-    const gridPos = this.viewport.pixelToGrid(pixelX, pixelY);
+    const gridPos = await this.viewport.pixelToGrid(pixelX, pixelY);
 
     // Update grid position for Alt preview
     if (gridPos) {

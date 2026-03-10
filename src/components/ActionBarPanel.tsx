@@ -4,7 +4,7 @@ import type { Block, PaintMode } from '../types';
 import { ToolPanel } from './ToolPanel';
 import { QuickSelectPalette } from './QuickSelectPalette';
 import { FullPaletteMenu } from './FullPaletteMenu';
-import { editorStateManager } from '../core/EditorStateManager';
+import { editorState } from '../core/EditorState';
 
 interface ActionBarPanelProps {
   paintMode: PaintMode;
@@ -67,7 +67,7 @@ export function ActionBarPanel({
         <FullPaletteMenu
           blocks={blocks}
           selectedBlockId={selectedBlock}
-          onSelectBlock={(blockId: string) => editorStateManager.setSelectedBlock(blockId)}
+          onSelectBlock={(blockId: string) => editorState.setSelectedBlock(blockId)}
         />
       </Stack>
       <Box sx={{ borderTop: 1, borderColor: 'divider', p: 1, display: 'flex', justifyContent: 'center' }}>

@@ -4,8 +4,7 @@ import { WelcomeView } from "./views/WelcomeView";
 import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
-import { projectManager } from "./core/ProjectManager";
-import { storageManager } from "./core/StorageManager";
+import { createProjectCommand } from "./commands/CreateProjectCommand";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -184,18 +183,17 @@ export function App() {
 
   // Handle project creation
   const handleCreateProject = (name: string, dimensions: Dimensions) => {
-    projectManager.createProject(name, dimensions);
+    createProjectCommand.execute(name, dimensions);
     setIsNewProjectDialogOpen(false);
     setCurrentView("editor");
   };
 
   // Handle open project from welcome screen
-  const handleOpenProject = async (projectId: string) => {
-    const project = await storageManager.loadProject(projectId);
-    if (project) {
-      projectManager.loadProject(project);
-      setCurrentView("editor");
-    }
+  const handleOpenProject = async (_projectId: string) => {
+    // Project data already loaded from EventLog (persistent IndexedDB)
+    // Projections rebuild automatically on startup
+    // Just switch to editor view
+    setCurrentView("editor");
   };
 
   // Handle load from file

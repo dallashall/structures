@@ -1,46 +1,50 @@
-import { EventEmitter } from '../core/EventEmitter';
-import { eventLog } from '../core/EventLog';
-import type { Dimensions, MetaBlock } from '../types';
-
 /**
- * Project metadata (derived from EventLog)
+ * MetadataProjection - Materializes project metadata from event log
+ *
+ * Maintains snapshot of:
+ * - id, name
+ * - created, modified timestamps
+ *
+ * Rebuilds incrementally from snapshot when new metadata:* events arrive.
+ * Creates new snapshot every 15 events to optimize replay performance.
  */
-export interface ProjectMetadata {
+
+import { EventEmitter } from '../core/EventEmitter';
+import { eventLog, type Event } from '../core/EventLog';
+
+const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
+
+export interface Metadata {
   id: string;
   name: string;
-  dimensions: Dimensions;
-  metaBlock: MetaBlock;
+  created: Date;
+  modified: Date;
+}
+
+interface MetadataSnapshot {
+  latestEventId: number;
+  id: string;
+  name: string;
   created: Date;
   modified: Date;
 }
 
 /**
- * MetadataProjection - Materializes project metadata from EventLog
- *
- * Consumes events from EventLog:
- * - project:created → initializes metadata
- * - project:renamed → updates name
- * - dimension:expanded/shrunk → updates dimensions
- * - metablock:placed/confirmed → updates metaBlock
- *
- * Ignores:
- * - Block events (those live in ModelHistory/BlockProjection)
- *
- * This is a READ MODEL (projection) - it materializes state from events.
- * It does not handle commands or append events.
+ * MetadataProjection singleton
  */
 class MetadataProjection extends EventEmitter {
   private static instance: MetadataProjection;
-  private metadata: ProjectMetadata | null = null;
+
+  private snapshot: MetadataSnapshot | null = null;
+  private eventsSinceSnapshot = 0;
 
   private constructor() {
     super();
 
-    // Rebuild when EventLog changes
-    eventLog.on('event:appended', () => this.rebuild());
-    eventLog.on('events:loaded', () => this.rebuild());
+    // Listen to event log
+    eventLog.on('event:appended', this.handleEvent.bind(this));
 
-    // Initial rebuild
+    // Initial rebuild from event log
     this.rebuild();
   }
 
@@ -52,95 +56,167 @@ class MetadataProjection extends EventEmitter {
   }
 
   /**
-   * Rebuild metadata from EventLog events
+   * Handle new event from log
    */
-  private rebuild(): void {
-    const events = eventLog.getEvents();
-    let metadata: ProjectMetadata | null = null;
-
-    for (const event of events) {
-      switch (event.type) {
-        case 'project:created':
-          metadata = {
-            id: event.projectId,
-            name: event.payload.name,
-            dimensions: event.payload.dimensions,
-            metaBlock: {
-              position: { x: 0, y: 0, z: 0 },
-              direction: 'north',
-              isConfirmed: false,
-            },
-            created: new Date(event.timestamp),
-            modified: new Date(event.timestamp),
-          };
-          break;
-
-        case 'project:renamed':
-          if (metadata) {
-            metadata.name = event.payload.newName;
-            metadata.modified = new Date(event.timestamp);
-          }
-          break;
-
-        case 'dimension:expanded':
-          if (metadata) {
-            metadata.dimensions = event.payload.newDimensions;
-            metadata.modified = new Date(event.timestamp);
-          }
-          break;
-
-        case 'dimension:shrunk':
-          if (metadata) {
-            metadata.dimensions = event.payload.newDimensions;
-            metadata.modified = new Date(event.timestamp);
-          }
-          break;
-
-        case 'metablock:placed':
-          if (metadata) {
-            metadata.metaBlock.position = event.payload.position;
-            metadata.modified = new Date(event.timestamp);
-          }
-          break;
-
-        case 'metablock:confirmed':
-          if (metadata) {
-            metadata.metaBlock.isConfirmed = true;
-            metadata.modified = new Date(event.timestamp);
-          }
-          break;
-
-        default: {
-          // Exhaustiveness check
-          const _exhaustive: never = event;
-          console.warn('Unknown event type in MetadataProjection:', _exhaustive);
-        }
-      }
+  private handleEvent(event: Event): void {
+    // Only process metadata events
+    if (!event.type.startsWith('metadata:')) {
+      return;
     }
 
-    this.metadata = metadata;
-    this.emit('metadata:updated', metadata);
+    // Apply event to snapshot
+    this.applyEvent(event);
+    this.eventsSinceSnapshot++;
+
+    // Create new snapshot if threshold reached
+    if (this.eventsSinceSnapshot >= SNAPSHOT_THRESHOLD) {
+      this.createSnapshot();
+      this.eventsSinceSnapshot = 0;
+    }
+
+    // Notify listeners
+    this.emit('metadata:rebuilt');
   }
 
   /**
-   * Get current project metadata
+   * Apply single event to snapshot
    */
-  getMetadata(): ProjectMetadata | null {
-    return this.metadata;
+  private applyEvent(event: Event): void {
+    switch (event.type) {
+      case 'metadata:created': {
+        const data = event.data as { id: string; name: string };
+        this.snapshot = {
+          latestEventId: event.id!,
+          id: data.id,
+          name: data.name,
+          created: new Date(event.timestamp),
+          modified: new Date(event.timestamp),
+        };
+        break;
+      }
+
+      case 'metadata:renamed': {
+        if (this.snapshot) {
+          const data = event.data as { newName: string };
+          this.snapshot.name = data.newName;
+          this.snapshot.modified = new Date(event.timestamp);
+          this.snapshot.latestEventId = event.id!;
+        }
+        break;
+      }
+    }
   }
 
   /**
-   * Get current dimensions (convenience method)
+   * Rebuild from event log (from snapshot forward)
    */
-  getDimensions(): Dimensions | null {
-    return this.metadata?.dimensions || null;
+  private async rebuild(): Promise<void> {
+    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
+
+    const events = await eventLog.getEvents({
+      fromId,
+      types: ['metadata:created', 'metadata:renamed'],
+    });
+
+    for (const event of events) {
+      this.applyEvent(event);
+    }
+
+    this.emit('metadata:rebuilt');
   }
 
   /**
-   * Get metaBlock state (convenience method)
+   * Create snapshot (persist to localStorage for fast startup)
    */
-  getMetaBlock(): MetaBlock | null {
-    return this.metadata?.metaBlock || null;
+  private createSnapshot(): void {
+    if (!this.snapshot) return;
+
+    try {
+      const serialized = JSON.stringify({
+        latestEventId: this.snapshot.latestEventId,
+        id: this.snapshot.id,
+        name: this.snapshot.name,
+        created: this.snapshot.created.toISOString(),
+        modified: this.snapshot.modified.toISOString(),
+      });
+      localStorage.setItem('metadata-snapshot', serialized);
+    } catch (error) {
+      console.error('Failed to create metadata snapshot:', error);
+    }
+  }
+
+  /**
+   * Ensure projection is fresh by applying any new events
+   * This guarantees reads always return latest state
+   *
+   * OPTIMIZED: Returns instantly (O(1)) if no new events since last check
+   */
+  async ensureFresh(): Promise<void> {
+    const latestEventId = await eventLog.getLatestEventId();
+
+    // No new events? Return instantly (O(1) version check)
+    if (this.snapshot && latestEventId === this.snapshot.latestEventId) {
+      return;
+    }
+
+    // New events exist (or no snapshot yet) - fetch and apply
+    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
+
+    const events = await eventLog.getEvents({
+      fromId,
+      types: ['metadata:created', 'metadata:renamed'],
+    });
+
+    for (const event of events) {
+      this.applyEvent(event);
+    }
+  }
+
+  /**
+   * Get cached metadata (synchronous, no freshness check)
+   * Use this in render loops where ensureFresh() was already called
+   */
+  getCached(): Metadata | null {
+    if (!this.snapshot) return null;
+
+    return {
+      id: this.snapshot.id,
+      name: this.snapshot.name,
+      created: this.snapshot.created,
+      modified: this.snapshot.modified,
+    };
+  }
+
+  /**
+   * Get current metadata (always fresh)
+   */
+  async getMetadata(): Promise<Metadata | null> {
+    await this.ensureFresh();
+
+    if (!this.snapshot) return null;
+
+    return {
+      id: this.snapshot.id,
+      name: this.snapshot.name,
+      created: this.snapshot.created,
+      modified: this.snapshot.modified,
+    };
+  }
+
+  /**
+   * Get project ID (always fresh)
+   */
+  async getId(): Promise<string | null> {
+    await this.ensureFresh();
+    return this.snapshot?.id || null;
+  }
+
+  /**
+   * Get project name (always fresh)
+   */
+  async getName(): Promise<string | null> {
+    await this.ensureFresh();
+    return this.snapshot?.name || null;
   }
 }
 

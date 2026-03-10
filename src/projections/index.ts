@@ -8,5 +8,7 @@
  */
 
 export { blockProjection } from './BlockProjection';
-export { metadataProjection, type ProjectMetadata } from './MetadataProjection';
+export { metadataProjection } from './MetadataProjection';
+export { modelProjection } from './ModelProjection';
 export { projectView } from './ProjectView';
+export type { StorageMetadata } from '../types';
