@@ -109,26 +109,6 @@ const BLOCK_TEXTURES: BlockTextureDef[] = [
     }
   },
 
-  // DEBUG block with directional arrows
-  {
-    blockId: 'debug_arrows',
-    textures: {
-      all: 'debug_arrows.png'
-    }
-  },
-
-  // Face letters debug block
-  {
-    blockId: 'face_letters',
-    textures: {
-      top: 'face_top.png',
-      bottom: 'face_bottom.png',
-      north: 'face_back.png',
-      south: 'face_front.png',
-      east: 'face_right.png',
-      west: 'face_left.png',
-    }
-  },
 ];
 
 // Collect all unique textures
