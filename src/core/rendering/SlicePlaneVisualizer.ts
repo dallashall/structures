@@ -61,14 +61,14 @@ export class SlicePlaneVisualizer {
     this.createAllPlanes();
 
     // Subscribe to layer changes
-    editorState.on('layer:changed', this.boundLayerChanged);
+    editorState.on('layer:adjusted', this.boundLayerChanged);
   }
 
   /**
    * Cleanup resources and event listeners
    */
   destroy(): void {
-    editorState.off('layer:changed', this.boundLayerChanged);
+    editorState.off('layer:adjusted', this.boundLayerChanged);
 
     this.disposePlanes(this.xPlanes);
     this.disposePlanes(this.yPlanes);

@@ -12,6 +12,7 @@
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import { BlockIndex } from '../core/BlockIndex';
 import type { Dimensions, Vector3D, MetaBlock } from '../types';
 
@@ -75,6 +76,16 @@ class ModelProjection extends EventEmitter {
       return;
     }
 
+    // Only process events for current project
+    const currentProjectId = editorState.getCurrentProjectId();
+    console.log(`ModelProjection.handleEvent: event.type=${event.type}, event.projectId=${event.projectId}, currentProjectId=${currentProjectId}`);
+
+    if (event.projectId !== currentProjectId) {
+      console.log('ModelProjection.handleEvent: Skipping event - projectId mismatch');
+      return;
+    }
+
+    console.log('ModelProjection.handleEvent: Applying event');
     // Apply event to snapshot
     this.applyEvent(event);
     this.eventsSinceSnapshot++;
@@ -247,6 +258,8 @@ class ModelProjection extends EventEmitter {
    * Rebuild from event log (from snapshot forward)
    */
   private async rebuild(): Promise<void> {
+    const projectId = editorState.getCurrentProjectId();
+
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
       types: [
@@ -258,6 +271,7 @@ class ModelProjection extends EventEmitter {
         'model:metaBlockPlaced',
         'model:metaBlockConfirmed',
       ],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -299,6 +313,8 @@ class ModelProjection extends EventEmitter {
     }
 
     // New events exist - fetch and apply
+    const projectId = editorState.getCurrentProjectId();
+
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
       types: [
@@ -312,6 +328,7 @@ class ModelProjection extends EventEmitter {
         'model:metaBlockPlaced',
         'model:metaBlockConfirmed',
       ],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -366,6 +383,23 @@ class ModelProjection extends EventEmitter {
   async getMetaBlock(): Promise<MetaBlock> {
     await this.ensureFresh();
     return this.snapshot.metaBlock;
+  }
+
+  /**
+   * Reset projection (clear snapshot for new project)
+   */
+  reset(): void {
+    this.snapshot = {
+      latestEventId: 0,
+      dimensions: { width: 16, height: 16, depth: 16 },
+      blocks: new BlockIndex(),
+      metaBlock: {
+        position: { x: 0, y: 0, z: 0 },
+        direction: 'north',
+        isConfirmed: false,
+      },
+    };
+    this.eventsSinceSnapshot = 0;
   }
 }
 

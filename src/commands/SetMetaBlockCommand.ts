@@ -1,4 +1,5 @@
 import { eventLog } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import type { Vector3D } from '../types';
 
 /**
@@ -19,10 +20,16 @@ class SetMetaBlockCommand {
   }
 
   async execute(position: Vector3D): Promise<void> {
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      console.error('SetMetaBlockCommand: No current project');
+      return;
+    }
+
     // Append to EventLog
     await eventLog.append('model:metaBlockPlaced', {
       position,
-    });
+    }, projectId);
 
     console.log(`Meta block placed at (${position.x}, ${position.y}, ${position.z})`);
   }

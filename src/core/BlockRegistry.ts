@@ -11,7 +11,7 @@ import type { Block } from '../types';
  * - Fuzzy search functionality
  *
  * Events:
- * - registry:updated - When blocks are added or modified
+ * - blocks:loaded - When blocks are loaded into the registry
  */
 class BlockRegistry extends EventEmitter {
   private static instance: BlockRegistry;
@@ -72,7 +72,7 @@ class BlockRegistry extends EventEmitter {
    */
   registerBlock(block: Block): void {
     this.blocks.set(block.id, block);
-    this.emit('registry:updated', this.getAllBlocks());
+    this.emit('blocks:loaded', this.getAllBlocks());
   }
 
   /**

@@ -18,12 +18,14 @@ export interface Event {
   type: string;      // e.g., 'model:blockPlaced', 'metadata:renamed'
   data: unknown;     // Event-specific payload
   timestamp: number; // When it happened
+  projectId?: string; // Project this event belongs to
 }
 
 export interface EventQuery {
   fromId?: number;     // Get events starting from this ID (inclusive)
   toId?: number;       // Get events up to this ID (inclusive)
   types?: string[];    // Filter by event types
+  projectId?: string;  // Filter by project ID
 }
 
 /**
@@ -95,13 +97,14 @@ class EventLog extends EventEmitter {
    * Append event to log
    * Returns the event ID
    */
-  async append(type: string, data: unknown): Promise<number> {
+  async append(type: string, data: unknown, projectId?: string): Promise<number> {
     await this.ensureReady();
 
     const event: Event = {
       type,
       data,
       timestamp: Date.now(),
+      projectId,
     };
 
     return new Promise((resolve, reject) => {
@@ -153,7 +156,10 @@ class EventLog extends EventEmitter {
           const matchesType =
             !query.types || query.types.includes(evt.type);
 
-          if (matchesId && matchesType) {
+          const matchesProject =
+            !query.projectId || evt.projectId === query.projectId;
+
+          if (matchesId && matchesType && matchesProject) {
             events.push(evt);
           }
 
@@ -217,6 +223,39 @@ class EventLog extends EventEmitter {
 
       request.onerror = () => {
         console.error('Failed to clear events:', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  /**
+   * Delete all events for a specific project
+   */
+  async deleteProjectEvents(projectId: string): Promise<void> {
+    await this.ensureReady();
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.openCursor();
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor) {
+          const evt = cursor.value as Event;
+          if (evt.projectId === projectId) {
+            cursor.delete();
+          }
+          cursor.continue();
+        } else {
+          console.log(`EventLog: Deleted events for project ${projectId}`);
+          resolve();
+        }
+      };
+
+      request.onerror = () => {
+        console.error('Failed to delete project events:', request.error);
         reject(request.error);
       };
     });

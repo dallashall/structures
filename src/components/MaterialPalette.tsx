@@ -1,7 +1,10 @@
 import { Box } from '@mui/material';
-import { ActionGroup, ActionGroupItem } from './ActionGroup';
-import { ColorSwatch } from './ColorSwatch';
+
 import type { Block } from '../types';
+
+import { ActionGroup } from './ActionGroup';
+import { ActionGroupItem } from './ActionGroupItem';
+import { ColorSwatch } from './ColorSwatch';
 
 interface MaterialPaletteProps {
   blocks: Block[];

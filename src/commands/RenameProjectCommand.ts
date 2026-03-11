@@ -1,4 +1,5 @@
 import { eventLog } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import { metadataProjection } from '../projections/MetadataProjection';
 
 /**
@@ -26,11 +27,16 @@ export class RenameProjectCommand {
       return; // No-op if name unchanged
     }
 
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      throw new Error('No current project');
+    }
+
     // Append to EventLog
     await eventLog.append('metadata:renamed', {
       previousName: metadata.name,
       newName,
-    });
+    }, projectId);
   }
 }
 

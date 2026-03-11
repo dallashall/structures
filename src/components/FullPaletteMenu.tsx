@@ -57,20 +57,63 @@ export function FullPaletteMenu({
     close();
   };
 
+  // Named filter function for search
+  const matchesSearchQuery = (block: Block) =>
+    block.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+  // Named map function for category extraction
+  const toCategory = (block: Block) => block.category;
+
   // Filter blocks by search query
   const filteredBlocks = searchQuery.trim()
-    ? blocks.filter((block) =>
-        block.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+    ? blocks.filter(matchesSearchQuery)
     : blocks;
 
   // Group blocks by category
   const categories = Array.from(
-    new Set(filteredBlocks.map((block) => block.category)),
+    new Set(filteredBlocks.map(toCategory)),
   ).sort();
 
   const getBlocksByCategory = (category: string): Block[] => {
     return filteredBlocks.filter((block) => block.category === category);
+  };
+
+  // Named render function for individual blocks (extracted from map)
+  const renderBlock = (block: Block, close: () => void) => {
+    const handleClick = () => handleBlockClick(block.id, close);
+
+    return (
+      <Box
+        key={block.id}
+        onClick={handleClick}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0.5,
+          cursor: "pointer",
+          p: 1,
+          borderRadius: 1,
+          "&:hover": {
+            bgcolor: "action.hover",
+          },
+        }}
+      >
+        <ColorSwatch color={block.color} />
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: 11,
+            textAlign: "center",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            width: "100%",
+          }}
+        >
+          {block.name}
+        </Typography>
+      </Box>
+    );
   };
 
   return (
@@ -126,44 +169,6 @@ export function FullPaletteMenu({
                   categories.map((category) => {
                     const categoryBlocks = getBlocksByCategory(category);
 
-                    const renderBlock = (block: Block) => {
-                      const handleClick = () =>
-                        handleBlockClick(block.id, close);
-
-                      return (
-                        <Box
-                          key={block.id}
-                          onClick={handleClick}
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 0.5,
-                            cursor: "pointer",
-                            p: 1,
-                            borderRadius: 1,
-                            "&:hover": {
-                              bgcolor: "action.hover",
-                            },
-                          }}
-                        >
-                          <ColorSwatch color={block.color} />
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontSize: 11,
-                              textAlign: "center",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              width: "100%",
-                            }}
-                          >
-                            {block.name}
-                          </Typography>
-                        </Box>
-                      );
-                    };
-
                     return (
                       <Box key={category} sx={{ mb: 3 }}>
                         <Typography variant="h6" sx={{ mb: 1 }}>
@@ -180,7 +185,7 @@ export function FullPaletteMenu({
                             gap: 1,
                           }}
                         >
-                          {categoryBlocks.map(renderBlock)}
+                          {categoryBlocks.map((block) => renderBlock(block, close))}
                         </Box>
                       </Box>
                     );

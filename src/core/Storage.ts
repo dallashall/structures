@@ -11,6 +11,7 @@
  */
 
 import { EventEmitter } from './EventEmitter';
+import { eventLog } from './EventLog';
 import type { StorageMetadata } from '../types';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'pending' | 'error';
@@ -69,7 +70,7 @@ class Storage extends EventEmitter {
     }
 
     this.saveData(data);
-    this.emit('projects:changed');
+    this.emit('project:saved');
   }
 
   /**
@@ -82,18 +83,29 @@ class Storage extends EventEmitter {
     if (project) {
       project.modified = new Date();
       this.saveData(data);
-      this.emit('projects:changed');
+      this.emit('project:touched');
     }
   }
 
   /**
-   * Delete project metadata
+   * Delete project metadata and all associated events
    */
-  deleteProject(projectId: string): void {
+  async deleteProject(projectId: string): Promise<void> {
+    // Delete from metadata
     const data = this.loadData();
     data.projects = data.projects.filter(p => p.id !== projectId);
+
+    // Clear last opened if this was it
+    if (data.lastOpenedProjectId === projectId) {
+      data.lastOpenedProjectId = null;
+    }
+
     this.saveData(data);
-    this.emit('projects:changed');
+
+    // Delete all events for this project from EventLog
+    await eventLog.deleteProjectEvents(projectId);
+
+    this.emit('project:deleted');
   }
 
   /**

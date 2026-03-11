@@ -19,6 +19,9 @@ export interface WithEditorStateProps {
   activeView: ViewType;
   activeLayers: LayerState;
   selectedBlock: string | null;
+  foregroundBlock: string | null;
+  backgroundBlock: string | null;
+  activeMaterialSlot: 'foreground' | 'background';
   activeTool: ToolType;
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
@@ -27,8 +30,6 @@ export interface WithEditorStateProps {
   isPlacementMode: boolean;
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
-  selectedQuickSelectSlot: number;
-  activeDragBlock: string | null;
 }
 
 /**
@@ -36,14 +37,14 @@ export interface WithEditorStateProps {
  * and provides editor UI state to wrapped component.
  *
  * Subscribes to:
- * - layout:changed
- * - view:changed
- * - layer:changed
+ * - layout:toggled
+ * - view:switched
+ * - layer:adjusted
  * - block:selected
- * - tool:changed
- * - paintmode:changed
- * - paintbehavior:changed
- * - quickselect:changed
+ * - tool:selected
+ * - paintmode:selected
+ * - paintbehavior:selected
+ * - quickselect:assigned
  *
  * Injects props:
  * - layoutMode: LayoutMode
@@ -74,6 +75,15 @@ export function withEditorState<P extends object>(
     const [selectedBlock, setSelectedBlock] = React.useState<string | null>(
       editorState.getSelectedBlock(),
     );
+    const [foregroundBlock, setForegroundBlock] = React.useState<string | null>(
+      editorState.getForegroundBlock(),
+    );
+    const [backgroundBlock, setBackgroundBlock] = React.useState<string | null>(
+      editorState.getBackgroundBlock(),
+    );
+    const [activeMaterialSlot, setActiveMaterialSlot] = React.useState<'foreground' | 'background'>(
+      editorState.getActiveMaterialSlot(),
+    );
     const [activeTool, setActiveTool] = React.useState<ToolType>(
       editorState.getActiveTool(),
     );
@@ -97,11 +107,6 @@ export function withEditorState<P extends object>(
     const [quickSelectSlots, setQuickSelectSlots] = React.useState<
       (string | null)[]
     >(editorState.getQuickSelectSlots());
-    const [activeDragBlock, setActiveDragBlock] = React.useState<string | null>(
-      editorState.getActiveDragBlock(),
-    );
-    const [selectedQuickSelectSlot, setSelectedQuickSelectSlot] =
-      React.useState<number>(editorState.getSelectedQuickSelectSlot());
 
     React.useEffect(() => {
       const handleLayoutChanged = (mode: LayoutMode) => {
@@ -118,6 +123,15 @@ export function withEditorState<P extends object>(
 
       const handleBlockSelected = (blockId: string | null) => {
         setSelectedBlock(blockId);
+        // Also update foreground/background based on active slot
+        setForegroundBlock(editorState.getForegroundBlock());
+        setBackgroundBlock(editorState.getBackgroundBlock());
+      };
+
+      const handleMaterialSlotChanged = (slot: 'foreground' | 'background') => {
+        setActiveMaterialSlot(slot);
+        // Update selected block when slot changes
+        setSelectedBlock(editorState.getSelectedBlock());
       };
 
       const handleToolChanged = (tool: ToolType) => {
@@ -152,70 +166,54 @@ export function withEditorState<P extends object>(
         setQuickSelectSlots(slots);
       };
 
-      const handleDragChanged = (blockId: string | null) => {
-        setActiveDragBlock(blockId);
-      };
-
-      const handleQuickSelectSlotChanged = (index: number) => {
-        setSelectedQuickSelectSlot(index);
-      };
-
       // Subscribe to events
-      editorState.on("layout:changed", handleLayoutChanged);
-      editorState.on("view:changed", handleViewChanged);
-      editorState.on("layer:changed", handleLayerChanged);
+      editorState.on("layout:toggled", handleLayoutChanged);
+      editorState.on("view:switched", handleViewChanged);
+      editorState.on("layer:adjusted", handleLayerChanged);
       editorState.on("block:selected", handleBlockSelected);
-      editorState.on("tool:changed", handleToolChanged);
-      editorState.on("paintmode:changed", handlePaintModeChanged);
+      editorState.on("materialslot:toggled", handleMaterialSlotChanged);
+      editorState.on("tool:selected", handleToolChanged);
+      editorState.on("paintmode:selected", handlePaintModeChanged);
       editorState.on(
-        "paintbehavior:changed",
+        "paintbehavior:selected",
         handlePaintBehaviorChanged,
       );
       editorState.on(
-        "shapefillmode:changed",
+        "shapefillmode:selected",
         handleShapeFillModeChanged,
       );
-      editorState.on("depthconfig:changed", handleDepthConfigChanged);
+      editorState.on("depthconfig:updated", handleDepthConfigChanged);
       editorState.on(
-        "placementmode:changed",
+        "placementmode:toggled",
         handlePlacementModeChanged,
       );
-      editorState.on("actionbar:changed", handleActionBarChanged);
-      editorState.on("quickselect:changed", handleQuickSelectChanged);
-      editorState.on(
-        "quickselect:slot:changed",
-        handleQuickSelectSlotChanged,
-      );
-      editorState.on("drag:changed", handleDragChanged);
+      editorState.on("actionbar:toggled", handleActionBarChanged);
+      editorState.on("quickselect:assigned", handleQuickSelectChanged);
 
       // Cleanup
       return () => {
-        editorState.off("layout:changed", handleLayoutChanged);
-        editorState.off("view:changed", handleViewChanged);
-        editorState.off("layer:changed", handleLayerChanged);
+        editorState.off("layout:toggled", handleLayoutChanged);
+        editorState.off("view:switched", handleViewChanged);
+        editorState.off("layer:adjusted", handleLayerChanged);
         editorState.off("block:selected", handleBlockSelected);
-        editorState.off("tool:changed", handleToolChanged);
-        editorState.off("paintmode:changed", handlePaintModeChanged);
+        editorState.off("materialslot:toggled", handleMaterialSlotChanged);
+        editorState.off("tool:selected", handleToolChanged);
+        editorState.off("paintmode:selected", handlePaintModeChanged);
         editorState.off(
-          "paintbehavior:changed",
+          "paintbehavior:selected",
           handlePaintBehaviorChanged,
         );
         editorState.off(
-          "shapefillmode:changed",
+          "shapefillmode:selected",
           handleShapeFillModeChanged,
         );
-        editorState.off("depthconfig:changed", handleDepthConfigChanged);
+        editorState.off("depthconfig:updated", handleDepthConfigChanged);
         editorState.off(
-          "placementmode:changed",
+          "placementmode:toggled",
           handlePlacementModeChanged,
         );
-        editorState.off("actionbar:changed", handleActionBarChanged);
-        editorState.off("quickselect:changed", handleQuickSelectChanged);
-        editorState.off(
-          "quickselect:slot:changed",
-          handleQuickSelectSlotChanged,
-        );
-        editorState.off("drag:changed", handleDragChanged);
+        editorState.off("actionbar:toggled", handleActionBarChanged);
+        editorState.off("quickselect:assigned", handleQuickSelectChanged);
       };
     }, []);
 
@@ -226,6 +224,9 @@ export function withEditorState<P extends object>(
         activeView={activeView}
         activeLayers={activeLayers}
         selectedBlock={selectedBlock}
+        foregroundBlock={foregroundBlock}
+        backgroundBlock={backgroundBlock}
+        activeMaterialSlot={activeMaterialSlot}
         activeTool={activeTool}
         paintMode={paintMode}
         paintBehavior={paintBehavior}
@@ -234,8 +235,6 @@ export function withEditorState<P extends object>(
         isPlacementMode={isPlacementMode}
         isActionBarExpanded={isActionBarExpanded}
         quickSelectSlots={quickSelectSlots}
-        selectedQuickSelectSlot={selectedQuickSelectSlot}
-        activeDragBlock={activeDragBlock}
       />
     );
   };

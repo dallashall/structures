@@ -16,7 +16,7 @@ export interface WithBlockRegistryProps {
  * and provides block catalog to wrapped component.
  *
  * Subscribes to:
- * - registry:updated
+ * - blocks:loaded
  *
  * Injects props:
  * - blocks: Block[] - All available blocks
@@ -40,11 +40,11 @@ export function withBlockRegistry<P extends object>(
       };
 
       // Subscribe to events
-      blockRegistry.on("registry:updated", handleRegistryUpdated);
+      blockRegistry.on("blocks:loaded", handleRegistryUpdated);
 
       // Cleanup
       return () => {
-        blockRegistry.off("registry:updated", handleRegistryUpdated);
+        blockRegistry.off("blocks:loaded", handleRegistryUpdated);
       };
     }, []);
 

@@ -1,117 +1,146 @@
-import { Box } from "@mui/material";
-import { ActionGroup, ActionGroupItem } from "./ActionGroup";
-import { ColorSwatch } from "./ColorSwatch";
+import { Box, IconButton, Tooltip, ToggleButton } from "@mui/material";
+import { Apps } from "@mui/icons-material";
+
 import type { Block } from "../types";
+
+import { ColorSwatch } from "./ColorSwatch";
+import { findBlockById } from "../utils/blockUtils";
 
 interface QuickSelectPaletteProps {
   slots: (string | null)[];
-  selectedSlotIndex: number | null;
   blocks: Block[]; // All blocks to look up by ID
-  onSelectSlot: (index: number) => void;
+  onSelectSlot: (index: number) => void; // Apply block from slot to active material
   onAssignSlot?: (index: number) => void; // Assign currently selected block to this slot
+  onOpenBrowser?: () => void; // Open material browser
   orientation?: "horizontal" | "vertical";
 }
 
 /**
- * QuickSelectPalette - 5-slot quick-select palette for materials
+ * QuickSelectPalette - 9-slot quick-select palette + browser button
  *
  * Features:
- * - 5 slots shown as color swatches or empty squares
- * - Click to select slot (makes that block the active material)
+ * - 9 slots shown as color swatches or empty squares
+ * - 10th item is a button to open the material browser
+ * - Click to apply block from slot to active material (same as number keys)
  * - Shift+click or right-click to assign currently selected block to that slot
+ * - No selection state - just instant application
  * - Empty slots shown as gray squares
- *
- * Uses our custom ActionGroup with ColorSwatch for consistent
- * theming and accessibility.
  */
 export function QuickSelectPalette({
   slots,
-  selectedSlotIndex,
   blocks,
   onSelectSlot,
   onAssignSlot,
+  onOpenBrowser,
   orientation = "horizontal",
 }: QuickSelectPaletteProps) {
-  const handleSelectionChange = (keys: Set<string>) => {
-    if (keys.size > 0) {
-      const selectedKey = Array.from(keys)[0] as string;
-      const index = parseInt(selectedKey, 10);
-      onSelectSlot(index);
-    }
+  const isVertical = orientation === "vertical";
+
+  const handleSlotClick = (index: number) => {
+    // Apply block from this slot to active material
+    onSelectSlot(index);
   };
 
-  const getBlock = (blockId: string | null): Block | null => {
-    if (!blockId) {
-      return null;
-    }
-    return blocks.find((b) => b.id === blockId) || null;
-  };
-
-  const handleSlotClick = (index: number, event: React.MouseEvent) => {
-    // Shift+click or right-click to assign current block to this slot
-    if (event.shiftKey || event.button === 2) {
-      event.preventDefault();
-      if (onAssignSlot) {
-        onAssignSlot(index);
-      }
-    }
-  };
-
-  const handleSlotContextMenu = (index: number, event: React.MouseEvent) => {
+  const handleSlotRightClick = (index: number, event: React.MouseEvent) => {
     event.preventDefault();
     if (onAssignSlot) {
       onAssignSlot(index);
     }
   };
 
+  const createSlotClickHandler = (index: number) => () => {
+    handleSlotClick(index);
+  };
+
+  const createSlotContextMenuHandler = (index: number) => (event: React.MouseEvent) => {
+    handleSlotRightClick(index, event);
+  };
+
   const renderSlot = (index: number) => {
     const blockId = slots[index];
-    const block = getBlock(blockId);
+    const block = findBlockById(blocks, blockId);
 
     return (
-      <Box
-        key={index.toString()}
-        onClick={(e) => handleSlotClick(index, e)}
-        onContextMenu={(e) => handleSlotContextMenu(index, e)}
-        sx={{ position: "relative" }}
+      <ToggleButton
+        key={index}
+        value={index.toString()}
+        onClick={createSlotClickHandler(index)}
+        onContextMenu={createSlotContextMenuHandler(index)}
+        aria-label={block?.name || `Slot ${index + 1}`}
+        sx={{
+          width: 40,
+          height: 40,
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 1,
+          p: 0,
+          // No selection styling - always same appearance
+          "&.Mui-selected": {
+            bgcolor: "transparent",
+            "&:hover": {
+              bgcolor: "action.hover",
+            },
+          },
+        }}
       >
-        <ActionGroupItem
-          itemKey={index.toString()}
-          aria-label={block?.name || `Slot ${index + 1}`}
-        >
-          {block ? (
-            <ColorSwatch color={block.color} />
-          ) : (
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                bgcolor: "grey.300",
-                borderRadius: 0.5,
-                border: 1,
-                borderColor: "grey.500",
-              }}
-            />
-          )}
-        </ActionGroupItem>
-      </Box>
+        {block ? (
+          <ColorSwatch color={block.color} />
+        ) : (
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: "grey.300",
+              borderRadius: 0.5,
+              border: 1,
+              borderColor: "grey.500",
+            }}
+          />
+        )}
+      </ToggleButton>
     );
   };
 
-  const selectedKeys =
-    selectedSlotIndex !== null
-      ? new Set([selectedSlotIndex.toString()])
-      : new Set<string>();
-
   return (
-    <ActionGroup
-      selectionMode="single"
-      selectedKeys={selectedKeys}
-      onSelectionChange={handleSelectionChange}
-      aria-label="Quick select palette"
-      orientation={orientation}
+    <Box
+      sx={
+        isVertical
+          ? {
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 0.5,
+              px: 0.5,
+            }
+          : {
+              display: "flex",
+              gap: 0.5,
+            }
+      }
     >
-      {[0, 1, 2, 3, 4].map(renderSlot)}
-    </ActionGroup>
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(renderSlot)}
+
+      {/* 10th item - Open Material Browser button */}
+      {isVertical && onOpenBrowser && (
+        <Tooltip title="Open Material Browser" placement="right">
+          <IconButton
+            onClick={onOpenBrowser}
+            aria-label="Open material browser"
+            sx={{
+              width: 40,
+              height: 40,
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 1,
+              bgcolor: "background.paper",
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
+            }}
+          >
+            <Apps fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
   );
 }

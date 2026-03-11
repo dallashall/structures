@@ -11,6 +11,7 @@
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 
 const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
 
@@ -64,6 +65,12 @@ class MetadataProjection extends EventEmitter {
       return;
     }
 
+    // Only process events for current project
+    const currentProjectId = editorState.getCurrentProjectId();
+    if (event.projectId !== currentProjectId) {
+      return;
+    }
+
     // Apply event to snapshot
     this.applyEvent(event);
     this.eventsSinceSnapshot++;
@@ -112,10 +119,12 @@ class MetadataProjection extends EventEmitter {
    */
   private async rebuild(): Promise<void> {
     const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
+    const projectId = editorState.getCurrentProjectId();
 
     const events = await eventLog.getEvents({
       fromId,
       types: ['metadata:created', 'metadata:renamed'],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -161,10 +170,12 @@ class MetadataProjection extends EventEmitter {
 
     // New events exist (or no snapshot yet) - fetch and apply
     const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
+    const projectId = editorState.getCurrentProjectId();
 
     const events = await eventLog.getEvents({
       fromId,
       types: ['metadata:created', 'metadata:renamed'],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -217,6 +228,14 @@ class MetadataProjection extends EventEmitter {
   async getName(): Promise<string | null> {
     await this.ensureFresh();
     return this.snapshot?.name || null;
+  }
+
+  /**
+   * Reset projection (clear snapshot for new project)
+   */
+  reset(): void {
+    this.snapshot = null;
+    this.eventsSinceSnapshot = 0;
   }
 }
 

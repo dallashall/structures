@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,24 +11,22 @@ import {
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { Search, Close } from '@mui/icons-material';
+import { Search, Close, PanTool } from '@mui/icons-material';
+
 import type { Block } from '../types';
-import { DraggableMaterialBlock } from './DraggableMaterialBlock';
-import { DroppableQuickSelectSlot } from './DroppableQuickSelectSlot';
+
+import { ColorSwatch } from './ColorSwatch';
+import { findBlockById } from '../utils/blockUtils';
 
 interface MaterialBrowserModalProps {
   isOpen: boolean;
   blocks: Block[];
   onClose: () => void;
-  onSelectMaterial: (blockId: string) => void;
-  selectedBlockId: string | null;
   searchQuery: string;
   selectedTab: number;
   onSearchChange: (query: string) => void;
   onTabChange: (tab: number) => void;
   quickSelectSlots: (string | null)[];
-  selectedSlotIndex: number;
-  onSelectSlot: (index: number) => void;
   onAssignSlot: (index: number, blockId: string) => void;
 }
 
@@ -40,28 +39,50 @@ const CATEGORIES = [
 ];
 
 /**
- * MaterialBrowserModal - Full material browser with tabs and search
+ * MaterialBrowserModal - Full material browser with grab-and-drop interaction
  *
  * Minecraft-style material browser with:
+ * - Click to grab a material
+ * - Click slot to drop grabbed material
+ * - Right-click to cancel/clear grabbed material
  * - Tabs for material categories
  * - Search functionality
- * - Grid display of all materials
  */
 export function MaterialBrowserModal({
   isOpen,
   blocks,
   onClose,
-  onSelectMaterial,
-  selectedBlockId,
   searchQuery,
   selectedTab,
   onSearchChange,
   onTabChange,
   quickSelectSlots,
-  selectedSlotIndex,
-  onSelectSlot,
   onAssignSlot,
 }: MaterialBrowserModalProps) {
+  // Local state for grabbed material
+  const [grabbedBlockId, setGrabbedBlockId] = React.useState<string | null>(null);
+  // Track mouse position for floating grabbed material
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+
+  // Reset grabbed material when modal opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setGrabbedBlockId(null);
+    }
+  }, [isOpen]);
+
+  // Track mouse movement to position floating grabbed material
+  React.useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    };
+
+    if (grabbedBlockId) {
+      window.addEventListener('mousemove', handleMouseMove);
+      return () => window.removeEventListener('mousemove', handleMouseMove);
+    }
+  }, [grabbedBlockId]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     onTabChange(newValue);
   };
@@ -71,24 +92,24 @@ export function MaterialBrowserModal({
   };
 
   const handleMaterialClick = (blockId: string) => {
-    // If a quick-select slot is selected, assign material to that slot
-    if (selectedSlotIndex !== -1) {
-      onAssignSlot(selectedSlotIndex, blockId);
-    } else {
-      // Otherwise, just select the material and close the browser
-      onSelectMaterial(blockId);
-    }
+    // Click to grab the material
+    setGrabbedBlockId(blockId);
   };
 
   const handleSlotClick = (index: number) => {
-    onSelectSlot(index);
+    // If we have a grabbed material, drop it into the slot
+    if (grabbedBlockId) {
+      onAssignSlot(index, grabbedBlockId);
+      setGrabbedBlockId(null); // Clear after dropping
+    }
   };
 
-  const matchesBlockId = (blockId: string | null) => (b: Block) => b.id === blockId;
-
-  const getBlockById = (blockId: string | null): Block | null => {
-    if (!blockId) return null;
-    return blocks.find(matchesBlockId(blockId)) ?? null;
+  const handleCancel = (event: React.MouseEvent) => {
+    // Right-click to cancel
+    if (event.button === 2) {
+      event.preventDefault();
+      setGrabbedBlockId(null);
+    }
   };
 
   const matchesSearchQuery = (block: Block) =>
@@ -97,59 +118,143 @@ export function MaterialBrowserModal({
   const filteredBlocks = blocks.filter(matchesSearchQuery);
   const currentCategoryBlocks = filteredBlocks.filter(CATEGORIES[selectedTab].filter);
 
+  // Named handler creators for callbacks
+  const createMaterialClickHandler = (blockId: string) => () => {
+    handleMaterialClick(blockId);
+  };
+
+  const createSlotClickHandler = (index: number) => () => {
+    handleSlotClick(index);
+  };
+
   const renderTab = (category: typeof CATEGORIES[0], index: number) => (
     <Tab key={index} label={category.label} />
   );
 
   const renderMaterialBlock = (block: Block) => {
-    const isSelected = block.id === selectedBlockId;
+    const isGrabbed = block.id === grabbedBlockId;
 
     return (
-      <DraggableMaterialBlock
+      <Box
         key={block.id}
-        block={block}
-        isSelected={isSelected}
-        onClick={handleMaterialClick}
-      />
+        onClick={createMaterialClickHandler(block.id)}
+        sx={{
+          cursor: 'pointer',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          p: 0.5,
+          borderRadius: 1,
+          border: 2,
+          borderColor: isGrabbed ? 'primary.main' : 'transparent',
+          bgcolor: isGrabbed ? 'action.selected' : 'transparent',
+          '&:hover': {
+            bgcolor: isGrabbed ? 'action.selected' : 'action.hover',
+          },
+          transition: 'all 0.1s',
+        }}
+      >
+        <ColorSwatch color={block.color} size="L" />
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: '0.65rem',
+            mt: 0.25,
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%',
+          }}
+        >
+          {block.name}
+        </Typography>
+      </Box>
     );
   };
 
   const renderQuickSelectSlot = (blockId: string | null, index: number) => {
-    const block = getBlockById(blockId);
-    const isSelected = index === selectedSlotIndex;
+    const block = findBlockById(blocks, blockId);
 
     return (
-      <DroppableQuickSelectSlot
+      <Box
         key={index}
-        index={index}
-        isSelected={isSelected}
-        block={block}
-        onClick={handleSlotClick}
-      />
+        onClick={createSlotClickHandler(index)}
+        onContextMenu={handleCancel}
+        sx={{
+          width: 48,
+          height: 48,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: 2,
+          borderColor: 'divider',
+          borderRadius: 1,
+          bgcolor: 'background.paper',
+          cursor: grabbedBlockId ? 'pointer' : 'default',
+          '&:hover': {
+            borderColor: grabbedBlockId ? 'primary.main' : 'divider',
+            bgcolor: grabbedBlockId ? 'action.hover' : 'background.paper',
+          },
+          transition: 'all 0.1s',
+        }}
+      >
+        {block ? <ColorSwatch color={block.color} size="M" /> : (
+          <Typography variant="caption" color="text.disabled">
+            {index + 1}
+          </Typography>
+        )}
+      </Box>
     );
   };
 
+  const grabbedBlock = findBlockById(blocks, grabbedBlockId);
+
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      slotProps={{
-        paper: {
-          sx: {
-            height: '80vh',
-            maxHeight: 600,
+    <>
+      <Dialog
+        open={isOpen}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        onContextMenu={handleCancel}
+        slotProps={{
+          paper: {
+            sx: {
+              height: '80vh',
+              maxHeight: 600,
+            },
           },
-        },
-      }}
-    >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
-        Material Browser
-        <IconButton onClick={onClose} size="small" aria-label="Close">
-          <Close />
-        </IconButton>
-      </DialogTitle>
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            Material Browser
+            {grabbedBlock && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.5,
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                }}
+              >
+                <PanTool fontSize="small" />
+                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                  {grabbedBlock.name}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+          <IconButton onClick={onClose} size="small" aria-label="Close">
+            <Close />
+          </IconButton>
+        </DialogTitle>
 
       <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Search Bar */}
@@ -180,11 +285,11 @@ export function MaterialBrowserModal({
         </Box>
 
         {/* Materials Grid */}
-        <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }}>
+        <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }} onContextMenu={handleCancel}>
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))',
               gap: 1,
             }}
           >
@@ -201,15 +306,55 @@ export function MaterialBrowserModal({
         </Box>
       </DialogContent>
 
-      {/* Quick Select Slots - Fixed at bottom */}
-      <Box sx={{ px: 2, py: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
-        <Typography variant="subtitle2" sx={{ mb: 0.75, fontWeight: 'bold', fontSize: '0.7rem' }}>
-          Quick Select (1-9)
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-          {quickSelectSlots.map(renderQuickSelectSlot)}
+        {/* Quick Select Slots - Fixed at bottom */}
+        <Box sx={{ px: 2, py: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.75, fontWeight: 'bold', fontSize: '0.7rem' }}>
+            {grabbedBlock ? 'Click a slot to drop material' : 'Quick Select (1-9)'}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+            {quickSelectSlots.map(renderQuickSelectSlot)}
+          </Box>
         </Box>
-      </Box>
-    </Dialog>
+      </Dialog>
+
+      {/* Floating Grabbed Material - Follows cursor */}
+      {grabbedBlock && (
+        <Box
+          sx={{
+            position: 'fixed',
+            left: mousePosition.x + 10,
+            top: mousePosition.y + 10,
+            zIndex: 2000,
+            pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            border: 2,
+            borderColor: 'primary.main',
+            borderRadius: 1,
+            boxShadow: 6,
+            p: 0.5,
+            transform: 'scale(1.1)',
+          }}
+        >
+          <ColorSwatch color={grabbedBlock.color} size="L" />
+          <Typography
+            variant="caption"
+            sx={{
+              fontSize: '0.65rem',
+              mt: 0.25,
+              textAlign: 'center',
+              maxWidth: 80,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {grabbedBlock.name}
+          </Typography>
+        </Box>
+      )}
+    </>
   );
 }

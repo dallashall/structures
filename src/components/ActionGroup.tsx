@@ -1,30 +1,4 @@
-import { ToggleButtonGroup, ToggleButton } from "@mui/material";
-
-export interface ActionGroupItemProps {
-  /** Unique key for this item */
-  itemKey: string;
-  /** Content to display */
-  children: React.ReactNode;
-  /** Accessible label */
-  "aria-label"?: string;
-}
-
-/**
- * ActionGroupItem - Individual item within an ActionGroup
- *
- * Used as children of ActionGroup to define selectable items.
- */
-export function ActionGroupItem({
-  itemKey,
-  children,
-  "aria-label": ariaLabel,
-}: ActionGroupItemProps) {
-  return (
-    <ToggleButton value={itemKey} aria-label={ariaLabel}>
-      {children}
-    </ToggleButton>
-  );
-}
+import { ToggleButtonGroup, type SxProps, type Theme } from "@mui/material";
 
 interface ActionGroupProps {
   /** Selection mode */
@@ -41,6 +15,8 @@ interface ActionGroupProps {
   "aria-label": string;
   /** Orientation */
   orientation?: "horizontal" | "vertical";
+  /** MUI sx prop for styling */
+  sx?: SxProps<Theme>;
 }
 
 /**
@@ -57,6 +33,7 @@ export function ActionGroup({
   density = "default",
   "aria-label": ariaLabel,
   orientation = "horizontal",
+  sx,
 }: ActionGroupProps) {
   const handleChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -92,6 +69,7 @@ export function ActionGroup({
       aria-label={ariaLabel}
       orientation={orientation}
       size={density === "compact" ? "small" : "medium"}
+      sx={sx}
     >
       {children}
     </ToggleButtonGroup>

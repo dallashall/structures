@@ -5,13 +5,10 @@ import { mockBlocks } from '../mockData';
 
 /**
  * Preview showcase for the QuickSelectPalette component
- * Demonstrates 5-slot quick-select palette for rapid material switching
+ * Demonstrates 9-slot quick-select palette for rapid material switching
  */
 export function QuickSelectPalettePreview() {
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(0);
-
   const handleSelectSlot = (index: number) => {
-    setSelectedSlotIndex(index);
     console.log('[Preview] Slot selected:', index);
   };
 
@@ -33,7 +30,7 @@ export function QuickSelectPalettePreview() {
     null,
   ]);
 
-  const selectedBlock = interactiveSlots[selectedSlotIndex ?? 0];
+  const selectedBlock = interactiveSlots[0];
   const selectedBlockInfo = mockBlocks.find((b) => b.id === selectedBlock);
 
   return (
@@ -52,7 +49,6 @@ export function QuickSelectPalettePreview() {
         </Typography>
         <QuickSelectPalette
           slots={emptySlots}
-          selectedSlotIndex={null}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
@@ -66,7 +62,6 @@ export function QuickSelectPalettePreview() {
         </Typography>
         <QuickSelectPalette
           slots={partialSlots}
-          selectedSlotIndex={0}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
@@ -80,7 +75,6 @@ export function QuickSelectPalettePreview() {
         </Typography>
         <QuickSelectPalette
           slots={fullSlots}
-          selectedSlotIndex={1}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
@@ -90,21 +84,18 @@ export function QuickSelectPalettePreview() {
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Click slots to select different materials. Selected slot is
-          highlighted with a ring.
+          Click slots to apply materials to the active foreground/background slot.
+          No selection state - just instant application.
         </Typography>
         <QuickSelectPalette
           slots={interactiveSlots}
-          selectedSlotIndex={selectedSlotIndex}
           blocks={mockBlocks}
           onSelectSlot={handleSelectSlot}
         />
         {selectedBlockInfo && (
           <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 3 }}>
-            <Typography variant="h6" component="h4">Selected Block</Typography>
+            <Typography variant="h6" component="h4">First Block in Palette</Typography>
             <Typography variant="body1">
-              <strong>Slot:</strong> {selectedSlotIndex !== null ? selectedSlotIndex + 1 : 'None'}
-              <br />
               <strong>Block:</strong> {selectedBlockInfo.name}
               <br />
               <strong>ID:</strong> {selectedBlockInfo.id}
@@ -126,18 +117,20 @@ export function QuickSelectPalettePreview() {
             }}
           >
             {`interface QuickSelectPaletteProps {
-  slots: (string | null)[];      // 5 block IDs or null for empty
-  selectedSlotIndex: number | null;  // Currently selected slot (0-4)
+  slots: (string | null)[];      // 9 block IDs or null for empty
   blocks: Block[];                   // All blocks for lookup
-  onSelectSlot: (index: number) => void;  // Slot selection callback
-  onAssignSlot?: (index: number, blockId: string) => void; // Future: slot assignment
+  onSelectSlot: (index: number) => void;  // Apply block from slot to active material
+  onAssignSlot?: (index: number) => void; // Assign current block to slot
+  onOpenBrowser?: () => void;     // Open material browser
+  orientation?: 'horizontal' | 'vertical'; // Layout orientation
 }
 
 // Usage:
-// - Click slot to select it (makes that block active for painting)
+// - Click slot to apply that block to active foreground/background
+// - No selection state - just instant application
+// - Right-click to assign currently selected block to that slot
 // - Empty slots shown as gray squares
-// - Selected slot has visual ring indicator
-// - Future: Right-click or long-press to assign new block to slot`}
+// - Number keys 1-9 trigger same action as clicking slots`}
           </pre>
         </Box>
       </Box>
@@ -147,12 +140,13 @@ export function QuickSelectPalettePreview() {
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">
           <ul>
-            <li>5 customizable slots for frequently used blocks</li>
+            <li>9 customizable slots for frequently used blocks</li>
             <li>Empty slots displayed as gray placeholder squares</li>
-            <li>Selected slot highlighted with accent ring</li>
-            <li>Keyboard shortcuts support (future: number keys 1-5)</li>
+            <li>No selection state - clicking applies block immediately</li>
+            <li>Keyboard shortcuts: number keys 1-9 apply blocks from slots</li>
+            <li>Right-click to assign currently selected block to slot</li>
             <li>Color swatch represents block's 2D rendering color</li>
-            <li>Accessible via React Spectrum ActionGroup</li>
+            <li>Vertical or horizontal orientation support</li>
           </ul>
         </Typography>
       </Box>

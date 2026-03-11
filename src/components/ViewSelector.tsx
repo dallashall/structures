@@ -1,5 +1,7 @@
-import { ActionGroup, ActionGroupItem } from './ActionGroup';
 import type { ViewType } from '../types';
+
+import { ActionGroup } from './ActionGroup';
+import { ActionGroupItem } from './ActionGroupItem';
 
 interface ViewSelectorProps {
   activeView: ViewType;

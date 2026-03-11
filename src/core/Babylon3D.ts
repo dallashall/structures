@@ -103,10 +103,10 @@ export class Babylon3D {
     draftingService.on('draft:updated', this.boundHandlers.previewChanged);
     draftingService.on('draft:finalized', this.boundHandlers.previewChanged);
     draftingService.on('draft:cancelled', this.boundHandlers.previewChanged);
-    editorState.on('preview:changed', this.boundHandlers.previewChanged);
+    editorState.on('preview:rendered', this.boundHandlers.previewChanged);
 
     // Subscribe to editor state events for active layer highlighting
-    editorState.on('layer:changed', this.boundHandlers.layerChanged);
+    editorState.on('layer:adjusted', this.boundHandlers.layerChanged);
 
     // Handle window resize
     window.addEventListener('resize', this.boundHandlers.resize);
@@ -137,10 +137,10 @@ export class Babylon3D {
     draftingService.off('draft:updated', this.boundHandlers.previewChanged);
     draftingService.off('draft:finalized', this.boundHandlers.previewChanged);
     draftingService.off('draft:cancelled', this.boundHandlers.previewChanged);
-    editorState.off('preview:changed', this.boundHandlers.previewChanged);
+    editorState.off('preview:rendered', this.boundHandlers.previewChanged);
 
     // Unsubscribe from editor state
-    editorState.off('layer:changed', this.boundHandlers.layerChanged);
+    editorState.off('layer:adjusted', this.boundHandlers.layerChanged);
     window.removeEventListener('resize', this.boundHandlers.resize);
 
     // Dispose slice plane visualizer

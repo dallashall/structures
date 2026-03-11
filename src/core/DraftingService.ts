@@ -13,6 +13,7 @@
 
 import { EventEmitter } from './EventEmitter';
 import { eventLog } from './EventLog';
+import { editorState } from './EditorState';
 import type { Vector3D } from '../types';
 
 export interface PreviewBlock {
@@ -66,12 +67,18 @@ class DraftingService extends EventEmitter {
       return;
     }
 
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      console.error('Cannot finalize draft: no current project');
+      return;
+    }
+
     // Persist each block to EventLog as model:blockPlaced
     for (const block of this.previewBlocks) {
       await eventLog.append('model:blockPlaced', {
         position: block.position,
         blockType: block.blockType,
-      });
+      }, projectId);
     }
 
     // Clear preview

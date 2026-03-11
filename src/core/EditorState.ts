@@ -33,20 +33,27 @@ export interface PreviewBlock {
  * - Quick-select palette slots
  *
  * Events:
- * - layout:changed - When layout mode changes
- * - view:changed - When active view changes
- * - layer:changed - When any layer changes (passes dimension and new layer)
+ * - layout:toggled - When layout mode is toggled
+ * - view:switched - When active view is switched
+ * - layer:adjusted - When any layer is adjusted (passes dimension and new layer)
  * - block:selected - When selected block changes
- * - tool:changed - When active tool changes
- * - paintmode:changed - When paint mode changes
- * - paintbehavior:changed - When paint behavior changes
- * - shapefillmode:changed - When shape fill mode changes
- * - depthconfig:changed - When depth config changes
- * - curvecontrol:changed - When curve control state changes
- * - placementmode:changed - When placement mode changes
- * - actionbar:changed - When action bar expanded state changes
- * - quickselect:changed - When quick-select slots change
- * - preview:changed - When preview blocks change (for ghost rendering)
+ * - materialslot:toggled - When active material slot is toggled (foreground/background)
+ * - tool:selected - When active tool is selected
+ * - paintmode:selected - When paint mode is selected
+ * - paintbehavior:selected - When paint behavior is selected
+ * - shapefillmode:selected - When shape fill mode is selected
+ * - depthconfig:updated - When depth config is updated
+ * - curvecontrol:updated - When curve control state is updated
+ * - placementmode:toggled - When placement mode is toggled
+ * - actionbar:toggled - When action bar expanded state is toggled
+ * - materialbrowser:toggled - When material browser is toggled open/closed
+ * - materialbrowser:search:updated - When material browser search query is updated
+ * - materialbrowser:tab:switched - When material browser tab is switched
+ * - drag:started - When a block drag operation starts
+ * - drag:cleared - When a block drag operation is cleared
+ * - quickselect:assigned - When quick-select slots are assigned
+ * - preview:rendered - When preview blocks are rendered (for ghost rendering)
+ * - project:switched - When current project is switched
  */
 class EditorState extends EventEmitter {
   private static instance: EditorState;
@@ -54,7 +61,9 @@ class EditorState extends EventEmitter {
   private layoutMode: LayoutMode = 'quad';
   private activeView: ViewType = 'front';
   private activeLayers: LayerState = { x: 0, y: 0, z: 0 };
-  private selectedBlockId: string | null = null;
+  private foregroundBlockId: string | null = null;
+  private backgroundBlockId: string | null = null;
+  private activeMaterialSlot: 'foreground' | 'background' = 'foreground'; // Like Minecraft's hands or Photoshop's FG/BG
   private activeTool: ToolType = 'paint';
   private paintMode: PaintMode = 'point';
   private paintBehavior: PaintBehavior = 'normal';
@@ -69,12 +78,12 @@ class EditorState extends EventEmitter {
   private isPlacementMode = false;
   private isActionBarExpanded = true;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
-  private selectedQuickSelectSlotIndex: number = -1; // -1 means no slot selected
   private previewBlocks: PreviewBlock[] = [];
   private isMaterialBrowserOpen = false;
   private materialBrowserSearchQuery = '';
   private materialBrowserSelectedTab = 0;
   private activeDragBlockId: string | null = null;
+  private currentProjectId: string | null = null;
 
   private constructor() {
     super();
@@ -93,7 +102,7 @@ class EditorState extends EventEmitter {
   setLayoutMode = (mode: LayoutMode): void => {
     if (this.layoutMode !== mode) {
       this.layoutMode = mode;
-      this.emit('layout:changed', mode);
+      this.emit('layout:toggled', mode);
     }
   }
 
@@ -110,7 +119,7 @@ class EditorState extends EventEmitter {
   setActiveView = (view: ViewType): void => {
     if (this.activeView !== view) {
       this.activeView = view;
-      this.emit('view:changed', view);
+      this.emit('view:switched', view);
     }
   }
 
@@ -127,7 +136,7 @@ class EditorState extends EventEmitter {
   setActiveLayer = (dimension: 'x' | 'y' | 'z', layer: number): void => {
     if (this.activeLayers[dimension] !== layer) {
       this.activeLayers[dimension] = layer;
-      this.emit('layer:changed', dimension, layer);
+      this.emit('layer:adjusted', dimension, layer);
     }
   }
 
@@ -146,20 +155,70 @@ class EditorState extends EventEmitter {
   }
 
   /**
-   * Set the selected block ID
+   * Set the selected block ID for the currently active material slot
    */
   setSelectedBlock = (blockId: string | null): void => {
-    if (this.selectedBlockId !== blockId) {
-      this.selectedBlockId = blockId;
-      this.emit('block:selected', blockId);
+    if (this.activeMaterialSlot === 'foreground') {
+      if (this.foregroundBlockId !== blockId) {
+        this.foregroundBlockId = blockId;
+        this.emit('block:selected', blockId);
+      }
+    } else {
+      if (this.backgroundBlockId !== blockId) {
+        this.backgroundBlockId = blockId;
+        this.emit('block:selected', blockId);
+      }
     }
   }
 
   /**
-   * Get the selected block ID
+   * Get the selected block ID for the currently active material slot
    */
   getSelectedBlock(): string | null {
-    return this.selectedBlockId;
+    return this.activeMaterialSlot === 'foreground'
+      ? this.foregroundBlockId
+      : this.backgroundBlockId;
+  }
+
+  /**
+   * Get the foreground block ID
+   */
+  getForegroundBlock(): string | null {
+    return this.foregroundBlockId;
+  }
+
+  /**
+   * Get the background block ID
+   */
+  getBackgroundBlock(): string | null {
+    return this.backgroundBlockId;
+  }
+
+  /**
+   * Set the active material slot (foreground or background)
+   * Similar to Minecraft's hand selection or Photoshop's FG/BG
+   */
+  setActiveMaterialSlot = (slot: 'foreground' | 'background'): void => {
+    if (this.activeMaterialSlot !== slot) {
+      this.activeMaterialSlot = slot;
+      this.emit('materialslot:toggled', slot);
+    }
+  }
+
+  /**
+   * Get the active material slot
+   */
+  getActiveMaterialSlot(): 'foreground' | 'background' {
+    return this.activeMaterialSlot;
+  }
+
+  /**
+   * Toggle between foreground and background slots
+   * Like pressing 'F' in Minecraft to swap hands
+   */
+  toggleMaterialSlot = (): void => {
+    const newSlot = this.activeMaterialSlot === 'foreground' ? 'background' : 'foreground';
+    this.setActiveMaterialSlot(newSlot);
   }
 
   /**
@@ -168,7 +227,7 @@ class EditorState extends EventEmitter {
   setActiveTool = (tool: ToolType): void => {
     if (this.activeTool !== tool) {
       this.activeTool = tool;
-      this.emit('tool:changed', tool);
+      this.emit('tool:selected', tool);
     }
   }
 
@@ -185,7 +244,7 @@ class EditorState extends EventEmitter {
   setPaintMode = (mode: PaintMode): void => {
     if (this.paintMode !== mode) {
       this.paintMode = mode;
-      this.emit('paintmode:changed', mode);
+      this.emit('paintmode:selected', mode);
     }
   }
 
@@ -202,7 +261,7 @@ class EditorState extends EventEmitter {
   setPaintBehavior = (behavior: PaintBehavior): void => {
     if (this.paintBehavior !== behavior) {
       this.paintBehavior = behavior;
-      this.emit('paintbehavior:changed', behavior);
+      this.emit('paintbehavior:selected', behavior);
     }
   }
 
@@ -219,7 +278,7 @@ class EditorState extends EventEmitter {
   setShapeFillMode = (mode: ShapeFillMode): void => {
     if (this.shapeFillMode !== mode) {
       this.shapeFillMode = mode;
-      this.emit('shapefillmode:changed', mode);
+      this.emit('shapefillmode:selected', mode);
     }
   }
 
@@ -235,7 +294,7 @@ class EditorState extends EventEmitter {
    */
   setDepthConfig = (config: Partial<DepthConfig>): void => {
     this.depthConfig = { ...this.depthConfig, ...config };
-    this.emit('depthconfig:changed', this.depthConfig);
+    this.emit('depthconfig:updated', this.depthConfig);
   }
 
   /**
@@ -273,7 +332,7 @@ class EditorState extends EventEmitter {
    */
   setCurveControlState = (state: CurveControlState | null): void => {
     this.curveControlState = state;
-    this.emit('curvecontrol:changed', state);
+    this.emit('curvecontrol:updated', state);
   }
 
   /**
@@ -289,7 +348,7 @@ class EditorState extends EventEmitter {
   setPlacementMode = (isPlacementMode: boolean): void => {
     if (this.isPlacementMode !== isPlacementMode) {
       this.isPlacementMode = isPlacementMode;
-      this.emit('placementmode:changed', isPlacementMode);
+      this.emit('placementmode:toggled', isPlacementMode);
     }
   }
 
@@ -306,7 +365,7 @@ class EditorState extends EventEmitter {
   setActionBarExpanded = (isExpanded: boolean): void => {
     if (this.isActionBarExpanded !== isExpanded) {
       this.isActionBarExpanded = isExpanded;
-      this.emit('actionbar:changed', isExpanded);
+      this.emit('actionbar:toggled', isExpanded);
     }
   }
 
@@ -328,7 +387,7 @@ class EditorState extends EventEmitter {
         this.materialBrowserSearchQuery = '';
         this.materialBrowserSelectedTab = 0;
       }
-      this.emit('materialbrowser:changed', isOpen);
+      this.emit('materialbrowser:toggled', isOpen);
     }
   }
 
@@ -344,7 +403,7 @@ class EditorState extends EventEmitter {
    */
   setMaterialBrowserSearchQuery = (query: string): void => {
     this.materialBrowserSearchQuery = query;
-    this.emit('materialbrowser:search:changed', query);
+    this.emit('materialbrowser:search:updated', query);
   }
 
   /**
@@ -359,7 +418,7 @@ class EditorState extends EventEmitter {
    */
   setMaterialBrowserSelectedTab = (tab: number): void => {
     this.materialBrowserSelectedTab = tab;
-    this.emit('materialbrowser:tab:changed', tab);
+    this.emit('materialbrowser:tab:switched', tab);
   }
 
   /**
@@ -375,7 +434,11 @@ class EditorState extends EventEmitter {
   setActiveDragBlock = (blockId: string | null): void => {
     if (this.activeDragBlockId !== blockId) {
       this.activeDragBlockId = blockId;
-      this.emit('drag:changed', blockId);
+      if (blockId === null) {
+        this.emit('drag:cleared');
+      } else {
+        this.emit('drag:started', blockId);
+      }
     }
   }
 
@@ -397,7 +460,7 @@ class EditorState extends EventEmitter {
 
     if (this.quickSelectSlots[index] !== blockId) {
       this.quickSelectSlots[index] = blockId;
-      this.emit('quickselect:changed', [...this.quickSelectSlots]);
+      this.emit('quickselect:assigned', [...this.quickSelectSlots]);
     }
   }
 
@@ -416,23 +479,6 @@ class EditorState extends EventEmitter {
       return null;
     }
     return this.quickSelectSlots[index];
-  }
-
-  /**
-   * Set the selected quick-select slot index
-   */
-  setSelectedQuickSelectSlot = (index: number): void => {
-    if (index !== this.selectedQuickSelectSlotIndex) {
-      this.selectedQuickSelectSlotIndex = index;
-      this.emit('quickselect:slot:changed', index);
-    }
-  }
-
-  /**
-   * Get the selected quick-select slot index
-   */
-  getSelectedQuickSelectSlot(): number {
-    return this.selectedQuickSelectSlotIndex;
   }
 
   /**
@@ -461,7 +507,7 @@ class EditorState extends EventEmitter {
    */
   setPreviewBlocks = (blocks: PreviewBlock[]): void => {
     this.previewBlocks = blocks;
-    this.emit('preview:changed', blocks);
+    this.emit('preview:rendered', blocks);
   }
 
   /**
@@ -477,8 +523,26 @@ class EditorState extends EventEmitter {
   clearPreview = (): void => {
     if (this.previewBlocks.length > 0) {
       this.previewBlocks = [];
-      this.emit('preview:changed', []);
+      this.emit('preview:rendered', []);
     }
+  }
+
+  /**
+   * Set the current project ID
+   * Used for scoping data to specific projects
+   */
+  setCurrentProjectId = (projectId: string | null): void => {
+    if (this.currentProjectId !== projectId) {
+      this.currentProjectId = projectId;
+      this.emit('project:switched', projectId);
+    }
+  }
+
+  /**
+   * Get the current project ID
+   */
+  getCurrentProjectId(): string | null {
+    return this.currentProjectId;
   }
 }
 

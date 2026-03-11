@@ -54,13 +54,35 @@ export function WelcomeView({
     onOpenProject(projectId);
   };
 
-  const handleDeleteProjectById = (projectId: string) => {
-    storage.deleteProject(projectId);
+  const handleDeleteProjectById = async (projectId: string) => {
+    await storage.deleteProject(projectId);
     const projectList = storage.listProjects();
     setProjects(projectList);
+    // Clear selection if deleted project was selected
+    if (selectedProjectId === projectId) {
+      setSelectedProjectId(null);
+    }
   };
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+
+  // Named handler creator for project click
+  const createProjectClickHandler = (projectId: string) => () => {
+    handleProjectClick(projectId);
+  };
+
+  // Named handlers for selected project actions
+  const handleOpenSelected = () => {
+    if (selectedProject) {
+      handleOpenProjectById(selectedProject.id);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedProject) {
+      handleDeleteProjectById(selectedProject.id);
+    }
+  };
 
   return (
     <Box sx={{ p: 4, height: "100%", overflow: "hidden" }}>
@@ -124,18 +146,14 @@ export function WelcomeView({
                   gap: 2,
                 }}
               >
-                {projects.map((project) => {
-                  const handleClick = () => handleProjectClick(project.id);
-
-                  return (
-                    <ProjectCard
-                      key={project.id}
-                      project={project}
-                      isSelected={selectedProjectId === project.id}
-                      onClick={handleClick}
-                    />
-                  );
-                })}
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedProjectId === project.id}
+                    onClick={createProjectClickHandler(project.id)}
+                  />
+                ))}
               </Box>
             )}
           </Box>
@@ -148,10 +166,10 @@ export function WelcomeView({
                 <Typography variant="body2">
                   Created: {selectedProject.created.toLocaleDateString()}
                 </Typography>
-                <Button onClick={() => handleOpenProjectById(selectedProject.id)}>
+                <Button onClick={handleOpenSelected}>
                   Open
                 </Button>
-                <Button onClick={() => handleDeleteProjectById(selectedProject.id)}>
+                <Button onClick={handleDeleteSelected}>
                   Delete
                 </Button>
               </Box>

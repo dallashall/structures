@@ -111,8 +111,8 @@ export class Canvas2D {
     renderLoop.on('tick', this.boundHandlers.tick);
 
     // Editor state changes (for mode-specific behavior)
-    editorState.on('paintmode:changed', this.boundHandlers.paintModeChanged);
-    editorState.on('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorState.on('paintmode:selected', this.boundHandlers.paintModeChanged);
+    editorState.on('paintbehavior:selected', this.boundHandlers.paintBehaviorChanged);
     editorState.on('deletemode:changed', this.boundHandlers.deleteModeChanged);
   }
 
@@ -125,8 +125,8 @@ export class Canvas2D {
     renderLoop.unregister();
 
     // Editor state changes
-    editorState.off('paintmode:changed', this.boundHandlers.paintModeChanged);
-    editorState.off('paintbehavior:changed', this.boundHandlers.paintBehaviorChanged);
+    editorState.off('paintmode:selected', this.boundHandlers.paintModeChanged);
+    editorState.off('paintbehavior:selected', this.boundHandlers.paintBehaviorChanged);
     editorState.off('deletemode:changed', this.boundHandlers.deleteModeChanged);
   }
 

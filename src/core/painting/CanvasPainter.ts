@@ -98,6 +98,16 @@ export class CanvasPainter {
       return;
     }
 
+    // Get current project ID
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      console.error('CanvasPainter: No current project');
+      this.isDraftMode = false;
+      this.draftOperations = [];
+      draftingService.cancel();
+      return;
+    }
+
     // Persist operations to EventLog as BULK events
     // Separate into deletes and placements for efficient bulk operations
     const deleteOps = this.draftOperations.filter(op => op.isDelete || op.blockType === null);
@@ -107,7 +117,7 @@ export class CanvasPainter {
     if (deleteOps.length > 0) {
       await eventLog.append('model:blocksRemoved', {
         positions: deleteOps.map(op => op.position),
-      });
+      }, projectId);
     }
 
     // Bulk place event (if any)
@@ -117,7 +127,7 @@ export class CanvasPainter {
           position: op.position,
           blockType: op.blockType!,
         })),
-      });
+      }, projectId);
     }
 
     // Clear preview from DraftingService
@@ -246,19 +256,24 @@ export class CanvasPainter {
       console.log(`CanvasPainter: Normal mode - executing ${finalOperations.length} operations immediately`);
 
       const deleteMode = editorState.getDeleteMode();
+      const projectId = editorState.getCurrentProjectId();
 
       // Execute operations immediately via EventLog (async, but don't block paint)
       (async () => {
+        if (!projectId) {
+          console.error('CanvasPainter: No current project');
+          return;
+        }
         for (const operation of finalOperations) {
           if (deleteMode) {
             await eventLog.append('model:blockRemoved', {
               position: operation.position,
-            });
+            }, projectId);
           } else {
             await eventLog.append('model:blockPlaced', {
               position: operation.position,
               blockType: operation.blockType!,
-            });
+            }, projectId);
           }
         }
       })();

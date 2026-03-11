@@ -1,14 +1,20 @@
-import { Box, Stack, Paper } from '@mui/material';
+import { Box, Stack, Paper, Divider } from '@mui/material';
 import type { Project, Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
 import { LayerControls } from '../components/LayerControls';
 import { QuadLayout } from '../layouts/QuadLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
+import { ForegroundBackgroundSelector } from '../components/ForegroundBackgroundSelector';
+import { QuickSelectPalette } from '../components/QuickSelectPalette';
+import { editorState } from '../core/EditorState';
 
 interface QuadEditorViewProps {
   project: Project;
   activeLayers: LayerState;
   selectedBlock: string | null;
+  foregroundBlock: string | null;
+  backgroundBlock: string | null;
+  activeMaterialSlot: 'foreground' | 'background';
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
@@ -37,23 +43,38 @@ export function QuadEditorView({
   project,
   activeLayers,
   selectedBlock,
+  foregroundBlock,
+  backgroundBlock,
+  activeMaterialSlot,
   paintMode,
   paintBehavior: _paintBehavior,
   shapeFillMode: _shapeFillMode,
   depthConfig: _depthConfig,
   isPlacementMode,
   isActionBarExpanded: _isActionBarExpanded,
-  quickSelectSlots: _quickSelectSlots,
-  blocks: _blocks,
+  quickSelectSlots,
+  blocks,
   onLayerChange,
   onPaintModeChange,
   onPaintBehaviorChange: _onPaintBehaviorChange,
   onShapeFillModeChange: _onShapeFillModeChange,
   onDepthConfigChange: _onDepthConfigChange,
-  onQuickSelectSlot: _onQuickSelectSlot,
-  onAssignSlot: _onAssignSlot,
+  onQuickSelectSlot,
+  onAssignSlot,
   onConfirmPlacement,
 }: QuadEditorViewProps) {
+  // Handlers for foreground/background selector
+  const handleToggleSlot = () => {
+    editorState.toggleMaterialSlot();
+  };
+
+  const handleClickForeground = () => {
+    editorState.setActiveMaterialSlot('foreground');
+  };
+
+  const handleClickBackground = () => {
+    editorState.setActiveMaterialSlot('background');
+  };
   return (
     <>
       {/* Layer Controls / Tab Bar */}
@@ -84,7 +105,7 @@ export function QuadEditorView({
           <MetaBlockPlacementBanner onConfirm={onConfirmPlacement} />
         )}
 
-        {/* Right Sidebar - Dense Icon Tool Panel */}
+        {/* Right Sidebar - Tool Panel + Material Selector */}
         <Paper
           elevation={0}
           sx={{
@@ -98,10 +119,31 @@ export function QuadEditorView({
             overflowY: 'auto',
           }}
         >
-          <ToolPanel
-            paintMode={paintMode}
-            onPaintModeChange={onPaintModeChange}
-          />
+          <Stack direction="column" spacing={2} sx={{ p: 1 }}>
+            <ToolPanel
+              paintMode={paintMode}
+              onPaintModeChange={onPaintModeChange}
+            />
+            <Divider />
+            <QuickSelectPalette
+              slots={quickSelectSlots}
+              blocks={blocks}
+              onSelectSlot={onQuickSelectSlot}
+              onAssignSlot={onAssignSlot}
+              onOpenBrowser={() => editorState.setMaterialBrowserOpen(true)}
+              orientation="vertical"
+            />
+            <Divider />
+            <ForegroundBackgroundSelector
+              foregroundBlockId={foregroundBlock}
+              backgroundBlockId={backgroundBlock}
+              activeMaterialSlot={activeMaterialSlot}
+              blocks={blocks}
+              onToggleSlot={handleToggleSlot}
+              onClickForeground={handleClickForeground}
+              onClickBackground={handleClickBackground}
+            />
+          </Stack>
         </Paper>
       </Box>
     </>

@@ -1,4 +1,5 @@
 import { eventLog } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import type { Dimensions, Vector3D } from '../types';
 
@@ -33,8 +34,13 @@ export class ExpandDimensionsCommand {
       throw new Error(`Dimensions cannot exceed ${this.MAX_DIMENSION}`);
     }
 
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      throw new Error('No current project');
+    }
+
     // Append to EventLog
-    await eventLog.append('model:dimensionExpanded', expansionResult);
+    await eventLog.append('model:dimensionExpanded', expansionResult, projectId);
   }
 
   private calculateExpansion(

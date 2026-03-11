@@ -1,4 +1,5 @@
 import { eventLog } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import { blockProjection } from '../projections/BlockProjection';
 import type { Dimensions, Vector3D } from '../types';
@@ -61,8 +62,13 @@ export class ShrinkDimensionsCommand {
       );
     }
 
+    const projectId = editorState.getCurrentProjectId();
+    if (!projectId) {
+      throw new Error('No current project');
+    }
+
     // Append to EventLog
-    await eventLog.append('model:dimensionShrunk', shrinkResult);
+    await eventLog.append('model:dimensionShrunk', shrinkResult, projectId);
   }
 
   private calculateShrink(

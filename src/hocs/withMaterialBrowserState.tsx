@@ -41,25 +41,25 @@ export function withMaterialBrowserState<P extends object>(
       };
 
       editorState.on(
-        "materialbrowser:changed",
+        "materialbrowser:toggled",
         handleMaterialBrowserChange,
       );
       editorState.on(
-        "materialbrowser:search:changed",
+        "materialbrowser:search:updated",
         handleSearchChange,
       );
-      editorState.on("materialbrowser:tab:changed", handleTabChange);
+      editorState.on("materialbrowser:tab:switched", handleTabChange);
 
       return () => {
         editorState.off(
-          "materialbrowser:changed",
+          "materialbrowser:toggled",
           handleMaterialBrowserChange,
         );
         editorState.off(
-          "materialbrowser:search:changed",
+          "materialbrowser:search:updated",
           handleSearchChange,
         );
-        editorState.off("materialbrowser:tab:changed", handleTabChange);
+        editorState.off("materialbrowser:tab:switched", handleTabChange);
       };
     }, []);
 

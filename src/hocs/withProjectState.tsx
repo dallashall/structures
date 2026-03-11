@@ -1,6 +1,6 @@
 import React from 'react';
 import { projectView } from "../projections/ProjectView";
-import { blockProjection } from "../projections/BlockProjection";
+import { modelProjection } from "../projections/ModelProjection";
 import { metadataProjection } from "../projections/MetadataProjection";
 import type { Project } from "../types";
 
@@ -21,8 +21,8 @@ export interface WithProjectStateProps {
  * - No cascading events, just signal → query
  *
  * Subscribes to:
- * - blocks:rebuilt (BlockProjection) - Blocks changed
- * - metadata:rebuilt (MetadataProjection) - Metadata changed
+ * - model:rebuilt (ModelProjection) - Model state changed (dimensions, blocks, metaBlock)
+ * - metadata:rebuilt (MetadataProjection) - Metadata changed (id, name, timestamps)
  *
  * Injects props:
  * - project: Project | null - The complete project state
@@ -62,12 +62,12 @@ export function withProjectState<P extends object>(
       };
 
       // Subscribe to both projections
-      blockProjection.on("blocks:rebuilt", handleProjectionCalculated);
+      modelProjection.on("model:rebuilt", handleProjectionCalculated);
       metadataProjection.on("metadata:rebuilt", handleProjectionCalculated);
 
       // Cleanup
       return () => {
-        blockProjection.off("blocks:rebuilt", handleProjectionCalculated);
+        modelProjection.off("model:rebuilt", handleProjectionCalculated);
         metadataProjection.off("metadata:rebuilt", handleProjectionCalculated);
       };
     }, []);

@@ -9,7 +9,6 @@ import { editorState } from '../core/EditorState';
 interface ActionBarPanelProps {
   paintMode: PaintMode;
   quickSelectSlots: (string | null)[];
-  selectedSlotIndex: number;
   selectedBlock: string | null;
   blocks: Block[];
   onPaintModeChange: (mode: PaintMode) => void;
@@ -30,7 +29,6 @@ interface ActionBarPanelProps {
 export function ActionBarPanel({
   paintMode,
   quickSelectSlots,
-  selectedSlotIndex,
   selectedBlock,
   blocks,
   onPaintModeChange,
@@ -58,7 +56,6 @@ export function ActionBarPanel({
         />
         <QuickSelectPalette
           slots={quickSelectSlots}
-          selectedSlotIndex={selectedSlotIndex}
           blocks={blocks}
           onSelectSlot={onSelectSlot}
           onAssignSlot={onAssignSlot}

@@ -47,6 +47,12 @@ export function DepthPaintingControl({
     });
   };
 
+  const handleModeToggle = () => {
+    const newMode =
+      depthConfig.mode === "through" ? "until-collision" : "through";
+    onDepthConfigChange({ mode: newMode });
+  };
+
   // Compact horizontal layout for toolbar
   if (compact) {
     return (
@@ -97,14 +103,7 @@ export function DepthPaintingControl({
             <Chip
               size="small"
               label={depthConfig.mode === "through" ? "Through" : "Until Hit"}
-              onClick={() =>
-                onDepthConfigChange({
-                  mode:
-                    depthConfig.mode === "through"
-                      ? "until-collision"
-                      : "through",
-                })
-              }
+              onClick={handleModeToggle}
               sx={{ height: "20px", fontSize: "0.65rem", cursor: "pointer" }}
             />
           </>

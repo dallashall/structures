@@ -1,11 +1,5 @@
 import React from 'react';
 import { Box, Stack } from "@mui/material";
-import {
-  DndContext,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
-} from "@dnd-kit/core";
 import type { ViewType } from "../types";
 
 import {
@@ -29,9 +23,7 @@ import {
 import { Toolbar } from "../layouts/Toolbar";
 import { ToolOptionsBar } from "../components/ToolOptionsBar";
 import { MetaBlockPlacementModal } from "../components/MetaBlockPlacementModal";
-import { MaterialQuickSelect } from "../components/MaterialQuickSelect";
 import { MaterialBrowserModal } from "../components/MaterialBrowserModal";
-import { ColorSwatch } from "../components/ColorSwatch";
 import { TabbedEditorView } from "./TabbedEditorView";
 import { QuadEditorView } from "./QuadEditorView";
 
@@ -53,7 +45,9 @@ interface EditorViewProps
     WithEditorStateProps,
     WithBlockRegistryProps,
     WithStorageStateProps,
-    WithMaterialBrowserStateProps {}
+    WithMaterialBrowserStateProps {
+  onBackToWelcome?: () => void;
+}
 
 function EditorViewComponent(props: EditorViewProps) {
   const {
@@ -64,6 +58,9 @@ function EditorViewComponent(props: EditorViewProps) {
     blocks,
     quickSelectSlots,
     selectedBlock,
+    foregroundBlock,
+    backgroundBlock,
+    activeMaterialSlot,
     paintMode,
     paintBehavior,
     shapeFillMode,
@@ -74,8 +71,7 @@ function EditorViewComponent(props: EditorViewProps) {
     isMaterialBrowserOpen,
     materialBrowserSearchQuery,
     materialBrowserSelectedTab,
-    selectedQuickSelectSlot,
-    activeDragBlock,
+    onBackToWelcome,
   } = props;
 
   // No project loaded
@@ -98,14 +94,6 @@ function EditorViewComponent(props: EditorViewProps) {
     editorState.setPlacementMode(true);
   };
 
-  // TODO: Add keyboard shortcuts directly (no manager pattern)
-  // For now, metablock placement can be confirmed via UI button
-
-  // Get the actual Block object for the active drag block ID
-  const activeDragBlockObject = activeDragBlock
-    ? (blocks.find((b) => b.id === activeDragBlock) ?? null)
-    : null;
-
   // Handlers
   const handleNewProject = () => {
     console.log("New project requested");
@@ -118,7 +106,9 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleOpenProject = () => {
-    console.log("Open project requested");
+    if (onBackToWelcome) {
+      onBackToWelcome();
+    }
   };
 
   const handleViewTabChange = (
@@ -129,10 +119,7 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleQuickSelectSlot = (index: number) => {
-    // Always select the slot (even if empty)
-    editorState.setSelectedQuickSelectSlot(index);
-
-    // If the slot has a material, also select that material
+    // Get block from slot and apply to active material
     const blockId = quickSelectSlots[index];
     if (blockId) {
       editorState.setSelectedBlock(blockId);
@@ -147,39 +134,11 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleConfirmMetaBlockPlacement = () => {
+    // Command handles exiting placement mode after event is persisted
     void confirmMetaBlockCommand.execute();
-    // Don't toggle placement mode - let the confirmation event update the projection
-    // The modal will hide automatically when metaBlock.isConfirmed becomes true
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const blockId = event.active.data.current?.blockId;
-    if (blockId) {
-      editorState.setActiveDragBlock(blockId);
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    // Clear the active drag block
-    editorState.setActiveDragBlock(null);
-
-    if (!over) return;
-
-    // Extract block ID from dragged material
-    const blockId = active.data.current?.blockId;
-    // Extract slot index from drop target
-    const slotIndex = over.data.current?.slotIndex;
-
-    if (blockId && typeof slotIndex === "number") {
-      editorState.setQuickSelectSlot(slotIndex, blockId);
-    }
-  };
-
-  const handleDragCancel = () => {
-    editorState.setActiveDragBlock(null);
-  };
+  // Keyboard shortcuts handled by KeyboardManager singleton
 
   return (
     <Box sx={{ height: "100%", overflow: "hidden" }}>
@@ -224,6 +183,9 @@ function EditorViewComponent(props: EditorViewProps) {
               activeView={activeView}
               activeLayers={activeLayers}
               selectedBlock={selectedBlock}
+              foregroundBlock={foregroundBlock}
+              backgroundBlock={backgroundBlock}
+              activeMaterialSlot={activeMaterialSlot}
               paintMode={paintMode}
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}
@@ -248,6 +210,9 @@ function EditorViewComponent(props: EditorViewProps) {
               project={project}
               activeLayers={activeLayers}
               selectedBlock={selectedBlock}
+              foregroundBlock={foregroundBlock}
+              backgroundBlock={backgroundBlock}
+              activeMaterialSlot={activeMaterialSlot}
               paintMode={paintMode}
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}
@@ -275,61 +240,18 @@ function EditorViewComponent(props: EditorViewProps) {
         onClose={handleMetaBlockModalClose}
       />
 
-      {/* Drag-and-drop context for material assignment */}
-      <DndContext
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        {/* Material Quick Select Bar (floating at bottom) */}
-        <MaterialQuickSelect
-          slots={quickSelectSlots}
-          selectedSlotIndex={selectedQuickSelectSlot}
-          blocks={blocks}
-          onSelectSlot={handleQuickSelectSlot}
-          onOpenBrowser={() => editorState.setMaterialBrowserOpen(true)}
-        />
-
-        {/* Material Browser Modal */}
-        <MaterialBrowserModal
-          isOpen={isMaterialBrowserOpen}
-          blocks={blocks}
-          selectedBlockId={selectedBlock}
-          searchQuery={materialBrowserSearchQuery}
-          selectedTab={materialBrowserSelectedTab}
-          quickSelectSlots={quickSelectSlots}
-          selectedSlotIndex={selectedQuickSelectSlot}
-          onClose={() => editorState.setMaterialBrowserOpen(false)}
-          onSelectMaterial={editorState.setSelectedBlock}
-          onSearchChange={editorState.setMaterialBrowserSearchQuery}
-          onTabChange={editorState.setMaterialBrowserSelectedTab}
-          onSelectSlot={handleQuickSelectSlot}
-          onAssignSlot={handleAssignSlot}
-        />
-
-        {/* Drag Overlay - shows visual feedback while dragging */}
-        <DragOverlay zIndex={1400} dropAnimation={null}>
-          {activeDragBlockObject && (
-            <Box
-              sx={{
-                width: 60,
-                height: 60,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                bgcolor: "background.paper",
-                border: 2,
-                borderColor: "primary.main",
-                borderRadius: 1,
-                boxShadow: 4,
-                cursor: "grabbing",
-              }}
-            >
-              <ColorSwatch color={activeDragBlockObject.color} size="L" />
-            </Box>
-          )}
-        </DragOverlay>
-      </DndContext>
+      {/* Material Browser Modal */}
+      <MaterialBrowserModal
+        isOpen={isMaterialBrowserOpen}
+        blocks={blocks}
+        searchQuery={materialBrowserSearchQuery}
+        selectedTab={materialBrowserSelectedTab}
+        quickSelectSlots={quickSelectSlots}
+        onClose={() => editorState.setMaterialBrowserOpen(false)}
+        onSearchChange={editorState.setMaterialBrowserSearchQuery}
+        onTabChange={editorState.setMaterialBrowserSelectedTab}
+        onAssignSlot={handleAssignSlot}
+      />
     </Box>
   );
 }

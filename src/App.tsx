@@ -5,6 +5,11 @@ import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
+import { storage } from "./core/Storage";
+import { editorState } from "./core/EditorState";
+import { keyboardManager } from "./core/KeyboardManager";
+import { metadataProjection } from "./projections/MetadataProjection";
+import { modelProjection } from "./projections/ModelProjection";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -164,6 +169,12 @@ export function App() {
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
+  // Initialize keyboard shortcuts (once on mount)
+  useEffect(() => {
+    keyboardManager.initialize();
+    return () => keyboardManager.destroy();
+  }, []);
+
   // Check for preview mode in hash on mount and hash changes
   useEffect(() => {
     const checkHash = () => {
@@ -176,24 +187,64 @@ export function App() {
     return () => window.removeEventListener("hashchange", checkHash);
   }, []);
 
+  // Load last opened project on startup
+  useEffect(() => {
+    const loadLastProject = async () => {
+      const lastProjectId = storage.getLastOpenedProjectId();
+      if (lastProjectId) {
+        // If there was a last opened project, open it automatically
+        const project = storage.getProject(lastProjectId);
+        if (project) {
+          // Reset projections and rebuild for this project
+          metadataProjection.reset();
+          modelProjection.reset();
+          editorState.setCurrentProjectId(lastProjectId);
+          editorState.setPlacementMode(false);
+          await Promise.all([
+            metadataProjection.ensureFresh(),
+            modelProjection.ensureFresh(),
+          ]);
+          setCurrentView("editor");
+        }
+      }
+    };
+
+    void loadLastProject();
+  }, []);
+
   // Handle new project
   const handleNewProject = () => {
     setIsNewProjectDialogOpen(true);
   };
 
   // Handle project creation
-  const handleCreateProject = (name: string, dimensions: Dimensions) => {
-    createProjectCommand.execute(name, dimensions);
+  const handleCreateProject = async (name: string, dimensions: Dimensions) => {
+    await createProjectCommand.execute(name, dimensions);
     setIsNewProjectDialogOpen(false);
     setCurrentView("editor");
   };
 
   // Handle open project from welcome screen
-  const handleOpenProject = async (_projectId: string) => {
-    // Project data already loaded from EventLog (persistent IndexedDB)
-    // Projections rebuild automatically on startup
-    // Just switch to editor view
+  const handleOpenProject = async (projectId: string) => {
+    // Reset projections and rebuild for new project
+    metadataProjection.reset();
+    modelProjection.reset();
+    editorState.setCurrentProjectId(projectId);
+    editorState.setPlacementMode(false);
+    storage.setLastOpenedProjectId(projectId);
+
+    // Wait for projections to rebuild with new project data
+    await Promise.all([
+      metadataProjection.ensureFresh(),
+      modelProjection.ensureFresh(),
+    ]);
+
     setCurrentView("editor");
+  };
+
+  // Handle back to welcome (close current project)
+  const handleBackToWelcome = () => {
+    setCurrentView("welcome");
   };
 
   // Handle load from file
@@ -227,7 +278,7 @@ export function App() {
           onLoadFromFile={handleLoadFromFile}
         />
       ) : (
-        <EditorView />
+        <EditorView onBackToWelcome={handleBackToWelcome} />
       )}
 
       {/* New Project Dialog */}
