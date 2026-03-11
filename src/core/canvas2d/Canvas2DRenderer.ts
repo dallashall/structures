@@ -1,7 +1,8 @@
-import type { Dimensions } from '../../types';
+import type { Dimensions, ViewType, Block } from '../../types';
 import { projectView } from '../../projections/ProjectView';
 import { blockProjection } from '../../projections/BlockProjection';
 import { blockRegistry } from '../BlockRegistry';
+import { textureManager } from '../TextureManager';
 import { editorState } from '../EditorState';
 import { draftingService } from '../DraftingService';
 import type { Canvas2DViewport } from './Canvas2DViewport';
@@ -161,6 +162,58 @@ export class Canvas2DRenderer {
   }
 
   /**
+   * Get face index for current view
+   * Maps orthographic view to BabylonJS face index
+   *
+   * Our coordinate system: X=width, Y=depth, Z=height
+   * BabylonJS: Y-up, conversion is Our (x,y,z) → Babylon (x,z,y) [NO NEGATION]
+   * Face order: [front(+Z), back(-Z), right(+X), left(-X), top(+Y), bottom(-Y)]
+   */
+  private getFaceIndexForView(view: ViewType): number {
+    const faceMap: Record<ViewType, number> = {
+      'front': 0,  // Face 0 - CONFIRMED
+      'back': 1,   // Face 1 - CONFIRMED
+      'left': 3,   // Face 3 - trying reverse of previous swap
+      'right': 2,  // Face 2 - trying reverse of previous swap
+      'top': 4,    // Face 4 - CONFIRMED
+      'bottom': 5, // Face 5 - CONFIRMED
+    };
+    return faceMap[view] ?? 0;
+  }
+
+  /**
+   * Render block with texture from atlas
+   * Returns true if successful, false if texture unavailable
+   */
+  private renderBlockTexture(
+    block: Block,
+    faceIndex: number,
+    px: number,
+    py: number,
+    cellSize: number,
+    opacity: number
+  ): boolean {
+    // Check if atlas is loaded
+    const atlas = textureManager.getAtlas();
+    if (!atlas || !atlas.loaded) return false;
+
+    // Get texture coordinates for this block face
+    const coords = textureManager.getBlockFaceCoords(block.id, faceIndex);
+    if (!coords) return false;
+
+    // Draw texture from atlas using source rectangle
+    this.ctx.globalAlpha = opacity;
+    this.ctx.drawImage(
+      atlas.image,
+      coords.x, coords.y, coords.width, coords.height, // Source rectangle in atlas
+      px + 1, py + 1, cellSize - 2, cellSize - 2      // Destination rectangle on canvas
+    );
+    this.ctx.globalAlpha = 1.0;
+
+    return true;
+  }
+
+  /**
    * Draw all blocks in the project
    *
    * OPTIMIZATION: Uses layer-based queries instead of iterating all blocks.
@@ -214,18 +267,37 @@ export class Canvas2DRenderer {
       // Don't render if 3+ layers away
       if (opacity === 0.0) continue;
 
-      // Get block color
-      const block = blockRegistry.getBlock(blockData.blockType);
+      // Get block
+      const { block } = blockRegistry.getBlockWithState(
+        blockData.blockType,
+        blockData.blockState
+      );
       if (!block) continue;
 
       // Draw block
       const px = pan.x + gridX * cellSize;
       const py = pan.y + gridY * cellSize;
 
-      this.ctx.fillStyle = block.color;
-      this.ctx.globalAlpha = opacity;
-      this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      this.ctx.globalAlpha = 1.0;
+      // Determine which face to show (based on view)
+      const faceIndex = this.getFaceIndexForView(viewport.getViewType());
+
+      // Try to render with texture from atlas
+      const rendered = this.renderBlockTexture(
+        block,
+        faceIndex,
+        px,
+        py,
+        cellSize,
+        opacity
+      );
+
+      // Fallback to color if texture unavailable
+      if (!rendered) {
+        this.ctx.fillStyle = block.color;
+        this.ctx.globalAlpha = opacity;
+        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+        this.ctx.globalAlpha = 1.0;
+      }
     }
   }
 

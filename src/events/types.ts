@@ -5,7 +5,7 @@
  * State is derived by reducing these events through pure reducer functions.
  */
 
-import type { Vector3D, Dimensions, BlockData } from '../types';
+import type { Vector3D, Dimensions, BlockData, BlockStateProperties } from '../types';
 
 /**
  * Base event interface - all events extend this
@@ -46,7 +46,9 @@ export interface BlockPlacedEvent extends ProjectEvent {
   payload: {
     position: Vector3D;
     blockType: string;
+    blockState?: BlockStateProperties;  // Optional blockstate
     previousBlockType?: string; // For undo - what was there before
+    previousBlockState?: BlockStateProperties;  // For undo
   };
 }
 
@@ -58,6 +60,7 @@ export interface BlockRemovedEvent extends ProjectEvent {
   payload: {
     position: Vector3D;
     blockType: string;         // Store removed block for undo
+    blockState?: BlockStateProperties;  // Store for undo
   };
 }
 

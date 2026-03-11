@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:atlas && tsc && vite build",
+    "build:atlas": "tsx scripts/buildTextureAtlas.ts",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "vitest",
@@ -26,12 +27,15 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/node": "^25.4.0",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^4.0.18",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^28.1.0",
+    "sharp": "^0.34.5",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
     "vitest": "^4.0.18"

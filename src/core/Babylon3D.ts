@@ -5,6 +5,7 @@ import {
   HemisphericLight,
   DirectionalLight,
   Vector3,
+  Vector4,
   MeshBuilder,
   StandardMaterial,
   Color3,
@@ -13,12 +14,14 @@ import {
   Animation,
   EasingFunction,
   ElasticEase,
+  Texture,
 } from '@babylonjs/core';
 import { projectView } from '../projections/ProjectView';
 import { blockProjection } from '../projections/BlockProjection';
 import { modelProjection } from '../projections/ModelProjection';
 import { draftingService } from './DraftingService';
 import { blockRegistry } from './BlockRegistry';
+import { textureManager } from './TextureManager';
 import { editorState } from './EditorState';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import type { Vector3D, BlockData } from '../types';
@@ -33,9 +36,9 @@ import type { Vector3D, BlockData } from '../types';
  * Our system: Z-up, right-handed (X=width, Y=depth, Z=height)
  * BabylonJS: Y-up, left-handed (X, Y, Z)
  *
- * Conversion:
+ * Conversion implemented in toBabylonVector():
  * - Our X → Babylon X
- * - Our Y → Babylon -Z (negated for handedness conversion)
+ * - Our Y → Babylon Z (NO negation)
  * - Our Z → Babylon Y
  */
 export class Babylon3D {
@@ -337,24 +340,63 @@ export class Babylon3D {
   }
 
   /**
-   * Get or create material for a block color
+   * Get or create material (using atlas texture or color fallback)
    */
-  private getMaterial(color: string): StandardMaterial {
-    if (this.materials.has(color)) {
-      return this.materials.get(color)!;
+  private getMaterial(blockId: string): StandardMaterial {
+    if (this.materials.has(blockId)) {
+      return this.materials.get(blockId)!;
     }
 
-    const material = new StandardMaterial(`material_${color}`, this.scene);
+    const block = blockRegistry.getBlock(blockId);
+    if (!block) {
+      // Fallback to gray material
+      return this.createColorMaterial('unknown', '#7f7f7f');
+    }
 
-    // Parse hex color
+    const material = new StandardMaterial(`material_${blockId}`, this.scene);
+
+    // Try to use atlas texture
+    const atlas = textureManager.getAtlas();
+    if (atlas && atlas.loaded) {
+      // Create BabylonJS texture from atlas
+      const babylonTexture = new Texture(
+        atlas.path,
+        this.scene,
+        false,  // noMipmap
+        false,  // invertY - Keep standard image coordinates to match Canvas2D
+        Texture.NEAREST_SAMPLINGMODE  // Pixel-perfect for 16x16
+      );
+
+      material.diffuseTexture = babylonTexture;
+
+      // For transparent blocks (glass)
+      if (block.isTransparent) {
+        material.alpha = 0.7;
+        material.backFaceCulling = false;
+      }
+    } else {
+      // Fallback to color
+      const r = parseInt(block.color.slice(1, 3), 16) / 255;
+      const g = parseInt(block.color.slice(3, 5), 16) / 255;
+      const b = parseInt(block.color.slice(5, 7), 16) / 255;
+      material.diffuseColor = new Color3(r, g, b);
+    }
+
+    material.specularColor = new Color3(0.2, 0.2, 0.2);
+    this.materials.set(blockId, material);
+    return material;
+  }
+
+  /**
+   * Helper to create color-based material
+   */
+  private createColorMaterial(id: string, color: string): StandardMaterial {
+    const material = new StandardMaterial(`material_${id}`, this.scene);
     const r = parseInt(color.slice(1, 3), 16) / 255;
     const g = parseInt(color.slice(3, 5), 16) / 255;
     const b = parseInt(color.slice(5, 7), 16) / 255;
-
     material.diffuseColor = new Color3(r, g, b);
     material.specularColor = new Color3(0.2, 0.2, 0.2);
-
-    this.materials.set(color, material);
     return material;
   }
 
@@ -369,11 +411,8 @@ export class Babylon3D {
     if (this.blockMeshes.has(key)) {
       // Update existing block material
       const existingMesh = this.blockMeshes.get(key)!;
-      const block = blockRegistry.getBlock(blockData.blockType);
-      if (block) {
-        existingMesh.material = this.getMaterial(block.color);
-        this.updateMeshBrightness(existingMesh, blockData.position);
-      }
+      existingMesh.material = this.getMaterial(blockData.blockType);
+      this.updateMeshBrightness(existingMesh, blockData.position);
       return;
     }
 
@@ -381,10 +420,25 @@ export class Babylon3D {
     const block = blockRegistry.getBlock(blockData.blockType);
     if (!block) return;
 
-    // Create box mesh
+    // Get 3D faceUV coordinates from texture manager (with swapped and rotated textures)
+    const faceUVData = textureManager.getBlockFaceUV3D(blockData.blockType);
+    const faceUV = faceUVData ? faceUVData.map((uv) => {
+      return new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
+    }) : undefined;
+
+    // Create box mesh with faceUV for per-face texturing
+    const boxOptions: any = {
+      size: 1,
+    };
+
+    // Apply faceUV if available (for multi-face texturing from atlas)
+    if (faceUV) {
+      boxOptions.faceUV = faceUV;
+    }
+
     const box = MeshBuilder.CreateBox(
       `block_${key}`,
-      { size: 1 },
+      boxOptions,
       this.scene
     );
 
@@ -397,8 +451,8 @@ export class Babylon3D {
     };
     box.position = this.toBabylonVector(centeredPos);
 
-    // Apply material
-    box.material = this.getMaterial(block.color);
+    // Apply material (atlas texture)
+    box.material = this.getMaterial(blockData.blockType);
 
     // Store reference
     this.blockMeshes.set(key, box);
@@ -668,6 +722,57 @@ export class Babylon3D {
    */
   setAxisSliceVisible(axis: 'x' | 'y' | 'z', visible: boolean): void {
     this.slicePlaneVisualizer?.setAxisVisible(axis, visible);
+  }
+
+  /**
+   * Set camera to a preset view
+   *
+   * Our coordinate system: X=width, Y=depth, Z=height (Z-up, right-handed)
+   * Babylon system: X, Z, Y (Y-up, left-handed) - conversion: (x,y,z) → (x,z,y)
+   *
+   * View mappings:
+   * - Front: Looking at +Y face (our south/front) → Babylon +Z
+   * - Back: Looking at -Y face (our north/back) → Babylon -Z
+   * - Left: Looking at -X face (our west/left) → Babylon -X
+   * - Right: Looking at +X face (our east/right) → Babylon +X
+   * - Top: Looking down at +Z face (our top) → Babylon +Y
+   * - Bottom: Looking up at -Z face (our bottom) → Babylon -Y
+   */
+  setCameraView(view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom'): void {
+    // ArcRotateCamera rotates AROUND the target
+    // Our: X=width, Y=depth, Z=height → Babylon: X=X, Z=Y, Y=Z
+    const presets = {
+      left: { alpha: 0, beta: Math.PI / 2 },               // Looking at left (-X faces)
+      right: { alpha: Math.PI, beta: Math.PI / 2 },        // Looking at right (+X faces)
+      front: { alpha: Math.PI / 2, beta: Math.PI / 2 },    // Looking at front (+Y = +Z Babylon)
+      back: { alpha: -Math.PI / 2, beta: Math.PI / 2 },    // Looking at back (-Y = -Z Babylon)
+      top: { alpha: 0, beta: 0.01 },                       // Looking down from above
+      bottom: { alpha: 0, beta: Math.PI - 0.01 },          // Looking up from below
+    };
+
+    const preset = presets[view];
+    this.camera.alpha = preset.alpha;
+    this.camera.beta = preset.beta;
+  }
+
+  /**
+   * Zoom camera in or out
+   */
+  zoomCamera(delta: number): void {
+    const newRadius = this.camera.radius + delta;
+    this.camera.radius = Math.max(
+      this.camera.lowerRadiusLimit || 2,
+      Math.min(this.camera.upperRadiusLimit || 100, newRadius)
+    );
+  }
+
+  /**
+   * Reset camera to default position
+   */
+  resetCamera(): void {
+    this.camera.alpha = Math.PI / 4;
+    this.camera.beta = Math.PI / 3;
+    this.camera.radius = 20;
   }
 
   /**

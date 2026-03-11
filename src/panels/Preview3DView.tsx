@@ -6,7 +6,15 @@ import {
   Stack,
   Typography,
   useTheme,
+  Button,
+  ButtonGroup,
+  Divider,
 } from "@mui/material";
+import {
+  ZoomIn,
+  ZoomOut,
+  RestartAlt,
+} from "@mui/icons-material";
 import { Babylon3D } from "../core/Babylon3D";
 
 // Axis colors that work in dark/light mode
@@ -51,12 +59,16 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     const controller = new Babylon3D(canvasRef.current);
     controllerRef.current = controller;
 
+    // Expose controller to window for programmatic control
+    (window as any).babylon3d = controller;
+
     // Initialize with async project data
     void controller.init();
 
     return () => {
       controller.destroy();
       controllerRef.current = null;
+      delete (window as any).babylon3d;
     };
   }, []);
 
@@ -82,6 +94,23 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     const newVisibility = !zVisible;
     setZVisible(newVisibility);
     controllerRef.current?.setAxisSliceVisible("z", newVisibility);
+  };
+
+  // Handle camera controls
+  const handleCameraView = (view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom') => {
+    controllerRef.current?.setCameraView(view);
+  };
+
+  const handleZoomIn = () => {
+    controllerRef.current?.zoomCamera(-2);
+  };
+
+  const handleZoomOut = () => {
+    controllerRef.current?.zoomCamera(2);
+  };
+
+  const handleResetCamera = () => {
+    controllerRef.current?.resetCamera();
   };
 
   return (
@@ -206,6 +235,71 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               </Typography>
             </IconButton>
           </Tooltip>
+        </Stack>
+      </Box>
+
+      {/* Camera Controls */}
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: 8,
+          left: 8,
+          zIndex: 10,
+        }}
+      >
+        <Stack spacing={1}>
+          {/* Camera View Presets */}
+          <Box sx={{ bgcolor: "rgba(0, 0, 0, 0.7)", borderRadius: 1, p: 1 }}>
+            <Typography variant="caption" sx={{ color: "#aaa", mb: 0.5, display: "block" }}>
+              Camera View
+            </Typography>
+            <Stack direction="row" spacing={0.5} sx={{ mb: 0.5 }}>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('front')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Front
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('back')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Back
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('left')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Left
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('right')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Right
+              </Button>
+            </Stack>
+            <Stack direction="row" spacing={0.5}>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('top')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Top
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => handleCameraView('bottom')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+                Bottom
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Zoom Controls */}
+          <Box sx={{ bgcolor: "rgba(0, 0, 0, 0.7)", borderRadius: 1, p: 1 }}>
+            <Typography variant="caption" sx={{ color: "#aaa", mb: 0.5, display: "block" }}>
+              Zoom
+            </Typography>
+            <ButtonGroup size="small" variant="outlined" fullWidth>
+              <Tooltip title="Zoom In">
+                <IconButton onClick={handleZoomIn} size="small">
+                  <ZoomIn fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Zoom Out">
+                <IconButton onClick={handleZoomOut} size="small">
+                  <ZoomOut fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Reset Camera">
+                <IconButton onClick={handleResetCamera} size="small">
+                  <RestartAlt fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </ButtonGroup>
+          </Box>
         </Stack>
       </Box>
     </Box>

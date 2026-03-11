@@ -64,6 +64,36 @@ The `Babylon3DController` automatically creates and manages the slice plane visu
 
 All visualizers handle this conversion internally.
 
+## Texture Atlas & UV Mappings
+
+The texture atlas contains multiple variants of each texture to correct BabylonJS face UV orientations.
+
+**Atlas Structure:**
+- **Normal textures** - Original 16×16 textures from texture pack
+- **`_hflip`** - Horizontal flip (mirror across vertical axis)
+- **`_rotated90ccw`** - 90° counter-clockwise rotation
+- **`_rotated90ccw_vflip`** - 90° CCW rotation + vertical flip
+
+**Separate UV Coordinate Arrays:**
+- **`blockFaceUV`** (2D Canvas) - Uses normal textures, standard face order
+- **`blockFaceUV3D`** (Babylon 3D) - Uses transformed textures, faces 2/3 swapped
+
+**3D Face Mappings (BabylonJS CreateBox order):**
+```
+Face 0 (Front/+Z):  Uses _hflip variant
+Face 1 (Back/-Z):   Uses normal texture
+Face 2 (Right/+X):  SWAPPED to left texture, uses _rotated90ccw_vflip variant
+Face 3 (Left/-X):   SWAPPED to right texture, uses _rotated90ccw_vflip variant
+Face 4 (Top/+Y):    Uses _rotated90ccw variant
+Face 5 (Bottom/-Y): Uses normal texture
+```
+
+**Why Transformations Are Needed:**
+BabylonJS CreateBox applies different default UV orientations to each face. Without correction, textures appear rotated or flipped. The atlas pre-transforms textures so they display correctly on each face.
+
+**2D Rendering:**
+Canvas2D uses `blockFaceUV` with normal textures and no transformations. The 2D face index mapping differs from 3D, so separate UV arrays prevent 2D views from breaking when 3D mappings change.
+
 ## Adding New Visualizers
 
 When adding new rendering components:
