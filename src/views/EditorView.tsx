@@ -95,17 +95,7 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   // Handlers
-  const handleNewProject = () => {
-    console.log("New project requested");
-  };
-
-  const handleSaveProject = () => {
-    // TODO: Implement export command
-    // Project is automatically saved to EventLog (IndexedDB)
-    console.log("Export not yet implemented");
-  };
-
-  const handleOpenProject = () => {
+  const handleBackToProjects = () => {
     if (onBackToWelcome) {
       onBackToWelcome();
     }
@@ -152,9 +142,7 @@ function EditorViewComponent(props: EditorViewProps) {
           projectName={project.name}
           layoutMode={layoutMode}
           saveState={saveState}
-          onNewProject={handleNewProject}
-          onSaveProject={handleSaveProject}
-          onOpenProject={handleOpenProject}
+          onBackToProjects={handleBackToProjects}
           onLayoutModeChange={editorState.setLayoutMode}
         />
 
@@ -164,9 +152,12 @@ function EditorViewComponent(props: EditorViewProps) {
           paintBehavior={paintBehavior}
           shapeFillMode={shapeFillMode}
           depthConfig={depthConfig}
+          maxDimensions={project.dimensions}
+          activeLayers={activeLayers}
           onPaintBehaviorChange={editorState.setPaintBehavior}
           onShapeFillModeChange={editorState.setShapeFillMode}
           onDepthConfigChange={editorState.setDepthConfig}
+          onLayerChange={editorState.setActiveLayer}
         />
 
         {/* Main Canvas Area - Switch between layout modes */}
@@ -198,7 +189,6 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={editorState.setActiveLayer}
               onViewChange={editorState.setActiveView}
               onTabChange={handleViewTabChange}
               onPaintModeChange={editorState.setPaintMode}
@@ -225,7 +215,6 @@ function EditorViewComponent(props: EditorViewProps) {
               isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
-              onLayerChange={editorState.setActiveLayer}
               onPaintModeChange={editorState.setPaintMode}
               onPaintBehaviorChange={editorState.setPaintBehavior}
               onShapeFillModeChange={editorState.setShapeFillMode}

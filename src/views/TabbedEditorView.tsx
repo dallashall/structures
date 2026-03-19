@@ -1,7 +1,6 @@
 import { Box, Stack, Tab, Paper, Divider } from '@mui/material';
 import { TabList, TabContext } from '@mui/lab';
 import type { Project, Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
-import { LayerControls } from '../components/LayerControls';
 import { TabbedLayout } from '../layouts/TabbedLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
@@ -25,7 +24,6 @@ interface TabbedEditorViewProps {
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
-  onLayerChange: (dimension: 'x' | 'y' | 'z', layer: number) => void;
   onViewChange: (view: ViewType) => void;
   onTabChange: (event: React.SyntheticEvent, newValue: string) => void;
   onPaintModeChange: (mode: PaintMode) => void;
@@ -59,7 +57,6 @@ export function TabbedEditorView({
   isActionBarExpanded: _isActionBarExpanded,
   quickSelectSlots,
   blocks,
-  onLayerChange,
   onViewChange,
   onTabChange,
   onPaintModeChange,
@@ -84,31 +81,17 @@ export function TabbedEditorView({
   };
   return (
     <TabContext value={activeView}>
-      {/* Layer Controls / Tab Bar */}
+      {/* Tab Bar */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          {/* Tabs */}
-          <Box sx={{ flex: 1 }}>
-            <TabList onChange={onTabChange} aria-label="View tabs">
-              <Tab label="Front" value="front" />
-              <Tab label="Back" value="back" />
-              <Tab label="Left" value="left" />
-              <Tab label="Right" value="right" />
-              <Tab label="Top" value="top" />
-              <Tab label="Bottom" value="bottom" />
-              <Tab label="3D Preview" value="3d" />
-            </TabList>
-          </Box>
-
-          {/* Layer Controls */}
-          <Box>
-            <LayerControls
-              maxDimensions={project.dimensions}
-              activeLayers={activeLayers}
-              onLayerChange={onLayerChange}
-            />
-          </Box>
-        </Stack>
+        <TabList onChange={onTabChange} aria-label="View tabs">
+          <Tab label="Front" value="front" />
+          <Tab label="Back" value="back" />
+          <Tab label="Left" value="left" />
+          <Tab label="Right" value="right" />
+          <Tab label="Top" value="top" />
+          <Tab label="Bottom" value="bottom" />
+          <Tab label="3D Preview" value="3d" />
+        </TabList>
       </Box>
 
       {/* Canvas Layout */}
@@ -143,7 +126,7 @@ export function TabbedEditorView({
             overflowY: 'auto',
           }}
         >
-          <Stack direction="column" spacing={2} sx={{ p: 1 }}>
+          <Stack direction="column" spacing={1.5} sx={{ p: 0.5 }}>
             <ToolPanel
               paintMode={paintMode}
               onPaintModeChange={onPaintModeChange}
@@ -158,15 +141,17 @@ export function TabbedEditorView({
               orientation="vertical"
             />
             <Divider />
-            <ForegroundBackgroundSelector
-              foregroundBlockId={foregroundBlock}
-              backgroundBlockId={backgroundBlock}
-              activeMaterialSlot={activeMaterialSlot}
-              blocks={blocks}
-              onToggleSlot={handleToggleSlot}
-              onClickForeground={handleClickForeground}
-              onClickBackground={handleClickBackground}
-            />
+            <Box sx={{ pt: 2 }}>
+              <ForegroundBackgroundSelector
+                foregroundBlockId={foregroundBlock}
+                backgroundBlockId={backgroundBlock}
+                activeMaterialSlot={activeMaterialSlot}
+                blocks={blocks}
+                onToggleSlot={handleToggleSlot}
+                onClickForeground={handleClickForeground}
+                onClickBackground={handleClickBackground}
+              />
+            </Box>
           </Stack>
         </Paper>
       </Box>

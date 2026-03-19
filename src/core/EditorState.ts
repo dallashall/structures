@@ -55,6 +55,7 @@ export interface PreviewBlock {
  * - quickselect:assigned - When quick-select slots are assigned
  * - preview:rendered - When preview blocks are rendered (for ghost rendering)
  * - project:switched - When current project is switched
+ * - sliceguide:axis:toggled - When a slice guide axis visibility is toggled (passes axis and visible)
  */
 class EditorState extends EventEmitter {
   private static instance: EditorState;
@@ -85,6 +86,7 @@ class EditorState extends EventEmitter {
   private materialBrowserSelectedTab = 0;
   private activeDragBlockId: string | null = null;
   private currentProjectId: string | null = null;
+  private sliceGuideVisibility: { x: boolean; y: boolean; z: boolean } = { x: false, y: false, z: false };
 
   private constructor() {
     super();
@@ -663,6 +665,38 @@ class EditorState extends EventEmitter {
    */
   getCurrentProjectId(): string | null {
     return this.currentProjectId;
+  }
+
+  // --- Slice Guide Visibility ---
+
+  /**
+   * Toggle visibility of a specific axis slice guide
+   */
+  toggleSliceGuide(axis: 'x' | 'y' | 'z'): void {
+    this.setSliceGuideVisible(axis, !this.sliceGuideVisibility[axis]);
+  }
+
+  /**
+   * Set visibility of a specific axis slice guide
+   */
+  setSliceGuideVisible(axis: 'x' | 'y' | 'z', visible: boolean): void {
+    if (this.sliceGuideVisibility[axis] === visible) return;
+    this.sliceGuideVisibility[axis] = visible;
+    this.emit('sliceguide:axis:toggled', axis, visible);
+  }
+
+  /**
+   * Get visibility state of all slice guides
+   */
+  getSliceGuideVisibility(): { x: boolean; y: boolean; z: boolean } {
+    return { ...this.sliceGuideVisibility };
+  }
+
+  /**
+   * Check if a specific axis slice guide is visible
+   */
+  isSliceGuideVisible(axis: 'x' | 'y' | 'z'): boolean {
+    return this.sliceGuideVisibility[axis];
   }
 }
 

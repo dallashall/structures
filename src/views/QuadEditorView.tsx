@@ -1,6 +1,5 @@
 import { Box, Stack, Paper, Divider } from '@mui/material';
 import type { Project, Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
-import { LayerControls } from '../components/LayerControls';
 import { QuadLayout } from '../layouts/QuadLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
@@ -23,7 +22,6 @@ interface QuadEditorViewProps {
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
-  onLayerChange: (dimension: 'x' | 'y' | 'z', layer: number) => void;
   onPaintModeChange: (mode: PaintMode) => void;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
@@ -54,7 +52,6 @@ export function QuadEditorView({
   isActionBarExpanded: _isActionBarExpanded,
   quickSelectSlots,
   blocks,
-  onLayerChange,
   onPaintModeChange,
   onPaintBehaviorChange: _onPaintBehaviorChange,
   onShapeFillModeChange: _onShapeFillModeChange,
@@ -77,18 +74,6 @@ export function QuadEditorView({
   };
   return (
     <>
-      {/* Layer Controls / Tab Bar */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>
-        <Stack direction="row" justifyContent="flex-end" alignItems="center">
-          {/* Layer Controls */}
-          <LayerControls
-            maxDimensions={project.dimensions}
-            activeLayers={activeLayers}
-            onLayerChange={onLayerChange}
-          />
-        </Stack>
-      </Box>
-
       {/* Canvas Layout */}
       <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
         <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
@@ -119,7 +104,7 @@ export function QuadEditorView({
             overflowY: 'auto',
           }}
         >
-          <Stack direction="column" spacing={2} sx={{ p: 1 }}>
+          <Stack direction="column" spacing={1.5} sx={{ p: 0.5 }}>
             <ToolPanel
               paintMode={paintMode}
               onPaintModeChange={onPaintModeChange}
@@ -134,15 +119,17 @@ export function QuadEditorView({
               orientation="vertical"
             />
             <Divider />
-            <ForegroundBackgroundSelector
-              foregroundBlockId={foregroundBlock}
-              backgroundBlockId={backgroundBlock}
-              activeMaterialSlot={activeMaterialSlot}
-              blocks={blocks}
-              onToggleSlot={handleToggleSlot}
-              onClickForeground={handleClickForeground}
-              onClickBackground={handleClickBackground}
-            />
+            <Box sx={{ pt: 2 }}>
+              <ForegroundBackgroundSelector
+                foregroundBlockId={foregroundBlock}
+                backgroundBlockId={backgroundBlock}
+                activeMaterialSlot={activeMaterialSlot}
+                blocks={blocks}
+                onToggleSlot={handleToggleSlot}
+                onClickForeground={handleClickForeground}
+                onClickBackground={handleClickBackground}
+              />
+            </Box>
           </Stack>
         </Paper>
       </Box>

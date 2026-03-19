@@ -15,6 +15,7 @@ import {
   RestartAlt,
 } from "@mui/icons-material";
 import { Babylon3D } from "../core/Babylon3D";
+import { editorState } from "../core/EditorState";
 
 // Axis colors that work in dark/light mode
 const AXIS_COLORS = {
@@ -47,9 +48,11 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const controllerRef = React.useRef<Babylon3D | null>(null);
   const theme = useTheme();
-  const [xVisible, setXVisible] = React.useState(true);
-  const [yVisible, setYVisible] = React.useState(true);
-  const [zVisible, setZVisible] = React.useState(true);
+
+  // Render cache for slice guide visibility (source of truth is EditorState)
+  const [sliceGuideVisibility, setSliceGuideVisibility] = React.useState(
+    editorState.getSliceGuideVisibility()
+  );
 
   // Create and mount controller
   React.useEffect(() => {
@@ -76,24 +79,21 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     controllerRef.current?.resize(width, height);
   }, [width, height]);
 
-  // Handle axis visibility toggles
-  const handleToggleX = () => {
-    const newVisibility = !xVisible;
-    setXVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible("x", newVisibility);
-  };
+  // Subscribe to slice guide visibility changes for button styling
+  React.useEffect(() => {
+    const handleSliceGuideToggled = () => {
+      setSliceGuideVisibility(editorState.getSliceGuideVisibility());
+    };
+    editorState.on('sliceguide:axis:toggled', handleSliceGuideToggled);
+    return () => {
+      editorState.off('sliceguide:axis:toggled', handleSliceGuideToggled);
+    };
+  }, []);
 
-  const handleToggleY = () => {
-    const newVisibility = !yVisible;
-    setYVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible("y", newVisibility);
-  };
-
-  const handleToggleZ = () => {
-    const newVisibility = !zVisible;
-    setZVisible(newVisibility);
-    controllerRef.current?.setAxisSliceVisible("z", newVisibility);
-  };
+  // Handle axis visibility toggles via EditorState
+  const handleToggleX = () => { editorState.toggleSliceGuide('x'); };
+  const handleToggleY = () => { editorState.toggleSliceGuide('y'); };
+  const handleToggleZ = () => { editorState.toggleSliceGuide('z'); };
 
   // Handle camera controls
   const handleCameraView = (view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom') => {
@@ -150,14 +150,14 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               onClick={handleToggleX}
               size="small"
               sx={{
-                bgcolor: xVisible ? AXIS_COLORS.x.main : "transparent",
-                color: xVisible
+                bgcolor: sliceGuideVisibility.x ? AXIS_COLORS.x.main : "transparent",
+                color: sliceGuideVisibility.x
                   ? theme.palette.getContrastText(AXIS_COLORS.x.main)
                   : AXIS_COLORS.x.main,
                 border: 1,
                 borderColor: AXIS_COLORS.x.main,
                 "&:hover": {
-                  bgcolor: xVisible ? AXIS_COLORS.x.hover : AXIS_COLORS.x.bg,
+                  bgcolor: sliceGuideVisibility.x ? AXIS_COLORS.x.hover : AXIS_COLORS.x.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -180,14 +180,14 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               onClick={handleToggleY}
               size="small"
               sx={{
-                bgcolor: yVisible ? AXIS_COLORS.y.main : "transparent",
-                color: yVisible
+                bgcolor: sliceGuideVisibility.y ? AXIS_COLORS.y.main : "transparent",
+                color: sliceGuideVisibility.y
                   ? theme.palette.getContrastText(AXIS_COLORS.y.main)
                   : AXIS_COLORS.y.main,
                 border: 1,
                 borderColor: AXIS_COLORS.y.main,
                 "&:hover": {
-                  bgcolor: yVisible ? AXIS_COLORS.y.hover : AXIS_COLORS.y.bg,
+                  bgcolor: sliceGuideVisibility.y ? AXIS_COLORS.y.hover : AXIS_COLORS.y.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -210,14 +210,14 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
               onClick={handleToggleZ}
               size="small"
               sx={{
-                bgcolor: zVisible ? AXIS_COLORS.z.main : "transparent",
-                color: zVisible
+                bgcolor: sliceGuideVisibility.z ? AXIS_COLORS.z.main : "transparent",
+                color: sliceGuideVisibility.z
                   ? theme.palette.getContrastText(AXIS_COLORS.z.main)
                   : AXIS_COLORS.z.main,
                 border: 1,
                 borderColor: AXIS_COLORS.z.main,
                 "&:hover": {
-                  bgcolor: zVisible ? AXIS_COLORS.z.hover : AXIS_COLORS.z.bg,
+                  bgcolor: sliceGuideVisibility.z ? AXIS_COLORS.z.hover : AXIS_COLORS.z.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -237,51 +237,50 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
         </Stack>
       </Box>
 
-      {/* Camera Controls */}
+      {/* Camera and Zoom Controls - Consolidated Horizontal Bar */}
       <Box
         sx={{
           position: "absolute",
           bottom: 8,
           left: 8,
           zIndex: 10,
+          bgcolor: "rgba(0, 0, 0, 0.7)",
+          borderRadius: 1,
+          p: 1,
         }}
       >
-        <Stack spacing={1}>
-          {/* Camera View Presets */}
-          <Box sx={{ bgcolor: "rgba(0, 0, 0, 0.7)", borderRadius: 1, p: 1 }}>
-            <Typography variant="caption" sx={{ color: "#aaa", mb: 0.5, display: "block" }}>
-              Camera View
+        <Stack direction="row" spacing={2} alignItems="center">
+          {/* Camera View Section */}
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
+              Camera:
             </Typography>
-            <Stack direction="row" spacing={0.5} sx={{ mb: 0.5 }}>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('front')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Front
-              </Button>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('back')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Back
-              </Button>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('left')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Left
-              </Button>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('right')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Right
-              </Button>
-            </Stack>
-            <Stack direction="row" spacing={0.5}>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('top')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Top
-              </Button>
-              <Button size="small" variant="outlined" onClick={() => handleCameraView('bottom')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
-                Bottom
-              </Button>
-            </Stack>
-          </Box>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('front')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Front
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('back')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Back
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('left')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Left
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('right')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Right
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('top')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Top
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => handleCameraView('bottom')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+              Bottom
+            </Button>
+          </Stack>
 
-          {/* Zoom Controls */}
-          <Box sx={{ bgcolor: "rgba(0, 0, 0, 0.7)", borderRadius: 1, p: 1 }}>
-            <Typography variant="caption" sx={{ color: "#aaa", mb: 0.5, display: "block" }}>
-              Zoom
+          {/* Zoom Section */}
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
+              Zoom:
             </Typography>
-            <ButtonGroup size="small" variant="outlined" fullWidth>
+            <ButtonGroup size="small" variant="outlined">
               <Tooltip title="Zoom In">
                 <IconButton onClick={handleZoomIn} size="small">
                   <ZoomIn fontSize="small" />
@@ -298,7 +297,7 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
                 </IconButton>
               </Tooltip>
             </ButtonGroup>
-          </Box>
+          </Stack>
         </Stack>
       </Box>
     </Box>

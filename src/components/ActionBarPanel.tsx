@@ -49,7 +49,7 @@ export function ActionBarPanel({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="column" spacing={2} sx={{ p: 1, flex: 1, overflowY: 'auto' }}>
+      <Stack direction="column" spacing={1.5} sx={{ p: 0.5, flex: 1, overflowY: 'auto' }}>
         <ToolPanel
           paintMode={paintMode}
           onPaintModeChange={onPaintModeChange}

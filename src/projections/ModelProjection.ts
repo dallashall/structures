@@ -259,6 +259,7 @@ class ModelProjection extends EventEmitter {
    */
   private async rebuild(): Promise<void> {
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
 
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
@@ -271,7 +272,7 @@ class ModelProjection extends EventEmitter {
         'model:metaBlockPlaced',
         'model:metaBlockConfirmed',
       ],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {
@@ -314,6 +315,7 @@ class ModelProjection extends EventEmitter {
 
     // New events exist - fetch and apply
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
 
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
@@ -328,7 +330,7 @@ class ModelProjection extends EventEmitter {
         'model:metaBlockPlaced',
         'model:metaBlockConfirmed',
       ],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {

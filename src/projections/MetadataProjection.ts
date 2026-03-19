@@ -118,13 +118,15 @@ class MetadataProjection extends EventEmitter {
    * Rebuild from event log (from snapshot forward)
    */
   private async rebuild(): Promise<void> {
-    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
+
+    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
 
     const events = await eventLog.getEvents({
       fromId,
       types: ['metadata:created', 'metadata:renamed'],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {
@@ -169,13 +171,15 @@ class MetadataProjection extends EventEmitter {
     }
 
     // New events exist (or no snapshot yet) - fetch and apply
-    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
+
+    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
 
     const events = await eventLog.getEvents({
       fromId,
       types: ['metadata:created', 'metadata:renamed'],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {

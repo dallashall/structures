@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { Toolbar } from '../../layouts/Toolbar';
 import { mockCallbacks } from '../mockData';
@@ -8,27 +7,18 @@ import { mockCallbacks } from '../mockData';
  * Demonstrates toolbar with and without active project
  */
 export function ToolbarPreview() {
-  const [is3DMode, setIs3DMode] = useState(false);
-
-  const handleToggle3D = () => {
-    setIs3DMode(!is3DMode);
-    mockCallbacks.onToggle3D();
-  };
-
   return (
     <Box>
       <Typography variant="h4" component="h1">Toolbar</Typography>
       <Typography variant="body1" sx={{ mb: 4 }}>
-        Application header with primary actions: New, Save, Open projects, and
-        toggle between 2D editor and 3D preview mode.
+        Application header with project name, save status indicator, and view mode selector.
       </Typography>
 
       {/* No Project Active */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">No Active Project</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Toolbar state when no project is loaded. Note that Save button is
-          disabled.
+          Toolbar state when no project is loaded. The save status indicator is hidden.
         </Typography>
         <Box
           sx={{
@@ -42,12 +32,8 @@ export function ToolbarPreview() {
             projectName={null}
             layoutMode="tabbed"
             saveState="saved"
-            onNewProject={mockCallbacks.onNewProject}
-            onSaveProject={mockCallbacks.onSaveProject}
-            onOpenProject={mockCallbacks.onOpenProject}
+            onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-            onToggle3D={mockCallbacks.onToggle3D}
-            is3DMode={false}
           />
         </Box>
       </Box>
@@ -73,9 +59,7 @@ export function ToolbarPreview() {
                 projectName="Saved Project"
                 layoutMode="tabbed"
                 saveState="saved"
-                onNewProject={mockCallbacks.onNewProject}
-                onSaveProject={mockCallbacks.onSaveProject}
-                onOpenProject={mockCallbacks.onOpenProject}
+                onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
                 onToggle3D={mockCallbacks.onToggle3D}
                 is3DMode={false}
@@ -96,9 +80,7 @@ export function ToolbarPreview() {
                 projectName="Project With Changes"
                 layoutMode="tabbed"
                 saveState="pending"
-                onNewProject={mockCallbacks.onNewProject}
-                onSaveProject={mockCallbacks.onSaveProject}
-                onOpenProject={mockCallbacks.onOpenProject}
+                onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
                 onToggle3D={mockCallbacks.onToggle3D}
                 is3DMode={false}
@@ -119,9 +101,7 @@ export function ToolbarPreview() {
                 projectName="Saving Project"
                 layoutMode="tabbed"
                 saveState="saving"
-                onNewProject={mockCallbacks.onNewProject}
-                onSaveProject={mockCallbacks.onSaveProject}
-                onOpenProject={mockCallbacks.onOpenProject}
+                onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
                 onToggle3D={mockCallbacks.onToggle3D}
                 is3DMode={false}
@@ -131,12 +111,11 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* With Project (2D Mode) */}
+      {/* With Project */}
       <Box sx={{ mt: 6 }}>
-        <Typography variant="h5" component="h2">Active Project - 2D Editor Mode</Typography>
+        <Typography variant="h5" component="h2">Active Project</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Toolbar with an active project named "Sample House". All buttons
-          enabled.
+          Toolbar with an active project named "Sample House".
         </Typography>
         <Box
           sx={{
@@ -150,21 +129,17 @@ export function ToolbarPreview() {
             projectName="Sample House"
             layoutMode="tabbed"
             saveState="saved"
-            onNewProject={mockCallbacks.onNewProject}
-            onSaveProject={mockCallbacks.onSaveProject}
-            onOpenProject={mockCallbacks.onOpenProject}
+            onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-            onToggle3D={mockCallbacks.onToggle3D}
-            is3DMode={false}
           />
         </Box>
       </Box>
 
-      {/* With Project (3D Mode) */}
+      {/* With Project - Quad Layout */}
       <Box sx={{ mt: 6 }}>
-        <Typography variant="h5" component="h2">Active Project - 3D Preview Mode</Typography>
+        <Typography variant="h5" component="h2">Active Project - Quad Layout Mode</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Toolbar with 3D mode active (note the accent variant on Toggle button).
+          Toolbar with quad layout mode selected (four-panel view).
         </Typography>
         <Box
           sx={{
@@ -178,9 +153,7 @@ export function ToolbarPreview() {
             projectName="Medieval Castle"
             layoutMode="quad"
             saveState="saved"
-            onNewProject={mockCallbacks.onNewProject}
-            onSaveProject={mockCallbacks.onSaveProject}
-            onOpenProject={mockCallbacks.onOpenProject}
+            onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
             onToggle3D={mockCallbacks.onToggle3D}
             is3DMode={true}
@@ -206,12 +179,8 @@ export function ToolbarPreview() {
             projectName="My Very Long Project Name For A Complex Minecraft Structure"
             layoutMode="tabbed"
             saveState="pending"
-            onNewProject={mockCallbacks.onNewProject}
-            onSaveProject={mockCallbacks.onSaveProject}
-            onOpenProject={mockCallbacks.onOpenProject}
+            onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-            onToggle3D={mockCallbacks.onToggle3D}
-            is3DMode={false}
           />
         </Box>
       </Box>
@@ -220,8 +189,7 @@ export function ToolbarPreview() {
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Click buttons to test interactions. Toggle 3D mode button changes
-          variant. Check console for callback logs.
+          Click buttons to test interactions. Check console for callback logs.
         </Typography>
         <Box
           sx={{
@@ -235,19 +203,9 @@ export function ToolbarPreview() {
             projectName="Interactive Demo Project"
             layoutMode="tabbed"
             saveState="saving"
-            onNewProject={mockCallbacks.onNewProject}
-            onSaveProject={mockCallbacks.onSaveProject}
-            onOpenProject={mockCallbacks.onOpenProject}
+            onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-            onToggle3D={handleToggle3D}
-            is3DMode={is3DMode}
           />
-        </Box>
-        <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300', mt: 2 }}>
-          <Typography variant="h6" component="h4">Current Mode</Typography>
-          <Typography variant="body1">
-            <strong>{is3DMode ? '3D Preview Mode' : '2D Editor Mode'}</strong>
-          </Typography>
         </Box>
       </Box>
 
@@ -270,12 +228,8 @@ export function ToolbarPreview() {
               projectName="Village House"
               layoutMode="tabbed"
               saveState="saved"
-              onNewProject={mockCallbacks.onNewProject}
-              onSaveProject={mockCallbacks.onSaveProject}
-              onOpenProject={mockCallbacks.onOpenProject}
+              onBackToProjects={mockCallbacks.onBackToProjects}
               onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-              onToggle3D={mockCallbacks.onToggle3D}
-              is3DMode={false}
             />
           </Box>
           <Box
@@ -290,12 +244,8 @@ export function ToolbarPreview() {
               projectName="Nether Portal"
               layoutMode="quad"
               saveState="saved"
-              onNewProject={mockCallbacks.onNewProject}
-              onSaveProject={mockCallbacks.onSaveProject}
-              onOpenProject={mockCallbacks.onOpenProject}
+              onBackToProjects={mockCallbacks.onBackToProjects}
               onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-              onToggle3D={mockCallbacks.onToggle3D}
-              is3DMode={true}
             />
           </Box>
           <Box
@@ -310,12 +260,8 @@ export function ToolbarPreview() {
               projectName="Redstone Machine"
               layoutMode="tabbed"
               saveState="saved"
-              onNewProject={mockCallbacks.onNewProject}
-              onSaveProject={mockCallbacks.onSaveProject}
-              onOpenProject={mockCallbacks.onOpenProject}
+              onBackToProjects={mockCallbacks.onBackToProjects}
               onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-              onToggle3D={mockCallbacks.onToggle3D}
-              is3DMode={false}
             />
           </Box>
         </Box>
@@ -335,15 +281,14 @@ export function ToolbarPreview() {
           >
             {`interface ToolbarProps {
   projectName: string | null;       // Current project name (null if no project)
-  onNewProject: () => void;         // New project callback
-  onSaveProject: () => void;        // Save project callback
-  onOpenProject: () => void;        // Open project callback
-  onToggle3D: () => void;           // Toggle 3D mode callback
-  is3DMode: boolean;                // Current view mode
+  layoutMode: LayoutMode;           // Current layout mode ('tabbed' | 'quad')
+  saveState: SaveState;             // Save status ('saved' | 'pending' | 'saving')
+  onBackToProjects: () => void;     // Navigate back to project list
+  onLayoutModeChange: (mode: LayoutMode) => void; // View mode selector callback
 }
 
-// Save button is disabled when projectName is null
-// Toggle button uses accent variant when is3DMode is true`}
+// Save status indicator shows next to project title
+// Indicator is hidden when projectName is null`}
           </pre>
         </Box>
       </Box>

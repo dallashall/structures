@@ -1,4 +1,5 @@
 import { editorState } from './EditorState';
+import { modelProjection } from '../projections/ModelProjection';
 
 /**
  * KeyboardManager - Handles global keyboard shortcuts
@@ -9,6 +10,9 @@ import { editorState } from './EditorState';
  * Shortcuts:
  * - 1-9: Select block from quick-select slot and apply to active material slot
  * - F: Toggle foreground/background material slot
+ * - W/S: Increment/decrement Z layer (height - up/down)
+ * - A/D: Decrement/increment X layer (width - left/right)
+ * - X/C: Decrement/increment Y layer (depth - forward/back)
  */
 class KeyboardManager {
   private static instance: KeyboardManager;
@@ -78,6 +82,55 @@ class KeyboardManager {
     if (event.key === 'f' || event.key === 'F') {
       event.preventDefault();
       editorState.toggleMaterialSlot();
+    }
+
+    // Layer navigation shortcuts
+    const model = modelProjection.getCached();
+    const activeLayers = editorState.getActiveLayers();
+
+    // W/S keys: Z layer (height - up/down)
+    if (event.key === 'w' || event.key === 'W') {
+      event.preventDefault();
+      const nextLayer = (activeLayers.z + 1) % model.dimensions.depth;
+      editorState.setActiveLayer('z', nextLayer);
+    }
+
+    if (event.key === 's' || event.key === 'S') {
+      event.preventDefault();
+      const nextLayer = activeLayers.z === 0
+        ? model.dimensions.depth - 1
+        : activeLayers.z - 1;
+      editorState.setActiveLayer('z', nextLayer);
+    }
+
+    // A/D keys: X layer (width - left/right)
+    if (event.key === 'a' || event.key === 'A') {
+      event.preventDefault();
+      const nextLayer = activeLayers.x === 0
+        ? model.dimensions.width - 1
+        : activeLayers.x - 1;
+      editorState.setActiveLayer('x', nextLayer);
+    }
+
+    if (event.key === 'd' || event.key === 'D') {
+      event.preventDefault();
+      const nextLayer = (activeLayers.x + 1) % model.dimensions.width;
+      editorState.setActiveLayer('x', nextLayer);
+    }
+
+    // X/C keys: Y layer (depth - forward/back)
+    if (event.key === 'x' || event.key === 'X') {
+      event.preventDefault();
+      const nextLayer = activeLayers.y === 0
+        ? model.dimensions.height - 1
+        : activeLayers.y - 1;
+      editorState.setActiveLayer('y', nextLayer);
+    }
+
+    if (event.key === 'c' || event.key === 'C') {
+      event.preventDefault();
+      const nextLayer = (activeLayers.y + 1) % model.dimensions.height;
+      editorState.setActiveLayer('y', nextLayer);
     }
   };
 }

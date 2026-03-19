@@ -196,12 +196,12 @@ export function App() {
         // If there was a last opened project, open it automatically
         const project = storage.getProject(lastProjectId);
         if (project) {
-          // Reset projections and rebuild for this project
+          // Set project ID BEFORE resetting projections so rebuild() filters correctly
+          editorState.setCurrentProjectId(lastProjectId);
+          editorState.setPlacementMode(false);
           metadataProjection.reset();
           modelProjection.reset();
           blockProjection.reset();
-          editorState.setCurrentProjectId(lastProjectId);
-          editorState.setPlacementMode(false);
           await Promise.all([
             metadataProjection.ensureFresh(),
             modelProjection.ensureFresh(),

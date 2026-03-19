@@ -8,16 +8,17 @@ import {
   LinesMesh,
 } from '@babylonjs/core';
 import { editorState } from '../EditorState';
+import { hexToColor3 } from './babylonUtils';
 import type { Dimensions, LayerState } from '../../types';
 
 /**
  * SlicePlaneVisualizer - Manages translucent planes showing 2D slice locations in 3D space
  *
- * Creates pairs of semi-transparent infinite planes on each side of the active slice
+ * Creates a single semi-transparent infinite plane on the origin side of the active slice
  * for each axis (X, Y, Z). Uses color-coding consistent with the 2D view:
- * - Red (#e74c3c) = X planes
- * - Blue (#3498db) = Y planes
- * - Green (#27ae60) = Z planes
+ * - Red (#e74c3c) = X plane
+ * - Blue (#3498db) = Y plane
+ * - Green (#27ae60) = Z plane
  *
  * COORDINATE SYSTEM CONVERSION:
  * Our system: Z-up, right-handed (X=width, Y=depth, Z=height)
@@ -32,10 +33,10 @@ export class SlicePlaneVisualizer {
   private scene: Scene;
   private dimensions: Dimensions;
 
-  // Plane meshes for each axis (2 planes per axis = 6 total)
-  private xPlanes: [Mesh, Mesh] | null = null;
-  private yPlanes: [Mesh, Mesh] | null = null;
-  private zPlanes: [Mesh, Mesh] | null = null;
+  // Plane meshes for each axis (1 plane per axis = 3 total, on origin side)
+  private xPlane: Mesh | null = null;
+  private yPlane: Mesh | null = null;
+  private zPlane: Mesh | null = null;
 
   // Intersection lines showing where planes cross each other
   private intersectionLines: LinesMesh[] = [];
@@ -70,9 +71,9 @@ export class SlicePlaneVisualizer {
   destroy(): void {
     editorState.off('layer:adjusted', this.boundLayerChanged);
 
-    this.disposePlanes(this.xPlanes);
-    this.disposePlanes(this.yPlanes);
-    this.disposePlanes(this.zPlanes);
+    this.disposePlane(this.xPlane);
+    this.disposePlane(this.yPlane);
+    this.disposePlane(this.zPlane);
     this.disposeIntersectionLines();
 
     this.xMaterial.dispose();
@@ -89,35 +90,21 @@ export class SlicePlaneVisualizer {
   }
 
   /**
-   * Toggle visibility of all slice planes and intersection lines
-   */
-  setVisible(visible: boolean): void {
-    this.setPlaneVisibility(this.xPlanes, visible);
-    this.setPlaneVisibility(this.yPlanes, visible);
-    this.setPlaneVisibility(this.zPlanes, visible);
-
-    // Toggle intersection lines
-    for (const line of this.intersectionLines) {
-      line.setEnabled(visible);
-    }
-  }
-
-  /**
-   * Toggle visibility of a specific axis slice planes
+   * Apply visibility for a specific axis slice plane
+   * EditorState is the single source of truth for visibility state
    */
   setAxisVisible(axis: 'x' | 'y' | 'z', visible: boolean): void {
     switch (axis) {
       case 'x':
-        this.setPlaneVisibility(this.xPlanes, visible);
+        this.setPlaneVisibility(this.xPlane, visible);
         break;
       case 'y':
-        this.setPlaneVisibility(this.yPlanes, visible);
+        this.setPlaneVisibility(this.yPlane, visible);
         break;
       case 'z':
-        this.setPlaneVisibility(this.zPlanes, visible);
+        this.setPlaneVisibility(this.zPlane, visible);
         break;
     }
-    // Intersection lines visibility is handled separately - they show when any planes are visible
   }
 
   /**
@@ -126,16 +113,13 @@ export class SlicePlaneVisualizer {
   private createMaterial(name: string, hexColor: string): StandardMaterial {
     const material = new StandardMaterial(name, this.scene);
 
-    // Parse hex color
-    const r = parseInt(hexColor.slice(1, 3), 16) / 255;
-    const g = parseInt(hexColor.slice(3, 5), 16) / 255;
-    const b = parseInt(hexColor.slice(5, 7), 16) / 255;
+    const color = hexToColor3(hexColor);
 
     // Glass-like appearance with visible color tint and shine
-    material.diffuseColor = new Color3(r * 0.5, g * 0.5, b * 0.5); // Saturated tint
+    material.diffuseColor = color.scale(0.5); // Saturated tint
     material.specularColor = new Color3(1.5, 1.5, 1.5); // Very bright specular for obvious shine
     material.specularPower = 16; // Lower power = broader, more visible highlights
-    material.emissiveColor = new Color3(r * 0.2, g * 0.2, b * 0.2); // Glow to show color
+    material.emissiveColor = color.scale(0.2); // Glow to show color
     material.alpha = 0.08; // More opaque to see color and shine
     material.backFaceCulling = false; // Visible from both sides
 
@@ -152,29 +136,29 @@ export class SlicePlaneVisualizer {
     const activeLayers = editorState.getActiveLayers();
 
     // Dispose old planes and lines
-    this.disposePlanes(this.xPlanes);
-    this.disposePlanes(this.yPlanes);
-    this.disposePlanes(this.zPlanes);
+    this.disposePlane(this.xPlane);
+    this.disposePlane(this.yPlane);
+    this.disposePlane(this.zPlane);
     this.disposeIntersectionLines();
 
-    // Create X planes (red) - perpendicular to X axis (width)
-    this.xPlanes = this.createPlanePair(
+    // Create X plane (red) - perpendicular to X axis (width), on origin side
+    this.xPlane = this.createPlane(
       'xSlice',
       activeLayers.x,
       'x',
       this.xMaterial
     );
 
-    // Create Y planes (blue) - perpendicular to Y axis (height)
-    this.yPlanes = this.createPlanePair(
+    // Create Y plane (blue) - perpendicular to Y axis (height), on origin side
+    this.yPlane = this.createPlane(
       'ySlice',
       activeLayers.y,
       'y',
       this.yMaterial
     );
 
-    // Create Z planes (green) - perpendicular to Z axis (depth)
-    this.zPlanes = this.createPlanePair(
+    // Create Z plane (green) - perpendicular to Z axis (depth), on origin side
+    this.zPlane = this.createPlane(
       'zSlice',
       activeLayers.z,
       'z',
@@ -183,17 +167,23 @@ export class SlicePlaneVisualizer {
 
     // Create intersection lines
     this.createIntersectionLines(activeLayers);
+
+    // Apply visibility from EditorState (single source of truth)
+    const visibility = editorState.getSliceGuideVisibility();
+    this.setPlaneVisibility(this.xPlane, visibility.x);
+    this.setPlaneVisibility(this.yPlane, visibility.y);
+    this.setPlaneVisibility(this.zPlane, visibility.z);
   }
 
   /**
-   * Create a pair of planes on either side of a slice
+   * Create a single plane on the origin side of a slice
    */
-  private createPlanePair(
+  private createPlane(
     baseName: string,
     sliceIndex: number,
     axis: 'x' | 'y' | 'z',
     material: StandardMaterial
-  ): [Mesh, Mesh] {
+  ): Mesh {
     // Calculate size - make planes large enough to cover entire build area
     const maxDim = Math.max(
       this.dimensions.width,
@@ -204,40 +194,29 @@ export class SlicePlaneVisualizer {
 
     // Create plane geometry
     // In Babylon: CreatePlane creates a plane in XY orientation (facing +Z)
-    const plane1 = MeshBuilder.CreatePlane(
-      `${baseName}_before`,
-      { size: planeSize, sideOrientation: Mesh.DOUBLESIDE },
-      this.scene
-    );
-
-    const plane2 = MeshBuilder.CreatePlane(
-      `${baseName}_after`,
+    const plane = MeshBuilder.CreatePlane(
+      baseName,
       { size: planeSize, sideOrientation: Mesh.DOUBLESIDE },
       this.scene
     );
 
     // Apply material
-    plane1.material = material;
-    plane2.material = material;
+    plane.material = material;
 
     // Enable edge rendering for glass-like outline
     const edgeColor = material.diffuseColor;
-    plane1.enableEdgesRendering();
-    plane1.edgesWidth = 2.0;
-    plane1.edgesColor = new Color3(edgeColor.r * 2, edgeColor.g * 2, edgeColor.b * 2).toColor4(0.6);
+    plane.enableEdgesRendering();
+    plane.edgesWidth = 2.0;
+    plane.edgesColor = new Color3(edgeColor.r * 2, edgeColor.g * 2, edgeColor.b * 2).toColor4(0.6);
 
-    plane2.enableEdgesRendering();
-    plane2.edgesWidth = 2.0;
-    plane2.edgesColor = new Color3(edgeColor.r * 2, edgeColor.g * 2, edgeColor.b * 2).toColor4(0.6);
+    // Position and orient plane based on axis (origin side only)
+    this.positionPlane(plane, sliceIndex, axis);
 
-    // Position and orient planes based on axis
-    this.positionPlanePair(plane1, plane2, sliceIndex, axis);
-
-    return [plane1, plane2];
+    return plane;
   }
 
   /**
-   * Position and orient a plane pair for a specific axis and slice index
+   * Position and orient a single plane on origin side for a specific axis and slice index
    *
    * Coordinate conversion (from toBabylonVector):
    * - Our X (width) → Babylon X
@@ -246,85 +225,67 @@ export class SlicePlaneVisualizer {
    *
    * CreatePlane defaults to XY orientation (perpendicular to +Z)
    */
-  private positionPlanePair(
-    plane1: Mesh,
-    plane2: Mesh,
+  private positionPlane(
+    plane: Mesh,
     sliceIndex: number,
     axis: 'x' | 'y' | 'z'
   ): void {
-    // Offset amount (0.01 to place just outside the slice boundaries)
+    // Offset amount (0.01 to place just outside the slice boundary on origin side)
     const offset = 0.01;
 
     switch (axis) {
       case 'x':
-        // X planes perpendicular to X axis (width)
+        // X plane perpendicular to X axis (width), on origin side
         // Our X → Babylon X, so perpendicular to Babylon X axis
         // Need YZ plane in Babylon, rotate 90° around Y
-        plane1.rotation.y = Math.PI / 2;
-        plane2.rotation.y = Math.PI / 2;
+        plane.rotation.y = Math.PI / 2;
 
-        // Position on either side of the slice
-        plane1.position.x = sliceIndex - offset;
-        plane2.position.x = sliceIndex + 1 + offset;
+        // Position on origin side of the slice
+        plane.position.x = sliceIndex - offset;
 
         // Center on build area
         // Babylon Y = our Z (depth), Babylon Z = our Y (height)
-        plane1.position.y = this.dimensions.depth / 2;
-        plane1.position.z = this.dimensions.height / 2;
-
-        plane2.position.y = this.dimensions.depth / 2;
-        plane2.position.z = this.dimensions.height / 2;
+        plane.position.y = this.dimensions.depth / 2;
+        plane.position.z = this.dimensions.height / 2;
         break;
 
       case 'y':
-        // Y planes perpendicular to Y axis (height)
+        // Y plane perpendicular to Y axis (height), on origin side
         // Our Y → Babylon Z, so perpendicular to Babylon Z axis
         // Default CreatePlane is XY (perpendicular to Z), so no rotation needed!
-        plane1.rotation.x = 0;
-        plane1.rotation.y = 0;
-        plane1.rotation.z = 0;
-        plane2.rotation.x = 0;
-        plane2.rotation.y = 0;
-        plane2.rotation.z = 0;
+        plane.rotation.x = 0;
+        plane.rotation.y = 0;
+        plane.rotation.z = 0;
 
-        // Position on either side of the slice
-        plane1.position.z = sliceIndex - offset;
-        plane2.position.z = sliceIndex + 1 + offset;
+        // Position on origin side of the slice
+        plane.position.z = sliceIndex - offset;
 
         // Center on build area
         // Babylon X = our X (width), Babylon Y = our Z (depth)
-        plane1.position.x = this.dimensions.width / 2;
-        plane1.position.y = this.dimensions.depth / 2;
-
-        plane2.position.x = this.dimensions.width / 2;
-        plane2.position.y = this.dimensions.depth / 2;
+        plane.position.x = this.dimensions.width / 2;
+        plane.position.y = this.dimensions.depth / 2;
         break;
 
       case 'z':
-        // Z planes perpendicular to Z axis (depth)
+        // Z plane perpendicular to Z axis (depth), on origin side
         // Our Z → Babylon Y, so perpendicular to Babylon Y axis
         // Need XZ plane in Babylon, rotate 90° around X
-        plane1.rotation.x = Math.PI / 2;
-        plane2.rotation.x = Math.PI / 2;
+        plane.rotation.x = Math.PI / 2;
 
-        // Position on either side of the slice
-        plane1.position.y = sliceIndex - offset;
-        plane2.position.y = sliceIndex + 1 + offset;
+        // Position on origin side of the slice
+        plane.position.y = sliceIndex - offset;
 
         // Center on build area
         // Babylon X = our X (width), Babylon Z = our Y (height)
-        plane1.position.x = this.dimensions.width / 2;
-        plane1.position.z = this.dimensions.height / 2;
-
-        plane2.position.x = this.dimensions.width / 2;
-        plane2.position.z = this.dimensions.height / 2;
+        plane.position.x = this.dimensions.width / 2;
+        plane.position.z = this.dimensions.height / 2;
         break;
     }
   }
 
   /**
    * Create intersection lines showing where slice planes cross
-   * Creates 4 lines for each pair of axes (2 planes × 2 planes = 4 intersections)
+   * Creates 3 lines total (one per pair of axes)
    * Lines extend to the edges of the build volume
    */
   private createIntersectionLines(activeLayers: LayerState): void {
@@ -333,50 +294,38 @@ export class SlicePlaneVisualizer {
 
     const offset = 0.01; // Match plane offset
 
-    // X-Y intersections (red-blue): vertical lines along depth axis (Babylon Y)
-    // Lines extend along our Z (height) dimension = Babylon Y
-    // 2 X planes × 2 Y planes = 4 lines
-    for (const xCoord of [activeLayers.x - offset, activeLayers.x + 1 + offset]) {
-      for (const yCoord of [activeLayers.y - offset, activeLayers.y + 1 + offset]) {
-        this.createIntersectionLine(
-          xCoord,
-          yCoord,
-          'xy',
-          this.dimensions.depth, // Our Z (depth) → Babylon Y
-          '#9b59b6' // Purple blend
-        );
-      }
-    }
+    // X-Y intersection (red-blue): vertical line along depth axis (Babylon Y)
+    // Line extends along our Z (depth) dimension = Babylon Y
+    // At the intersection of X origin plane and Y origin plane
+    this.createIntersectionLine(
+      activeLayers.x - offset,
+      activeLayers.y - offset,
+      'xy',
+      this.dimensions.depth, // Our Z (depth) → Babylon Y
+      '#9b59b6' // Purple blend
+    );
 
-    // X-Z intersections (red-green): vertical lines along height axis (Babylon Z)
-    // Lines extend along our Y (height) dimension = Babylon Z
-    // 2 X planes × 2 Z planes = 4 lines
-    for (const xCoord of [activeLayers.x - offset, activeLayers.x + 1 + offset]) {
-      for (const zCoord of [activeLayers.z - offset, activeLayers.z + 1 + offset]) {
-        this.createIntersectionLine(
-          xCoord,
-          zCoord,
-          'xz',
-          this.dimensions.height, // Our Y (height) → Babylon Z
-          '#f39c12' // Orange blend
-        );
-      }
-    }
+    // X-Z intersection (red-green): vertical line along height axis (Babylon Z)
+    // Line extends along our Y (height) dimension = Babylon Z
+    // At the intersection of X origin plane and Z origin plane
+    this.createIntersectionLine(
+      activeLayers.x - offset,
+      activeLayers.z - offset,
+      'xz',
+      this.dimensions.height, // Our Y (height) → Babylon Z
+      '#f39c12' // Orange blend
+    );
 
-    // Y-Z intersections (blue-green): horizontal lines along width axis (Babylon X)
-    // Lines extend along our X (width) dimension = Babylon X
-    // 2 Y planes × 2 Z planes = 4 lines
-    for (const yCoord of [activeLayers.y - offset, activeLayers.y + 1 + offset]) {
-      for (const zCoord of [activeLayers.z - offset, activeLayers.z + 1 + offset]) {
-        this.createIntersectionLine(
-          yCoord,
-          zCoord,
-          'yz',
-          this.dimensions.width, // Our X (width) → Babylon X
-          '#16a085' // Teal blend
-        );
-      }
-    }
+    // Y-Z intersection (blue-green): horizontal line along width axis (Babylon X)
+    // Line extends along our X (width) dimension = Babylon X
+    // At the intersection of Y origin plane and Z origin plane
+    this.createIntersectionLine(
+      activeLayers.y - offset,
+      activeLayers.z - offset,
+      'yz',
+      this.dimensions.width, // Our X (width) → Babylon X
+      '#16a085' // Teal blend
+    );
   }
 
   /**
@@ -429,12 +378,7 @@ export class SlicePlaneVisualizer {
       this.scene
     );
 
-    // Parse hex color
-    const r = parseInt(color.slice(1, 3), 16) / 255;
-    const g = parseInt(color.slice(3, 5), 16) / 255;
-    const b = parseInt(color.slice(5, 7), 16) / 255;
-
-    line.color = new Color3(r, g, b);
+    line.color = hexToColor3(color);
     line.alpha = 0.5;
 
     this.intersectionLines.push(line);
@@ -455,20 +399,24 @@ export class SlicePlaneVisualizer {
    */
   private handleLayerChanged(dimension: 'x' | 'y' | 'z', layer: number): void {
     const activeLayers = editorState.getActiveLayers();
+    const visibility = editorState.getSliceGuideVisibility();
 
-    // Update only the affected planes
+    // Update only the affected plane and restore visibility from EditorState
     switch (dimension) {
       case 'x':
-        this.disposePlanes(this.xPlanes);
-        this.xPlanes = this.createPlanePair('xSlice', layer, 'x', this.xMaterial);
+        this.disposePlane(this.xPlane);
+        this.xPlane = this.createPlane('xSlice', layer, 'x', this.xMaterial);
+        this.setPlaneVisibility(this.xPlane, visibility.x);
         break;
       case 'y':
-        this.disposePlanes(this.yPlanes);
-        this.yPlanes = this.createPlanePair('ySlice', layer, 'y', this.yMaterial);
+        this.disposePlane(this.yPlane);
+        this.yPlane = this.createPlane('ySlice', layer, 'y', this.yMaterial);
+        this.setPlaneVisibility(this.yPlane, visibility.y);
         break;
       case 'z':
-        this.disposePlanes(this.zPlanes);
-        this.zPlanes = this.createPlanePair('zSlice', layer, 'z', this.zMaterial);
+        this.disposePlane(this.zPlane);
+        this.zPlane = this.createPlane('zSlice', layer, 'z', this.zMaterial);
+        this.setPlaneVisibility(this.zPlane, visibility.z);
         break;
     }
 
@@ -478,20 +426,18 @@ export class SlicePlaneVisualizer {
   }
 
   /**
-   * Dispose a pair of planes
+   * Dispose a single plane
    */
-  private disposePlanes(planes: [Mesh, Mesh] | null): void {
-    if (!planes) return;
-    planes[0].dispose();
-    planes[1].dispose();
+  private disposePlane(plane: Mesh | null): void {
+    if (!plane) return;
+    plane.dispose();
   }
 
   /**
-   * Set visibility for a pair of planes
+   * Set visibility for a single plane
    */
-  private setPlaneVisibility(planes: [Mesh, Mesh] | null, visible: boolean): void {
-    if (!planes) return;
-    planes[0].setEnabled(visible);
-    planes[1].setEnabled(visible);
+  private setPlaneVisibility(plane: Mesh | null, visible: boolean): void {
+    if (!plane) return;
+    plane.setEnabled(visible);
   }
 }

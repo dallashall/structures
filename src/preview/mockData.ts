@@ -71,16 +71,8 @@ export const mockCallbacks = {
     console.log('[Mock Callback] Layout mode changed:', mode);
   },
 
-  onNewProject: (): void => {
-    console.log('[Mock Callback] New project clicked');
-  },
-
-  onSaveProject: (): void => {
-    console.log('[Mock Callback] Save project clicked');
-  },
-
-  onOpenProject: (): void => {
-    console.log('[Mock Callback] Open project clicked');
+  onBackToProjects: (): void => {
+    console.log('[Mock Callback] Back to projects clicked');
   },
 
   onToggle3D: (): void => {

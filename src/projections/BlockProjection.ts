@@ -141,11 +141,12 @@ class BlockProjection extends EventEmitter {
    */
   private async rebuild(): Promise<void> {
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
 
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
       types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {
@@ -186,11 +187,12 @@ class BlockProjection extends EventEmitter {
 
     // New events exist - fetch and apply
     const projectId = editorState.getCurrentProjectId();
+    if (!projectId) return;
 
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
       types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
-      projectId: projectId || undefined,
+      projectId,
     });
 
     for (const event of events) {

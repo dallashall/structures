@@ -10,7 +10,7 @@ import {
   InputLabel,
   SelectChangeEvent,
 } from '@mui/material';
-import { Add, Save, FolderOpen } from '@mui/icons-material';
+import { ViewList } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
 import type { SaveState } from '../core/Storage';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
@@ -19,9 +19,7 @@ interface ToolbarProps {
   projectName: string | null;
   layoutMode: LayoutMode;
   saveState: SaveState;
-  onNewProject: () => void;
-  onSaveProject: () => void;
-  onOpenProject: () => void;
+  onBackToProjects: () => void;
   onLayoutModeChange: (mode: LayoutMode) => void;
   // Optional props for preview compatibility (3D feature not yet implemented)
   onToggle3D?: () => void;
@@ -31,11 +29,11 @@ interface ToolbarProps {
 /**
  * Toolbar - Application header with primary actions
  *
- * Displays project name and provides buttons for:
- * - Creating new projects
- * - Saving current project
- * - Opening existing projects
- * - Toggling between 2D editor and 3D preview
+ * Displays:
+ * - Project name (left)
+ * - Save status indicator (center, between name and controls)
+ * - Projects button (right)
+ * - View mode selector (right)
  *
  * Uses MUI components for consistent theming and
  * automatic light/dark mode support.
@@ -44,21 +42,11 @@ export function Toolbar({
   projectName,
   layoutMode,
   saveState,
-  onNewProject,
-  onSaveProject,
-  onOpenProject,
+  onBackToProjects,
   onLayoutModeChange,
 }: ToolbarProps) {
-  const handleNewClick = () => {
-    onNewProject();
-  };
-
-  const handleSaveClick = () => {
-    onSaveProject();
-  };
-
-  const handleOpenClick = () => {
-    onOpenProject();
+  const handleProjectsClick = () => {
+    onBackToProjects();
   };
 
   const handleLayoutModeChange = (event: SelectChangeEvent<LayoutMode>) => {
@@ -74,81 +62,55 @@ export function Toolbar({
       }}
     >
       <Stack
-        direction={{ xs: 'column', lg: 'row' }}
-        alignItems={{ xs: 'stretch', lg: 'center' }}
+        direction="row"
+        alignItems="center"
         spacing={2}
       >
         {/* Project Name */}
-        <Box
+        <Typography
+          variant="h5"
+          component="h1"
           sx={{
-            flex: { lg: 1 },
-            minWidth: 0,
-            overflow: 'hidden',
+            m: 0,
+            whiteSpace: 'nowrap',
           }}
         >
-          <Typography
-            variant="h5"
-            component="h1"
-            sx={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              m: 0,
-            }}
-          >
-            {projectName || 'Structures'}
-          </Typography>
-          {projectName && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Project
-              </Typography>
-              <SaveStatusIndicator saveState={saveState} />
-            </Stack>
-          )}
-        </Box>
+          {projectName || 'Structures'}
+        </Typography>
 
-        {/* Action Buttons */}
+        {/* Save Status Indicator - next to title with divider */}
+        {projectName && (
+          <>
+            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <SaveStatusIndicator saveState={saveState} />
+          </>
+        )}
+
+        {/* Spacer */}
+        <Box sx={{ flex: 1 }} />
+
+        {/* Right Controls */}
         <Stack
-          direction={{ xs: 'column', md: 'row' }}
+          direction="row"
           spacing={1}
           alignItems="center"
-          flexWrap="wrap"
         >
           <Button
-            variant="contained"
-            onClick={handleNewClick}
-            startIcon={<Add />}
-          >
-            New
-          </Button>
-
-          <Button
             variant="outlined"
-            onClick={handleSaveClick}
-            disabled={!projectName}
-            startIcon={<Save />}
+            onClick={handleProjectsClick}
+            startIcon={<ViewList />}
           >
-            Save
-          </Button>
-
-          <Button
-            variant="outlined"
-            onClick={handleOpenClick}
-            startIcon={<FolderOpen />}
-          >
-            Open
+            Projects
           </Button>
 
           <Divider
             orientation="vertical"
             flexItem
-            sx={{ display: { xs: 'none', md: 'block' } }}
           />
 
           <FormControl
             size="small"
-            sx={{ minWidth: { xs: '100%', md: 200 } }}
+            sx={{ minWidth: 200 }}
           >
             <InputLabel id="layout-mode-label">View Mode</InputLabel>
             <Select

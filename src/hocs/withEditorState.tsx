@@ -30,6 +30,7 @@ export interface WithEditorStateProps {
   isPlacementMode: boolean;
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
+  sliceGuideVisibility: { x: boolean; y: boolean; z: boolean };
 }
 
 /**
@@ -107,6 +108,9 @@ export function withEditorState<P extends object>(
     const [quickSelectSlots, setQuickSelectSlots] = React.useState<
       (string | null)[]
     >(editorState.getQuickSelectSlots());
+    const [sliceGuideVisibility, setSliceGuideVisibility] = React.useState(
+      editorState.getSliceGuideVisibility()
+    );
 
     React.useEffect(() => {
       const handleLayoutChanged = (mode: LayoutMode) => {
@@ -166,6 +170,10 @@ export function withEditorState<P extends object>(
         setQuickSelectSlots(slots);
       };
 
+      const handleSliceGuideToggled = () => {
+        setSliceGuideVisibility(editorState.getSliceGuideVisibility());
+      };
+
       // Subscribe to events
       editorState.on("layout:toggled", handleLayoutChanged);
       editorState.on("view:switched", handleViewChanged);
@@ -189,6 +197,7 @@ export function withEditorState<P extends object>(
       );
       editorState.on("actionbar:toggled", handleActionBarChanged);
       editorState.on("quickselect:assigned", handleQuickSelectChanged);
+      editorState.on("sliceguide:axis:toggled", handleSliceGuideToggled);
 
       // Cleanup
       return () => {
@@ -214,6 +223,7 @@ export function withEditorState<P extends object>(
         );
         editorState.off("actionbar:toggled", handleActionBarChanged);
         editorState.off("quickselect:assigned", handleQuickSelectChanged);
+        editorState.off("sliceguide:axis:toggled", handleSliceGuideToggled);
       };
     }, []);
 
@@ -235,6 +245,7 @@ export function withEditorState<P extends object>(
         isPlacementMode={isPlacementMode}
         isActionBarExpanded={isActionBarExpanded}
         quickSelectSlots={quickSelectSlots}
+        sliceGuideVisibility={sliceGuideVisibility}
       />
     );
   };

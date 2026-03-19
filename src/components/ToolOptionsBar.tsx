@@ -4,19 +4,25 @@ import type {
   PaintBehavior,
   ShapeFillMode,
   DepthConfig,
+  Dimensions,
+  LayerState,
 } from "../types";
 import { ShapeFillModeControl } from "./ShapeFillModeControl";
 import { DepthPaintingControl } from "./DepthPaintingControl";
 import { PaintBehaviorControl } from "./PaintBehaviorControl";
+import { LayerControls } from "./LayerControls";
 
 interface ToolOptionsBarProps {
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
+  maxDimensions: Dimensions;
+  activeLayers: LayerState;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
+  onLayerChange: (dimension: 'x' | 'y' | 'z', layer: number) => void;
 }
 
 /**
@@ -35,9 +41,12 @@ export function ToolOptionsBar({
   paintBehavior,
   shapeFillMode,
   depthConfig,
+  maxDimensions,
+  activeLayers,
   onPaintBehaviorChange,
   onShapeFillModeChange,
   onDepthConfigChange,
+  onLayerChange,
 }: ToolOptionsBarProps) {
   const isShapeMode = ["outline", "circle", "arch", "curve"].includes(
     paintMode,
@@ -52,15 +61,17 @@ export function ToolOptionsBar({
         borderColor: "divider",
         display: "flex",
         alignItems: "center",
+        justifyContent: "space-between",
         px: 1.5,
         gap: 1,
-        overflowX: "auto",
       }}
     >
+      {/* Left side: Tool modifiers */}
       <Stack
         direction="row"
         spacing={1.5}
         divider={<Divider orientation="vertical" flexItem />}
+        sx={{ overflow: "hidden" }}
       >
         {/* 1. Shape fill mode - only for shape tools */}
         {isShapeMode && (
@@ -85,6 +96,13 @@ export function ToolOptionsBar({
           orientation="horizontal"
         />
       </Stack>
+
+      {/* Right side: Layer controls (X, Y, Z + gear) */}
+      <LayerControls
+        maxDimensions={maxDimensions}
+        activeLayers={activeLayers}
+        onLayerChange={onLayerChange}
+      />
     </Box>
   );
 }
