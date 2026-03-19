@@ -46,12 +46,6 @@ export interface DepthConfig {
 // Circle drawing modes (for modifier keys)
 export type CircleDrawMode = 'center-radius' | 'bounding-box' | 'constrained-box';
 
-// Curve control state for bezier curve manipulation
-export interface CurveControlState {
-  controlPoint1: { x: number; y: number }; // Grid coordinates
-  controlPoint2: { x: number; y: number };
-}
-
 // Tool types (simplified for initial implementation)
 export type ToolType = 'paint' | 'erase';
 
@@ -275,6 +269,81 @@ export interface ExportConfig {
   filename: string;
   includeMetadata: boolean;
 }
+
+// ============ RENDER SETTINGS ============
+
+/**
+ * PBR material category preset
+ */
+export interface PBRPreset {
+  metallic: number;
+  roughness: number;
+  environmentIntensity: number;
+}
+
+/**
+ * Per-project rendering settings (persisted to IndexedDB)
+ */
+export interface RenderSettings {
+  // Anti-aliasing
+  fxaaEnabled: boolean;
+  msaaSamples: number;
+
+  // PBR
+  pbrEnabled: boolean;
+
+  // Environment
+  environmentIntensity: number;
+
+  // Edges
+  edgesEnabled: boolean;
+  edgesWidth: number;
+  edgesColor: string;
+
+  // Shadows
+  shadowsEnabled: boolean;
+  shadowMapSize: number;
+  shadowDarkness: number;
+
+  // SSAO
+  ssaoEnabled: boolean;
+  ssaoRadius: number;
+  ssaoIntensity: number;
+  ssaoSamples: number;
+
+  // Bloom
+  bloomEnabled: boolean;
+  bloomIntensity: number;
+  bloomThreshold: number;
+
+  // Tone mapping
+  toneMapping: boolean;
+  contrast: number;
+  exposure: number;
+}
+
+export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
+  fxaaEnabled: true,
+  msaaSamples: 4,
+  pbrEnabled: true,
+  environmentIntensity: 1.0,
+  edgesEnabled: true,
+  edgesWidth: 1.0,
+  edgesColor: '#000000',
+  shadowsEnabled: true,
+  shadowMapSize: 1024,
+  shadowDarkness: 0.4,
+  ssaoEnabled: true,
+  ssaoRadius: 2.0,
+  ssaoIntensity: 1.0,
+  ssaoSamples: 16,
+  bloomEnabled: true,
+  bloomIntensity: 0.15,
+  bloomThreshold: 0.9,
+  toneMapping: true,
+  contrast: 1.1,
+  exposure: 1.0,
+};
 
 // Utility type for event handlers
 export type EventHandler<T = any> = (...args: T[]) => void;

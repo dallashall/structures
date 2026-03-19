@@ -13,8 +13,32 @@ export type Plane = 'xy' | 'xz' | 'yz';
  * - Arch calculations (arc segments)
  * - Bezier curve calculations (cubic bezier)
  * - Depth projection for multi-layer painting
+ *
+ * COORDINATE CONVENTION:
+ * All 2D math operates in (u, v) space where:
+ * - xy plane: u=x, v=y (constrained z)
+ * - xz plane: u=x, v=z (constrained y)
+ * - yz plane: u=y, v=z (constrained x)
+ *
+ * Use to2D() to project 3D→2D and applyToPlane() to project 2D→3D.
  */
 export class ShapeUtils {
+  /**
+   * Project a 3D point onto a 2D plane coordinate system
+   *
+   * Returns the two relevant components for the given plane:
+   * - xy: { u: x, v: y }
+   * - xz: { u: x, v: z }
+   * - yz: { u: y, v: z }
+   */
+  static to2D(point: Vector3D, plane: Plane): { u: number; v: number } {
+    switch (plane) {
+      case 'xy': return { u: point.x, v: point.y };
+      case 'xz': return { u: point.x, v: point.z };
+      case 'yz': return { u: point.y, v: point.z };
+    }
+  }
+
   /**
    * Calculate circle outline using midpoint circle algorithm
    * Uses 8-way symmetry for perfect discrete circles
@@ -27,13 +51,14 @@ export class ShapeUtils {
   ): Vector3D[] {
     const positions: Vector3D[] = [];
     const r = Math.round(radius);
+    const c = this.to2D(center, plane);
 
     // Midpoint circle algorithm
     let x = 0;
     let y = r;
     let d = 1 - r;
 
-    const addSymmetricPoints = (cx: number, cy: number, dx: number, dy: number) => {
+    const addSymmetricPoints = (cu: number, cv: number, dx: number, dy: number) => {
       const points = [
         { dx, dy },
         { dx: -dx, dy },
@@ -46,7 +71,7 @@ export class ShapeUtils {
       ];
 
       for (const point of points) {
-        const pos = this.applyToPlane(cx, cy, point.dx, point.dy, plane, center);
+        const pos = this.applyToPlane(cu, cv, point.dx, point.dy, plane, center);
         if (this.isValidPosition(pos, dimensions)) {
           positions.push(pos);
         }
@@ -54,7 +79,7 @@ export class ShapeUtils {
     };
 
     while (x <= y) {
-      addSymmetricPoints(center.x, center.y, x, y);
+      addSymmetricPoints(c.u, c.v, x, y);
 
       if (d < 0) {
         d += 2 * x + 3;
@@ -80,12 +105,13 @@ export class ShapeUtils {
     const positions: Vector3D[] = [];
     const r = Math.round(radius);
     const rSquared = r * r;
+    const c = this.to2D(center, plane);
 
     // Scan-line fill using circle equation
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (dx * dx + dy * dy <= rSquared) {
-          const pos = this.applyToPlane(center.x, center.y, dx, dy, plane, center);
+          const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
           if (this.isValidPosition(pos, dimensions)) {
             positions.push(pos);
           }
@@ -110,6 +136,7 @@ export class ShapeUtils {
   ): Vector3D[] {
     const positions: Vector3D[] = [];
     const r = Math.round(radius);
+    const c = this.to2D(center, plane);
 
     // Calculate arc length to determine number of steps
     const angleSpan = Math.abs(endAngle - startAngle);
@@ -122,7 +149,7 @@ export class ShapeUtils {
       const dx = Math.round(r * Math.cos(rad));
       const dy = Math.round(r * Math.sin(rad));
 
-      const pos = this.applyToPlane(center.x, center.y, dx, dy, plane, center);
+      const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
       if (this.isValidPosition(pos, dimensions)) {
         positions.push(pos);
       }
@@ -144,6 +171,7 @@ export class ShapeUtils {
   ): Vector3D[] {
     const positions: Vector3D[] = [];
     const r = Math.round(radius);
+    const c = this.to2D(center, plane);
 
     // Fill sector by checking each point within bounding box
     for (let dy = -r; dy <= r; dy++) {
@@ -158,7 +186,7 @@ export class ShapeUtils {
           const normalizedEnd = endAngle < 0 ? endAngle + 360 : endAngle;
 
           if (this.isAngleInRange(angle, normalizedStart, normalizedEnd)) {
-            const pos = this.applyToPlane(center.x, center.y, dx, dy, plane, center);
+            const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
             if (this.isValidPosition(pos, dimensions)) {
               positions.push(pos);
             }
@@ -173,6 +201,9 @@ export class ShapeUtils {
   /**
    * Calculate cubic Bezier curve
    * Uses De Casteljau's algorithm for smooth interpolation
+   *
+   * Control points are in 2D plane coordinates (u, v) matching the plane.
+   * Start and end are 3D and get projected internally.
    */
   static calculateBezierCurve(
     start: Vector3D,
@@ -185,24 +216,27 @@ export class ShapeUtils {
   ): Vector3D[] {
     const positions: Vector3D[] = [];
 
+    // Project start/end to 2D plane coordinates to match control points
+    const s = this.to2D(start, plane);
+    const e = this.to2D(end, plane);
+
     for (let i = 0; i <= segments; i++) {
       const t = i / segments;
 
-      // Cubic bezier formula
-      const x =
-        Math.pow(1 - t, 3) * start.x +
+      // Cubic bezier formula (all in 2D plane coordinates)
+      const u =
+        Math.pow(1 - t, 3) * s.u +
         3 * Math.pow(1 - t, 2) * t * cp1.x +
         3 * (1 - t) * Math.pow(t, 2) * cp2.x +
-        Math.pow(t, 3) * end.x;
+        Math.pow(t, 3) * e.u;
 
-      const y =
-        Math.pow(1 - t, 3) * start.y +
+      const v =
+        Math.pow(1 - t, 3) * s.v +
         3 * Math.pow(1 - t, 2) * t * cp1.y +
         3 * (1 - t) * Math.pow(t, 2) * cp2.y +
-        Math.pow(t, 3) * end.y;
+        Math.pow(t, 3) * e.v;
 
-      // Determine which axis is constrained
-      const pos = this.applyToPlane(Math.round(x), Math.round(y), 0, 0, plane, start);
+      const pos = this.applyToPlane(Math.round(u), Math.round(v), 0, 0, plane, start);
       if (this.isValidPosition(pos, dimensions)) {
         positions.push(pos);
       }
@@ -306,7 +340,25 @@ export class ShapeUtils {
   }
 
   /**
-   * Determine plane from start and end positions
+   * Get the drawing plane from a constrain axis
+   *
+   * This is the authoritative way to determine the plane when the
+   * constrained axis is known (i.e., passed from the view context).
+   * Prefer this over determinePlane() which guesses from position deltas.
+   */
+  static planeFromConstrainAxis(axis: 'x' | 'y' | 'z'): Plane {
+    switch (axis) {
+      case 'x': return 'yz';
+      case 'y': return 'xz';
+      case 'z': return 'xy';
+    }
+  }
+
+  /**
+   * Determine plane from start and end positions (heuristic fallback)
+   *
+   * Infers the constrained axis by finding which axis has the least variation.
+   * Use planeFromConstrainAxis() instead when the constrained axis is known.
    */
   static determinePlane(start: Vector3D, end: Vector3D): Plane {
     // Check which axis has the least variation (constrained axis)
@@ -338,23 +390,28 @@ export class ShapeUtils {
   }
 
   /**
-   * Apply 2D coordinates to a 3D plane
+   * Apply 2D plane coordinates back to a 3D position
+   *
+   * The (u, v) + (du, dv) values are in the plane's coordinate system:
+   * - xy: u→x, v→y, constrained z from reference
+   * - xz: u→x, v→z, constrained y from reference
+   * - yz: u→y, v→z, constrained x from reference
    */
   private static applyToPlane(
-    x: number,
-    y: number,
-    dx: number,
-    dy: number,
+    u: number,
+    v: number,
+    du: number,
+    dv: number,
     plane: Plane,
     reference: Vector3D
   ): Vector3D {
     switch (plane) {
       case 'xy':
-        return { x: x + dx, y: y + dy, z: reference.z };
+        return { x: u + du, y: v + dv, z: reference.z };
       case 'xz':
-        return { x: x + dx, y: reference.y, z: y + dy };
+        return { x: u + du, y: reference.y, z: v + dv };
       case 'yz':
-        return { x: reference.x, y: x + dx, z: y + dy };
+        return { x: reference.x, y: u + du, z: v + dv };
     }
   }
 

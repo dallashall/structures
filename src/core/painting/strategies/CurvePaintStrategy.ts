@@ -1,185 +1,272 @@
 import type { PaintStrategy, PaintOperation } from './PaintStrategy';
 import type { Vector3D, Dimensions } from '../../../types';
-import { ShapeUtils } from './ShapeUtils';
-import { editorState } from '../../EditorState';
+import { ShapeUtils, type Plane } from './ShapeUtils';
+import type { GuideGeometry, ControlPointHandle, GuideLine } from './GuideGeometry';
+import type { GuideGeometryProvider } from './GuideGeometryProvider';
 
 /**
- * CurvePaintStrategy - Bezier curve painting
+ * CurvePaintStrategy - Multi-click Bezier curve painting (4 points)
  *
- * Creates smooth curves using cubic Bezier algorithm.
- * Interaction:
- * - Click-drag for start/end points (like rectangle)
- * - Default: Gentle symmetric curve
- * - Shift+drag: Adjust control point 1
- * - Ctrl+drag: Adjust control point 2
+ * Interaction: 4 clicks to define a cubic Bezier curve
+ * 1. Click start point
+ * 2. Click end point
+ * 3. Click control point 1 (curve bends toward it near start)
+ * 4. Click control point 2 (curve bends toward it near end)
  *
- * Supports:
- * - Outline only (curves are naturally outline shapes)
- * - Depth painting for creating curved tunnels
+ * Preview progression:
+ * - 0 points: single block at cursor
+ * - 1 point: line from start to cursor (preview path)
+ * - 2 points: straight line from start to end, cursor previews CP1
+ * - 3 points: curve with CP1 placed, cursor previews CP2
+ * - 4 points (complete): final cubic Bezier curve
  */
-export class CurvePaintStrategy implements PaintStrategy {
-  private dragStart: Vector3D | null = null;
+export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider {
+  private points: Vector3D[] = [];
+  private readonly requiredPoints = 4;
 
   /**
-   * Start a drag operation and initialize default control points
+   * Add a clicked point to the curve definition
    */
-  startDrag(position: Vector3D): void {
-    // Clear any previous drag state to prevent state leakage
-    this.dragStart = null;
-    this.dragStart = position;
-    // Initialize curve control state with default gentle curve
-    // Will be updated when we know the end position
-    editorState.setCurveControlState(null);
+  addPoint(position: Vector3D): void {
+    this.points.push(position);
   }
 
   /**
-   * End a drag operation and clear state
+   * Check if all required points have been placed
    */
-  endDrag(): void {
-    this.dragStart = null;
-    editorState.setCurveControlState(null);
+  isComplete(): boolean {
+    return this.points.length >= this.requiredPoints;
   }
 
   /**
-   * Check if currently in a drag operation
+   * Reset multi-click state for next curve
    */
-  isDragging(): boolean {
-    return this.dragStart !== null;
+  reset(): void {
+    this.points = [];
+  }
+
+  /**
+   * Get guide geometry for rendering control point handles and guide lines
+   */
+  getGuideGeometry(cursorPosition: Vector3D): GuideGeometry | null {
+    const pointCount = this.points.length;
+    if (pointCount === 0) return null;
+
+    const handles: ControlPointHandle[] = [];
+    const lines: GuideLine[] = [];
+    const start = this.points[0];
+
+    handles.push({ position: start, label: 'Start', style: 'placed' });
+
+    if (pointCount === 1) {
+      handles.push({ position: cursorPosition, label: 'End', style: 'cursor' });
+      lines.push({ from: start, to: cursorPosition, style: 'baseline' });
+    }
+
+    if (pointCount >= 2) {
+      const end = this.points[1];
+      handles.push({ position: end, label: 'End', style: 'placed' });
+      lines.push({ from: start, to: end, style: 'baseline' });
+
+      if (pointCount === 2) {
+        handles.push({ position: cursorPosition, label: 'CP1', style: 'cursor' });
+        lines.push({ from: start, to: cursorPosition, style: 'control' });
+        // Show mirrored CP2 as tangent hint
+        const mirroredCp2 = this.mirrorControlPoint(cursorPosition, start, end);
+        handles.push({ position: mirroredCp2, label: 'CP2 (auto)', style: 'cursor' });
+        lines.push({ from: end, to: mirroredCp2, style: 'tangent' });
+      }
+
+      if (pointCount === 3) {
+        const cp1 = this.points[2];
+        handles.push({ position: cp1, label: 'CP1', style: 'placed' });
+        lines.push({ from: start, to: cp1, style: 'control' });
+        handles.push({ position: cursorPosition, label: 'CP2', style: 'cursor' });
+        lines.push({ from: end, to: cursorPosition, style: 'control' });
+      }
+
+      if (pointCount >= 4) {
+        const cp1 = this.points[2];
+        const cp2 = this.points[3];
+        handles.push({ position: cp1, label: 'CP1', style: 'placed' });
+        handles.push({ position: cp2, label: 'CP2', style: 'placed' });
+        lines.push({ from: start, to: cp1, style: 'control' });
+        lines.push({ from: end, to: cp2, style: 'control' });
+      }
+    }
+
+    return { handles, lines };
   }
 
   calculateOperations(
-    endPosition: Vector3D,
+    cursorPosition: Vector3D,
     selectedBlockId: string | null,
     dimensions: Dimensions,
-    _constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
+    constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
   ): PaintOperation[] {
-    // If no drag started, just paint a single point
-    if (!this.dragStart) {
-      if (
-        endPosition.x < 0 ||
-        endPosition.x >= dimensions.width ||
-        endPosition.y < 0 ||
-        endPosition.y >= dimensions.height ||
-        endPosition.z < 0 ||
-        endPosition.z >= dimensions.depth
-      ) {
+    const pointCount = this.points.length;
+
+    // 0 points: single block at cursor
+    if (pointCount === 0) {
+      if (!this.isValidPosition(cursorPosition, dimensions)) {
         return [];
       }
-
-      return [
-        {
-          position: endPosition,
-          blockType: selectedBlockId,
-        },
-      ];
+      return [{ position: cursorPosition, blockType: selectedBlockId }];
     }
 
-    // Get or create control points
-    let curveState = editorState.getCurveControlState();
-    if (!curveState) {
-      // Initialize default control points for gentle curve
-      curveState = this.createDefaultControlPoints(this.dragStart, endPosition);
-      editorState.setCurveControlState(curveState);
+    const start = this.points[0];
+
+    // Resolve the plane from view context (authoritative) or fallback to heuristic
+    const plane = constrainAxis
+      ? ShapeUtils.planeFromConstrainAxis(constrainAxis.axis)
+      : ShapeUtils.determinePlane(start, cursorPosition);
+
+    // 1 point: line from start to cursor
+    if (pointCount === 1) {
+      return this.calculateLine(start, cursorPosition, selectedBlockId, dimensions);
     }
 
-    // Determine plane
-    const plane = ShapeUtils.determinePlane(this.dragStart, endPosition);
+    const end = this.points[1];
 
-    // Calculate curve positions
-    const positions = ShapeUtils.calculateBezierCurve(
-      this.dragStart,
-      endPosition,
-      curveState.controlPoint1,
-      curveState.controlPoint2,
-      plane,
-      dimensions,
-      30 // More segments for smoother curves
-    );
-
-    // Apply depth if enabled
-    const depthConfig = editorState.getDepthConfig();
-    let finalPositions = positions;
-
-    if (depthConfig.enabled) {
-      const constrainAxis = ShapeUtils.getPerpendicularAxis(plane);
-      finalPositions = ShapeUtils.applyDepth(
-        positions,
-        depthConfig,
-        constrainAxis,
-        dimensions,
-        this.getBlockAtPosition
-      );
+    // 2 points: curve preview with cursor as CP1, default CP2
+    if (pointCount === 2) {
+      const cp1 = cursorPosition;
+      const cp2 = this.mirrorControlPoint(cp1, start, end);
+      return this.calculateBezier(start, end, cp1, cp2, plane, selectedBlockId, dimensions);
     }
 
-    // Convert positions to operations
-    return finalPositions.map((position) => ({
-      position,
-      blockType: selectedBlockId,
-    }));
+    const cp1 = this.points[2];
+
+    // 3 points: curve with CP1 placed, cursor as CP2
+    if (pointCount === 3) {
+      return this.calculateBezier(start, end, cp1, cursorPosition, plane, selectedBlockId, dimensions);
+    }
+
+    // 4 points (complete): final curve
+    const cp2 = this.points[3];
+    return this.calculateBezier(start, end, cp1, cp2, plane, selectedBlockId, dimensions);
   }
 
   /**
-   * Create default control points for a gentle symmetric curve
+   * Calculate a line between two points
    */
-  private createDefaultControlPoints(
+  private calculateLine(
     start: Vector3D,
-    end: Vector3D
-  ): { controlPoint1: { x: number; y: number }; controlPoint2: { x: number; y: number } } {
-    // Calculate vector from start to end
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
+    end: Vector3D,
+    blockType: string | null,
+    dimensions: Dimensions
+  ): PaintOperation[] {
+    const operations: PaintOperation[] = [];
 
-    // Calculate perpendicular vector (rotated 90 degrees)
-    const perpX = -dy;
-    const perpY = dx;
+    const dx = Math.abs(end.x - start.x);
+    const dy = Math.abs(end.y - start.y);
+    const dz = Math.abs(end.z - start.z);
+    const steps = Math.max(dx, dy, dz, 1);
 
-    // Distance between start and end
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    for (let i = 0; i <= steps; i++) {
+      const t = steps === 0 ? 0 : i / steps;
+      const pos: Vector3D = {
+        x: Math.round(start.x + (end.x - start.x) * t),
+        y: Math.round(start.y + (end.y - start.y) * t),
+        z: Math.round(start.z + (end.z - start.z) * t),
+      };
 
-    // Control points offset: 1/3 along the line, offset perpendicular by 1/6 of distance
-    const offset = distance / 6;
+      if (this.isValidPosition(pos, dimensions)) {
+        operations.push({ position: pos, blockType });
+      }
+    }
 
-    const cp1x = start.x + dx / 3 + (perpX / distance) * offset;
-    const cp1y = start.y + dy / 3 + (perpY / distance) * offset;
+    return this.deduplicateOperations(operations);
+  }
 
-    const cp2x = start.x + (dx * 2) / 3 + (perpX / distance) * offset;
-    const cp2y = start.y + (dy * 2) / 3 + (perpY / distance) * offset;
+  /**
+   * Calculate cubic Bezier curve positions
+   */
+  private calculateBezier(
+    start: Vector3D,
+    end: Vector3D,
+    cp1: Vector3D,
+    cp2: Vector3D,
+    plane: Plane,
+    blockType: string | null,
+    dimensions: Dimensions
+  ): PaintOperation[] {
+    // Convert 3D control points to 2D for ShapeUtils
+    const cp1_2d = this.to2DControlPoint(cp1, plane);
+    const cp2_2d = this.to2DControlPoint(cp2, plane);
+
+    const positions = ShapeUtils.calculateBezierCurve(
+      start,
+      end,
+      cp1_2d,
+      cp2_2d,
+      plane,
+      dimensions,
+      30
+    );
+
+    return positions.map(toOperation(blockType));
+  }
+
+  /**
+   * Convert a 3D position to a 2D control point for the Bezier calculation
+   * ShapeUtils.calculateBezierCurve expects { x, y } control points in plane coords
+   */
+  private to2DControlPoint(pos: Vector3D, plane: Plane): { x: number; y: number } {
+    const uv = ShapeUtils.to2D(pos, plane);
+    return { x: uv.u, y: uv.v };
+  }
+
+  /**
+   * Mirror a control point across the midpoint of start-end
+   * Used as default CP2 when only CP1 is specified, creating a symmetric curve
+   */
+  private mirrorControlPoint(cp: Vector3D, start: Vector3D, end: Vector3D): Vector3D {
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    const midZ = (start.z + end.z) / 2;
 
     return {
-      controlPoint1: { x: Math.round(cp1x), y: Math.round(cp1y) },
-      controlPoint2: { x: Math.round(cp2x), y: Math.round(cp2y) },
+      x: Math.round(2 * midX - cp.x),
+      y: Math.round(2 * midY - cp.y),
+      z: Math.round(2 * midZ - cp.z),
     };
   }
 
   /**
-   * Update control point based on modifier key and position
-   * Called from Canvas2D when modifier keys are held during drag
+   * Check if a position is within valid dimensions
    */
-  updateControlPoint(
-    controlPointIndex: 1 | 2,
-    gridX: number,
-    gridY: number
-  ): void {
-    const curveState = editorState.getCurveControlState();
-    if (!curveState) return;
-
-    if (controlPointIndex === 1) {
-      curveState.controlPoint1 = { x: gridX, y: gridY };
-    } else {
-      curveState.controlPoint2 = { x: gridX, y: gridY };
-    }
-
-    editorState.setCurveControlState(curveState);
+  private isValidPosition(pos: Vector3D, dimensions: Dimensions): boolean {
+    return (
+      pos.x >= 0 && pos.x < dimensions.width &&
+      pos.y >= 0 && pos.y < dimensions.height &&
+      pos.z >= 0 && pos.z < dimensions.depth
+    );
   }
 
   /**
-   * Get block at position (for depth collision detection)
-   * This would normally come from ProjectManager, but for now we return null
-   * TODO: Inject ProjectManager or getBlock function
+   * Remove duplicate positions from operations
    */
-  private getBlockAtPosition = (_pos: Vector3D): string | null => {
-    // This will be properly implemented when integrating with ProjectManager
-    // For now, return null (no collision)
-    return null;
-  };
+  private deduplicateOperations(operations: PaintOperation[]): PaintOperation[] {
+    const seen = new Set<string>();
+    return operations.filter(filterDuplicatePositions(seen));
+  }
 }
+
+/**
+ * Create a position-to-operation mapper
+ */
+const toOperation = (blockType: string | null) => (position: Vector3D): PaintOperation => ({
+  position,
+  blockType,
+});
+
+/**
+ * Create a deduplication filter for operations by position
+ */
+const filterDuplicatePositions = (seen: Set<string>) => (op: PaintOperation): boolean => {
+  const key = `${op.position.x},${op.position.y},${op.position.z}`;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+};

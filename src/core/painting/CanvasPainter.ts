@@ -45,6 +45,13 @@ export class CanvasPainter {
   }
 
   /**
+   * Get the current paint strategy
+   */
+  getStrategy(): PaintStrategy {
+    return this.strategy;
+  }
+
+  /**
    * Set the active paint strategy
    */
   setStrategy(strategy: PaintStrategy): void {

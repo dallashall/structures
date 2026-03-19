@@ -20,7 +20,6 @@ export class CirclePaintStrategy implements PaintStrategy {
    * Start a drag operation (call on mousedown)
    */
   startDrag(position: Vector3D): void {
-    // Clear any previous drag state to prevent state leakage
     this.dragStart = null;
     this.dragStart = position;
   }
@@ -43,7 +42,7 @@ export class CirclePaintStrategy implements PaintStrategy {
     endPosition: Vector3D,
     selectedBlockId: string | null,
     dimensions: Dimensions,
-    _constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
+    constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
   ): PaintOperation[] {
     // If no drag started, just paint a single point
     if (!this.dragStart) {
@@ -58,29 +57,26 @@ export class CirclePaintStrategy implements PaintStrategy {
         return [];
       }
 
-      return [
-        {
-          position: endPosition,
-          blockType: selectedBlockId,
-        },
-      ];
+      return [{ position: endPosition, blockType: selectedBlockId }];
     }
 
     // Get circle parameters based on draw mode
     const drawMode = editorState.getCircleDrawMode();
+    const plane = constrainAxis
+      ? ShapeUtils.planeFromConstrainAxis(constrainAxis.axis)
+      : ShapeUtils.determinePlane(this.dragStart, endPosition);
+
     const { center, radius } = this.calculateCircleParams(
       this.dragStart,
       endPosition,
-      drawMode
+      drawMode,
+      plane
     );
 
     // Minimum radius check
     if (radius < 1) {
       return [];
     }
-
-    // Determine plane
-    const plane = ShapeUtils.determinePlane(this.dragStart, endPosition);
 
     // Get positions based on fill mode
     const shapeFillMode = editorState.getShapeFillMode();
@@ -92,96 +88,97 @@ export class CirclePaintStrategy implements PaintStrategy {
       positions = ShapeUtils.calculateCircleOutline(center, radius, plane, dimensions);
     }
 
-    // Apply depth if enabled
-    const depthConfig = editorState.getDepthConfig();
-    if (depthConfig.enabled) {
-      const constrainAxis = ShapeUtils.getPerpendicularAxis(plane);
-      positions = ShapeUtils.applyDepth(
-        positions,
-        depthConfig,
-        constrainAxis,
-        dimensions,
-        this.getBlockAtPosition
-      );
-    }
-
     // Convert positions to operations
-    return positions.map((position) => ({
-      position,
-      blockType: selectedBlockId,
-    }));
+    return positions.map(toOperation(selectedBlockId));
   }
 
   /**
    * Calculate circle center and radius based on draw mode
+   * Uses 2D plane coordinates for distance calculations
    */
   private calculateCircleParams(
     start: Vector3D,
     end: Vector3D,
-    drawMode: 'center-radius' | 'bounding-box' | 'constrained-box'
+    drawMode: 'center-radius' | 'bounding-box' | 'constrained-box',
+    plane: ReturnType<typeof ShapeUtils.planeFromConstrainAxis>
   ): { center: Vector3D; radius: number } {
+    // Project to 2D for correct distance calculations
+    const s = ShapeUtils.to2D(start, plane);
+    const e = ShapeUtils.to2D(end, plane);
+
     switch (drawMode) {
       case 'center-radius': {
-        // Start is center, radius is distance to end
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const dz = end.z - start.z;
-        const radius = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        // Start is center, radius is 2D distance to end in the plane
+        const du = e.u - s.u;
+        const dv = e.v - s.v;
+        const radius = Math.sqrt(du * du + dv * dv);
         return { center: start, radius };
       }
 
       case 'bounding-box': {
         // Start and end are opposite corners of bounding box
-        const centerX = (start.x + end.x) / 2;
-        const centerY = (start.y + end.y) / 2;
-        const centerZ = (start.z + end.z) / 2;
-        const center = {
-          x: Math.round(centerX),
-          y: Math.round(centerY),
-          z: Math.round(centerZ),
-        };
+        const centerU = (s.u + e.u) / 2;
+        const centerV = (s.v + e.v) / 2;
 
-        // Radius is distance from center to end
-        const dx = end.x - center.x;
-        const dy = end.y - center.y;
-        const dz = end.z - center.z;
-        const radius = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        // Radius is 2D distance from center to end
+        const du = e.u - centerU;
+        const dv = e.v - centerV;
+        const radius = Math.sqrt(du * du + dv * dv);
+
+        const center = {
+          x: Math.round((start.x + end.x) / 2),
+          y: Math.round((start.y + end.y) / 2),
+          z: Math.round((start.z + end.z) / 2),
+        };
         return { center, radius };
       }
 
       case 'constrained-box': {
-        // Same as bounding-box but force 1:1 aspect ratio
-        const dx = Math.abs(end.x - start.x);
-        const dy = Math.abs(end.y - start.y);
-        const dz = Math.abs(end.z - start.z);
+        // Same as bounding-box but force 1:1 aspect ratio in the plane
+        const du = Math.abs(e.u - s.u);
+        const dv = Math.abs(e.v - s.v);
 
-        // Use shortest dimension to enforce square bounding box
-        const side = Math.min(dx, dy, dz);
+        // Use shortest 2D dimension to enforce square bounding box
+        const side = Math.min(du, dv);
 
-        // Calculate center maintaining start as corner
-        const centerX = start.x + (end.x > start.x ? side / 2 : -side / 2);
-        const centerY = start.y + (end.y > start.y ? side / 2 : -side / 2);
-        const centerZ = start.z + (end.z > start.z ? side / 2 : -side / 2);
+        // Calculate 2D center maintaining start as corner
+        const centerU = s.u + (e.u > s.u ? side / 2 : -side / 2);
+        const centerV = s.v + (e.v > s.v ? side / 2 : -side / 2);
+
+        // Convert back to 3D center
         const center = {
-          x: Math.round(centerX),
-          y: Math.round(centerY),
-          z: Math.round(centerZ),
+          x: Math.round((start.x + end.x) / 2),
+          y: Math.round((start.y + end.y) / 2),
+          z: Math.round((start.z + end.z) / 2),
         };
+
+        // Override the plane components with the constrained values
+        switch (plane) {
+          case 'xy':
+            center.x = Math.round(centerU);
+            center.y = Math.round(centerV);
+            break;
+          case 'xz':
+            center.x = Math.round(centerU);
+            center.z = Math.round(centerV);
+            break;
+          case 'yz':
+            center.y = Math.round(centerU);
+            center.z = Math.round(centerV);
+            break;
+        }
 
         const radius = side / 2;
         return { center, radius };
       }
     }
   }
-
-  /**
-   * Get block at position (for depth collision detection)
-   * This would normally come from ProjectManager, but for now we return null
-   * TODO: Inject ProjectManager or getBlock function
-   */
-  private getBlockAtPosition = (_pos: Vector3D): string | null => {
-    // This will be properly implemented when integrating with ProjectManager
-    // For now, return null (no collision)
-    return null;
-  };
 }
+
+/**
+ * Create a position-to-operation mapper
+ */
+const toOperation = (blockType: string | null) => (position: Vector3D): PaintOperation => ({
+  position,
+  blockType,
+});

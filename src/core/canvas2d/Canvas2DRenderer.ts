@@ -8,6 +8,8 @@ import { draftingService } from '../DraftingService';
 import type { Canvas2DViewport } from './Canvas2DViewport';
 import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
 import { getOpacityForDistance, getColorForAxis, getLayerForAxis } from './renderingUtils';
+import { GuideGeometryRenderer } from './GuideGeometryRenderer';
+import type { GuideGeometry } from '../painting/strategies/GuideGeometry';
 
 /**
  * Canvas2DColorConfig - Color configuration for dark/light mode support
@@ -96,7 +98,11 @@ export class Canvas2DRenderer {
   /**
    * Main render method - draws the entire canvas
    */
-  render(viewport: Canvas2DViewport, previewManager: Canvas2DPreviewManager): void {
+  render(
+    viewport: Canvas2DViewport,
+    previewManager: Canvas2DPreviewManager,
+    guideGeometry?: GuideGeometry | null
+  ): void {
     const project = projectView.getCached();
     if (!project) return;
 
@@ -127,6 +133,13 @@ export class Canvas2DRenderer {
     // Draw previews
     this.drawOutlinePreview(previewManager, viewport, gridWidth, gridHeight, cellSize, pan);
     this.drawPointPreview(previewManager, gridWidth, gridHeight, cellSize, pan);
+
+    // Draw guide geometry (control points + guide lines for multi-click tools)
+    if (guideGeometry) {
+      GuideGeometryRenderer.draw(this.ctx, guideGeometry, viewport, project.dimensions, cellSize, pan);
+    }
+
+    // Draw shared preview (draft blocks on top of guides)
     this.drawSharedPreview(viewport, project.dimensions, gridWidth, gridHeight, cellSize, pan);
   }
 

@@ -8,6 +8,9 @@ import { CanvasPainter } from '../painting/CanvasPainter';
 import { PointPaintStrategy } from '../painting/strategies/PointPaintStrategy';
 import { FillPaintStrategy } from '../painting/strategies/FillPaintStrategy';
 import { OutlinePaintStrategy } from '../painting/strategies/OutlinePaintStrategy';
+import { CirclePaintStrategy } from '../painting/strategies/CirclePaintStrategy';
+import { ArchPaintStrategy } from '../painting/strategies/ArchPaintStrategy';
+import { CurvePaintStrategy } from '../painting/strategies/CurvePaintStrategy';
 import { NormalBehavior } from '../painting/behaviors/NormalBehavior';
 import { OnlyReplaceBehavior } from '../painting/behaviors/OnlyReplaceBehavior';
 import { SelectiveReplaceBehavior } from '../painting/behaviors/SelectiveReplaceBehavior';
@@ -18,6 +21,15 @@ import { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
 import { Canvas2DPaintHandler } from './Canvas2DPaintHandler';
 import { Canvas2DInteractionHandler } from './Canvas2DInteractionHandler';
 import type { GridPosition, ModifierKeys } from './Canvas2DInteractionEvents';
+import { isGuideGeometryProvider } from '../painting/strategies/GuideGeometryProvider';
+import type { GuideGeometry } from '../painting/strategies/GuideGeometry';
+
+// Mode categorization helpers
+const DRAG_SHAPE_MODES: ReadonlySet<string> = new Set(['outline', 'circle']);
+const isDragShapeMode = (mode: string): boolean => DRAG_SHAPE_MODES.has(mode);
+
+const MULTI_CLICK_MODES: ReadonlySet<string> = new Set(['arch', 'curve']);
+const isMultiClickMode = (mode: string): boolean => MULTI_CLICK_MODES.has(mode);
 
 /**
  * Canvas2D - Orchestrates 2D canvas with proper separation of concerns
@@ -43,6 +55,8 @@ export class Canvas2D {
 
   // Domain state
   private isPlacementMode = false;
+  private multiClickActive = false;
+  private lastCursorWorldPosition: { x: number; y: number; z: number } | null = null;
   private cursorState: 'default' | 'crosshair' | 'grab' | 'grabbing' | 'pointer' | 'not-allowed' = 'crosshair';
 
   // Bound event handlers (for cleanup)
@@ -170,7 +184,21 @@ export class Canvas2D {
    * Uses cached projection state (ensureFresh called by RenderLoop)
    */
   private render(): void {
-    this.renderer.render(this.viewport, this.previewManager);
+    this.renderer.render(this.viewport, this.previewManager, this.computeGuideGeometry());
+  }
+
+  /**
+   * Compute guide geometry from the current strategy if in multi-click mode
+   */
+  private computeGuideGeometry(): GuideGeometry | null {
+    if (!this.multiClickActive || !this.lastCursorWorldPosition) {
+      return null;
+    }
+    const strategy = this.canvasPainter.getStrategy();
+    if (!isGuideGeometryProvider(strategy)) {
+      return null;
+    }
+    return strategy.getGuideGeometry(this.lastCursorWorldPosition);
   }
 
   // ============================================================================
@@ -181,6 +209,27 @@ export class Canvas2D {
    * Handle hover - domain logic decides what to do based on mode
    */
   private handleHover(position: GridPosition, modifiers: ModifierKeys): void {
+    // Track cursor world position for guide geometry rendering
+    this.lastCursorWorldPosition = this.viewport.gridToPositionSync(position.gridX, position.gridY);
+
+    // Multi-click mode: show live preview of shape with cursor as next point
+    if (this.multiClickActive) {
+      this.canvasPainter.clearDraftPreview();
+      const activeLayers = editorState.getActiveLayers();
+      const selectedBlock = editorState.getSelectedBlock();
+      if (selectedBlock) {
+        this.canvasPainter.paint(
+          position.gridX,
+          position.gridY,
+          this.viewport.getViewType(),
+          activeLayers,
+          selectedBlock
+        );
+      }
+      void this.render();
+      return;
+    }
+
     const paintMode = editorState.getPaintMode();
 
     // Point mode: show preview (both paint and delete modes)
@@ -210,24 +259,33 @@ export class Canvas2D {
    * Handle drag start - domain logic
    */
   private handleDragStart(position: GridPosition, button: number, _modifiers: ModifierKeys): void {
-    // BEGIN DRAFT MODE - collect all paint operations into single CompoundEvent
-    this.paintHandler.beginDraft();
-
     // Paint mode (delete modifier will handle erase if needed)
     if (button === 0) {
       const paintMode = editorState.getPaintMode();
 
+      // Multi-click mode (arch, curve): begin draft on first click only
+      if (isMultiClickMode(paintMode)) {
+        if (!this.multiClickActive) {
+          this.paintHandler.beginDraft();
+          this.multiClickActive = true;
+        }
+        return;
+      }
+
+      // BEGIN DRAFT MODE - collect all paint operations into single CompoundEvent
+      this.paintHandler.beginDraft();
+
       // Clear hover preview
       this.previewManager.clearPointPreview();
 
-      // Outline mode: start outline preview
-      if (paintMode === 'outline') {
+      // Drag shape mode (outline, circle): start drag preview
+      if (isDragShapeMode(paintMode)) {
         const worldPos = this.viewport.gridToPositionSync(position.gridX, position.gridY);
         this.previewManager.startOutlineDrag(position.gridX, position.gridY);
 
         // Notify strategy
-        const strategy = this.canvasPainter['strategy'];
-        if (strategy && 'startDrag' in strategy) {
+        const strategy = this.canvasPainter.getStrategy();
+        if ('startDrag' in strategy) {
           (strategy as any).startDrag(worldPos);
         }
         return;
@@ -253,10 +311,13 @@ export class Canvas2D {
    * Handle drag move - domain logic
    */
   private handleDragMove(position: GridPosition, _modifiers: ModifierKeys): void {
+    // Multi-click mode: ignore drag moves (interaction is click-based)
+    if (this.multiClickActive) return;
+
     const paintMode = editorState.getPaintMode();
 
-    // Outline mode: clear preview before repainting (replace, not accumulate)
-    if (paintMode === 'outline') {
+    // Drag shape mode: clear preview before repainting (replace, not accumulate)
+    if (isDragShapeMode(paintMode)) {
       this.canvasPainter.clearDraftPreview();
     }
 
@@ -278,13 +339,46 @@ export class Canvas2D {
   /**
    * Handle drag end - domain logic
    */
-  private async handleDragEnd(_position: GridPosition, _modifiers: ModifierKeys): Promise<void> {
+  private async handleDragEnd(position: GridPosition, _modifiers: ModifierKeys): Promise<void> {
+    // Multi-click mode: place a point on each click release
+    if (this.multiClickActive) {
+      const strategy = this.canvasPainter.getStrategy();
+      if ('addPoint' in strategy) {
+        const worldPos = this.viewport.gridToPositionSync(position.gridX, position.gridY);
+        (strategy as any).addPoint(worldPos);
+
+        // Recalculate shape with all placed points
+        this.canvasPainter.clearDraftPreview();
+        const activeLayers = editorState.getActiveLayers();
+        const selectedBlock = editorState.getSelectedBlock();
+        if (selectedBlock) {
+          this.canvasPainter.paint(
+            position.gridX,
+            position.gridY,
+            this.viewport.getViewType(),
+            activeLayers,
+            selectedBlock
+          );
+        }
+
+        // Check if all points have been placed
+        if ((strategy as any).isComplete()) {
+          await this.paintHandler.finalizeDraft();
+          this.multiClickActive = false;
+          (strategy as any).reset();
+          this.previewManager.clearAll();
+          void this.render();
+        }
+      }
+      return;
+    }
+
     const paintMode = editorState.getPaintMode();
 
-    // Outline mode: end drag in strategy (clears dragStart state)
-    if (paintMode === 'outline') {
-      const strategy = this.canvasPainter['strategy'];
-      if (strategy && 'endDrag' in strategy) {
+    // Drag shape mode: end drag in strategy (clears dragStart state)
+    if (isDragShapeMode(paintMode)) {
+      const strategy = this.canvasPainter.getStrategy();
+      if ('endDrag' in strategy) {
         (strategy as any).endDrag();
       }
     }
@@ -304,6 +398,13 @@ export class Canvas2D {
    * Handle mouse leave - domain logic
    */
   private handleMouseLeave(): void {
+    // Cancel in-progress multi-click when cursor leaves canvas
+    if (this.multiClickActive) {
+      this.cancelMultiClick();
+      this.paintHandler.cancelDraft();
+    }
+
+    this.lastCursorWorldPosition = null;
     this.previewManager.clearAll();
     this.paintHandler.resetLastPaintedCell();
     void this.render();
@@ -374,6 +475,11 @@ export class Canvas2D {
    * Handle escape key - cancel current operation
    */
   private handleEscape(): void {
+    // Cancel in-progress multi-click
+    if (this.multiClickActive) {
+      this.cancelMultiClick();
+    }
+
     // Cancel draft mode (discard collected paint operations and draft event)
     this.paintHandler.cancelDraft();
 
@@ -413,6 +519,18 @@ export class Canvas2D {
   }
 
   /**
+   * Cancel an in-progress multi-click operation
+   */
+  private cancelMultiClick(): void {
+    const strategy = this.canvasPainter.getStrategy();
+    if ('reset' in strategy) {
+      (strategy as any).reset();
+    }
+    this.multiClickActive = false;
+    this.lastCursorWorldPosition = null;
+  }
+
+  /**
    * Get default cursor based on mode
    */
   private getDefaultCursor(): 'crosshair' | 'pointer' {
@@ -430,6 +548,13 @@ export class Canvas2D {
    * Handle paint mode change
    */
   private handlePaintModeChanged(mode: string): void {
+    // Cancel in-progress multi-click if switching modes
+    if (this.multiClickActive) {
+      this.cancelMultiClick();
+      this.paintHandler.cancelDraft();
+      this.previewManager.clearAll();
+    }
+
     const strategy = this.createStrategyForMode(mode as any);
     this.paintHandler.updateStrategy(strategy);
   }
@@ -466,6 +591,12 @@ export class Canvas2D {
         return new FillPaintStrategy();
       case 'outline':
         return new OutlinePaintStrategy();
+      case 'circle':
+        return new CirclePaintStrategy();
+      case 'arch':
+        return new ArchPaintStrategy();
+      case 'curve':
+        return new CurvePaintStrategy();
       default:
         return new PointPaintStrategy();
     }
