@@ -18,6 +18,32 @@ npm run build
 npm run type-check
 ```
 
+## Resource Packs Setup
+
+This project uses Minecraft resource packs for block textures. **You must generate the texture atlas before running the app.**
+
+1. **Download a resource pack** (e.g., [PixelBOX](https://www.curseforge.com/minecraft/texture-packs/pixelbox), [Excalibur](https://www.curseforge.com/minecraft/texture-packs/excalibur))
+
+2. **Place the resource pack** in the `resource-packs/` directory:
+   ```bash
+   mkdir -p resource-packs
+   # Unzip your resource pack here
+   ```
+
+3. **Generate the texture atlas** (required):
+   ```bash
+   # For Squareful resource pack
+   npm run build:atlas:squareful
+
+   # For Excalibur resource pack
+   npm run build:atlas:excaliber
+
+   # Or specify a custom pack
+   npm run build:atlas -- --pack your-pack-name
+   ```
+
+**Note:** Resource packs and generated atlas files are not committed to git. Each developer generates their own atlas from their preferred resource pack.
+
 ## Documentation
 
 - **[PROJECT.md](./PROJECT.md)** - Complete project specification and architecture

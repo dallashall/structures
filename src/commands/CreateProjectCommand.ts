@@ -3,6 +3,7 @@ import { storage } from '../core/Storage';
 import { editorState } from '../core/EditorState';
 import { metadataProjection } from '../projections/MetadataProjection';
 import { modelProjection } from '../projections/ModelProjection';
+import { blockProjection } from '../projections/BlockProjection';
 import { generateUUID } from '../utils/uuid';
 import type { Dimensions } from '../types';
 
@@ -32,6 +33,7 @@ export class CreateProjectCommand {
     // Reset projections for new project
     metadataProjection.reset();
     modelProjection.reset();
+    blockProjection.reset();
 
     // Set as current project and reset placement mode
     editorState.setCurrentProjectId(projectId);

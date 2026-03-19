@@ -14,6 +14,7 @@
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
+import { editorState } from '../core/EditorState';
 import { BlockIndex } from '../core/BlockIndex';
 import type { Vector3D, BlockData } from '../types';
 
@@ -67,6 +68,12 @@ class BlockProjection extends EventEmitter {
     ];
 
     if (!blockEventTypes.includes(event.type)) {
+      return;
+    }
+
+    // Only process events for current project
+    const currentProjectId = editorState.getCurrentProjectId();
+    if (event.projectId !== currentProjectId) {
       return;
     }
 
@@ -133,9 +140,12 @@ class BlockProjection extends EventEmitter {
    * Rebuild from event log (from snapshot forward)
    */
   private async rebuild(): Promise<void> {
+    const projectId = editorState.getCurrentProjectId();
+
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
-      types: ['model:blockPlaced', 'model:blockRemoved'],
+      types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -175,9 +185,12 @@ class BlockProjection extends EventEmitter {
     }
 
     // New events exist - fetch and apply
+    const projectId = editorState.getCurrentProjectId();
+
     const events = await eventLog.getEvents({
       fromId: this.snapshot.latestEventId + 1,
       types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
+      projectId: projectId || undefined,
     });
 
     for (const event of events) {
@@ -215,6 +228,17 @@ class BlockProjection extends EventEmitter {
   async getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): Promise<BlockData[]> {
     await this.ensureFresh();
     return this.snapshot.blocks.getBlocksAtLayer(axis, layer);
+  }
+
+  /**
+   * Reset projection (clear snapshot for new project)
+   */
+  reset(): void {
+    this.snapshot = {
+      latestEventId: 0,
+      blocks: new BlockIndex(),
+    };
+    this.eventsSinceSnapshot = 0;
   }
 }
 

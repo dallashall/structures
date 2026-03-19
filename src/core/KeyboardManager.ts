@@ -64,12 +64,13 @@ class KeyboardManager {
       event.preventDefault();
       const slotIndex = parseInt(event.key, 10) - 1;
 
-      // Get block from quick-select slot
-      const blockId = editorState.getQuickSelectSlot(slotIndex);
-
-      // Apply to currently active material slot (foreground or background)
-      if (blockId) {
-        editorState.setSelectedBlock(blockId);
+      // Set this slot index as the active foreground/background
+      // This does NOT modify the slot contents - it just makes this slot active
+      const activeMaterialSlot = editorState.getActiveMaterialSlot();
+      if (activeMaterialSlot === 'foreground') {
+        editorState.setForegroundSlotIndex(slotIndex);
+      } else {
+        editorState.setBackgroundSlotIndex(slotIndex);
       }
     }
 

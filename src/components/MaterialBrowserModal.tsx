@@ -15,7 +15,7 @@ import { Search, Close, PanTool } from '@mui/icons-material';
 
 import type { Block } from '../types';
 
-import { ColorSwatch } from './ColorSwatch';
+import { BlockTextureSwatch } from './BlockTextureSwatch';
 import { findBlockById } from '../utils/blockUtils';
 
 interface MaterialBrowserModalProps {
@@ -154,7 +154,7 @@ export function MaterialBrowserModal({
           transition: 'all 0.1s',
         }}
       >
-        <ColorSwatch color={block.color} size="L" />
+        <BlockTextureSwatch blockId={block.id} blockName={block.name} size="L" fallbackColor={block.color} />
         <Typography
           variant="caption"
           sx={{
@@ -199,7 +199,7 @@ export function MaterialBrowserModal({
           transition: 'all 0.1s',
         }}
       >
-        {block ? <ColorSwatch color={block.color} size="M" /> : (
+        {block ? <BlockTextureSwatch blockId={block.id} blockName={block.name} size="M" fallbackColor={block.color} /> : (
           <Typography variant="caption" color="text.disabled">
             {index + 1}
           </Typography>
@@ -338,7 +338,7 @@ export function MaterialBrowserModal({
             transform: 'scale(1.1)',
           }}
         >
-          <ColorSwatch color={grabbedBlock.color} size="L" />
+          <BlockTextureSwatch blockId={grabbedBlock.id} blockName={grabbedBlock.name} size="L" fallbackColor={grabbedBlock.color} />
           <Typography
             variant="caption"
             sx={{

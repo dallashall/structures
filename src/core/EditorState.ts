@@ -1,4 +1,5 @@
 import { EventEmitter } from './EventEmitter';
+import { quickSelectStore } from './QuickSelectStore';
 import type {
   LayoutMode,
   ViewType,
@@ -61,8 +62,6 @@ class EditorState extends EventEmitter {
   private layoutMode: LayoutMode = 'quad';
   private activeView: ViewType = 'front';
   private activeLayers: LayerState = { x: 0, y: 0, z: 0 };
-  private foregroundBlockId: string | null = null;
-  private backgroundBlockId: string | null = null;
   private activeMaterialSlot: 'foreground' | 'background' = 'foreground'; // Like Minecraft's hands or Photoshop's FG/BG
   private activeTool: ToolType = 'paint';
   private paintMode: PaintMode = 'point';
@@ -78,6 +77,8 @@ class EditorState extends EventEmitter {
   private isPlacementMode = false;
   private isActionBarExpanded = true;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
+  private foregroundSlotIndex = 0; // Which of the 9 slots is foreground (0-8)
+  private backgroundSlotIndex = 1; // Which of the 9 slots is background (0-8)
   private previewBlocks: PreviewBlock[] = [];
   private isMaterialBrowserOpen = false;
   private materialBrowserSearchQuery = '';
@@ -156,18 +157,22 @@ class EditorState extends EventEmitter {
 
   /**
    * Set the selected block ID for the currently active material slot
+   * NOTE: This does NOT modify quick-select slots - use setQuickSelectSlot for that
+   * This is used when selecting a block from the material browser
    */
   setSelectedBlock = (blockId: string | null): void => {
-    if (this.activeMaterialSlot === 'foreground') {
-      if (this.foregroundBlockId !== blockId) {
-        this.foregroundBlockId = blockId;
-        this.emit('block:selected', blockId);
+    const previousBlock = this.getSelectedBlock();
+    if (previousBlock !== blockId) {
+      // When a block is selected from the browser, assign it to the current slot
+      const slotIndex = this.activeMaterialSlot === 'foreground'
+        ? this.foregroundSlotIndex
+        : this.backgroundSlotIndex;
+
+      if (blockId) {
+        this.setQuickSelectSlot(slotIndex, blockId);
       }
-    } else {
-      if (this.backgroundBlockId !== blockId) {
-        this.backgroundBlockId = blockId;
-        this.emit('block:selected', blockId);
-      }
+
+      this.emit('block:selected', blockId);
     }
   }
 
@@ -176,32 +181,41 @@ class EditorState extends EventEmitter {
    */
   getSelectedBlock(): string | null {
     return this.activeMaterialSlot === 'foreground'
-      ? this.foregroundBlockId
-      : this.backgroundBlockId;
+      ? this.getForegroundBlock()
+      : this.getBackgroundBlock();
   }
 
   /**
    * Get the foreground block ID
+   * Derived from the quick-select slot at foregroundSlotIndex
    */
   getForegroundBlock(): string | null {
-    return this.foregroundBlockId;
+    return this.quickSelectSlots[this.foregroundSlotIndex] || null;
   }
 
   /**
    * Get the background block ID
+   * Derived from the quick-select slot at backgroundSlotIndex
    */
   getBackgroundBlock(): string | null {
-    return this.backgroundBlockId;
+    return this.quickSelectSlots[this.backgroundSlotIndex] || null;
   }
 
   /**
    * Set the active material slot (foreground or background)
    * Similar to Minecraft's hand selection or Photoshop's FG/BG
+   * Automatically saves to QuickSelectStore
    */
   setActiveMaterialSlot = (slot: 'foreground' | 'background'): void => {
     if (this.activeMaterialSlot !== slot) {
       this.activeMaterialSlot = slot;
       this.emit('materialslot:toggled', slot);
+
+      // Save to QuickSelectStore
+      const projectId = this.currentProjectId;
+      if (projectId) {
+        void quickSelectStore.setMode(projectId, slot);
+      }
     }
   }
 
@@ -451,6 +465,7 @@ class EditorState extends EventEmitter {
 
   /**
    * Set a block ID in a quick-select slot
+   * Automatically saves to QuickSelectStore for current project
    */
   setQuickSelectSlot = (index: number, blockId: string | null): void => {
     if (index < 0 || index >= 9) {
@@ -461,6 +476,12 @@ class EditorState extends EventEmitter {
     if (this.quickSelectSlots[index] !== blockId) {
       this.quickSelectSlots[index] = blockId;
       this.emit('quickselect:assigned', [...this.quickSelectSlots]);
+
+      // Save to QuickSelectStore for current project
+      const projectId = this.currentProjectId;
+      if (projectId && blockId) {
+        void quickSelectStore.setSlot(projectId, index, blockId);
+      }
     }
   }
 
@@ -479,6 +500,74 @@ class EditorState extends EventEmitter {
       return null;
     }
     return this.quickSelectSlots[index];
+  }
+
+  /**
+   * Set the foreground slot index (0-8)
+   * Automatically saves to QuickSelectStore
+   */
+  setForegroundSlotIndex = (index: number): void => {
+    if (index < 0 || index >= 9) {
+      console.warn(`Invalid foreground slot index: ${index}`);
+      return;
+    }
+
+    if (this.foregroundSlotIndex !== index) {
+      this.foregroundSlotIndex = index;
+      this.emit('quickselect:foreground:changed', index);
+
+      // If foreground is active, emit block:selected to update UI
+      if (this.activeMaterialSlot === 'foreground') {
+        this.emit('block:selected', this.getSelectedBlock());
+      }
+
+      // Save to QuickSelectStore
+      const projectId = this.currentProjectId;
+      if (projectId) {
+        void quickSelectStore.setForeground(projectId, index);
+      }
+    }
+  }
+
+  /**
+   * Set the background slot index (0-8)
+   * Automatically saves to QuickSelectStore
+   */
+  setBackgroundSlotIndex = (index: number): void => {
+    if (index < 0 || index >= 9) {
+      console.warn(`Invalid background slot index: ${index}`);
+      return;
+    }
+
+    if (this.backgroundSlotIndex !== index) {
+      this.backgroundSlotIndex = index;
+      this.emit('quickselect:background:changed', index);
+
+      // If background is active, emit block:selected to update UI
+      if (this.activeMaterialSlot === 'background') {
+        this.emit('block:selected', this.getSelectedBlock());
+      }
+
+      // Save to QuickSelectStore
+      const projectId = this.currentProjectId;
+      if (projectId) {
+        void quickSelectStore.setBackground(projectId, index);
+      }
+    }
+  }
+
+  /**
+   * Get the foreground slot index
+   */
+  getForegroundSlotIndex(): number {
+    return this.foregroundSlotIndex;
+  }
+
+  /**
+   * Get the background slot index
+   */
+  getBackgroundSlotIndex(): number {
+    return this.backgroundSlotIndex;
   }
 
   /**
@@ -530,11 +619,42 @@ class EditorState extends EventEmitter {
   /**
    * Set the current project ID
    * Used for scoping data to specific projects
+   * Automatically loads quick-select state from QuickSelectStore
    */
   setCurrentProjectId = (projectId: string | null): void => {
     if (this.currentProjectId !== projectId) {
       this.currentProjectId = projectId;
       this.emit('project:switched', projectId);
+
+      // Load quick-select state for this project
+      if (projectId) {
+        void this.loadQuickSelectState(projectId);
+      }
+    }
+  }
+
+  /**
+   * Load quick-select state from QuickSelectStore
+   * Called automatically when project is switched
+   */
+  private async loadQuickSelectState(projectId: string): Promise<void> {
+    try {
+      const state = await quickSelectStore.getState(projectId);
+
+      // Update in-memory state
+      this.quickSelectSlots = state.blocks;
+      this.foregroundSlotIndex = state.foregroundIndex;
+      this.backgroundSlotIndex = state.backgroundIndex;
+      this.activeMaterialSlot = state.activeMode;
+
+      // Notify listeners
+      this.emit('quickselect:assigned', [...this.quickSelectSlots]);
+      this.emit('quickselect:foreground:changed', state.foregroundIndex);
+      this.emit('quickselect:background:changed', state.backgroundIndex);
+      this.emit('materialslot:toggled', state.activeMode);
+      this.emit('block:selected', this.getSelectedBlock());
+    } catch (error) {
+      console.error('Failed to load quick-select state:', error);
     }
   }
 

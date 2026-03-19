@@ -55,7 +55,7 @@ export class Babylon3D {
   // Preview/ghost mesh instances (for drag preview)
   private previewMeshes = new Map<string, Mesh>();
 
-  // Materials cache (one per block color)
+  // Materials cache (one per block for customization)
   private materials = new Map<string, StandardMaterial>();
 
   // Ghost materials cache (semi-transparent versions for preview)
@@ -67,6 +67,7 @@ export class Babylon3D {
     previewChanged: this.updatePreviewMeshes.bind(this),
     layerChanged: this.updateBlockBrightness.bind(this),
     resize: this.handleResize.bind(this),
+    atlasLoaded: this.handleAtlasLoaded.bind(this),
   };
 
   constructor(canvas: HTMLCanvasElement) {
@@ -111,6 +112,9 @@ export class Babylon3D {
     // Subscribe to editor state events for active layer highlighting
     editorState.on('layer:adjusted', this.boundHandlers.layerChanged);
 
+    // Subscribe to texture atlas loading
+    textureManager.on('atlas:loaded', this.boundHandlers.atlasLoaded);
+
     // Handle window resize
     window.addEventListener('resize', this.boundHandlers.resize);
 
@@ -144,6 +148,7 @@ export class Babylon3D {
 
     // Unsubscribe from editor state
     editorState.off('layer:adjusted', this.boundHandlers.layerChanged);
+    textureManager.off('atlas:loaded', this.boundHandlers.atlasLoaded);
     window.removeEventListener('resize', this.boundHandlers.resize);
 
     // Dispose slice plane visualizer
@@ -155,6 +160,37 @@ export class Babylon3D {
     // Dispose BabylonJS resources
     this.scene.dispose();
     this.engine.dispose();
+  }
+
+  /**
+   * Handle atlas loaded event - regenerate all materials with textures
+   */
+  private handleAtlasLoaded(): void {
+    console.log('🎨 Atlas loaded, regenerating 3D materials...');
+
+    // Clear materials cache so they get regenerated with atlas textures
+    for (const material of this.materials.values()) {
+      material.dispose();
+    }
+    this.materials.clear();
+
+    for (const material of this.ghostMaterials.values()) {
+      material.dispose();
+    }
+    this.ghostMaterials.clear();
+
+    // Re-apply materials to all existing meshes
+    for (const mesh of this.blockMeshes.values()) {
+      // Get block type from mesh metadata
+      if (mesh.metadata && mesh.metadata.blockType) {
+        mesh.material = this.getMaterial(mesh.metadata.blockType);
+      }
+    }
+
+    // Update preview meshes too
+    this.updatePreviewMeshes();
+
+    console.log('✅ 3D materials regenerated with atlas textures');
   }
 
   /**
@@ -340,52 +376,141 @@ export class Babylon3D {
   }
 
   /**
-   * Get or create material (using atlas texture or color fallback)
+   * Get or create material (using atlas texture, tinted texture, or color fallback)
    */
   private getMaterial(blockId: string): StandardMaterial {
-    if (this.materials.has(blockId)) {
-      return this.materials.get(blockId)!;
-    }
-
     const block = blockRegistry.getBlock(blockId);
     if (!block) {
-      // Fallback to gray material
+      console.warn(`❌ Block not found in registry: ${blockId}`);
       return this.createColorMaterial('unknown', '#7f7f7f');
+    }
+
+    // Extract block name for type checking
+    const blockIdLower = blockId.toLowerCase();
+    const blockName = blockIdLower.replace('minecraft:', '');
+
+    // Check cache first
+    if (this.materials.has(blockId)) {
+      console.log(`  → Using cached material for ${blockId}`);
+      return this.materials.get(blockId)!;
     }
 
     const material = new StandardMaterial(`material_${blockId}`, this.scene);
 
-    // Try to use atlas texture
-    const atlas = textureManager.getAtlas();
-    if (atlas && atlas.loaded) {
-      // Create BabylonJS texture from atlas
+    // Try tinted texture first (for glass, grass, leaves)
+    const tintedTexture = textureManager.getTintedTexture(blockId, 0);
+    if (tintedTexture) {
+      console.log(`  → Using tinted texture material for ${blockId}`);
+      // Create BabylonJS texture from tinted canvas
       const babylonTexture = new Texture(
-        atlas.path,
+        tintedTexture.toDataURL(),
         this.scene,
-        false,  // noMipmap
-        false,  // invertY - Keep standard image coordinates to match Canvas2D
-        Texture.NEAREST_SAMPLINGMODE  // Pixel-perfect for 16x16
+        false,
+        false,
+        Texture.NEAREST_SAMPLINGMODE
       );
 
       material.diffuseTexture = babylonTexture;
 
-      // For transparent blocks (glass)
-      if (block.isTransparent) {
-        material.alpha = 0.7;
-        material.backFaceCulling = false;
+      // Handle transparency based on block type
+      if (blockName.includes('glass')) {
+        // Glass: uniform semi-transparency
+        material.alpha = 0.15;
+        material.backFaceCulling = true;
+        material.transparencyMode = StandardMaterial.MATERIAL_ALPHABLEND;
+        material.needDepthPrePass = true;
+        material.specularColor = new Color3(0.3, 0.3, 0.3);
+      } else if (blockName.includes('leaves') ||
+                 blockName === 'grass' ||
+                 blockName === 'tall_grass' ||
+                 blockName === 'short_grass' ||
+                 blockName === 'fern') {
+        // Leaves and grass plants: per-pixel alpha from tinted texture
+        babylonTexture.hasAlpha = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.transparencyMode = StandardMaterial.MATERIAL_ALPHABLEND;
+        material.backFaceCulling = false; // Render both sides
+        material.needDepthPrePass = true;
+        material.specularColor = new Color3(0.2, 0.2, 0.2);
+        console.log(`  🔍 Alpha enabled for tinted texture: ${blockId}`);
       }
-    } else {
-      // Fallback to color
-      const r = parseInt(block.color.slice(1, 3), 16) / 255;
-      const g = parseInt(block.color.slice(3, 5), 16) / 255;
-      const b = parseInt(block.color.slice(5, 7), 16) / 255;
-      material.diffuseColor = new Color3(r, g, b);
+
+      this.materials.set(blockId, material);
+      return material;
     }
 
+    // Create per-block atlas material (allows customization per block)
+    const atlasMaterial = this.createAtlasMaterial(blockId, block, blockName);
+    if (atlasMaterial) {
+      console.log(`  → Created atlas material for ${blockId}`);
+      this.materials.set(blockId, atlasMaterial);
+      return atlasMaterial;
+    }
+
+    // Fallback to color if atlas not available
+    console.log(`  → Using color fallback for ${blockId} (atlas not available)`);
+    const r = parseInt(block.color.slice(1, 3), 16) / 255;
+    const g = parseInt(block.color.slice(3, 5), 16) / 255;
+    const b = parseInt(block.color.slice(5, 7), 16) / 255;
+    material.diffuseColor = new Color3(r, g, b);
     material.specularColor = new Color3(0.2, 0.2, 0.2);
     this.materials.set(blockId, material);
     return material;
   }
+
+  /**
+   * Create a per-block atlas material
+   * Allows customization of transparency, alpha testing, etc. per block
+   */
+  private createAtlasMaterial(blockId: string, block: any, blockName: string): StandardMaterial | null {
+    const atlas = textureManager.getAtlas();
+    if (!atlas || !atlas.loaded) {
+      return null;
+    }
+
+    const material = new StandardMaterial(`atlas_${blockId}`, this.scene);
+
+    // Create texture from atlas
+    const babylonTexture = new Texture(
+      atlas.path,
+      this.scene,
+      false, // noMipmap
+      false, // invertY
+      Texture.NEAREST_SAMPLINGMODE
+    );
+
+    // Force alpha channel to be recognized
+    babylonTexture.hasAlpha = true;
+    babylonTexture.getAlphaFromRGB = false; // Use actual alpha channel, not RGB
+
+    material.diffuseTexture = babylonTexture;
+    material.specularColor = new Color3(0.2, 0.2, 0.2);
+
+    // Handle transparency based on block type
+    // Blocks with "hole-y" textures need alpha from texture
+    const needsAlphaCutout =
+      blockName.includes('vine') ||
+      blockName.includes('fence') ||
+      blockName.includes('door') ||
+      blockName.includes('trapdoor');
+
+    if (needsAlphaCutout) {
+      // Use alpha blending for textures with alpha channel
+      material.useAlphaFromDiffuseTexture = true;
+      material.transparencyMode = StandardMaterial.MATERIAL_ALPHABLEND;
+      material.backFaceCulling = false; // Render both sides
+      material.needDepthPrePass = true;
+      console.log(`  🔍 Alpha blend enabled for ${blockId}`);
+    } else if (block.isTransparent) {
+      // Other transparent blocks (would be glass, but glass uses tinted textures)
+      material.useAlphaFromDiffuseTexture = true;
+      material.transparencyMode = StandardMaterial.MATERIAL_ALPHABLEND;
+      material.needDepthPrePass = true;
+    }
+
+    return material;
+  }
+
 
   /**
    * Helper to create color-based material
@@ -420,20 +545,37 @@ export class Babylon3D {
     const block = blockRegistry.getBlock(blockData.blockType);
     if (!block) return;
 
-    // Get 3D faceUV coordinates from texture manager (with swapped and rotated textures)
-    const faceUVData = textureManager.getBlockFaceUV3D(blockData.blockType);
-    const faceUV = faceUVData ? faceUVData.map((uv) => {
-      return new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
-    }) : undefined;
+    // Check if block uses tinted texture (single-texture blocks only)
+    // Exclude multi-face blocks like grass_block, podzol, mycelium
+    const blockIdLower = blockData.blockType.toLowerCase();
+    const blockName = blockIdLower.replace('minecraft:', '');
 
-    // Create box mesh with faceUV for per-face texturing
+    const usesTintedTexture =
+      blockName.includes('glass') || // Glass and stained glass variants
+      blockName.includes('leaves') || // All leaf types
+      (blockName === 'grass' || // Grass plant (exact match, not grass_block)
+       blockName === 'tall_grass' ||
+       blockName === 'short_grass' ||
+       blockName === 'fern' ||
+       blockName === 'large_fern');
+
+    // Create box mesh with faceUV for per-face texturing (only for atlas-based materials)
     const boxOptions: any = {
       size: 1,
     };
 
-    // Apply faceUV if available (for multi-face texturing from atlas)
-    if (faceUV) {
-      boxOptions.faceUV = faceUV;
+    // Only apply atlas faceUV for blocks using shared atlas material
+    // Tinted textures are 16x16 and should use full UV [0,0,1,1]
+    if (!usesTintedTexture) {
+      const faceUVData = textureManager.getBlockFaceUV3D(blockData.blockType);
+      if (faceUVData) {
+        const faceUV = faceUVData.map((uv) => {
+          return new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
+        });
+        boxOptions.faceUV = faceUV;
+      } else {
+        console.warn(`⚠️ No faceUV data for ${blockData.blockType}`);
+      }
     }
 
     const box = MeshBuilder.CreateBox(
@@ -451,7 +593,13 @@ export class Babylon3D {
     };
     box.position = this.toBabylonVector(centeredPos);
 
-    // Apply material (atlas texture)
+    // Store block type in metadata for material regeneration
+    box.metadata = {
+      blockType: blockData.blockType,
+      position: blockData.position,
+    };
+
+    // Apply material (atlas texture, tinted texture, or color)
     box.material = this.getMaterial(blockData.blockType);
 
     // Store reference

@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { Apps, Search } from "@mui/icons-material";
 import { DialogTrigger } from "./DialogTrigger";
-import { ColorSwatch } from "./ColorSwatch";
+import { BlockTextureSwatch } from "./BlockTextureSwatch";
 import type { Block } from "../types";
 
 interface FullPaletteMenuProps {
@@ -99,7 +99,7 @@ export function FullPaletteMenu({
           },
         }}
       >
-        <ColorSwatch color={block.color} />
+        <BlockTextureSwatch blockId={block.id} blockName={block.name} fallbackColor={block.color} />
         <Typography
           variant="caption"
           sx={{
@@ -120,7 +120,7 @@ export function FullPaletteMenu({
     <DialogTrigger type="popover">
       {selectedBlock ? (
         <IconButton aria-label={`Selected: ${selectedBlock.name}`}>
-          <ColorSwatch color={selectedBlock.color} size="L" />
+          <BlockTextureSwatch blockId={selectedBlock.id} blockName={selectedBlock.name} size="L" fallbackColor={selectedBlock.color} />
         </IconButton>
       ) : (
         <Button

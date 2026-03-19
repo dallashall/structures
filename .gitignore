@@ -39,3 +39,15 @@ coverage/
 # Temporary files
 .tmp/
 temp/
+
+# Resource packs (third-party, not committed)
+# Users should download and place in resource-packs/ directory
+resource-packs/
+Excalibur*/
+Squareful*/
+PixelBOX/
+data/
+
+# Generated texture atlas (rebuild with: npm run build:atlas)
+public/atlas.png
+public/atlas.json

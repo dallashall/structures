@@ -4,6 +4,7 @@ import { SwapHoriz } from '@mui/icons-material';
 import type { Block } from '../types';
 
 import { findBlockById } from '../utils/blockUtils';
+import { BlockTextureSwatch } from './BlockTextureSwatch';
 
 interface ForegroundBackgroundSelectorProps {
   foregroundBlockId: string | null;
@@ -40,9 +41,6 @@ export function ForegroundBackgroundSelector({
   const foregroundBlock = findBlockById(blocks, foregroundBlockId);
   const backgroundBlock = findBlockById(blocks, backgroundBlockId);
 
-  const foregroundColor = foregroundBlock?.color || '#888';
-  const backgroundColor = backgroundBlock?.color || '#444';
-
   return (
     <Box
       sx={{
@@ -62,15 +60,25 @@ export function ForegroundBackgroundSelector({
             right: 0,
             width: 36,
             height: 36,
-            bgcolor: backgroundColor,
             border: activeMaterialSlot === 'background' ? 3 : 2,
             borderColor: activeMaterialSlot === 'background' ? 'primary.main' : 'divider',
             cursor: 'pointer',
+            overflow: 'hidden',
             '&:hover': {
               borderColor: activeMaterialSlot === 'background' ? 'primary.main' : 'text.secondary',
             },
           }}
-        />
+        >
+          {backgroundBlock && (
+            <BlockTextureSwatch
+              blockId={backgroundBlock.id}
+              blockName={backgroundBlock.name}
+              size="L"
+              rounding="none"
+              fallbackColor={backgroundBlock.color}
+            />
+          )}
+        </Box>
       </Tooltip>
 
       {/* Foreground square (top-left) */}
@@ -83,16 +91,26 @@ export function ForegroundBackgroundSelector({
             left: 0,
             width: 36,
             height: 36,
-            bgcolor: foregroundColor,
             border: activeMaterialSlot === 'foreground' ? 3 : 2,
             borderColor: activeMaterialSlot === 'foreground' ? 'primary.main' : 'divider',
             cursor: 'pointer',
             zIndex: 1,
+            overflow: 'hidden',
             '&:hover': {
               borderColor: activeMaterialSlot === 'foreground' ? 'primary.main' : 'text.secondary',
             },
           }}
-        />
+        >
+          {foregroundBlock && (
+            <BlockTextureSwatch
+              blockId={foregroundBlock.id}
+              blockName={foregroundBlock.name}
+              size="L"
+              rounding="none"
+              fallbackColor={foregroundBlock.color}
+            />
+          )}
+        </Box>
       </Tooltip>
 
       {/* Swap icon (bottom-left corner) */}

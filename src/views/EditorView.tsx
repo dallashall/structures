@@ -119,10 +119,14 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleQuickSelectSlot = (index: number) => {
-    // Get block from slot and apply to active material
-    const blockId = quickSelectSlots[index];
-    if (blockId) {
-      editorState.setSelectedBlock(blockId);
+    // Update the foreground/background slot index based on active material slot
+    // This makes the block at this slot the active foreground/background
+    // WITHOUT modifying what's stored in the slot
+    const activeMaterialSlot = editorState.getActiveMaterialSlot();
+    if (activeMaterialSlot === 'foreground') {
+      editorState.setForegroundSlotIndex(index);
+    } else {
+      editorState.setBackgroundSlotIndex(index);
     }
   };
 

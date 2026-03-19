@@ -182,7 +182,7 @@ export class Canvas2DRenderer {
   }
 
   /**
-   * Render block with texture from atlas
+   * Render block with texture from atlas or tinted texture
    * Returns true if successful, false if texture unavailable
    */
   private renderBlockTexture(
@@ -193,23 +193,46 @@ export class Canvas2DRenderer {
     cellSize: number,
     opacity: number
   ): boolean {
-    // Check if atlas is loaded
+    // Check for tinted texture first (glass variants)
+    const tintedTexture = textureManager.getTintedTexture(block.id, faceIndex);
+    if (tintedTexture) {
+      // Use tinted texture
+      this.ctx.imageSmoothingEnabled = false;
+
+      // For glass, use fixed 0.15 opacity
+      if (block.isTransparent) {
+        this.ctx.globalAlpha = opacity * 0.15;
+      } else {
+        this.ctx.globalAlpha = opacity;
+      }
+
+      this.ctx.drawImage(
+        tintedTexture,
+        0, 0, tintedTexture.width, tintedTexture.height,
+        px + 1, py + 1, cellSize - 2, cellSize - 2
+      );
+
+      this.ctx.globalAlpha = 1.0;
+      return true;
+    }
+
+    // Fallback to atlas texture
     const atlas = textureManager.getAtlas();
     if (!atlas || !atlas.loaded) return false;
 
-    // Get texture coordinates for this block face
     const coords = textureManager.getBlockFaceCoords(block.id, faceIndex);
     if (!coords) return false;
 
-    // Draw texture from atlas using source rectangle
+    this.ctx.imageSmoothingEnabled = false;
     this.ctx.globalAlpha = opacity;
+
     this.ctx.drawImage(
       atlas.image,
-      coords.x, coords.y, coords.width, coords.height, // Source rectangle in atlas
-      px + 1, py + 1, cellSize - 2, cellSize - 2      // Destination rectangle on canvas
+      coords.x, coords.y, coords.width, coords.height,
+      px + 1, py + 1, cellSize - 2, cellSize - 2
     );
-    this.ctx.globalAlpha = 1.0;
 
+    this.ctx.globalAlpha = 1.0;
     return true;
   }
 
@@ -278,10 +301,8 @@ export class Canvas2DRenderer {
       const px = pan.x + gridX * cellSize;
       const py = pan.y + gridY * cellSize;
 
-      // Determine which face to show (based on view)
+      // Try to render with texture (atlas or tinted)
       const faceIndex = this.getFaceIndexForView(viewport.getViewType());
-
-      // Try to render with texture from atlas
       const rendered = this.renderBlockTexture(
         block,
         faceIndex,

@@ -8,7 +8,6 @@ import {
   useTheme,
   Button,
   ButtonGroup,
-  Divider,
 } from "@mui/material";
 import {
   ZoomIn,

@@ -1,9 +1,9 @@
-import { Box, IconButton, Tooltip, ToggleButton } from "@mui/material";
+import { Box, IconButton, Tooltip, ButtonBase } from "@mui/material";
 import { Apps } from "@mui/icons-material";
 
 import type { Block } from "../types";
 
-import { ColorSwatch } from "./ColorSwatch";
+import { BlockTextureSwatch } from "./BlockTextureSwatch";
 import { findBlockById } from "../utils/blockUtils";
 
 interface QuickSelectPaletteProps {
@@ -60,10 +60,8 @@ export function QuickSelectPalette({
     const blockId = slots[index];
     const block = findBlockById(blocks, blockId);
 
-    return (
-      <ToggleButton
-        key={index}
-        value={index.toString()}
+    const button = (
+      <ButtonBase
         onClick={createSlotClickHandler(index)}
         onContextMenu={createSlotContextMenuHandler(index)}
         aria-label={block?.name || `Slot ${index + 1}`}
@@ -74,17 +72,16 @@ export function QuickSelectPalette({
           borderColor: "divider",
           borderRadius: 1,
           p: 0,
-          // No selection styling - always same appearance
-          "&.Mui-selected": {
-            bgcolor: "transparent",
-            "&:hover": {
-              bgcolor: "action.hover",
-            },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          "&:hover": {
+            bgcolor: "action.hover",
           },
         }}
       >
         {block ? (
-          <ColorSwatch color={block.color} />
+          <BlockTextureSwatch blockId={block.id} blockName={block.name} fallbackColor={block.color} />
         ) : (
           <Box
             sx={{
@@ -97,7 +94,14 @@ export function QuickSelectPalette({
             }}
           />
         )}
-      </ToggleButton>
+      </ButtonBase>
+    );
+
+    // Wrap with tooltip showing block name if block exists
+    return (
+      <Tooltip key={index} title={block?.name || `Slot ${index + 1}`} placement="top">
+        {button}
+      </Tooltip>
     );
   };
 

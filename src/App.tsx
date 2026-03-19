@@ -10,6 +10,7 @@ import { editorState } from "./core/EditorState";
 import { keyboardManager } from "./core/KeyboardManager";
 import { metadataProjection } from "./projections/MetadataProjection";
 import { modelProjection } from "./projections/ModelProjection";
+import { blockProjection } from "./projections/BlockProjection";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -198,11 +199,13 @@ export function App() {
           // Reset projections and rebuild for this project
           metadataProjection.reset();
           modelProjection.reset();
+          blockProjection.reset();
           editorState.setCurrentProjectId(lastProjectId);
           editorState.setPlacementMode(false);
           await Promise.all([
             metadataProjection.ensureFresh(),
             modelProjection.ensureFresh(),
+            blockProjection.ensureFresh(),
           ]);
           setCurrentView("editor");
         }
@@ -229,6 +232,7 @@ export function App() {
     // Reset projections and rebuild for new project
     metadataProjection.reset();
     modelProjection.reset();
+    blockProjection.reset();
     editorState.setCurrentProjectId(projectId);
     editorState.setPlacementMode(false);
     storage.setLastOpenedProjectId(projectId);
@@ -237,6 +241,7 @@ export function App() {
     await Promise.all([
       metadataProjection.ensureFresh(),
       modelProjection.ensureFresh(),
+      blockProjection.ensureFresh(),
     ]);
 
     setCurrentView("editor");

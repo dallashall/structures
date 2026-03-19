@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:atlas && tsc && vite build",
-    "build:atlas": "tsx scripts/buildTextureAtlas.ts",
+    "build:atlas": "tsx scripts/buildTextureAtlas.ts --pack squareful",
+    "build:atlas:squareful": "npm run build:atlas -- --pack squareful",
+    "build:atlas:excaliber": "npm run build:atlas -- --pack excaliber",
+    "parse:pack": "tsx scripts/parseResourcePack.ts",
+    "generate:manifest": "tsx scripts/generatePackManifest.ts",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "vitest",
