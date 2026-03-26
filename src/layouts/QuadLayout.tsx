@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { Box, Typography } from "@mui/material";
 
 import type { Project, LayerState } from "../types";
@@ -83,18 +83,27 @@ export function QuadLayout({
         gridTemplateColumns: "1fr 1fr",
         gridTemplateRows: "1fr 1fr",
         height: "100%",
-        gap: 1,
+        gap: "1px",
       }}
     >
       {/* Front View */}
       <Box
         sx={{
           bgcolor: "grey.50",
-          border: 2,
-          borderColor: "error.main",
-          borderRadius: 1,
+          border: 1,
+          borderColor: "primary.light",
+          borderRadius: 0,
           overflow: "hidden",
           position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            boxShadow: (theme) =>
+              `inset 0 0 8px ${theme.palette.primary.light}55`,
+            pointerEvents: "none",
+            zIndex: 5,
+          },
         }}
       >
         <Box
@@ -113,7 +122,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "error.main",
+              color: "primary.main",
               fontWeight: "medium",
             }}
           >
@@ -136,7 +145,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "error.main",
+              color: "primary.main",
               fontWeight: "bold",
             }}
           >
@@ -151,7 +160,6 @@ export function QuadLayout({
             width={canvasSizes.front.width}
             height={canvasSizes.front.height}
             selectedBlockId={selectedBlockId}
-
           />
         </div>
       </Box>
@@ -160,11 +168,20 @@ export function QuadLayout({
       <Box
         sx={{
           bgcolor: "grey.50",
-          border: 2,
-          borderColor: "primary.main",
-          borderRadius: 1,
+          border: 1,
+          borderColor: "error.light",
+          borderRadius: 0,
           overflow: "hidden",
           position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            boxShadow: (theme) =>
+              `inset 0 0 8px ${theme.palette.error.light}55`,
+            pointerEvents: "none",
+            zIndex: 5,
+          },
         }}
       >
         <Box
@@ -183,7 +200,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "primary.main",
+              color: "error.main",
               fontWeight: "medium",
             }}
           >
@@ -206,7 +223,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "primary.main",
+              color: "error.main",
               fontWeight: "bold",
             }}
           >
@@ -221,7 +238,6 @@ export function QuadLayout({
             width={canvasSizes.left.width}
             height={canvasSizes.left.height}
             selectedBlockId={selectedBlockId}
-
           />
         </div>
       </Box>
@@ -230,11 +246,20 @@ export function QuadLayout({
       <Box
         sx={{
           bgcolor: "grey.50",
-          border: 2,
-          borderColor: "success.main",
-          borderRadius: 1,
+          border: 1,
+          borderColor: "success.light",
+          borderRadius: 0,
           overflow: "hidden",
           position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            boxShadow: (theme) =>
+              `inset 0 0 8px ${theme.palette.success.light}55`,
+            pointerEvents: "none",
+            zIndex: 5,
+          },
         }}
       >
         <Box
@@ -291,7 +316,6 @@ export function QuadLayout({
             width={canvasSizes.top.width}
             height={canvasSizes.top.height}
             selectedBlockId={selectedBlockId}
-
           />
         </div>
       </Box>
@@ -300,11 +324,20 @@ export function QuadLayout({
       <Box
         sx={{
           bgcolor: "grey.50",
-          border: 2,
-          borderColor: "secondary.main",
-          borderRadius: 1,
+          border: 1,
+          borderColor: "secondary.light",
+          borderRadius: 0,
           overflow: "hidden",
           position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            boxShadow: (theme) =>
+              `inset 0 0 8px ${theme.palette.secondary.light}55`,
+            pointerEvents: "none",
+            zIndex: 5,
+          },
         }}
       >
         <Box
