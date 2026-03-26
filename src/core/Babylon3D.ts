@@ -21,8 +21,8 @@ import {
   Engine,
   Scene,
   Color3,
-  Mesh,
 } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core';
 import { projectView } from '../projections/ProjectView';
 import { blockProjection } from '../projections/BlockProjection';
 import { modelProjection } from '../projections/ModelProjection';
@@ -62,10 +62,11 @@ export class Babylon3D {
   private postProcessing: PostProcessingPipelines | null = null;
   private renderSettings: RenderSettings | null = null;
   private paused = false;
+  private sceneUpdateQueued = false;
 
   // Bound event handlers (for cleanup)
   private boundHandlers = {
-    tick: this.updateScene.bind(this),
+    queueSceneUpdate: this.queueSceneUpdate.bind(this),
     renderFrame: this.renderFrame.bind(this),
     previewChanged: this.handlePreviewChanged.bind(this),
     layerChanged: this.handleLayerChanged.bind(this),
@@ -103,9 +104,9 @@ export class Babylon3D {
     // Initialize rendering enhancements (async, non-blocking)
     void this.initRenderingEnhancements();
 
-    // Subscribe to projection changes
-    blockProjection.on('blocks:rebuilt', this.boundHandlers.tick);
-    modelProjection.on('model:rebuilt', this.boundHandlers.tick);
+    // Subscribe to projection changes (debounced — both fire on the same event)
+    blockProjection.on('blocks:rebuilt', this.boundHandlers.queueSceneUpdate);
+    modelProjection.on('model:rebuilt', this.boundHandlers.queueSceneUpdate);
 
     // Subscribe to preview state
     draftingService.on('draft:updated', this.boundHandlers.previewChanged);
@@ -150,8 +151,8 @@ export class Babylon3D {
 
     // Shadow system with mesh lifecycle callbacks
     this.shadowSystem = setupShadows(this.scene, settings);
-    const handleMeshCreated = (mesh: Mesh) => registerShadowCaster(this.shadowSystem, mesh);
-    const handleMeshDestroyed = (mesh: Mesh) => unregisterShadowCaster(this.shadowSystem, mesh);
+    const handleMeshCreated = (mesh: AbstractMesh): void => { registerShadowCaster(this.shadowSystem, mesh); };
+    const handleMeshDestroyed = (mesh: AbstractMesh): void => { unregisterShadowCaster(this.shadowSystem, mesh); };
     this.blockRenderer.setMeshLifecycleCallbacks(handleMeshCreated, handleMeshDestroyed);
 
     // Layer highlight + edge rendering
@@ -178,8 +179,8 @@ export class Babylon3D {
 
   destroy(): void {
     // Unsubscribe from all events
-    blockProjection.off('blocks:rebuilt', this.boundHandlers.tick);
-    modelProjection.off('model:rebuilt', this.boundHandlers.tick);
+    blockProjection.off('blocks:rebuilt', this.boundHandlers.queueSceneUpdate);
+    modelProjection.off('model:rebuilt', this.boundHandlers.queueSceneUpdate);
     draftingService.off('draft:updated', this.boundHandlers.previewChanged);
     draftingService.off('draft:finalized', this.boundHandlers.previewChanged);
     draftingService.off('draft:cancelled', this.boundHandlers.previewChanged);
@@ -254,6 +255,19 @@ export class Babylon3D {
 
   // -- Private event handlers --
 
+  /**
+   * Debounce updateScene — both blocks:rebuilt and model:rebuilt fire on the
+   * same user action, so coalesce into a single microtask.
+   */
+  private queueSceneUpdate(): void {
+    if (this.sceneUpdateQueued) return;
+    this.sceneUpdateQueued = true;
+    queueMicrotask(() => {
+      this.sceneUpdateQueued = false;
+      void this.updateScene();
+    });
+  }
+
   private async updateScene(): Promise<void> {
     const project = await projectView.getProject();
     if (!project) {
@@ -307,9 +321,10 @@ export class Babylon3D {
 
   private handleAtlasLoaded(): void {
     this.materialResolver.clearAllCaches();
-    this.blockRenderer.reapplyMaterials();
+    // Base meshes have faceUV baked into geometry — must rebuild, not just reapply materials
+    this.blockRenderer.clearAll();
+    this.queueSceneUpdate();
     this.previewRenderer.updatePreviewMeshes();
-
   }
 
   private handleSliceGuideToggled(axis: 'x' | 'y' | 'z', visible: boolean): void {
@@ -343,13 +358,11 @@ export class Babylon3D {
       this.shadowSystem.generator.darkness = settings.shadowDarkness;
     }
 
-    // Layer highlight toggle
+    // Layer highlight toggle (uses renderOverlay, no material cloning)
     if (!prev || prev.layerHighlightEnabled !== settings.layerHighlightEnabled) {
       this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
       if (settings.layerHighlightEnabled) {
         void this.handleLayerChanged();
-      } else {
-        this.blockRenderer.reapplyMaterials();
       }
     }
 

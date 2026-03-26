@@ -15,6 +15,7 @@ import {
   Scene,
   Mesh,
 } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core';
 
 import type { RenderSettings } from '../../types';
 
@@ -71,7 +72,7 @@ export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSyst
 /**
  * Register a mesh as a shadow caster
  */
-export function registerShadowCaster(shadowSystem: ShadowSystem | null, mesh: Mesh): void {
+export function registerShadowCaster(shadowSystem: ShadowSystem | null, mesh: AbstractMesh): void {
   if (!shadowSystem) return;
   shadowSystem.generator.addShadowCaster(mesh);
 }
@@ -79,7 +80,7 @@ export function registerShadowCaster(shadowSystem: ShadowSystem | null, mesh: Me
 /**
  * Unregister a mesh as a shadow caster
  */
-export function unregisterShadowCaster(shadowSystem: ShadowSystem | null, mesh: Mesh): void {
+export function unregisterShadowCaster(shadowSystem: ShadowSystem | null, mesh: AbstractMesh): void {
   if (!shadowSystem) return;
   shadowSystem.generator.removeShadowCaster(mesh);
 }
