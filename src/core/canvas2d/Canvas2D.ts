@@ -1,6 +1,7 @@
-import type { ViewType } from "../../types";
+import type { ViewType, BlockData } from "../../types";
 import { blockProjection } from "../../projections/BlockProjection";
 import { modelProjection } from "../../projections/ModelProjection";
+import { projectView } from "../../projections/ProjectView";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { renderLoop } from "../RenderLoop";
@@ -8,18 +9,24 @@ import { confirmMetaBlockCommand } from "../../commands/ConfirmMetaBlockCommand"
 
 import { ViewState } from "./ViewState";
 import { Canvas2DRenderer } from "./Canvas2DRenderer";
+import { resolveBlocksToGrid, resolvePreviewToGrid } from "./GridBlock";
+import type { GridBlock } from "./GridBlock";
 import { toolRegistry } from "../tools/ToolRegistry";
 import type { ToolBase } from "../tools/ToolBase";
 
 /**
- * Canvas2D - Thin orchestrator for a 2D canvas panel
+ * Canvas2D - Orchestrator for a 2D canvas panel
  *
  * Wires together:
  * - ViewState (zoom, pan, coordinate math)
  * - Canvas2DRenderer (pure rendering)
  * - ToolBase subclass (interaction + preview)
  * - RenderLoop (shared tick)
- * - Singleton events (external state changes → re-render)
+ * - Singleton events (external state changes → re-resolve → re-render)
+ *
+ * **Coordinate resolution**: This class is the single point where model→grid
+ * conversion happens for rendering. Data is resolved at change time (event
+ * handlers), not at render time. The renderer receives only GridBlock[] data.
  */
 export class Canvas2D {
   private viewState: ViewState;
@@ -27,13 +34,24 @@ export class Canvas2D {
   private activeTool: ToolBase | null = null;
   private needsRender = true;
 
-  // Bound handlers for subscribe/unsubscribe symmetry
+  // Pre-resolved grid data — converted once at data-change time
+  private resolvedPersistentBlocks: GridBlock[] = [];
+  private resolvedDraftBlocks: GridBlock[] = [];
+  private resolvedEditorPreview: GridBlock[] = [];
+
+  // ============================================================================
+  // Bound handlers
+  // ============================================================================
+
   private handleRender = (): void => {
     if (!this.needsRender) return;
     this.needsRender = false;
     this.renderer.render(
       this.viewState,
       this.activeTool?.previewData ?? null,
+      this.resolvedPersistentBlocks,
+      this.resolvedDraftBlocks,
+      this.resolvedEditorPreview,
     );
   };
 
@@ -44,6 +62,88 @@ export class Canvas2D {
   private handleToolChange = (mode: string): void => {
     this.setTool(mode);
   };
+
+  // ============================================================================
+  // Resolution handlers — convert model→grid at data-change time
+  // ============================================================================
+
+  private resolvePersistentBlocks = (): void => {
+    const project = projectView.getCached();
+    if (!project) {
+      this.resolvedPersistentBlocks = [];
+      this.needsRender = true;
+      return;
+    }
+
+    const activeLayers = editorState.getActiveLayers();
+    const axes = this.viewState.getAxesForView();
+    const depthAxis = axes.depth.toLowerCase() as "x" | "y" | "z";
+    const activeLayer =
+      depthAxis === "x"
+        ? activeLayers.x
+        : depthAxis === "y"
+          ? activeLayers.y
+          : activeLayers.z;
+
+    const minLayer = Math.max(0, activeLayer - 2);
+    const maxLayer = activeLayer + 2;
+    const blockIndex = blockProjection.getCached();
+
+    const blocks: BlockData[] = [];
+
+    for (let layer = minLayer; layer <= maxLayer; layer++) {
+      const blocksAtLayer = blockIndex.getBlocksAtLayer(depthAxis, layer);
+      for (const blockData of blocksAtLayer) {
+        blocks.push(blockData);
+      }
+    }
+
+    this.resolvedPersistentBlocks = resolveBlocksToGrid(
+      blocks,
+      this.viewState,
+      project.dimensions,
+      activeLayers,
+    );
+    this.needsRender = true;
+  };
+
+  private resolveDraftBlocks = (): void => {
+    const project = projectView.getCached();
+    if (!project) {
+      this.resolvedDraftBlocks = [];
+      this.needsRender = true;
+      return;
+    }
+
+    const draftPreview = draftingService.getPreview();
+    this.resolvedDraftBlocks = resolvePreviewToGrid(
+      draftPreview,
+      this.viewState,
+      project.dimensions,
+    );
+    this.needsRender = true;
+  };
+
+  private resolveEditorPreview = (): void => {
+    const project = projectView.getCached();
+    if (!project) {
+      this.resolvedEditorPreview = [];
+      this.needsRender = true;
+      return;
+    }
+
+    const editorPreview = editorState.getPreviewBlocks();
+    this.resolvedEditorPreview = resolvePreviewToGrid(
+      editorPreview,
+      this.viewState,
+      project.dimensions,
+    );
+    this.needsRender = true;
+  };
+
+  // ============================================================================
+  // Constructor
+  // ============================================================================
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -56,6 +156,7 @@ export class Canvas2D {
     this.renderer = new Canvas2DRenderer(ctx, canvas);
 
     this.subscribeToEvents();
+    this.resolvePersistentBlocks();
     this.setTool(editorState.getPaintMode());
   }
 
@@ -72,7 +173,9 @@ export class Canvas2D {
 
   setViewType(viewType: ViewType): void {
     this.viewState.setViewType(viewType);
-    this.needsRender = true;
+    this.resolvePersistentBlocks();
+    this.resolveDraftBlocks();
+    this.resolveEditorPreview();
   }
 
   destroy(): void {
@@ -81,9 +184,6 @@ export class Canvas2D {
     this.unsubscribeFromEvents();
   }
 
-  /**
-   * Confirm all meta block placements (static, for multi-panel coordination)
-   */
   static confirmAllPlacements(): void {
     confirmMetaBlockCommand.execute();
   }
@@ -112,17 +212,25 @@ export class Canvas2D {
     renderLoop.register();
     renderLoop.on("tick", this.handleRender);
 
-    blockProjection.on("blocks:rebuilt", this.handleRequestRender);
-    modelProjection.on("model:rebuilt", this.handleRequestRender);
-    draftingService.on("draft:updated", this.handleRequestRender);
-    draftingService.on("draft:finalized", this.handleRequestRender);
-    draftingService.on("draft:cancelled", this.handleRequestRender);
-    editorState.on("preview:rendered", this.handleRequestRender);
-    editorState.on("layer:adjusted", this.handleRequestRender);
+    // Persistent block resolution
+    blockProjection.on("blocks:rebuilt", this.resolvePersistentBlocks);
+    modelProjection.on("model:rebuilt", this.resolvePersistentBlocks);
+    editorState.on("layer:adjusted", this.resolvePersistentBlocks);
+
+    // Draft block resolution
+    draftingService.on("draft:updated", this.resolveDraftBlocks);
+    draftingService.on("draft:finalized", this.resolveDraftBlocks);
+    draftingService.on("draft:cancelled", this.resolveDraftBlocks);
+
+    // Editor preview resolution
+    editorState.on("preview:rendered", this.resolveEditorPreview);
+
+    // Render-only events (no data resolution needed)
     editorState.on("block:selected", this.handleRequestRender);
     editorState.on("paintbehavior:selected", this.handleRequestRender);
     editorState.on("deletemode:changed", this.handleRequestRender);
 
+    // Tool switching
     editorState.on("paintmode:selected", this.handleToolChange);
   }
 
@@ -130,13 +238,16 @@ export class Canvas2D {
     renderLoop.off("tick", this.handleRender);
     renderLoop.unregister();
 
-    blockProjection.off("blocks:rebuilt", this.handleRequestRender);
-    modelProjection.off("model:rebuilt", this.handleRequestRender);
-    draftingService.off("draft:updated", this.handleRequestRender);
-    draftingService.off("draft:finalized", this.handleRequestRender);
-    draftingService.off("draft:cancelled", this.handleRequestRender);
-    editorState.off("preview:rendered", this.handleRequestRender);
-    editorState.off("layer:adjusted", this.handleRequestRender);
+    blockProjection.off("blocks:rebuilt", this.resolvePersistentBlocks);
+    modelProjection.off("model:rebuilt", this.resolvePersistentBlocks);
+    editorState.off("layer:adjusted", this.resolvePersistentBlocks);
+
+    draftingService.off("draft:updated", this.resolveDraftBlocks);
+    draftingService.off("draft:finalized", this.resolveDraftBlocks);
+    draftingService.off("draft:cancelled", this.resolveDraftBlocks);
+
+    editorState.off("preview:rendered", this.resolveEditorPreview);
+
     editorState.off("block:selected", this.handleRequestRender);
     editorState.off("paintbehavior:selected", this.handleRequestRender);
     editorState.off("deletemode:changed", this.handleRequestRender);

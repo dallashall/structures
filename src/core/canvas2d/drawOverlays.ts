@@ -1,0 +1,267 @@
+import type { Dimensions, LayerState, Vector3D } from "../../types";
+import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
+import type { ViewState } from "./ViewState";
+import { getColorForAxis, getLayerForAxis } from "./renderingUtils";
+
+/**
+ * Draw coordinate axes legend (bottom-left corner).
+ */
+export function drawCoordinateAxes(
+  ctx: CanvasRenderingContext2D,
+  viewState: ViewState,
+  canvasHeight: number,
+  colors: Canvas2DColorConfig,
+): void {
+  const padding = 20;
+  const arrowLength = 40;
+  const arrowHeadSize = 8;
+
+  const axes = viewState.getAxesForView();
+  const originX = padding;
+  const originY = canvasHeight - padding;
+
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.font = "bold 14px sans-serif";
+
+  // Horizontal axis
+  const hColor = getColorForAxis(axes.horizontal);
+  ctx.strokeStyle = hColor;
+  ctx.fillStyle = hColor;
+  ctx.beginPath();
+  ctx.moveTo(originX, originY);
+  ctx.lineTo(originX + arrowLength, originY);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(originX + arrowLength, originY);
+  ctx.lineTo(
+    originX + arrowLength - arrowHeadSize,
+    originY - arrowHeadSize / 2,
+  );
+  ctx.lineTo(
+    originX + arrowLength - arrowHeadSize,
+    originY + arrowHeadSize / 2,
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
+
+  // Vertical axis
+  const vColor = getColorForAxis(axes.vertical);
+  ctx.strokeStyle = vColor;
+  ctx.fillStyle = vColor;
+  ctx.beginPath();
+  ctx.moveTo(originX, originY);
+  ctx.lineTo(originX, originY - arrowLength);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(originX, originY - arrowLength);
+  ctx.lineTo(
+    originX - arrowHeadSize / 2,
+    originY - arrowLength + arrowHeadSize,
+  );
+  ctx.lineTo(
+    originX + arrowHeadSize / 2,
+    originY - arrowLength + arrowHeadSize,
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillText(axes.vertical, originX - 5, originY - arrowLength - 8);
+
+  // Depth indicator
+  const depthX = originX + arrowLength + 60;
+  const depthY = originY;
+  const dColor = getColorForAxis(axes.depth);
+  ctx.strokeStyle = dColor;
+  ctx.fillStyle = dColor;
+  ctx.beginPath();
+  ctx.arc(depthX, depthY, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillText(axes.depth, depthX + 12, depthY + 5);
+  ctx.fillStyle = colors.textSecondary;
+  ctx.font = "12px sans-serif";
+  ctx.fillText("(depth)", depthX + 12, depthY + 18);
+
+  ctx.restore();
+}
+
+/**
+ * Draw active layer indicators (lines and labels at edges of grid).
+ */
+export function drawLayerIndicators(
+  ctx: CanvasRenderingContext2D,
+  viewState: ViewState,
+  dimensions: Dimensions,
+  activeLayers: LayerState,
+): void {
+  const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
+  const cellSize = viewState.getCellSize();
+  const pan = viewState.getPan();
+  const axes = viewState.getAxesForView();
+
+  ctx.save();
+
+  // Horizontal layer indicator
+  if (axes.vertical !== axes.depth) {
+    const axisName = axes.vertical;
+    const layerValue = getLayerForAxis(axisName, activeLayers);
+    const color = getColorForAxis(axisName);
+    const gridPos = viewState.getGridPositionForLayer(
+      axisName,
+      layerValue,
+      dimensions,
+    );
+
+    if (gridPos !== null && gridPos >= 0 && gridPos < gridHeight) {
+      const py = pan.y + gridPos * cellSize;
+      const gridLeft = pan.x;
+      const gridRight = pan.x + gridWidth * cellSize;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(gridLeft, py);
+      ctx.lineTo(gridRight, py);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(gridLeft - 2, py);
+      ctx.lineTo(gridLeft, py);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(gridRight, py);
+      ctx.lineTo(gridRight + 2, py);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(`${axisName}: ${layerValue}`, gridLeft - 8, py - 6);
+      ctx.textAlign = "left";
+      ctx.fillText(`${axisName}: ${layerValue}`, gridRight + 8, py - 6);
+    }
+  }
+
+  // Vertical layer indicator
+  if (axes.horizontal !== axes.depth) {
+    const axisName = axes.horizontal;
+    const layerValue = getLayerForAxis(axisName, activeLayers);
+    const color = getColorForAxis(axisName);
+    const gridPos = viewState.getGridPositionForLayer(
+      axisName,
+      layerValue,
+      dimensions,
+    );
+
+    if (gridPos !== null && gridPos >= 0 && gridPos < gridWidth) {
+      const px = pan.x + gridPos * cellSize;
+      const gridTop = pan.y;
+      const gridBottom = pan.y + gridHeight * cellSize;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(px, gridTop);
+      ctx.lineTo(px, gridBottom);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(px, gridTop - 2);
+      ctx.lineTo(px, gridTop);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(px, gridBottom);
+      ctx.lineTo(px, gridBottom + 2);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${axisName}: ${layerValue}`, px, gridTop - 8);
+      ctx.fillText(`${axisName}: ${layerValue}`, px, gridBottom + 18);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draw meta block (spawn point).
+ */
+export function drawMetaBlock(
+  ctx: CanvasRenderingContext2D,
+  metaBlock: { position: Vector3D; isConfirmed: boolean } | null,
+  viewState: ViewState,
+  dimensions: Dimensions,
+  activeLayers: LayerState,
+  cellSize: number,
+  pan: { x: number; y: number },
+  colors: Canvas2DColorConfig,
+): void {
+  if (!metaBlock) return;
+
+  const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
+  const distance = viewState.getLayerDistance(
+    metaBlock.position,
+    activeLayers,
+  );
+
+  // Reuse same opacity curve as blocks
+  let opacity: number;
+  if (distance === 0) opacity = 1.0;
+  else if (distance === 1) opacity = 0.3;
+  else if (distance === 2) opacity = 0.1;
+  else return;
+
+  const { gridX, gridY } = viewState.modelToGrid(
+    metaBlock.position,
+    dimensions,
+  );
+
+  if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
+    return;
+  }
+
+  const px = pan.x + gridX * cellSize;
+  const py = pan.y + gridY * cellSize;
+  const centerX = px + cellSize / 2;
+  const centerY = py + cellSize / 2;
+
+  const strokeColor = metaBlock.isConfirmed
+    ? colors.metaBlockBorder
+    : colors.metaBlockBorderUnconfirmed;
+  const strokeWidth = metaBlock.isConfirmed ? 2 : 3;
+  const fillOpacity = metaBlock.isConfirmed ? opacity : opacity * 0.7;
+
+  ctx.fillStyle = colors.metaBlockFill;
+  ctx.globalAlpha = fillOpacity;
+  ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = strokeWidth;
+  ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+  // Draw center dot
+  ctx.strokeStyle = colors.metaBlockArrow;
+  ctx.fillStyle = colors.metaBlockArrow;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const arrowSize = Math.min(cellSize * 0.6, 20);
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, arrowSize * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1.0;
+}

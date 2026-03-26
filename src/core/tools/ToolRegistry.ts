@@ -148,14 +148,14 @@ toolRegistry.register({
 
 toolRegistry.register({
   name: "circle",
-  hotkey: "c",
+  hotkey: "o",
   label: "Circle",
   create: (canvas, vs, rr) => new CirclePaintTool(canvas, vs, rr),
 });
 
 toolRegistry.register({
   name: "arch",
-  hotkey: "a",
+  hotkey: "g",
   label: "Arch",
   create: (canvas, vs, rr) => new ArchPaintTool(canvas, vs, rr),
 });

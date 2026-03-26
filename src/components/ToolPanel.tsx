@@ -92,13 +92,13 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
           </ToggleButton>
         </Tooltip>
 
-        <Tooltip title="Circle (C)" placement="right">
+        <Tooltip title="Circle (O)" placement="right">
           <ToggleButton value="circle" aria-label="Circle mode">
             <Circle fontSize="small" />
           </ToggleButton>
         </Tooltip>
 
-        <Tooltip title="Arch (A)" placement="right">
+        <Tooltip title="Arch (G)" placement="right">
           <ToggleButton value="arch" aria-label="Arch mode">
             <Box sx={{ fontSize: "1.2rem", fontWeight: "bold" }}>⌒</Box>
           </ToggleButton>
