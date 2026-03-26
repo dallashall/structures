@@ -29,8 +29,10 @@ import type { MaterialResolver } from './MaterialResolver';
 import type { Vector3D, BlockData, RenderSettings } from '../../types';
 
 // Per-instance vertex colors for layer highlight
-const COLOR_NORMAL = new Color4(1, 1, 1, 1);            // Default: normal brightness
-const COLOR_HIGHLIGHTED = new Color4(1.4, 1.4, 1.6, 1); // Active layer: boosted with slight blue
+// Each axis maps to an RGB channel: X=red, Y=green, Z=blue
+// Overlapping layers combine additively (e.g., X+Z = red+blue = magenta tint)
+const COLOR_NORMAL = new Color4(1, 1, 1, 1);
+const AXIS_TINT_BOOST = 0.4; // How much each axis channel is boosted
 
 export class BlockRenderer {
   private scene: Scene;
@@ -211,8 +213,8 @@ export class BlockRenderer {
 
   /**
    * Update highlight for a single instance based on active layers.
-   * Uses per-instance vertex color buffer: active-layer blocks stay
-   * full brightness, others get dimmed.
+   * Each axis maps to an RGB channel (X=R, Y=G, Z=B). Blocks on
+   * multiple active layers get combined tints (e.g., X+Z = magenta).
    */
   private updateInstanceHighlight(instance: InstancedMesh, position: Vector3D): void {
     if (!this.layerHighlightEnabled) {
@@ -221,12 +223,22 @@ export class BlockRenderer {
     }
 
     const activeLayers = editorState.getActiveLayers();
-    const isOnActiveLayer =
-      position.x === activeLayers.x ||
-      position.y === activeLayers.y ||
-      position.z === activeLayers.z;
+    const onX = position.x === activeLayers.x;
+    const onY = position.y === activeLayers.y;
+    const onZ = position.z === activeLayers.z;
 
-    instance.instancedBuffers.color = isOnActiveLayer ? COLOR_HIGHLIGHTED : COLOR_NORMAL;
+    if (!onX && !onY && !onZ) {
+      instance.instancedBuffers.color = COLOR_NORMAL;
+      return;
+    }
+
+    // Match 2D axis colors: X=red, Y=blue, Z=green
+    instance.instancedBuffers.color = new Color4(
+      1 + (onX ? AXIS_TINT_BOOST : 0),
+      1 + (onZ ? AXIS_TINT_BOOST : 0),
+      1 + (onY ? AXIS_TINT_BOOST : 0),
+      1,
+    );
   }
 
   /**
