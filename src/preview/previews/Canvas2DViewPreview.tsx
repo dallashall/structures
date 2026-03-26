@@ -20,7 +20,6 @@ export function Canvas2DViewPreview() {
             width={400}
             height={400}
             selectedBlockId="stone"
-            isPlacementMode={false}
           />
         </Box>
       </Box>

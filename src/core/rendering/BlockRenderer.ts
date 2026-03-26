@@ -3,34 +3,61 @@
  *
  * Creates, removes, animates, and highlights block meshes
  * based on active layers. Manages the blockMeshes collection.
+ * Supports edge rendering and shadow caster lifecycle callbacks.
  */
 
 import {
   Vector4,
   MeshBuilder,
-  StandardMaterial,
   Mesh,
   Animation,
   EasingFunction,
   ElasticEase,
   Scene,
+  Color3,
+  Material,
 } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
 import { textureManager } from '../TextureManager';
 import { editorState } from '../EditorState';
-import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock } from './babylonUtils';
+import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
 
+import type { PBRMaterial, StandardMaterial } from '@babylonjs/core';
 import type { MaterialResolver } from './MaterialResolver';
-import type { Vector3D, BlockData } from '../../types';
+import type { Vector3D, BlockData, RenderSettings } from '../../types';
 
 export class BlockRenderer {
   private scene: Scene;
   private materialResolver: MaterialResolver;
   private blockMeshes = new Map<string, Mesh>();
 
+  // Edge rendering state
+  private edgesEnabled = false;
+  private edgesWidth = 1.0;
+  private edgesColor = '#000000';
+
+  // Layer highlight
+  private layerHighlightEnabled = false;
+
+  // Mesh lifecycle callbacks (for shadow caster registration)
+  private onMeshCreated: ((mesh: Mesh) => void) | null = null;
+  private onMeshDestroyed: ((mesh: Mesh) => void) | null = null;
+
   constructor(scene: Scene, materialResolver: MaterialResolver) {
     this.scene = scene;
     this.materialResolver = materialResolver;
+  }
+
+  /**
+   * Set callbacks invoked when block meshes are created/destroyed.
+   * Used by Babylon3D to register/unregister shadow casters.
+   */
+  setMeshLifecycleCallbacks(
+    onCreated: (mesh: Mesh) => void,
+    onDestroyed: (mesh: Mesh) => void
+  ): void {
+    this.onMeshCreated = onCreated;
+    this.onMeshDestroyed = onDestroyed;
   }
 
   /**
@@ -83,6 +110,12 @@ export class BlockRenderer {
     this.blockMeshes.set(key, box);
     this.updateMeshBrightness(box, blockData.position);
 
+    // Apply edge rendering if enabled
+    this.applyEdgeRendering(box);
+
+    // Notify shadow system
+    this.onMeshCreated?.(box);
+
     if (animate) {
       box.scaling.y = 0;
 
@@ -122,6 +155,9 @@ export class BlockRenderer {
 
     this.blockMeshes.delete(key);
 
+    // Notify shadow system before disposal
+    this.onMeshDestroyed?.(mesh);
+
     if (animate) {
       const animationAlpha = new Animation(
         'fadeOutAnimation',
@@ -160,10 +196,15 @@ export class BlockRenderer {
     }
   }
 
+  setLayerHighlightEnabled(enabled: boolean): void {
+    this.layerHighlightEnabled = enabled;
+  }
+
   /**
    * Update brightness of a single mesh based on active layers
    */
   updateMeshBrightness(mesh: Mesh, position: Vector3D): void {
+    if (!this.layerHighlightEnabled) return;
     const activeLayers = editorState.getActiveLayers();
 
     const isOnActiveLayer =
@@ -177,20 +218,26 @@ export class BlockRenderer {
     const baseMaterial = this.materialResolver.resolve(blockId);
 
     if (isOnActiveLayer) {
-      const highlightedMaterial = baseMaterial.clone(`${baseMaterial.name}_highlight_${mesh.uniqueId}`);
+      const highlightedMaterial = baseMaterial.clone(`${baseMaterial.name}_highlight_${mesh.uniqueId}`) as Material;
 
-      if (highlightedMaterial.diffuseColor) {
-        highlightedMaterial.emissiveColor = highlightedMaterial.diffuseColor.scale(0.15);
+      // Add emissive highlight -- works on both StandardMaterial and PBRMaterial
+      const asPBR = highlightedMaterial as unknown as PBRMaterial;
+      const asStandard = highlightedMaterial as unknown as StandardMaterial;
+
+      if (asPBR.albedoColor) {
+        asPBR.emissiveColor = asPBR.albedoColor.scale(0.15);
+      } else if (asStandard.diffuseColor) {
+        asStandard.emissiveColor = (asStandard.diffuseColor as Color3).scale(0.15);
       }
 
       if (mesh.material !== baseMaterial && mesh.material) {
-        (mesh.material as StandardMaterial).dispose();
+        mesh.material.dispose();
       }
 
       mesh.material = highlightedMaterial;
     } else {
       if (mesh.material !== baseMaterial && mesh.material) {
-        (mesh.material as StandardMaterial).dispose();
+        mesh.material.dispose();
       }
 
       mesh.material = baseMaterial;
@@ -222,10 +269,28 @@ export class BlockRenderer {
   }
 
   /**
+   * Update edge rendering settings on all existing meshes
+   */
+  updateEdgeRendering(settings: RenderSettings): void {
+    this.edgesEnabled = settings.edgesEnabled;
+    this.edgesWidth = settings.edgesWidth;
+    this.edgesColor = settings.edgesColor;
+
+    for (const mesh of this.blockMeshes.values()) {
+      if (settings.edgesEnabled) {
+        this.applyEdgeRendering(mesh);
+      } else {
+        mesh.disableEdgesRendering();
+      }
+    }
+  }
+
+  /**
    * Clear all block meshes
    */
   clearAll(): void {
     for (const mesh of this.blockMeshes.values()) {
+      this.onMeshDestroyed?.(mesh);
       mesh.dispose();
     }
     this.blockMeshes.clear();
@@ -240,5 +305,14 @@ export class BlockRenderer {
 
   destroy(): void {
     this.clearAll();
+  }
+
+  // ---- Private helpers ----
+
+  private applyEdgeRendering(mesh: Mesh): void {
+    if (!this.edgesEnabled) return;
+    mesh.enableEdgesRendering();
+    mesh.edgesWidth = this.edgesWidth;
+    mesh.edgesColor = hexToColor4(this.edgesColor);
   }
 }

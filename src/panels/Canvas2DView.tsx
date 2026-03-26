@@ -10,7 +10,6 @@ interface Canvas2DViewProps {
   width: number;
   height: number;
   selectedBlockId: string | null;
-  isPlacementMode: boolean;
 }
 
 /**
@@ -32,7 +31,6 @@ export function Canvas2DView({
   viewType,
   width,
   height,
-  isPlacementMode,
 }: Canvas2DViewProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const controllerRef = React.useRef<Canvas2D | null>(null);
@@ -59,11 +57,6 @@ export function Canvas2DView({
   React.useEffect(() => {
     controllerRef.current?.setViewType(viewType);
   }, [viewType]);
-
-  // Handle placement mode changes
-  React.useEffect(() => {
-    controllerRef.current?.setPlacementMode(isPlacementMode);
-  }, [isPlacementMode]);
 
   return (
     <Box sx={{ width: "100%", height: "100%", bgcolor: "#1a1a1a" }}>

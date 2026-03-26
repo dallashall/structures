@@ -17,7 +17,7 @@ export interface PaintOperation {
  * Each strategy calculates which positions should be modified and returns
  * an array of operations. The strategy is agnostic to:
  * - Whether operations are allowed (handled by PaintBehavior)
- * - How operations are executed (handled by CanvasPainter)
+ * - How operations are executed (handled by PaintPipeline and tools)
  */
 export interface PaintStrategy {
   /**

@@ -24,7 +24,6 @@ export function TabbedLayoutPreview() {
           onViewChange={handleViewChange}
           project={mockProject}
           activeLayers={{ x: 5, y: 3, z: 7 }}
-          isPlacementMode={false}
           selectedBlockId="stone"
         />
       </Box>

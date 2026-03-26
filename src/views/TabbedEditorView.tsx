@@ -102,7 +102,6 @@ export function TabbedEditorView({
             onViewChange={(key) => onViewChange(key as ViewType)}
             project={project}
             activeLayers={activeLayers}
-            isPlacementMode={isPlacementMode}
             selectedBlockId={selectedBlock}
           />
         </Box>

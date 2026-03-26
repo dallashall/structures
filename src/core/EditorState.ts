@@ -1,5 +1,7 @@
 import { EventEmitter } from './EventEmitter';
 import { quickSelectStore } from './QuickSelectStore';
+import { renderSettingsStore } from './RenderSettingsStore';
+import { DEFAULT_RENDER_SETTINGS } from '../types';
 import type {
   LayoutMode,
   ViewType,
@@ -11,7 +13,7 @@ import type {
   ShapeFillMode,
   DepthConfig,
   CircleDrawMode,
-  CurveControlState,
+  RenderSettings,
 } from '../types';
 
 /**
@@ -56,6 +58,8 @@ export interface PreviewBlock {
  * - preview:rendered - When preview blocks are rendered (for ghost rendering)
  * - project:switched - When current project is switched
  * - sliceguide:axis:toggled - When a slice guide axis visibility is toggled (passes axis and visible)
+ * - rendersettings:applied - When render settings are changed (passes RenderSettings)
+ * - rendersettingsmodal:toggled - When render settings modal is toggled open/closed
  */
 class EditorState extends EventEmitter {
   private static instance: EditorState;
@@ -74,7 +78,6 @@ class EditorState extends EventEmitter {
     mode: 'through',
   };
   private circleDrawMode: CircleDrawMode = 'center-radius';
-  private curveControlState: CurveControlState | null = null;
   private isPlacementMode = false;
   private isActionBarExpanded = true;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
@@ -87,6 +90,8 @@ class EditorState extends EventEmitter {
   private activeDragBlockId: string | null = null;
   private currentProjectId: string | null = null;
   private sliceGuideVisibility: { x: boolean; y: boolean; z: boolean } = { x: false, y: false, z: false };
+  private renderSettings: RenderSettings = { ...DEFAULT_RENDER_SETTINGS };
+  private isRenderSettingsModalOpen = false;
 
   private constructor() {
     super();
@@ -341,21 +346,6 @@ class EditorState extends EventEmitter {
    */
   getCircleDrawMode(): CircleDrawMode {
     return this.circleDrawMode;
-  }
-
-  /**
-   * Set the curve control state
-   */
-  setCurveControlState = (state: CurveControlState | null): void => {
-    this.curveControlState = state;
-    this.emit('curvecontrol:updated', state);
-  }
-
-  /**
-   * Get the current curve control state
-   */
-  getCurveControlState(): CurveControlState | null {
-    return this.curveControlState;
   }
 
   /**
@@ -628,9 +618,10 @@ class EditorState extends EventEmitter {
       this.currentProjectId = projectId;
       this.emit('project:switched', projectId);
 
-      // Load quick-select state for this project
+      // Load project-scoped state from stores
       if (projectId) {
         void this.loadQuickSelectState(projectId);
+        void this.loadRenderSettings(projectId);
       }
     }
   }
@@ -697,6 +688,67 @@ class EditorState extends EventEmitter {
    */
   isSliceGuideVisible(axis: 'x' | 'y' | 'z'): boolean {
     return this.sliceGuideVisibility[axis];
+  }
+
+  // --- Render Settings ---
+
+  /**
+   * Get current render settings
+   */
+  getRenderSettings(): RenderSettings {
+    return { ...this.renderSettings };
+  }
+
+  /**
+   * Apply new render settings, persist to store, and notify listeners
+   */
+  setRenderSettings = (settings: RenderSettings): void => {
+    this.renderSettings = { ...settings };
+    this.emit('rendersettings:applied', this.renderSettings);
+
+    // Persist to store for current project
+    const projectId = this.currentProjectId;
+    if (projectId) {
+      void renderSettingsStore.saveSettings(projectId, this.renderSettings);
+    }
+  }
+
+  /**
+   * Reset render settings to defaults
+   */
+  resetRenderSettings = (): void => {
+    this.setRenderSettings({ ...DEFAULT_RENDER_SETTINGS });
+  }
+
+  /**
+   * Get render settings modal open state
+   */
+  getRenderSettingsModalOpen(): boolean {
+    return this.isRenderSettingsModalOpen;
+  }
+
+  /**
+   * Set render settings modal open state
+   */
+  setRenderSettingsModalOpen = (isOpen: boolean): void => {
+    if (this.isRenderSettingsModalOpen !== isOpen) {
+      this.isRenderSettingsModalOpen = isOpen;
+      this.emit('rendersettingsmodal:toggled', isOpen);
+    }
+  }
+
+  /**
+   * Load render settings from RenderSettingsStore
+   * Called automatically when project is switched
+   */
+  private async loadRenderSettings(projectId: string): Promise<void> {
+    try {
+      const settings = await renderSettingsStore.getSettings(projectId);
+      this.renderSettings = settings;
+      this.emit('rendersettings:applied', this.renderSettings);
+    } catch (error) {
+      console.error('Failed to load render settings:', error);
+    }
   }
 }
 

@@ -12,7 +12,6 @@ interface TabbedLayoutProps {
   onViewChange: (key: React.Key) => void;
   project: Project;
   activeLayers: LayerState;
-  isPlacementMode: boolean;
   selectedBlockId: string | null;
   renderTabBar?: boolean; // Whether to render the tab bar internally (default false)
 }
@@ -29,7 +28,6 @@ export function TabbedLayout({
   project,
   activeLayers,
   selectedBlockId,
-  isPlacementMode,
   renderTabBar = false,
 }: TabbedLayoutProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -125,6 +123,7 @@ export function TabbedLayout({
               <Preview3DView
                 width={preview3DSize.width}
                 height={preview3DSize.height}
+                isVisible={(activeView as string) === "3d"}
               />
             </div>
           ) : (
@@ -163,7 +162,7 @@ export function TabbedLayout({
                   width={canvasSize.width}
                   height={canvasSize.height}
                   selectedBlockId={selectedBlockId}
-                  isPlacementMode={isPlacementMode}
+
                 />
               </div>
             </>

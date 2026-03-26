@@ -1,5 +1,7 @@
 import { editorState } from './EditorState';
 import { modelProjection } from '../projections/ModelProjection';
+import { toolRegistry } from './tools/ToolRegistry';
+import type { PaintMode } from '../types';
 
 /**
  * KeyboardManager - Handles global keyboard shortcuts
@@ -60,6 +62,14 @@ class KeyboardManager {
       target.tagName === 'TEXTAREA' ||
       target.isContentEditable
     ) {
+      return;
+    }
+
+    // Tool hotkeys (B, R, C, A, V)
+    const toolName = toolRegistry.getByHotkey(event.key.toLowerCase());
+    if (toolName) {
+      event.preventDefault();
+      editorState.setPaintMode(toolName as PaintMode);
       return;
     }
 

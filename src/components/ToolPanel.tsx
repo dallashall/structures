@@ -80,7 +80,7 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
           </ToggleButton>
         </Tooltip>
 
-        <Tooltip title="Fill (F)" placement="right">
+        <Tooltip title="Fill" placement="right">
           <ToggleButton value="fill" aria-label="Fill mode">
             <FormatColorFill fontSize="small" />
           </ToggleButton>

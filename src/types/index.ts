@@ -320,10 +320,13 @@ export interface RenderSettings {
   toneMapping: boolean;
   contrast: number;
   exposure: number;
+
+  // Layer highlight
+  layerHighlightEnabled: boolean;
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
-  fxaaEnabled: true,
+  fxaaEnabled: false,
   msaaSamples: 4,
   pbrEnabled: true,
   environmentIntensity: 1.0,
@@ -332,17 +335,18 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   edgesColor: '#000000',
   shadowsEnabled: true,
   shadowMapSize: 1024,
-  shadowDarkness: 0.4,
+  shadowDarkness: 0.5,
   ssaoEnabled: true,
   ssaoRadius: 2.0,
   ssaoIntensity: 1.0,
   ssaoSamples: 16,
   bloomEnabled: true,
   bloomIntensity: 0.15,
-  bloomThreshold: 0.9,
+  bloomThreshold: 0.8,
   toneMapping: true,
   contrast: 1.1,
   exposure: 1.0,
+  layerHighlightEnabled: false,
 };
 
 // Utility type for event handlers

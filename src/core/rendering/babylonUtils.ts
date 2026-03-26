@@ -6,7 +6,7 @@
  * No dependencies on singletons or scene state.
  */
 
-import { Color3, Vector3 } from '@babylonjs/core';
+import { Color3, Color4, Vector3 } from '@babylonjs/core';
 
 import type { Vector3D } from '../../types';
 
@@ -58,6 +58,16 @@ export function centerInCell(position: Vector3D): Vector3D {
  * These blocks use individually generated tinted textures rather than the shared atlas.
  * Excludes multi-face blocks like grass_block, podzol, mycelium.
  */
+/**
+ * Parse a hex color string (#RRGGBB) into a BabylonJS Color4
+ */
+export function hexToColor4(hex: string, alpha: number = 1.0): Color4 {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return new Color4(r, g, b, alpha);
+}
+
 export function isTintedTextureBlock(blockId: string): boolean {
   const blockName = blockId.toLowerCase().replace('minecraft:', '');
   return (

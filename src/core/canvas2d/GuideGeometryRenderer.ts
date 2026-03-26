@@ -1,12 +1,16 @@
-import type { GuideGeometry, ControlPointHandle, GuideLine } from '../painting/strategies/GuideGeometry';
-import type { Canvas2DViewport } from './Canvas2DViewport';
-import type { Dimensions } from '../../types';
+import type {
+  GuideGeometry,
+  ControlPointHandle,
+  GuideLine,
+} from "../painting/strategies/GuideGeometry";
+import type { ViewState } from "./ViewState";
+import type { Dimensions } from "../../types";
 
 /**
  * GuideGeometryRenderer - Renders control point handles and guide lines
  *
  * Pure rendering module with static methods. Receives guide geometry in
- * world space, converts to pixel space via viewport, and draws onto canvas.
+ * world space, converts to pixel space via ViewState, and draws onto canvas.
  *
  * Visual conventions:
  * - Placed handles: filled gold diamonds with black outline
@@ -17,13 +21,13 @@ import type { Dimensions } from '../../types';
  * - Labels: white text with black stroke above each handle
  */
 export class GuideGeometryRenderer {
-  private static readonly HANDLE_PLACED_COLOR = '#FFD700';
-  private static readonly HANDLE_CURSOR_COLOR = '#87CEEB';
-  private static readonly BASELINE_COLOR = '#FFD700';
-  private static readonly CONTROL_LINE_COLOR = '#FF69B4';
-  private static readonly TANGENT_LINE_COLOR = '#87CEEB';
+  private static readonly HANDLE_PLACED_COLOR = "#FFD700";
+  private static readonly HANDLE_CURSOR_COLOR = "#87CEEB";
+  private static readonly BASELINE_COLOR = "#FFD700";
+  private static readonly CONTROL_LINE_COLOR = "#FF69B4";
+  private static readonly TANGENT_LINE_COLOR = "#87CEEB";
   private static readonly HANDLE_RADIUS = 5;
-  private static readonly LABEL_FONT = 'bold 10px sans-serif';
+  private static readonly LABEL_FONT = "bold 10px sans-serif";
 
   /**
    * Draw guide geometry onto the canvas
@@ -31,21 +35,21 @@ export class GuideGeometryRenderer {
   static draw(
     ctx: CanvasRenderingContext2D,
     geometry: GuideGeometry,
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     dimensions: Dimensions,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
     ctx.save();
 
     // Draw lines first (beneath handles)
     for (const line of geometry.lines) {
-      this.drawLine(ctx, line, viewport, dimensions, cellSize, pan);
+      this.drawLine(ctx, line, viewState, dimensions, cellSize, pan);
     }
 
     // Draw handles on top
     for (const handle of geometry.handles) {
-      this.drawHandle(ctx, handle, viewport, dimensions, cellSize, pan);
+      this.drawHandle(ctx, handle, viewState, dimensions, cellSize, pan);
     }
 
     ctx.restore();
@@ -56,12 +60,12 @@ export class GuideGeometryRenderer {
    */
   private static toPixelCenter(
     position: { x: number; y: number; z: number },
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     dimensions: Dimensions,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): { px: number; py: number } {
-    const grid = viewport.positionToGridSync(position, dimensions);
+    const grid = viewState.modelToGrid(position, dimensions);
     return {
       px: pan.x + grid.gridX * cellSize + cellSize / 2,
       py: pan.y + grid.gridY * cellSize + cellSize / 2,
@@ -74,28 +78,34 @@ export class GuideGeometryRenderer {
   private static drawLine(
     ctx: CanvasRenderingContext2D,
     line: GuideLine,
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     dimensions: Dimensions,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
-    const from = this.toPixelCenter(line.from, viewport, dimensions, cellSize, pan);
-    const to = this.toPixelCenter(line.to, viewport, dimensions, cellSize, pan);
+    const from = this.toPixelCenter(
+      line.from,
+      viewState,
+      dimensions,
+      cellSize,
+      pan,
+    );
+    const to = this.toPixelCenter(line.to, viewState, dimensions, cellSize, pan);
 
     ctx.beginPath();
     ctx.lineWidth = 1.5;
     ctx.globalAlpha = 0.8;
 
     switch (line.style) {
-      case 'baseline':
+      case "baseline":
         ctx.strokeStyle = this.BASELINE_COLOR;
         ctx.setLineDash([]);
         break;
-      case 'control':
+      case "control":
         ctx.strokeStyle = this.CONTROL_LINE_COLOR;
         ctx.setLineDash([6, 4]);
         break;
-      case 'tangent':
+      case "tangent":
         ctx.strokeStyle = this.TANGENT_LINE_COLOR;
         ctx.setLineDash([2, 3]);
         ctx.globalAlpha = 0.5;
@@ -114,22 +124,26 @@ export class GuideGeometryRenderer {
   private static drawHandle(
     ctx: CanvasRenderingContext2D,
     handle: ControlPointHandle,
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     dimensions: Dimensions,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
     const { px, py } = this.toPixelCenter(
-      handle.position, viewport, dimensions, cellSize, pan
+      handle.position,
+      viewState,
+      dimensions,
+      cellSize,
+      pan,
     );
     const r = this.HANDLE_RADIUS;
 
     ctx.globalAlpha = 0.9;
 
-    if (handle.style === 'placed') {
+    if (handle.style === "placed") {
       // Filled diamond for placed points
       ctx.fillStyle = this.HANDLE_PLACED_COLOR;
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = "#000000";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(px, py - r);
@@ -149,11 +163,11 @@ export class GuideGeometryRenderer {
     }
 
     // Draw label above handle
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = 2;
     ctx.font = this.LABEL_FONT;
-    ctx.textAlign = 'center';
+    ctx.textAlign = "center";
     const labelY = py - r - 6;
     ctx.strokeText(handle.label, px, labelY);
     ctx.fillText(handle.label, px, labelY);

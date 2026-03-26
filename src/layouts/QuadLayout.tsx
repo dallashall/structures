@@ -9,7 +9,6 @@ import { Preview3DView } from "../panels/Preview3DView";
 interface QuadLayoutProps {
   project: Project;
   activeLayers: LayerState;
-  isPlacementMode: boolean;
   selectedBlockId: string | null;
 }
 
@@ -26,7 +25,6 @@ export function QuadLayout({
   project,
   activeLayers,
   selectedBlockId,
-  isPlacementMode,
 }: QuadLayoutProps) {
   const frontContainerRef = React.useRef<HTMLDivElement>(null);
   const leftContainerRef = React.useRef<HTMLDivElement>(null);
@@ -153,7 +151,7 @@ export function QuadLayout({
             width={canvasSizes.front.width}
             height={canvasSizes.front.height}
             selectedBlockId={selectedBlockId}
-            isPlacementMode={isPlacementMode}
+
           />
         </div>
       </Box>
@@ -223,7 +221,7 @@ export function QuadLayout({
             width={canvasSizes.left.width}
             height={canvasSizes.left.height}
             selectedBlockId={selectedBlockId}
-            isPlacementMode={isPlacementMode}
+
           />
         </div>
       </Box>
@@ -293,7 +291,7 @@ export function QuadLayout({
             width={canvasSizes.top.width}
             height={canvasSizes.top.height}
             selectedBlockId={selectedBlockId}
-            isPlacementMode={isPlacementMode}
+
           />
         </div>
       </Box>
@@ -339,6 +337,7 @@ export function QuadLayout({
           <Preview3DView
             width={canvasSizes.preview3D.width}
             height={canvasSizes.preview3D.height}
+            isVisible={true}
           />
         </div>
       </Box>

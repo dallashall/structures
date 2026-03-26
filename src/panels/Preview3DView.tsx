@@ -13,9 +13,13 @@ import {
   ZoomIn,
   ZoomOut,
   RestartAlt,
+  Tune,
 } from "@mui/icons-material";
 import { Babylon3D } from "../core/Babylon3D";
 import { editorState } from "../core/EditorState";
+import { RenderSettingsModal } from "../components/RenderSettingsModal";
+
+import type { RenderSettings } from "../types";
 
 // Axis colors that work in dark/light mode
 const AXIS_COLORS = {
@@ -27,6 +31,7 @@ const AXIS_COLORS = {
 interface Preview3DViewProps {
   width: number;
   height: number;
+  isVisible?: boolean;
 }
 
 /**
@@ -44,7 +49,7 @@ interface Preview3DViewProps {
  * - The component only handles React ↔ DOM lifecycle management
  * - It's a bridge between React's declarative props and imperative BabylonJS APIs
  */
-export function Preview3DView({ width, height }: Preview3DViewProps) {
+export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const controllerRef = React.useRef<Babylon3D | null>(null);
   const theme = useTheme();
@@ -52,6 +57,12 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
   // Render cache for slice guide visibility (source of truth is EditorState)
   const [sliceGuideVisibility, setSliceGuideVisibility] = React.useState(
     editorState.getSliceGuideVisibility()
+  );
+
+  // Render settings state
+  const [renderSettingsOpen, setRenderSettingsOpen] = React.useState(false);
+  const [renderSettings, setRenderSettings] = React.useState<RenderSettings>(
+    editorState.getRenderSettings()
   );
 
   // Create and mount controller
@@ -74,6 +85,16 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     };
   }, []);
 
+  // Pause/resume render loop based on visibility
+  React.useEffect(() => {
+    if (!controllerRef.current) return;
+    if (isVisible === false) {
+      controllerRef.current.pause();
+    } else {
+      controllerRef.current.resume();
+    }
+  }, [isVisible]);
+
   // Handle resize
   React.useEffect(() => {
     controllerRef.current?.resize(width, height);
@@ -87,6 +108,17 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     editorState.on('sliceguide:axis:toggled', handleSliceGuideToggled);
     return () => {
       editorState.off('sliceguide:axis:toggled', handleSliceGuideToggled);
+    };
+  }, []);
+
+  // Subscribe to render settings changes
+  React.useEffect(() => {
+    const handleRenderSettingsApplied = (settings: RenderSettings) => {
+      setRenderSettings(settings);
+    };
+    editorState.on('rendersettings:applied', handleRenderSettingsApplied);
+    return () => {
+      editorState.off('rendersettings:applied', handleRenderSettingsApplied);
     };
   }, []);
 
@@ -112,6 +144,12 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
     controllerRef.current?.resetCamera();
   };
 
+  // Render settings handlers
+  const handleOpenSettings = () => { setRenderSettingsOpen(true); };
+  const handleCloseSettings = () => { setRenderSettingsOpen(false); };
+  const handleApplySettings = (settings: RenderSettings) => { editorState.setRenderSettings(settings); };
+  const handleResetSettings = () => { editorState.resetRenderSettings(); };
+
   return (
     <Box
       sx={{
@@ -131,7 +169,7 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
         }}
       />
 
-      {/* Slice Guides Toggle Buttons */}
+      {/* Slice Guides Toggle Buttons + Settings */}
       <Box
         sx={{
           position: "absolute",
@@ -145,6 +183,21 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
           spacing={0.5}
           sx={{ bgcolor: "rgba(0, 0, 0, 0.5)", borderRadius: 1, p: 0.5 }}
         >
+          <Tooltip title="Render Settings">
+            <IconButton
+              onClick={handleOpenSettings}
+              size="small"
+              sx={{
+                color: "#aaa",
+                "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+                minWidth: 24,
+                width: 24,
+                height: 24,
+              }}
+            >
+              <Tune sx={{ fontSize: "1rem" }} />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Toggle X Slice (Width)">
             <IconButton
               onClick={handleToggleX}
@@ -300,6 +353,15 @@ export function Preview3DView({ width, height }: Preview3DViewProps) {
           </Stack>
         </Stack>
       </Box>
+
+      {/* Render Settings Modal */}
+      <RenderSettingsModal
+        isOpen={renderSettingsOpen}
+        settings={renderSettings}
+        onClose={handleCloseSettings}
+        onApply={handleApplySettings}
+        onReset={handleResetSettings}
+      />
     </Box>
   );
 }

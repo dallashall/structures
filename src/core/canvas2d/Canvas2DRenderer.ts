@@ -1,15 +1,18 @@
-import type { Dimensions, ViewType, Block } from '../../types';
-import { projectView } from '../../projections/ProjectView';
-import { blockProjection } from '../../projections/BlockProjection';
-import { blockRegistry } from '../BlockRegistry';
-import { textureManager } from '../TextureManager';
-import { editorState } from '../EditorState';
-import { draftingService } from '../DraftingService';
-import type { Canvas2DViewport } from './Canvas2DViewport';
-import type { Canvas2DPreviewManager } from './Canvas2DPreviewManager';
-import { getOpacityForDistance, getColorForAxis, getLayerForAxis } from './renderingUtils';
-import { GuideGeometryRenderer } from './GuideGeometryRenderer';
-import type { GuideGeometry } from '../painting/strategies/GuideGeometry';
+import type { Dimensions, ViewType, Block } from "../../types";
+import { projectView } from "../../projections/ProjectView";
+import { blockProjection } from "../../projections/BlockProjection";
+import { blockRegistry } from "../BlockRegistry";
+import { textureManager } from "../TextureManager";
+import { editorState } from "../EditorState";
+import { draftingService } from "../DraftingService";
+import type { ViewState } from "./ViewState";
+import type { PreviewData } from "../tools/ToolBase";
+import {
+  getOpacityForDistance,
+  getColorForAxis,
+  getLayerForAxis,
+} from "./renderingUtils";
+import { GuideGeometryRenderer } from "./GuideGeometryRenderer";
 
 /**
  * Canvas2DColorConfig - Color configuration for dark/light mode support
@@ -32,34 +35,34 @@ export interface Canvas2DColorConfig {
  * Default dark mode colors
  */
 export const DARK_MODE_COLORS: Canvas2DColorConfig = {
-  grid: '#444444',
-  axisX: '#e74c3c',
-  axisY: '#3498db',
-  axisZ: '#27ae60',
-  axisLabel: '#a0a0a0',
-  metaBlockBorder: '#2a2a2a',
-  metaBlockBorderUnconfirmed: '#4CAF50',
-  metaBlockFill: '#e0e0e0',
-  metaBlockArrow: '#1a1a1a',
-  layerIndicator: '#666666',
-  textSecondary: '#888888',
+  grid: "#444444",
+  axisX: "#e74c3c",
+  axisY: "#3498db",
+  axisZ: "#27ae60",
+  axisLabel: "#a0a0a0",
+  metaBlockBorder: "#2a2a2a",
+  metaBlockBorderUnconfirmed: "#4CAF50",
+  metaBlockFill: "#e0e0e0",
+  metaBlockArrow: "#1a1a1a",
+  layerIndicator: "#666666",
+  textSecondary: "#888888",
 };
 
 /**
  * Default light mode colors
  */
 export const LIGHT_MODE_COLORS: Canvas2DColorConfig = {
-  grid: '#cccccc',
-  axisX: '#e74c3c',
-  axisY: '#3498db',
-  axisZ: '#27ae60',
-  axisLabel: '#666666',
-  metaBlockBorder: '#000000',
-  metaBlockBorderUnconfirmed: '#4CAF50',
-  metaBlockFill: '#ffffff',
-  metaBlockArrow: '#000000',
-  layerIndicator: '#999999',
-  textSecondary: '#666666',
+  grid: "#cccccc",
+  axisX: "#e74c3c",
+  axisY: "#3498db",
+  axisZ: "#27ae60",
+  axisLabel: "#666666",
+  metaBlockBorder: "#000000",
+  metaBlockBorderUnconfirmed: "#4CAF50",
+  metaBlockFill: "#ffffff",
+  metaBlockArrow: "#000000",
+  layerIndicator: "#999999",
+  textSecondary: "#666666",
 };
 
 /**
@@ -70,10 +73,10 @@ export const LIGHT_MODE_COLORS: Canvas2DColorConfig = {
  * - Block rendering
  * - Coordinate axes legend
  * - Active layer indicators
- * - Preview rendering (outline, point)
+ * - Tool preview rendering (hover highlights, guide geometry)
+ * - Shared preview rendering (DraftingService blocks)
  *
  * This class is stateless - all state comes from parameters.
- * It reads from viewport and previewManager but never modifies them.
  */
 export class Canvas2DRenderer {
   private colors: Canvas2DColorConfig = DARK_MODE_COLORS;
@@ -81,7 +84,7 @@ export class Canvas2DRenderer {
   constructor(
     private ctx: CanvasRenderingContext2D,
     private canvas: HTMLCanvasElement,
-    colors?: Canvas2DColorConfig
+    colors?: Canvas2DColorConfig,
   ) {
     if (colors) {
       this.colors = colors;
@@ -99,18 +102,19 @@ export class Canvas2DRenderer {
    * Main render method - draws the entire canvas
    */
   render(
-    viewport: Canvas2DViewport,
-    previewManager: Canvas2DPreviewManager,
-    guideGeometry?: GuideGeometry | null
+    viewState: ViewState,
+    previewData: PreviewData | null,
   ): void {
     const project = projectView.getCached();
     if (!project) return;
 
     const { width, height } = this.canvas;
-    const { gridWidth, gridHeight } = viewport.getGridDimensions(project.dimensions);
+    const { gridWidth, gridHeight } = viewState.getGridDimensions(
+      project.dimensions,
+    );
     const activeLayers = editorState.getActiveLayers();
-    const cellSize = viewport.getCellSize();
-    const pan = viewport.getPan();
+    const cellSize = viewState.getCellSize();
+    const pan = viewState.getPan();
 
     // Clear canvas
     this.ctx.clearRect(0, 0, width, height);
@@ -119,28 +123,47 @@ export class Canvas2DRenderer {
     this.drawGrid(gridWidth, gridHeight, cellSize, pan);
 
     // Draw blocks
-    this.drawBlocks(project.dimensions, viewport, activeLayers);
+    this.drawBlocks(project.dimensions, viewState, activeLayers);
 
     // Draw meta block
-    this.drawMetaBlock(project.dimensions, viewport, activeLayers, cellSize, pan);
+    this.drawMetaBlock(
+      project.dimensions,
+      viewState,
+      activeLayers,
+      cellSize,
+      pan,
+    );
 
     // Draw coordinate axes
-    this.drawCoordinateAxes(viewport);
+    this.drawCoordinateAxes(viewState);
 
     // Draw active layer indicators
-    this.drawActiveLayerIndicators(project.dimensions, viewport, activeLayers);
-
-    // Draw previews
-    this.drawOutlinePreview(previewManager, viewport, gridWidth, gridHeight, cellSize, pan);
-    this.drawPointPreview(previewManager, gridWidth, gridHeight, cellSize, pan);
+    this.drawActiveLayerIndicators(project.dimensions, viewState, activeLayers);
 
     // Draw guide geometry (control points + guide lines for multi-click tools)
-    if (guideGeometry) {
-      GuideGeometryRenderer.draw(this.ctx, guideGeometry, viewport, project.dimensions, cellSize, pan);
+    if (previewData?.guide) {
+      GuideGeometryRenderer.draw(
+        this.ctx,
+        previewData.guide,
+        viewState,
+        project.dimensions,
+        cellSize,
+        pan,
+      );
     }
 
-    // Draw shared preview (draft blocks on top of guides)
-    this.drawSharedPreview(viewport, project.dimensions, gridWidth, gridHeight, cellSize, pan);
+    // Draw shared preview (draft blocks from DraftingService + EditorState)
+    this.drawSharedPreview(
+      viewState,
+      project.dimensions,
+      gridWidth,
+      gridHeight,
+      cellSize,
+      pan,
+    );
+
+    // Draw tool-local preview (hover highlight)
+    this.drawToolPreview(previewData, gridWidth, gridHeight, cellSize, pan);
   }
 
   /**
@@ -150,7 +173,7 @@ export class Canvas2DRenderer {
     gridWidth: number,
     gridHeight: number,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
     this.ctx.strokeStyle = this.colors.grid;
     this.ctx.lineWidth = 1;
@@ -184,12 +207,12 @@ export class Canvas2DRenderer {
    */
   private getFaceIndexForView(view: ViewType): number {
     const faceMap: Record<ViewType, number> = {
-      'front': 0,  // Face 0 - CONFIRMED
-      'back': 1,   // Face 1 - CONFIRMED
-      'left': 3,   // Face 3 - trying reverse of previous swap
-      'right': 2,  // Face 2 - trying reverse of previous swap
-      'top': 4,    // Face 4 - CONFIRMED
-      'bottom': 5, // Face 5 - CONFIRMED
+      front: 0,
+      back: 1,
+      left: 3,
+      right: 2,
+      top: 4,
+      bottom: 5,
     };
     return faceMap[view] ?? 0;
   }
@@ -204,15 +227,13 @@ export class Canvas2DRenderer {
     px: number,
     py: number,
     cellSize: number,
-    opacity: number
+    opacity: number,
   ): boolean {
     // Check for tinted texture first (glass variants)
     const tintedTexture = textureManager.getTintedTexture(block.id, faceIndex);
     if (tintedTexture) {
-      // Use tinted texture
       this.ctx.imageSmoothingEnabled = false;
 
-      // For glass, use fixed 0.15 opacity
       if (block.isTransparent) {
         this.ctx.globalAlpha = opacity * 0.15;
       } else {
@@ -221,8 +242,14 @@ export class Canvas2DRenderer {
 
       this.ctx.drawImage(
         tintedTexture,
-        0, 0, tintedTexture.width, tintedTexture.height,
-        px + 1, py + 1, cellSize - 2, cellSize - 2
+        0,
+        0,
+        tintedTexture.width,
+        tintedTexture.height,
+        px + 1,
+        py + 1,
+        cellSize - 2,
+        cellSize - 2,
       );
 
       this.ctx.globalAlpha = 1.0;
@@ -241,8 +268,14 @@ export class Canvas2DRenderer {
 
     this.ctx.drawImage(
       atlas.image,
-      coords.x, coords.y, coords.width, coords.height,
-      px + 1, py + 1, cellSize - 2, cellSize - 2
+      coords.x,
+      coords.y,
+      coords.width,
+      coords.height,
+      px + 1,
+      py + 1,
+      cellSize - 2,
+      cellSize - 2,
     );
 
     this.ctx.globalAlpha = 1.0;
@@ -254,30 +287,25 @@ export class Canvas2DRenderer {
    *
    * OPTIMIZATION: Uses layer-based queries instead of iterating all blocks.
    * Only queries blocks within ±2 layers of the active layer (opacity range).
-   * This is O(blocks in visible layers) instead of O(all blocks).
    */
   private drawBlocks(
     dimensions: Dimensions,
-    viewport: Canvas2DViewport,
-    activeLayers: { x: number; y: number; z: number }
+    viewState: ViewState,
+    activeLayers: { x: number; y: number; z: number },
   ): void {
-    const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
-    const cellSize = viewport.getCellSize();
-    const pan = viewport.getPan();
+    const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
+    const cellSize = viewState.getCellSize();
+    const pan = viewState.getPan();
 
-    // Determine which axis is the depth axis for this view
-    const axes = viewport.getAxesForView();
-    const depthAxis = axes.depth.toLowerCase() as 'x' | 'y' | 'z';
+    const axes = viewState.getAxesForView();
+    const depthAxis = axes.depth.toLowerCase() as "x" | "y" | "z";
     const activeLayer = getLayerForAxis(axes.depth, activeLayers);
 
-    // Query blocks in visible layer range (±2 for opacity falloff)
-    // Distance 0: 100%, distance 1: 30%, distance 2: 10%, distance 3+: 0%
     const minLayer = Math.max(0, activeLayer - 2);
     const maxLayer = activeLayer + 2;
 
     const visibleBlocks: Array<{ blockData: any; distance: number }> = [];
 
-    // Collect blocks from all visible layers (synchronous cached read)
     const blockIndex = blockProjection.getCached();
     for (let layer = minLayer; layer <= maxLayer; layer++) {
       const blocksAtLayer = blockIndex.getBlocksAtLayer(depthAxis, layer);
@@ -288,44 +316,38 @@ export class Canvas2DRenderer {
       }
     }
 
-    // Render visible blocks (synchronous)
     for (const { blockData, distance } of visibleBlocks) {
-      const { gridX, gridY } = viewport.positionToGridSync(blockData.position, dimensions);
+      const { gridX, gridY } = viewState.modelToGrid(
+        blockData.position,
+        dimensions,
+      );
 
-      // Check bounds
       if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
         continue;
       }
 
-      // Calculate opacity
       const opacity = getOpacityForDistance(distance);
-
-      // Don't render if 3+ layers away
       if (opacity === 0.0) continue;
 
-      // Get block
       const { block } = blockRegistry.getBlockWithState(
         blockData.blockType,
-        blockData.blockState
+        blockData.blockState,
       );
       if (!block) continue;
 
-      // Draw block
       const px = pan.x + gridX * cellSize;
       const py = pan.y + gridY * cellSize;
 
-      // Try to render with texture (atlas or tinted)
-      const faceIndex = this.getFaceIndexForView(viewport.getViewType());
+      const faceIndex = this.getFaceIndexForView(viewState.getViewType());
       const rendered = this.renderBlockTexture(
         block,
         faceIndex,
         px,
         py,
         cellSize,
-        opacity
+        opacity,
       );
 
-      // Fallback to color if texture unavailable
       if (!rendered) {
         this.ctx.fillStyle = block.color;
         this.ctx.globalAlpha = opacity;
@@ -340,22 +362,28 @@ export class Canvas2DRenderer {
    */
   private drawMetaBlock(
     dimensions: Dimensions,
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     activeLayers: { x: number; y: number; z: number },
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
     const project = projectView.getCached();
     if (!project?.metaBlock) return;
 
-    const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
+    const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
     const metaBlock = project.metaBlock;
-    const distance = viewport.getLayerDistance(metaBlock.position, activeLayers);
+    const distance = viewState.getLayerDistance(
+      metaBlock.position,
+      activeLayers,
+    );
     const opacity = getOpacityForDistance(distance);
 
     if (opacity === 0.0) return;
 
-    const { gridX, gridY } = viewport.positionToGridSync(metaBlock.position, dimensions);
+    const { gridX, gridY } = viewState.modelToGrid(
+      metaBlock.position,
+      dimensions,
+    );
 
     if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
       return;
@@ -367,24 +395,23 @@ export class Canvas2DRenderer {
     const centerY = py + cellSize / 2;
 
     const isConfirmed = metaBlock.isConfirmed;
-    const strokeColor = isConfirmed ? this.colors.metaBlockBorder : this.colors.metaBlockBorderUnconfirmed;
+    const strokeColor = isConfirmed
+      ? this.colors.metaBlockBorder
+      : this.colors.metaBlockBorderUnconfirmed;
     const strokeWidth = isConfirmed ? 2 : 3;
     const fillOpacity = isConfirmed ? opacity : opacity * 0.7;
 
-    // Draw background
     this.ctx.fillStyle = this.colors.metaBlockFill;
     this.ctx.globalAlpha = fillOpacity;
     this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
-    // Draw border
     this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = strokeWidth;
     this.ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
-    // Draw directional arrow
     this.ctx.strokeStyle = this.colors.metaBlockArrow;
     this.ctx.fillStyle = this.colors.metaBlockArrow;
-    this.drawMetaBlockArrow(centerX, centerY, cellSize, metaBlock.direction, viewport);
+    this.drawMetaBlockArrow(centerX, centerY, cellSize);
     this.ctx.globalAlpha = 1.0;
   }
 
@@ -395,18 +422,14 @@ export class Canvas2DRenderer {
     centerX: number,
     centerY: number,
     cellSize: number,
-    _direction: string,
-    _viewport: Canvas2DViewport
   ): void {
     const arrowSize = Math.min(cellSize * 0.6, 20);
     this.ctx.strokeStyle = this.colors.metaBlockArrow;
     this.ctx.fillStyle = this.colors.metaBlockArrow;
     this.ctx.lineWidth = 2;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
 
-    // Simplified arrow rendering (implementation details omitted for brevity)
-    // In real code, would include full arrow drawing logic
     this.ctx.beginPath();
     this.ctx.arc(centerX, centerY, arrowSize * 0.2, 0, Math.PI * 2);
     this.ctx.fill();
@@ -415,19 +438,19 @@ export class Canvas2DRenderer {
   /**
    * Draw coordinate axes legend
    */
-  private drawCoordinateAxes(viewport: Canvas2DViewport): void {
+  private drawCoordinateAxes(viewState: ViewState): void {
     const { height } = this.canvas;
     const padding = 20;
     const arrowLength = 40;
     const arrowHeadSize = 8;
 
-    const axes = viewport.getAxesForView();
+    const axes = viewState.getAxesForView();
     const originX = padding;
     const originY = height - padding;
 
     this.ctx.save();
     this.ctx.lineWidth = 2;
-    this.ctx.font = 'bold 14px sans-serif';
+    this.ctx.font = "bold 14px sans-serif";
 
     // Horizontal axis
     const hColor = getColorForAxis(axes.horizontal);
@@ -438,15 +461,19 @@ export class Canvas2DRenderer {
     this.ctx.lineTo(originX + arrowLength, originY);
     this.ctx.stroke();
 
-    // Arrowhead
     this.ctx.beginPath();
     this.ctx.moveTo(originX + arrowLength, originY);
-    this.ctx.lineTo(originX + arrowLength - arrowHeadSize, originY - arrowHeadSize / 2);
-    this.ctx.lineTo(originX + arrowLength - arrowHeadSize, originY + arrowHeadSize / 2);
+    this.ctx.lineTo(
+      originX + arrowLength - arrowHeadSize,
+      originY - arrowHeadSize / 2,
+    );
+    this.ctx.lineTo(
+      originX + arrowLength - arrowHeadSize,
+      originY + arrowHeadSize / 2,
+    );
     this.ctx.closePath();
     this.ctx.fill();
 
-    // Label
     this.ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
 
     // Vertical axis
@@ -458,15 +485,19 @@ export class Canvas2DRenderer {
     this.ctx.lineTo(originX, originY - arrowLength);
     this.ctx.stroke();
 
-    // Arrowhead
     this.ctx.beginPath();
     this.ctx.moveTo(originX, originY - arrowLength);
-    this.ctx.lineTo(originX - arrowHeadSize / 2, originY - arrowLength + arrowHeadSize);
-    this.ctx.lineTo(originX + arrowHeadSize / 2, originY - arrowLength + arrowHeadSize);
+    this.ctx.lineTo(
+      originX - arrowHeadSize / 2,
+      originY - arrowLength + arrowHeadSize,
+    );
+    this.ctx.lineTo(
+      originX + arrowHeadSize / 2,
+      originY - arrowLength + arrowHeadSize,
+    );
     this.ctx.closePath();
     this.ctx.fill();
 
-    // Label
     this.ctx.fillText(axes.vertical, originX - 5, originY - arrowLength - 8);
 
     // Depth indicator
@@ -480,8 +511,8 @@ export class Canvas2DRenderer {
     this.ctx.fill();
     this.ctx.fillText(axes.depth, depthX + 12, depthY + 5);
     this.ctx.fillStyle = this.colors.textSecondary;
-    this.ctx.font = '12px sans-serif';
-    this.ctx.fillText('(depth)', depthX + 12, depthY + 18);
+    this.ctx.font = "12px sans-serif";
+    this.ctx.fillText("(depth)", depthX + 12, depthY + 18);
 
     this.ctx.restore();
   }
@@ -491,13 +522,13 @@ export class Canvas2DRenderer {
    */
   private drawActiveLayerIndicators(
     dimensions: Dimensions,
-    viewport: Canvas2DViewport,
-    activeLayers: { x: number; y: number; z: number }
+    viewState: ViewState,
+    activeLayers: { x: number; y: number; z: number },
   ): void {
-    const { gridWidth, gridHeight } = viewport.getGridDimensions(dimensions);
-    const cellSize = viewport.getCellSize();
-    const pan = viewport.getPan();
-    const axes = viewport.getAxesForView();
+    const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
+    const cellSize = viewState.getCellSize();
+    const pan = viewState.getPan();
+    const axes = viewState.getAxesForView();
 
     this.ctx.save();
 
@@ -506,7 +537,11 @@ export class Canvas2DRenderer {
       const axisName = axes.vertical;
       const layerValue = getLayerForAxis(axisName, activeLayers);
       const color = getColorForAxis(axisName);
-      const gridPos = viewport.getGridPositionForLayer(axisName, layerValue, dimensions);
+      const gridPos = viewState.getGridPositionForLayer(
+        axisName,
+        layerValue,
+        dimensions,
+      );
 
       if (gridPos !== null && gridPos >= 0 && gridPos < gridHeight) {
         const py = pan.y + gridPos * cellSize;
@@ -522,7 +557,6 @@ export class Canvas2DRenderer {
         this.ctx.stroke();
         this.ctx.globalAlpha = 1.0;
 
-        // Edge markers
         this.ctx.lineWidth = 5;
         this.ctx.beginPath();
         this.ctx.moveTo(gridLeft - 2, py);
@@ -533,12 +567,11 @@ export class Canvas2DRenderer {
         this.ctx.lineTo(gridRight + 2, py);
         this.ctx.stroke();
 
-        // Labels
         this.ctx.fillStyle = color;
-        this.ctx.font = 'bold 11px sans-serif';
-        this.ctx.textAlign = 'right';
+        this.ctx.font = "bold 11px sans-serif";
+        this.ctx.textAlign = "right";
         this.ctx.fillText(`${axisName}: ${layerValue}`, gridLeft - 8, py - 6);
-        this.ctx.textAlign = 'left';
+        this.ctx.textAlign = "left";
         this.ctx.fillText(`${axisName}: ${layerValue}`, gridRight + 8, py - 6);
       }
     }
@@ -548,7 +581,11 @@ export class Canvas2DRenderer {
       const axisName = axes.horizontal;
       const layerValue = getLayerForAxis(axisName, activeLayers);
       const color = getColorForAxis(axisName);
-      const gridPos = viewport.getGridPositionForLayer(axisName, layerValue, dimensions);
+      const gridPos = viewState.getGridPositionForLayer(
+        axisName,
+        layerValue,
+        dimensions,
+      );
 
       if (gridPos !== null && gridPos >= 0 && gridPos < gridWidth) {
         const px = pan.x + gridPos * cellSize;
@@ -564,7 +601,6 @@ export class Canvas2DRenderer {
         this.ctx.stroke();
         this.ctx.globalAlpha = 1.0;
 
-        // Edge markers
         this.ctx.lineWidth = 5;
         this.ctx.beginPath();
         this.ctx.moveTo(px, gridTop - 2);
@@ -575,10 +611,9 @@ export class Canvas2DRenderer {
         this.ctx.lineTo(px, gridBottom + 2);
         this.ctx.stroke();
 
-        // Labels
         this.ctx.fillStyle = color;
-        this.ctx.font = 'bold 11px sans-serif';
-        this.ctx.textAlign = 'center';
+        this.ctx.font = "bold 11px sans-serif";
+        this.ctx.textAlign = "center";
         this.ctx.fillText(`${axisName}: ${layerValue}`, px, gridTop - 8);
         this.ctx.fillText(`${axisName}: ${layerValue}`, px, gridBottom + 18);
       }
@@ -588,121 +623,49 @@ export class Canvas2DRenderer {
   }
 
   /**
-   * Draw outline preview (dashed rectangle and preview blocks)
-   */
-  private drawOutlinePreview(
-    previewManager: Canvas2DPreviewManager,
-    _viewport: Canvas2DViewport,
-    gridWidth: number,
-    gridHeight: number,
-    cellSize: number,
-    pan: { x: number; y: number }
-  ): void {
-    const selectedBlock = editorState.getSelectedBlock();
-    if (!selectedBlock) return;
-
-    const block = blockRegistry.getBlock(selectedBlock);
-    if (!block) return;
-
-    const preview = previewManager.getOutlinePreview();
-    if (!preview) return;
-
-    const minX = Math.min(preview.start.gridX, preview.end.gridX);
-    const maxX = Math.max(preview.start.gridX, preview.end.gridX);
-    const minY = Math.min(preview.start.gridY, preview.end.gridY);
-    const maxY = Math.max(preview.start.gridY, preview.end.gridY);
-
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.5;
-    this.ctx.fillStyle = block.color;
-
-    // Draw outline blocks
-    for (let x = minX; x <= maxX; x++) {
-      if (x >= 0 && x < gridWidth && minY >= 0 && minY < gridHeight) {
-        const px = pan.x + x * cellSize;
-        const py = pan.y + minY * cellSize;
-        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      }
-      if (x >= 0 && x < gridWidth && maxY >= 0 && maxY < gridHeight) {
-        const px = pan.x + x * cellSize;
-        const py = pan.y + maxY * cellSize;
-        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      }
-    }
-
-    for (let y = minY + 1; y < maxY; y++) {
-      if (minX >= 0 && minX < gridWidth && y >= 0 && y < gridHeight) {
-        const px = pan.x + minX * cellSize;
-        const py = pan.y + y * cellSize;
-        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      }
-      if (maxX >= 0 && maxX < gridWidth && y >= 0 && y < gridHeight) {
-        const px = pan.x + maxX * cellSize;
-        const py = pan.y + y * cellSize;
-        this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      }
-    }
-
-    // Draw dashed rectangle guide
-    this.ctx.setLineDash([5, 5]);
-    this.ctx.strokeStyle = block.color;
-    this.ctx.lineWidth = 2;
-    this.ctx.globalAlpha = 0.7;
-    const rectX = pan.x + minX * cellSize;
-    const rectY = pan.y + minY * cellSize;
-    const rectWidth = (maxX - minX + 1) * cellSize;
-    const rectHeight = (maxY - minY + 1) * cellSize;
-    this.ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
-    this.ctx.setLineDash([]);
-
-    this.ctx.restore();
-  }
-
-  /**
-   * Draw shared preview blocks from EditorStateManager and DraftingService
+   * Draw shared preview blocks from EditorState and DraftingService
    *
-   * Two types of preview:
-   * 1. EditorStateManager: Local 2D-specific preview (outline drag, point hover, Alt key preview)
-   * 2. DraftingService: Shared painting preview (draft blocks during painting, shared across ALL views)
+   * Two sources:
+   * 1. EditorState: Local 2D-specific preview (Alt key preview)
+   * 2. DraftingService: Shared painting preview (draft blocks during painting)
    *
    * In delete mode, preview blocks are shown with a red tint to indicate removal.
    */
   private drawSharedPreview(
-    viewport: Canvas2DViewport,
+    viewState: ViewState,
     dimensions: Dimensions,
     gridWidth: number,
     gridHeight: number,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
-    // Combine preview blocks from both sources
     const editorPreview = editorState.getPreviewBlocks() || [];
     const draftPreview = draftingService.getPreview() || [];
 
-    // Combine both arrays
     const allPreviewBlocks = [...editorPreview, ...draftPreview];
-
     if (allPreviewBlocks.length === 0) return;
 
     const deleteMode = editorState.getDeleteMode();
 
     this.ctx.save();
-    this.ctx.globalAlpha = 0.7; // Preview blocks at 70% opacity for visibility
+    this.ctx.globalAlpha = 0.7;
 
-    // Render each preview block
     for (const previewBlock of allPreviewBlocks) {
       if (!previewBlock.blockType) continue;
 
       const block = blockRegistry.getBlock(previewBlock.blockType);
       if (!block) continue;
 
-      // Convert 3D position to 2D grid coordinates
-      const gridPos = viewport.positionToGridSync(previewBlock.position, dimensions);
+      const gridPos = viewState.modelToGrid(
+        previewBlock.position,
+        dimensions,
+      );
 
-      // Check if within visible grid
       if (
-        gridPos.gridX < 0 || gridPos.gridX >= gridWidth ||
-        gridPos.gridY < 0 || gridPos.gridY >= gridHeight
+        gridPos.gridX < 0 ||
+        gridPos.gridX >= gridWidth ||
+        gridPos.gridY < 0 ||
+        gridPos.gridY >= gridHeight
       ) {
         continue;
       }
@@ -710,13 +673,11 @@ export class Canvas2DRenderer {
       const px = pan.x + gridPos.gridX * cellSize;
       const py = pan.y + gridPos.gridY * cellSize;
 
-      // Draw block with normal color
       this.ctx.fillStyle = block.color;
       this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
-      // If in delete mode, overlay red tint to indicate removal
       if (deleteMode) {
-        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)'; // Red overlay at 40% opacity
+        this.ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
         this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       }
     }
@@ -725,41 +686,47 @@ export class Canvas2DRenderer {
   }
 
   /**
-   * Draw point preview (single cell highlight)
+   * Draw tool-local preview blocks (hover highlight)
+   *
+   * Reads from previewData.blocks, which contains UniversalPosition
+   * with pre-resolved gridX/gridY coordinates.
    */
-  private drawPointPreview(
-    previewManager: Canvas2DPreviewManager,
+  private drawToolPreview(
+    previewData: PreviewData | null,
     gridWidth: number,
     gridHeight: number,
     cellSize: number,
-    pan: { x: number; y: number }
+    pan: { x: number; y: number },
   ): void {
+    if (!previewData || previewData.blocks.length === 0) return;
+
     const selectedBlock = editorState.getSelectedBlock();
     if (!selectedBlock) return;
 
     const block = blockRegistry.getBlock(selectedBlock);
     if (!block) return;
 
-    const preview = previewManager.getPointPreview();
-    if (!preview) return;
+    this.ctx.save();
 
-    const { gridX, gridY } = preview;
-    if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
-      return;
+    for (const previewBlock of previewData.blocks) {
+      const { gridX, gridY } = previewBlock.position;
+      if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight) {
+        continue;
+      }
+
+      const px = pan.x + gridX * cellSize;
+      const py = pan.y + gridY * cellSize;
+
+      this.ctx.fillStyle = block.color;
+      this.ctx.globalAlpha = 0.5;
+      this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+
+      this.ctx.strokeStyle = block.color;
+      this.ctx.lineWidth = 2;
+      this.ctx.globalAlpha = 0.8;
+      this.ctx.strokeRect(px + 2, py + 2, cellSize - 4, cellSize - 4);
     }
 
-    const px = pan.x + gridX * cellSize;
-    const py = pan.y + gridY * cellSize;
-
-    this.ctx.save();
-    this.ctx.fillStyle = block.color;
-    this.ctx.globalAlpha = 0.5;
-    this.ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-
-    this.ctx.strokeStyle = block.color;
-    this.ctx.lineWidth = 2;
-    this.ctx.globalAlpha = 0.8;
-    this.ctx.strokeRect(px + 2, py + 2, cellSize - 4, cellSize - 4);
     this.ctx.restore();
   }
 }

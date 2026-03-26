@@ -80,7 +80,6 @@ export function QuadEditorView({
           <QuadLayout
             project={project}
             activeLayers={activeLayers}
-            isPlacementMode={isPlacementMode}
             selectedBlockId={selectedBlock}
           />
         </Box>
