@@ -35,6 +35,8 @@ import { setupLighting, setupAxes } from './rendering/SceneSetup';
 import { setupEnvironment, updateEnvironmentIntensity } from './rendering/EnvironmentSetup';
 import { setupShadows, registerShadowCaster, unregisterShadowCaster, disposeShadows, refreshShadowMap } from './rendering/ShadowSetup';
 import { setupPostProcessing, updatePostProcessing, disposePostProcessing } from './rendering/PostProcessingSetup';
+import { applyLightingPreset, getEmissiveScale, getEmissiveLightIntensity } from './rendering/LightingPresets';
+import { EmissiveLighting } from './rendering/EmissiveLighting';
 import { MaterialResolver } from './rendering/MaterialResolver';
 import { CameraRig } from './rendering/CameraRig';
 import { BlockRenderer } from './rendering/BlockRenderer';
@@ -59,6 +61,7 @@ export class Babylon3D {
 
   // Rendering enhancement systems
   private shadowSystem: ShadowSystem | null = null;
+  private emissiveLighting: EmissiveLighting | null = null;
   private postProcessing: PostProcessingPipelines | null = null;
   private renderSettings: RenderSettings | null = null;
   private paused = false;
@@ -137,7 +140,7 @@ export class Babylon3D {
   }
 
   /**
-   * Initialize rendering enhancements: environment, PBR, shadows, post-processing, edges
+   * Initialize rendering enhancements: environment, PBR, lighting, shadows, emissive lights, post-processing, edges
    */
   private async initRenderingEnhancements(): Promise<void> {
     const settings = editorState.getRenderSettings();
@@ -146,7 +149,11 @@ export class Babylon3D {
     // Environment texture (must come first for PBR)
     setupEnvironment(this.scene, settings.environmentIntensity);
 
-    // PBR materials
+    // Lighting preset (adjusts lights, clear color, environment intensity)
+    applyLightingPreset(this.scene, settings.lightingPreset);
+
+    // PBR materials with preset-driven emissive scale
+    this.materialResolver.setEmissiveScale(getEmissiveScale(settings.lightingPreset));
     this.materialResolver.setPBREnabled(settings.pbrEnabled);
 
     // Shadow system with mesh lifecycle callbacks
@@ -154,6 +161,12 @@ export class Babylon3D {
     const handleMeshCreated = (mesh: AbstractMesh): void => { registerShadowCaster(this.shadowSystem, mesh); };
     const handleMeshDestroyed = (mesh: AbstractMesh): void => { unregisterShadowCaster(this.shadowSystem, mesh); };
     this.blockRenderer.setMeshLifecycleCallbacks(handleMeshCreated, handleMeshDestroyed);
+
+    // Emissive point lights for luminous blocks
+    this.emissiveLighting = new EmissiveLighting(
+      this.scene,
+      getEmissiveLightIntensity(settings.lightingPreset),
+    );
 
     // Layer highlight + edge rendering
     this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
@@ -195,6 +208,7 @@ export class Babylon3D {
 
     // Destroy rendering enhancements
     disposePostProcessing(this.postProcessing);
+    this.emissiveLighting?.dispose();
     disposeShadows(this.shadowSystem);
 
     // Destroy modules
@@ -272,6 +286,7 @@ export class Babylon3D {
     const project = await projectView.getProject();
     if (!project) {
       this.blockRenderer.clearAll();
+      this.emissiveLighting?.clearAll();
       return;
     }
 
@@ -299,12 +314,14 @@ export class Babylon3D {
     // Focus camera on structure
     this.cameraRig.focusOnStructure(project.dimensions);
 
+    // Sync emissive point lights for luminous blocks
+    this.emissiveLighting?.syncLights(blocks);
+
     // Update previews
     this.previewRenderer.updatePreviewMeshes();
 
     // Refresh shadow map (renders once, not every frame)
     refreshShadowMap(this.shadowSystem);
-
   }
 
   private handlePreviewChanged(): void {
@@ -336,7 +353,15 @@ export class Babylon3D {
     const prev = this.renderSettings;
     this.renderSettings = settings;
 
-    // Environment intensity (in-place update)
+    // Lighting preset (adjusts lights, clear color, environment, emissive scale, point light params)
+    if (!prev || prev.lightingPreset !== settings.lightingPreset) {
+      applyLightingPreset(this.scene, settings.lightingPreset);
+      this.materialResolver.setEmissiveScale(getEmissiveScale(settings.lightingPreset));
+      this.blockRenderer.reapplyMaterials();
+      this.emissiveLighting?.setIntensity(getEmissiveLightIntensity(settings.lightingPreset));
+    }
+
+    // Environment intensity (in-place update, overrides preset value if slider adjusted)
     updateEnvironmentIntensity(this.scene, settings.environmentIntensity);
 
     // PBR toggle
@@ -374,8 +399,6 @@ export class Babylon3D {
     this.postProcessing = updatePostProcessing(
       this.postProcessing, this.scene, camera, settings
     );
-
-
   }
 
   private reregisterAllShadowCasters(): void {

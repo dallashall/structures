@@ -22,6 +22,7 @@ import { resolvePBRCategory, isLuminousBlock } from './PBRCategoryMap';
 export class MaterialResolver {
   private scene: Scene;
   private pbrEnabled = false;
+  private emissiveScale = 0.3;
 
   // Cached materials (one per block type)
   private materials = new Map<string, Material>();
@@ -40,6 +41,20 @@ export class MaterialResolver {
     if (this.pbrEnabled !== enabled) {
       this.pbrEnabled = enabled;
       // Cache must be cleared since material types change
+      for (const material of this.materials.values()) {
+        material.dispose();
+      }
+      this.materials.clear();
+    }
+  }
+
+  /**
+   * Set the emissive scale applied to luminous block materials.
+   * Call when lighting preset changes. Clears cache to force rebuild.
+   */
+  setEmissiveScale(scale: number): void {
+    if (this.emissiveScale !== scale) {
+      this.emissiveScale = scale;
       for (const material of this.materials.values()) {
         material.dispose();
       }
@@ -70,6 +85,10 @@ export class MaterialResolver {
     const material = this.pbrEnabled
       ? this.createPBRBlockMaterial(blockId, block, blockName)
       : this.createStandardBlockMaterial(blockId, block, blockName);
+
+    // Allow more simultaneous lights (default 4 only leaves 2 slots after
+    // hemispheric + directional; 8 leaves 6 for nearby emissive point lights)
+    material.maxSimultaneousLights = 32;
 
     this.materials.set(blockId, material);
     return material;
@@ -143,16 +162,21 @@ export class MaterialResolver {
   private createStandardBlockMaterial(blockId: string, block: any, blockName: string): StandardMaterial {
     // Try tinted texture first (for glass, grass, leaves)
     const tintedTexture = textureManager.getTintedTexture(blockId, 0);
+    let material: StandardMaterial;
+
     if (tintedTexture) {
-      return this.createStandardTintedMaterial(blockId, blockName, tintedTexture);
+      material = this.createStandardTintedMaterial(blockId, blockName, tintedTexture);
+    } else {
+      const atlasMaterial = this.createStandardAtlasMaterial(blockId, block, blockName);
+      material = atlasMaterial ?? this.createColorMaterial(blockId, block.color);
     }
 
-    // Try atlas
-    const atlasMaterial = this.createStandardAtlasMaterial(blockId, block, blockName);
-    if (atlasMaterial) return atlasMaterial;
+    // Apply emissive to luminous blocks (same as PBR path)
+    if (isLuminousBlock(blockName)) {
+      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
+    }
 
-    // Fallback to color
-    return this.createColorMaterial(blockId, block.color);
+    return material;
   }
 
   private createStandardTintedMaterial(
@@ -268,7 +292,6 @@ export class MaterialResolver {
     material.albedoTexture = babylonTexture;
     material.metallic = preset.metallic;
     material.roughness = preset.roughness;
-    material.environmentIntensity = preset.environmentIntensity;
 
     if (blockName.includes('glass')) {
       material.alpha = 0.15;
@@ -288,7 +311,7 @@ export class MaterialResolver {
     }
 
     if (isLuminousBlock(blockName)) {
-      material.emissiveColor = hexToColor3(block.color).scale(0.4);
+      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
     }
 
     return material;
@@ -311,7 +334,6 @@ export class MaterialResolver {
     material.albedoTexture = babylonTexture;
     material.metallic = preset.metallic;
     material.roughness = preset.roughness;
-    material.environmentIntensity = preset.environmentIntensity;
 
     const needsAlphaCutout =
       blockName.includes('vine') ||
@@ -331,7 +353,7 @@ export class MaterialResolver {
     }
 
     if (isLuminousBlock(blockName)) {
-      material.emissiveColor = hexToColor3(block.color).scale(0.4);
+      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
     }
 
     return material;
@@ -343,10 +365,9 @@ export class MaterialResolver {
     material.albedoColor = hexToColor3(color);
     material.metallic = preset.metallic;
     material.roughness = preset.roughness;
-    material.environmentIntensity = preset.environmentIntensity;
 
     if (isLuminousBlock(id)) {
-      material.emissiveColor = hexToColor3(color).scale(0.4);
+      material.emissiveColor = hexToColor3(color).scale(this.emissiveScale);
     }
 
     return material;

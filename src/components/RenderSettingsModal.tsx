@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { ExpandMore, Close } from '@mui/icons-material';
 
-import type { RenderSettings } from '../types';
+import type { RenderSettings, LightingPreset } from '../types';
 
 interface RenderSettingsModalProps {
   isOpen: boolean;
@@ -67,6 +67,10 @@ export function RenderSettingsModal({
 
   const handleSelect = (key: keyof RenderSettings) => (event: any) => {
     onApply({ ...settings, [key]: Number(event.target.value) });
+  };
+
+  const handlePresetChange = (event: any) => {
+    onApply({ ...settings, lightingPreset: event.target.value as LightingPreset });
   };
 
   const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +141,20 @@ export function RenderSettingsModal({
           </AccordionSummary>
           <AccordionDetails>
             <Stack spacing={1.5}>
+              <SettingRow label="Lighting Preset">
+                <Select
+                  value={settings.lightingPreset}
+                  onChange={handlePresetChange}
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value="day">Day</MenuItem>
+                  <MenuItem value="night">Night</MenuItem>
+                  <MenuItem value="cloudy">Cloudy</MenuItem>
+                </Select>
+              </SettingRow>
+              <Divider sx={{ my: 0.5 }} />
+
               <SettingRow label="PBR Materials">
                 <Switch
                   checked={settings.pbrEnabled}
@@ -317,7 +335,7 @@ export function RenderSettingsModal({
                 <Slider
                   value={settings.bloomThreshold}
                   onChange={handleSlider('bloomThreshold')}
-                  min={0.5} max={1.5} step={0.05}
+                  min={0.1} max={1.5} step={0.05}
                   size="small"
                   valueLabelDisplay="auto"
                   disabled={!settings.bloomEnabled}

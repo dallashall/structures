@@ -2,7 +2,7 @@
  * Core type definitions for the Structures editor
  */
 
-import type { BlockIndex } from '../core/BlockIndex';
+import type { BlockIndex } from "../core/BlockIndex";
 
 export interface Vector3D {
   x: number;
@@ -16,25 +16,38 @@ export interface Dimensions {
   depth: number;
 }
 
-export type Direction = 'north' | 'south' | 'east' | 'west';
+export type Direction = "north" | "south" | "east" | "west";
 
 // Layout modes for editor
-export type LayoutMode = 'tabbed' | 'quad';
+export type LayoutMode = "tabbed" | "quad";
 
 // Orthographic view types with perspectives (front/back, left/right, top/bottom)
-export type ViewType = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+export type ViewType = "front" | "back" | "left" | "right" | "top" | "bottom";
 
 // Painting modes
-export type PaintMode = 'point' | 'fill' | 'outline' | 'circle' | 'arch' | 'curve';
+export type PaintMode =
+  | "point"
+  | "fill"
+  | "outline"
+  | "circle"
+  | "arch"
+  | "curve";
 
 // Painting behaviors (modifiers that affect how painting works)
-export type PaintBehavior = 'normal' | 'only-replace' | 'selective-replace' | 'delete';
+export type PaintBehavior =
+  | "normal"
+  | "only-replace"
+  | "selective-replace"
+  | "delete";
 
 // Shape fill modes (separate from paint behavior)
-export type ShapeFillMode = 'outline' | 'filled';
+export type ShapeFillMode = "outline" | "filled";
+
+// Lighting presets for 3D renderer
+export type LightingPreset = "day" | "night" | "cloudy";
 
 // Depth painting modes
-export type DepthPaintMode = 'through' | 'until-collision';
+export type DepthPaintMode = "through" | "until-collision";
 
 // Depth configuration for painting through multiple layers
 export interface DepthConfig {
@@ -44,10 +57,13 @@ export interface DepthConfig {
 }
 
 // Circle drawing modes (for modifier keys)
-export type CircleDrawMode = 'center-radius' | 'bounding-box' | 'constrained-box';
+export type CircleDrawMode =
+  | "center-radius"
+  | "bounding-box"
+  | "constrained-box";
 
 // Tool types (simplified for initial implementation)
-export type ToolType = 'paint' | 'erase';
+export type ToolType = "paint" | "erase";
 
 // Layer state for all three dimensions
 export interface LayerState {
@@ -63,12 +79,17 @@ export interface LayerState {
  */
 export interface BlockStateProperties {
   // Directional properties
-  facing?: 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
-  axis?: 'x' | 'y' | 'z';
+  facing?: "north" | "south" | "east" | "west" | "up" | "down";
+  axis?: "x" | "y" | "z";
 
   // Shape properties
-  half?: 'upper' | 'lower' | 'top' | 'bottom';
-  shape?: 'straight' | 'inner_left' | 'inner_right' | 'outer_left' | 'outer_right';
+  half?: "upper" | "lower" | "top" | "bottom";
+  shape?:
+    | "straight"
+    | "inner_left"
+    | "inner_right"
+    | "outer_left"
+    | "outer_right";
 
   // Connection properties (fences, walls, glass panes)
   north?: boolean;
@@ -85,7 +106,7 @@ export interface BlockStateProperties {
   open?: boolean;
 
   // Numeric properties
-  age?: number;  // crops: 0-7
+  age?: number; // crops: 0-7
   level?: number; // water: 0-15
   rotation?: number; // 0-15
 
@@ -97,7 +118,7 @@ export interface BlockStateProperties {
  * Blockstate - combines block type with properties
  */
 export interface BlockState {
-  blockType: string;  // Base block ID (e.g., 'stone', 'oak_stairs')
+  blockType: string; // Base block ID (e.g., 'stone', 'oak_stairs')
   properties: BlockStateProperties;
 }
 
@@ -107,48 +128,48 @@ export interface BlockState {
  * Texture face mapping for multi-face blocks
  */
 export interface TextureFaceMap {
-  all?: string;      // Single texture for all faces
-  top?: string;      // Y+ face
-  bottom?: string;   // Y- face
-  side?: string;     // X+, X-, Z+, Z- faces
-  north?: string;    // Z- face
-  south?: string;    // Z+ face
-  east?: string;     // X+ face
-  west?: string;     // X- face
-  front?: string;    // Directional front
-  back?: string;     // Directional back
+  all?: string; // Single texture for all faces
+  top?: string; // Y+ face
+  bottom?: string; // Y- face
+  side?: string; // X+, X-, Z+, Z- faces
+  north?: string; // Z- face
+  south?: string; // Z+ face
+  east?: string; // X+ face
+  west?: string; // X- face
+  front?: string; // Directional front
+  back?: string; // Directional back
 }
 
 /**
  * Block variant - different visual appearances of same block
  */
 export interface BlockVariant {
-  id: string;                    // Variant ID (e.g., 'oak_stairs_facing_north')
-  name: string;                  // Display name
-  stateProperties: BlockStateProperties;  // Required properties for this variant
-  textures: TextureFaceMap;     // Texture mapping for each face
+  id: string; // Variant ID (e.g., 'oak_stairs_facing_north')
+  name: string; // Display name
+  stateProperties: BlockStateProperties; // Required properties for this variant
+  textures: TextureFaceMap; // Texture mapping for each face
 }
 
 /**
  * Texture pack metadata
  */
 export interface TexturePack {
-  id: string;           // Unique pack ID (e.g., 'pixelbox')
-  name: string;         // Display name
-  version: string;      // Pack version
-  resolution: number;   // Texture resolution (16, 32, 64, etc.)
-  basePath: string;     // Base path to texture files
-  mappings: Record<string, string>;  // blockId → texture filename mapping
+  id: string; // Unique pack ID (e.g., 'pixelbox')
+  name: string; // Display name
+  version: string; // Pack version
+  resolution: number; // Texture resolution (16, 32, 64, etc.)
+  basePath: string; // Base path to texture files
+  mappings: Record<string, string>; // blockId → texture filename mapping
 }
 
 /**
  * Loaded texture data
  */
 export interface LoadedTexture {
-  id: string;           // Texture ID
-  path: string;         // File path
-  image: HTMLImageElement;  // Loaded image for Canvas2D
-  babylonTexture?: any;     // BabylonJS Texture instance for 3D
+  id: string; // Texture ID
+  path: string; // File path
+  image: HTMLImageElement; // Loaded image for Canvas2D
+  babylonTexture?: any; // BabylonJS Texture instance for 3D
   width: number;
   height: number;
   loaded: boolean;
@@ -163,45 +184,51 @@ export interface AtlasMetadata {
   textureSize: number;
   textureCount: number;
   textureMap: Record<string, { x: number; y: number; u: number; v: number }>;
-  blockFaceUV: Record<string, {
-    faceUV: Array<{ u0: number; v0: number; u1: number; v1: number }>;
-    faceOrder: string[];
-  }>;
-  blockFaceUV3D: Record<string, {
-    faceUV: Array<{ u0: number; v0: number; u1: number; v1: number }>;
-    faceOrder: string[];
-  }>;
+  blockFaceUV: Record<
+    string,
+    {
+      faceUV: Array<{ u0: number; v0: number; u1: number; v1: number }>;
+      faceOrder: string[];
+    }
+  >;
+  blockFaceUV3D: Record<
+    string,
+    {
+      faceUV: Array<{ u0: number; v0: number; u1: number; v1: number }>;
+      faceOrder: string[];
+    }
+  >;
 }
 
 // ============ ENHANCED BLOCK TYPE ============
 
 export interface Block {
-  id: string;                      // Minecraft-compatible internal ID
-  name: string;                    // Display name
-  category: string;                // Category for palette organization
-  color: string;                   // Fallback hex color
+  id: string; // Minecraft-compatible internal ID
+  name: string; // Display name
+  category: string; // Category for palette organization
+  color: string; // Fallback hex color
 
   // Minecraft identifiers for import/export
-  javaId?: string;                 // Java Edition identifier
-  bedrockId?: string;              // Bedrock Edition identifier
+  javaId?: string; // Java Edition identifier
+  bedrockId?: string; // Bedrock Edition identifier
 
   // Texture mapping
-  textures?: TextureFaceMap;       // Texture file references
+  textures?: TextureFaceMap; // Texture file references
 
   // Blockstate support
-  hasBlockState: boolean;          // Whether this block has variants
-  variants?: BlockVariant[];       // Available variants
-  defaultState?: BlockStateProperties;  // Default state
+  hasBlockState: boolean; // Whether this block has variants
+  variants?: BlockVariant[]; // Available variants
+  defaultState?: BlockStateProperties; // Default state
 
   // Block properties
-  isCube: boolean;                 // Whether block is a simple cube
-  isTransparent: boolean;          // For rendering transparency (glass)
+  isCube: boolean; // Whether block is a simple cube
+  isTransparent: boolean; // For rendering transparency (glass)
 }
 
 export interface BlockData {
   position: Vector3D;
-  blockType: string;               // References Block.id
-  blockState?: BlockStateProperties;  // Optional blockstate
+  blockType: string; // References Block.id
+  blockState?: BlockStateProperties; // Optional blockstate
 }
 
 export interface MetaBlock {
@@ -265,7 +292,7 @@ export interface CameraState {
 }
 
 export interface ExportConfig {
-  format: 'json' | 'nbt';
+  format: "json" | "nbt";
   filename: string;
   includeMetadata: boolean;
 }
@@ -323,16 +350,19 @@ export interface RenderSettings {
 
   // Layer highlight
   layerHighlightEnabled: boolean;
+
+  // Lighting preset
+  lightingPreset: LightingPreset;
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   fxaaEnabled: false,
   msaaSamples: 4,
   pbrEnabled: true,
-  environmentIntensity: 1.0,
+  environmentIntensity: 0.5,
   edgesEnabled: true,
   edgesWidth: 1.0,
-  edgesColor: '#000000',
+  edgesColor: "#000000",
   shadowsEnabled: true,
   shadowMapSize: 1024,
   shadowDarkness: 0.5,
@@ -341,12 +371,13 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   ssaoIntensity: 1.0,
   ssaoSamples: 16,
   bloomEnabled: true,
-  bloomIntensity: 0.15,
-  bloomThreshold: 0.8,
+  bloomIntensity: 0.25,
+  bloomThreshold: 0.3,
   toneMapping: true,
   contrast: 1.1,
   exposure: 1.0,
   layerHighlightEnabled: false,
+  lightingPreset: "night",
 };
 
 // Utility type for event handlers
@@ -368,4 +399,4 @@ export type {
   ProjectDataEvent,
   Snapshot,
   VersionPointer,
-} from '../events/types';
+} from "../events/types";
