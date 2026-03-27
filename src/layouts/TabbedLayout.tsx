@@ -54,10 +54,14 @@ export function TabbedLayout({
       }
     };
 
-    updateSize();
+    // Defer measurement until after layout is complete
+    requestAnimationFrame(() => {
+      updateSize();
+    });
+
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [activeView]); // Re-measure when view changes
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     onViewChange(newValue);

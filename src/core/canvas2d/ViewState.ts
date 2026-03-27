@@ -31,7 +31,7 @@ export class ViewState {
   ) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
-    void this.initializePan();
+    this.initializePan();
   }
 
   /**
@@ -40,7 +40,7 @@ export class ViewState {
   setCanvasSize(width: number, height: number): void {
     this.canvasWidth = width;
     this.canvasHeight = height;
-    void this.initializePan();
+    this.initializePan();
   }
 
   /**
@@ -48,14 +48,14 @@ export class ViewState {
    */
   setViewType(viewType: ViewType): void {
     this.viewType = viewType;
-    void this.initializePan();
+    this.initializePan();
   }
 
   /**
    * Initialize pan to center the grid
    */
-  private async initializePan(): Promise<void> {
-    const project = await projectView.getProject();
+  private initializePan(): void {
+    const project = projectView.getCached();
     if (!project) return;
 
     const { gridWidth, gridHeight } = this.getGridDimensions(

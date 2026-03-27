@@ -221,7 +221,7 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
               <Typography
                 variant="caption"
                 fontWeight="bold"
-                sx={{ fontSize: "0.75rem" }}
+                sx={{ fontSize: "0.75rem", lineHeight: 1 }}
               >
                 X
               </Typography>
@@ -251,7 +251,7 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
               <Typography
                 variant="caption"
                 fontWeight="bold"
-                sx={{ fontSize: "0.75rem" }}
+                sx={{ fontSize: "0.75rem", lineHeight: 1 }}
               >
                 Y
               </Typography>
@@ -281,7 +281,7 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
               <Typography
                 variant="caption"
                 fontWeight="bold"
-                sx={{ fontSize: "0.75rem" }}
+                sx={{ fontSize: "0.75rem", lineHeight: 1 }}
               >
                 Z
               </Typography>

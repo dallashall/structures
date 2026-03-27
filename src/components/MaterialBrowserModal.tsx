@@ -17,6 +17,7 @@ import type { Block } from '../types';
 
 import { BlockTextureSwatch } from './BlockTextureSwatch';
 import { findBlockById } from '../utils/blockUtils';
+import { throttled } from '../utils/throttle';
 
 interface MaterialBrowserModalProps {
   isOpen: boolean;
@@ -61,8 +62,8 @@ export function MaterialBrowserModal({
 }: MaterialBrowserModalProps) {
   // Local state for grabbed material
   const [grabbedBlockId, setGrabbedBlockId] = React.useState<string | null>(null);
-  // Track mouse position for floating grabbed material
-  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+  // Ref to floating element for direct DOM manipulation (no re-renders)
+  const floatingElementRef = React.useRef<HTMLDivElement>(null);
 
   // Reset grabbed material when modal opens/closes
   React.useEffect(() => {
@@ -72,10 +73,16 @@ export function MaterialBrowserModal({
   }, [isOpen]);
 
   // Track mouse movement to position floating grabbed material
+  // Uses direct DOM manipulation with transform (GPU-accelerated, no layout reflow)
+  // Throttled to ~60fps to avoid excessive JavaScript execution
   React.useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    };
+    const handleMouseMove = throttled((event: MouseEvent) => {
+      if (floatingElementRef.current) {
+        // Use transform instead of left/top to avoid layout reflows
+        floatingElementRef.current.style.transform =
+          `translate(${event.clientX + 10}px, ${event.clientY + 10}px) scale(1.1)`;
+      }
+    }, 16); // 16ms = ~60fps
 
     if (grabbedBlockId) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -83,7 +90,8 @@ export function MaterialBrowserModal({
     }
   }, [grabbedBlockId]);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    event.stopPropagation(); // Prevent clearing grabbed material when changing tabs
     onTabChange(newValue);
   };
 
@@ -91,16 +99,25 @@ export function MaterialBrowserModal({
     onSearchChange(event.target.value);
   };
 
-  const handleMaterialClick = (blockId: string) => {
+  const handleMaterialClick = (blockId: string, event: React.MouseEvent) => {
     // Click to grab the material
+    event.stopPropagation(); // Prevent clearing grabbed material
     setGrabbedBlockId(blockId);
   };
 
-  const handleSlotClick = (index: number) => {
+  const handleSlotClick = (index: number, event: React.MouseEvent) => {
     // If we have a grabbed material, drop it into the slot
+    event.stopPropagation(); // Prevent clearing grabbed material
     if (grabbedBlockId) {
       onAssignSlot(index, grabbedBlockId);
       setGrabbedBlockId(null); // Clear after dropping
+    }
+  };
+
+  const handleClearGrabbedMaterial = () => {
+    // Click on empty space clears the grabbed material
+    if (grabbedBlockId) {
+      setGrabbedBlockId(null);
     }
   };
 
@@ -112,6 +129,11 @@ export function MaterialBrowserModal({
     }
   };
 
+  const handleClose = (event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent clearing grabbed material when closing
+    onClose();
+  };
+
   const matchesSearchQuery = (block: Block) =>
     block.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -119,12 +141,12 @@ export function MaterialBrowserModal({
   const currentCategoryBlocks = filteredBlocks.filter(CATEGORIES[selectedTab].filter);
 
   // Named handler creators for callbacks
-  const createMaterialClickHandler = (blockId: string) => () => {
-    handleMaterialClick(blockId);
+  const createMaterialClickHandler = (blockId: string) => (event: React.MouseEvent) => {
+    handleMaterialClick(blockId, event);
   };
 
-  const createSlotClickHandler = (index: number) => () => {
-    handleSlotClick(index);
+  const createSlotClickHandler = (index: number) => (event: React.MouseEvent) => {
+    handleSlotClick(index, event);
   };
 
   const renderTab = (category: typeof CATEGORIES[0], index: number) => (
@@ -217,6 +239,7 @@ export function MaterialBrowserModal({
         onClose={onClose}
         maxWidth="md"
         fullWidth
+        onClick={handleClearGrabbedMaterial}
         onContextMenu={handleCancel}
         slotProps={{
           paper: {
@@ -251,7 +274,7 @@ export function MaterialBrowserModal({
               </Box>
             )}
           </Box>
-          <IconButton onClick={onClose} size="small" aria-label="Close">
+          <IconButton onClick={handleClose} size="small" aria-label="Close">
             <Close />
           </IconButton>
         </DialogTitle>
@@ -320,10 +343,11 @@ export function MaterialBrowserModal({
       {/* Floating Grabbed Material - Follows cursor */}
       {grabbedBlock && (
         <Box
+          ref={floatingElementRef}
           sx={{
             position: 'fixed',
-            left: mousePosition.x + 10,
-            top: mousePosition.y + 10,
+            left: 0,
+            top: 0,
             zIndex: 2000,
             pointerEvents: 'none',
             display: 'flex',
@@ -335,7 +359,7 @@ export function MaterialBrowserModal({
             borderRadius: 1,
             boxShadow: 6,
             p: 0.5,
-            transform: 'scale(1.1)',
+            willChange: 'transform',
           }}
         >
           <BlockTextureSwatch blockId={grabbedBlock.id} blockName={grabbedBlock.name} size="L" fallbackColor={grabbedBlock.color} />
