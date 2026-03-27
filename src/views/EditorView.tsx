@@ -71,6 +71,8 @@ function EditorViewComponent(props: EditorViewProps) {
     isMaterialBrowserOpen,
     materialBrowserSearchQuery,
     materialBrowserSelectedTab,
+    activeBlockState,
+    hasBlockState,
     onBackToWelcome,
   } = props;
 
@@ -181,6 +183,8 @@ function EditorViewComponent(props: EditorViewProps) {
               foregroundBlock={foregroundBlock}
               backgroundBlock={backgroundBlock}
               activeMaterialSlot={activeMaterialSlot}
+              activeBlockState={activeBlockState}
+              hasBlockState={hasBlockState}
               paintMode={paintMode}
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}
@@ -207,6 +211,8 @@ function EditorViewComponent(props: EditorViewProps) {
               foregroundBlock={foregroundBlock}
               backgroundBlock={backgroundBlock}
               activeMaterialSlot={activeMaterialSlot}
+              activeBlockState={activeBlockState}
+              hasBlockState={hasBlockState}
               paintMode={paintMode}
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}

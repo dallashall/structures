@@ -6,6 +6,7 @@ import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
+import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
  * ArchPaintTool - Arch painting via 3 clicks
@@ -130,7 +131,7 @@ export class ArchPaintTool extends MultiClickTool {
   }
 
   private async persistOps(
-    ops: { position: { x: number; y: number; z: number }; blockType: string | null }[],
+    ops: PaintOperation[],
   ): Promise<void> {
     if (ops.length === 0) return;
 
@@ -151,12 +152,13 @@ export class ArchPaintTool extends MultiClickTool {
   }
 }
 
-const hasBlockType = (op: { blockType: string | null }): op is { position: { x: number; y: number; z: number }; blockType: string } =>
+const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;
 
-const extractPosition = (op: { position: { x: number; y: number; z: number } }) => op.position;
+const extractPosition = (op: PaintOperation) => op.position;
 
-const toPlacedBlock = (op: { position: { x: number; y: number; z: number }; blockType: string | null }) => ({
+const toPlacedBlock = (op: PaintOperation) => ({
   position: op.position,
   blockType: op.blockType!,
+  blockState: op.blockState,
 });

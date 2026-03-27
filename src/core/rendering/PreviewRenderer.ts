@@ -14,6 +14,7 @@ import { blockRegistry } from '../BlockRegistry';
 import { editorState } from '../EditorState';
 import { draftingService } from '../DraftingService';
 import { toBabylonVector, positionKey, centerInCell } from './babylonUtils';
+import { getGeometryKey, createSlabMesh, facingToYRotation } from './GeometryFactory';
 
 import type { MaterialResolver } from './MaterialResolver';
 
@@ -63,6 +64,7 @@ export class PreviewRenderer {
 
   /**
    * Create a ghost/preview mesh (semi-transparent)
+   * Uses GeometryFactory for non-cube shapes (slabs, etc.)
    */
   private createPreviewMesh(previewBlock: import('../EditorState').PreviewBlock): void {
     const key = positionKey(previewBlock.position);
@@ -70,20 +72,34 @@ export class PreviewRenderer {
     const block = blockRegistry.getBlock(previewBlock.blockType!);
     if (!block) return;
 
-    const box = MeshBuilder.CreateBox(
-      `preview_${key}`,
-      { size: 1 },
-      this.scene
-    );
+    const geoKey = getGeometryKey(previewBlock.blockType!, previewBlock.blockState);
+    let mesh: Mesh;
 
-    box.position = toBabylonVector(centerInCell(previewBlock.position));
+    if (geoKey.startsWith('slab_')) {
+      const slabType = (previewBlock.blockState?.type ?? 'bottom') as 'top' | 'bottom' | 'double';
+      mesh = createSlabMesh(this.scene, slabType);
+      mesh.name = `preview_${key}`;
+    } else {
+      mesh = MeshBuilder.CreateBox(
+        `preview_${key}`,
+        { size: 1 },
+        this.scene,
+      );
+    }
+
+    mesh.position = toBabylonVector(centerInCell(previewBlock.position));
+
+    // Apply rotation for oriented blocks
+    if (previewBlock.blockState?.facing) {
+      mesh.rotation.y = facingToYRotation(previewBlock.blockState.facing);
+    }
 
     const deleteMode = editorState.getDeleteMode();
-    box.material = deleteMode
+    mesh.material = deleteMode
       ? this.materialResolver.resolveDeleteGhost(block.color)
       : this.materialResolver.resolveGhost(block.color);
 
-    this.previewMeshes.set(key, box);
+    this.previewMeshes.set(key, mesh);
   }
 
   /**

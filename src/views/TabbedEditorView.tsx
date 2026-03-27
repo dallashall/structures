@@ -1,9 +1,10 @@
 import { Box, Stack, Tab, Paper, Divider } from '@mui/material';
 import { TabList, TabContext } from '@mui/lab';
-import type { Project, Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
+import type { Project, Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { TabbedLayout } from '../layouts/TabbedLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
+import { BlockStateControls } from '../components/BlockStateControls';
 import { ForegroundBackgroundSelector } from '../components/ForegroundBackgroundSelector';
 import { QuickSelectPalette } from '../components/QuickSelectPalette';
 import { editorState } from '../core/EditorState';
@@ -16,6 +17,8 @@ interface TabbedEditorViewProps {
   foregroundBlock: string | null;
   backgroundBlock: string | null;
   activeMaterialSlot: 'foreground' | 'background';
+  activeBlockState: BlockStateProperties;
+  hasBlockState: boolean;
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
@@ -49,6 +52,8 @@ export function TabbedEditorView({
   foregroundBlock,
   backgroundBlock,
   activeMaterialSlot,
+  activeBlockState,
+  hasBlockState,
   paintMode,
   paintBehavior: _paintBehavior,
   shapeFillMode: _shapeFillMode,
@@ -79,6 +84,9 @@ export function TabbedEditorView({
   const handleClickBackground = () => {
     editorState.setActiveMaterialSlot('background');
   };
+
+  const handleSetBlockState = (state: BlockStateProperties) => editorState.setActiveBlockState(state);
+
   return (
     <TabContext value={activeView}>
       {/* Tab Bar */}
@@ -130,6 +138,16 @@ export function TabbedEditorView({
               paintMode={paintMode}
               onPaintModeChange={onPaintModeChange}
             />
+            {hasBlockState && (
+              <>
+                <Divider />
+                <BlockStateControls
+                  activeBlockState={activeBlockState}
+                  hasBlockState={hasBlockState}
+                  onSetBlockState={handleSetBlockState}
+                />
+              </>
+            )}
             <Divider />
             <QuickSelectPalette
               slots={quickSelectSlots}

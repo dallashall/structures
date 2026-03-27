@@ -9,7 +9,9 @@ import type {
   PaintBehavior,
   ShapeFillMode,
   DepthConfig,
+  BlockStateProperties,
 } from "../types";
+import { blockRegistry } from "../core/BlockRegistry";
 
 /**
  * Props injected by withEditorState HOC
@@ -31,6 +33,8 @@ export interface WithEditorStateProps {
   isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   sliceGuideVisibility: { x: boolean; y: boolean; z: boolean };
+  activeBlockState: BlockStateProperties;
+  hasBlockState: boolean;
 }
 
 /**
@@ -111,6 +115,19 @@ export function withEditorState<P extends object>(
     const [sliceGuideVisibility, setSliceGuideVisibility] = React.useState(
       editorState.getSliceGuideVisibility()
     );
+    const [activeBlockState, setActiveBlockState] = React.useState<BlockStateProperties>(
+      editorState.getActiveBlockState()
+    );
+
+    const deriveHasBlockState = (blockId: string | null): boolean => {
+      if (!blockId) return false;
+      const block = blockRegistry.getBlock(blockId);
+      return block?.hasBlockState ?? false;
+    };
+
+    const [hasBlockState, setHasBlockState] = React.useState<boolean>(
+      deriveHasBlockState(editorState.getSelectedBlock())
+    );
 
     React.useEffect(() => {
       const handleLayoutChanged = (mode: LayoutMode) => {
@@ -130,6 +147,9 @@ export function withEditorState<P extends object>(
         // Also update foreground/background based on active slot
         setForegroundBlock(editorState.getForegroundBlock());
         setBackgroundBlock(editorState.getBackgroundBlock());
+        // Update hasBlockState based on new selected block
+        setHasBlockState(deriveHasBlockState(blockId));
+        setActiveBlockState(editorState.getActiveBlockState());
       };
 
       const handleMaterialSlotChanged = (slot: 'foreground' | 'background') => {
@@ -174,6 +194,10 @@ export function withEditorState<P extends object>(
         setSliceGuideVisibility(editorState.getSliceGuideVisibility());
       };
 
+      const handleBlockStateApplied = (state: BlockStateProperties) => {
+        setActiveBlockState(state);
+      };
+
       // Subscribe to events
       editorState.on("layout:toggled", handleLayoutChanged);
       editorState.on("view:switched", handleViewChanged);
@@ -198,6 +222,7 @@ export function withEditorState<P extends object>(
       editorState.on("actionbar:toggled", handleActionBarChanged);
       editorState.on("quickselect:assigned", handleQuickSelectChanged);
       editorState.on("sliceguide:axis:toggled", handleSliceGuideToggled);
+      editorState.on("blockstate:applied", handleBlockStateApplied);
 
       // Cleanup
       return () => {
@@ -224,6 +249,7 @@ export function withEditorState<P extends object>(
         editorState.off("actionbar:toggled", handleActionBarChanged);
         editorState.off("quickselect:assigned", handleQuickSelectChanged);
         editorState.off("sliceguide:axis:toggled", handleSliceGuideToggled);
+        editorState.off("blockstate:applied", handleBlockStateApplied);
       };
     }, []);
 
@@ -246,6 +272,8 @@ export function withEditorState<P extends object>(
         isActionBarExpanded={isActionBarExpanded}
         quickSelectSlots={quickSelectSlots}
         sliceGuideVisibility={sliceGuideVisibility}
+        activeBlockState={activeBlockState}
+        hasBlockState={hasBlockState}
       />
     );
   };

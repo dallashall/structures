@@ -5,6 +5,7 @@ import { FillPaintStrategy } from "../painting/strategies/FillPaintStrategy";
 import { editorState } from "../EditorState";
 import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
+import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
  * FillPaintTool - Flood fill on click release
@@ -100,12 +101,13 @@ export class FillPaintTool extends ClickDragReleaseTool {
   }
 }
 
-const extractPosition = (op: { position: { x: number; y: number; z: number } }) => op.position;
+const extractPosition = (op: PaintOperation) => op.position;
 
-const hasBlockType = (op: { blockType: string | null }): op is { position: { x: number; y: number; z: number }; blockType: string } =>
+const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;
 
-const toPlacedBlock = (op: { position: { x: number; y: number; z: number }; blockType: string | null }) => ({
+const toPlacedBlock = (op: PaintOperation) => ({
   position: op.position,
   blockType: op.blockType!,
+  blockState: op.blockState,
 });

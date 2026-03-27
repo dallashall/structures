@@ -1,7 +1,13 @@
-import type { ViewType } from "../../types";
+import type { ViewType, BlockStateProperties } from "../../types";
 import type { GridBlock } from "./GridBlock";
 import { blockRegistry } from "../BlockRegistry";
 import { textureManager } from "../TextureManager";
+
+/**
+ * Views where Z (height) is on the vertical grid axis.
+ * For these views, slab top/bottom affects the visible rendering area.
+ */
+const Z_VERTICAL_VIEWS = new Set<ViewType>(['front', 'back', 'left', 'right']);
 
 /**
  * Face index mapping for each orthographic view.
@@ -41,6 +47,15 @@ export function drawPersistentBlocks(
     );
     if (!block) continue;
 
+    // Apply clipping for non-cube blocks (slabs)
+    const clip = getSlabClip(gridBlock.blockState, viewType, px, py, cellSize);
+    if (clip) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clip.x, clip.y, clip.w, clip.h);
+      ctx.clip();
+    }
+
     const rendered = renderBlockTexture(
       ctx,
       block,
@@ -56,6 +71,10 @@ export function drawPersistentBlocks(
       ctx.globalAlpha = gridBlock.opacity;
       ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       ctx.globalAlpha = 1.0;
+    }
+
+    if (clip) {
+      ctx.restore();
     }
   }
 }
@@ -113,4 +132,36 @@ function renderBlockTexture(
   );
   ctx.globalAlpha = 1.0;
   return true;
+}
+
+/**
+ * Get clipping rectangle for slab blocks.
+ * Returns null for non-slab blocks or views where slabs appear as full blocks.
+ *
+ * In views where Z is the vertical axis (front, back, left, right):
+ * - bottom slab: lower half of cell
+ * - top slab: upper half of cell
+ * - double slab: no clip (full block)
+ *
+ * In top/bottom views: slabs look like full blocks (looking straight down).
+ */
+function getSlabClip(
+  blockState: BlockStateProperties | undefined,
+  viewType: ViewType,
+  px: number,
+  py: number,
+  cellSize: number,
+): { x: number; y: number; w: number; h: number } | null {
+  if (!blockState?.type) return null;
+  if (blockState.type === 'double') return null;
+  if (!Z_VERTICAL_VIEWS.has(viewType)) return null;
+
+  const halfSize = cellSize / 2;
+
+  if (blockState.type === 'bottom') {
+    // Bottom slab: lower half of cell (higher py since Y increases downward on canvas)
+    return { x: px, y: py + halfSize, w: cellSize, h: halfSize };
+  }
+  // Top slab: upper half of cell
+  return { x: px, y: py, w: cellSize, h: halfSize };
 }

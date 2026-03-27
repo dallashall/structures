@@ -1,8 +1,9 @@
 import { Box, Stack, Paper, Divider } from '@mui/material';
-import type { Project, Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig } from '../types';
+import type { Project, Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { QuadLayout } from '../layouts/QuadLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
+import { BlockStateControls } from '../components/BlockStateControls';
 import { ForegroundBackgroundSelector } from '../components/ForegroundBackgroundSelector';
 import { QuickSelectPalette } from '../components/QuickSelectPalette';
 import { editorState } from '../core/EditorState';
@@ -14,6 +15,8 @@ interface QuadEditorViewProps {
   foregroundBlock: string | null;
   backgroundBlock: string | null;
   activeMaterialSlot: 'foreground' | 'background';
+  activeBlockState: BlockStateProperties;
+  hasBlockState: boolean;
   paintMode: PaintMode;
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
@@ -44,6 +47,8 @@ export function QuadEditorView({
   foregroundBlock,
   backgroundBlock,
   activeMaterialSlot,
+  activeBlockState,
+  hasBlockState,
   paintMode,
   paintBehavior: _paintBehavior,
   shapeFillMode: _shapeFillMode,
@@ -72,6 +77,9 @@ export function QuadEditorView({
   const handleClickBackground = () => {
     editorState.setActiveMaterialSlot('background');
   };
+
+  const handleSetBlockState = (state: BlockStateProperties) => editorState.setActiveBlockState(state);
+
   return (
     <>
       {/* Canvas Layout */}
@@ -108,6 +116,16 @@ export function QuadEditorView({
               paintMode={paintMode}
               onPaintModeChange={onPaintModeChange}
             />
+            {hasBlockState && (
+              <>
+                <Divider />
+                <BlockStateControls
+                  activeBlockState={activeBlockState}
+                  hasBlockState={hasBlockState}
+                  onSetBlockState={handleSetBlockState}
+                />
+              </>
+            )}
             <Divider />
             <QuickSelectPalette
               slots={quickSelectSlots}

@@ -6,6 +6,7 @@ import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
+import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
  * PointPaintTool - Single-cell painting via click-drag
@@ -17,7 +18,7 @@ import { projectView } from "../../projections/ProjectView";
 export class PointPaintTool extends ClickDragReleaseTool {
   private strategy = new PointPaintStrategy();
   private lastPaintedCell: string | null = null;
-  private draftPositions = new Map<string, { position: { x: number; y: number; z: number }; blockType: string | null }>();
+  private draftPositions = new Map<string, PaintOperation>();
 
   protected onHover(pos: UniversalPosition): void {
     this.previewData = { blocks: [{ position: pos }] };
@@ -139,18 +140,19 @@ export class PointPaintTool extends ClickDragReleaseTool {
 }
 
 // Helpers
-const hasBlockType = (op: { blockType: string | null }): op is { position: { x: number; y: number; z: number }; blockType: string } =>
+const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;
 
-const isDeleteOp = (deleteMode: boolean) => (op: { blockType: string | null }): boolean =>
+const isDeleteOp = (deleteMode: boolean) => (op: PaintOperation): boolean =>
   deleteMode || op.blockType === null;
 
-const isPlaceOp = (deleteMode: boolean) => (op: { blockType: string | null }): boolean =>
+const isPlaceOp = (deleteMode: boolean) => (op: PaintOperation): boolean =>
   !deleteMode && op.blockType !== null;
 
-const extractPosition = (op: { position: { x: number; y: number; z: number } }) => op.position;
+const extractPosition = (op: PaintOperation) => op.position;
 
-const toPlacedBlock = (op: { position: { x: number; y: number; z: number }; blockType: string | null }) => ({
+const toPlacedBlock = (op: PaintOperation) => ({
   position: op.position,
   blockType: op.blockType!,
+  blockState: op.blockState,
 });

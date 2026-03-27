@@ -1,6 +1,12 @@
 import type { GridBlock } from "./GridBlock";
 import type { PreviewData } from "../tools/ToolBase";
+import type { ViewType, BlockStateProperties } from "../../types";
 import { blockRegistry } from "../BlockRegistry";
+
+/**
+ * Views where Z (height) is on the vertical grid axis.
+ */
+const Z_VERTICAL_VIEWS = new Set<ViewType>(['front', 'back', 'left', 'right']);
 
 /**
  * Draw shared preview blocks from DraftingService and EditorState.
@@ -15,6 +21,7 @@ export function drawSharedPreview(
   cellSize: number,
   pan: { x: number; y: number },
   deleteMode: boolean,
+  viewType: ViewType,
 ): void {
   if (draftBlocks.length === 0 && editorPreview.length === 0) return;
 
@@ -28,12 +35,25 @@ export function drawSharedPreview(
     const px = pan.x + gridBlock.gridX * cellSize;
     const py = pan.y + gridBlock.gridY * cellSize;
 
+    // Apply slab clipping for preview blocks
+    const clip = getPreviewSlabClip(gridBlock.blockState, viewType, px, py, cellSize);
+    if (clip) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clip.x, clip.y, clip.w, clip.h);
+      ctx.clip();
+    }
+
     ctx.fillStyle = block.color;
     ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
     if (deleteMode) {
       ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
       ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+    }
+
+    if (clip) {
+      ctx.restore();
     }
   };
 
@@ -46,6 +66,28 @@ export function drawSharedPreview(
   }
 
   ctx.restore();
+}
+
+/**
+ * Get clipping rectangle for slab preview blocks.
+ */
+function getPreviewSlabClip(
+  blockState: BlockStateProperties | undefined,
+  viewType: ViewType,
+  px: number,
+  py: number,
+  cellSize: number,
+): { x: number; y: number; w: number; h: number } | null {
+  if (!blockState?.type) return null;
+  if (blockState.type === 'double') return null;
+  if (!Z_VERTICAL_VIEWS.has(viewType)) return null;
+
+  const halfSize = cellSize / 2;
+
+  if (blockState.type === 'bottom') {
+    return { x: px, y: py + halfSize, w: cellSize, h: halfSize };
+  }
+  return { x: px, y: py, w: cellSize, h: halfSize };
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { Vector3D, Dimensions } from '../../../types';
+import type { Vector3D, Dimensions, BlockStateProperties } from '../../../types';
 
 /**
  * PaintOperation - Represents a single paint/erase action
@@ -6,6 +6,7 @@ import type { Vector3D, Dimensions } from '../../../types';
 export interface PaintOperation {
   position: Vector3D;
   blockType: string | null; // null = erase
+  blockState?: BlockStateProperties;
 }
 
 /**

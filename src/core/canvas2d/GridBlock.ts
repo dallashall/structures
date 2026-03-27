@@ -67,7 +67,7 @@ export function resolveBlocksToGrid(
  * where all blocks render at full opacity on the active layer.
  */
 export function resolvePreviewToGrid(
-  blocks: ReadonlyArray<{ position: Vector3D; blockType: string | null }>,
+  blocks: ReadonlyArray<{ position: Vector3D; blockType: string | null; blockState?: BlockStateProperties }>,
   viewState: ViewState,
   dimensions: Dimensions,
 ): GridBlock[] {
@@ -90,6 +90,7 @@ export function resolvePreviewToGrid(
       gridX,
       gridY,
       blockType: block.blockType,
+      blockState: block.blockState,
       opacity: 1.0,
     });
   }

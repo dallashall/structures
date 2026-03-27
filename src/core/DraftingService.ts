@@ -14,12 +14,12 @@
 import { EventEmitter } from './EventEmitter';
 import { eventLog } from './EventLog';
 import { editorState } from './EditorState';
-import type { Vector3D } from '../types';
+import type { Vector3D, BlockStateProperties } from '../types';
 
 export interface PreviewBlock {
   position: Vector3D;
   blockType: string;
-  direction?: string;  // Future: directional materials
+  blockState?: BlockStateProperties;
 }
 
 /**
@@ -78,6 +78,7 @@ class DraftingService extends EventEmitter {
       await eventLog.append('model:blockPlaced', {
         position: block.position,
         blockType: block.blockType,
+        blockState: block.blockState,
       }, projectId);
     }
 

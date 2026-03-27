@@ -166,6 +166,7 @@ export class Canvas2DRenderer {
       cellSize,
       pan,
       deleteMode,
+      viewType,
     );
 
     // 8. Tool preview (hover)

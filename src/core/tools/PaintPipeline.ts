@@ -4,6 +4,7 @@ import type {
   LayerState,
   DepthConfig,
   Dimensions,
+  BlockStateProperties,
 } from "../../types";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 import type { PaintBehavior } from "../painting/behaviors/PaintBehavior";
@@ -11,6 +12,7 @@ import { NormalBehavior } from "../painting/behaviors/NormalBehavior";
 import { OnlyReplaceBehavior } from "../painting/behaviors/OnlyReplaceBehavior";
 import { SelectiveReplaceBehavior } from "../painting/behaviors/SelectiveReplaceBehavior";
 import { blockProjection } from "../../projections/BlockProjection";
+import { blockRegistry } from "../BlockRegistry";
 import { editorState } from "../EditorState";
 
 /**
@@ -122,6 +124,7 @@ export class PaintPipeline {
         expanded.push({
           position: expandedPosition,
           blockType: operation.blockType,
+          blockState: operation.blockState,
         });
       }
     }
@@ -162,6 +165,7 @@ export class PaintPipeline {
         transformed.push({
           position: operation.position,
           blockType: existingBlock.blockType,
+          blockState: existingBlock.blockState,
         });
       }
     }
@@ -194,7 +198,33 @@ export class PaintPipeline {
       viewType,
     );
     const afterBehavior = PaintPipeline.applyBehavior(afterDepth, behavior);
-    return PaintPipeline.applyDeleteModifier(afterBehavior);
+    const afterDelete = PaintPipeline.applyDeleteModifier(afterBehavior);
+    return PaintPipeline.attachBlockState(afterDelete);
+  }
+
+  /**
+   * Attach the active block state from EditorState to each placement operation.
+   * Merges the block's defaultState with the user's activeBlockState.
+   * Only applies to blocks that have hasBlockState=true.
+   */
+  static attachBlockState(
+    operations: PaintOperation[],
+  ): PaintOperation[] {
+    const selectedBlockId = editorState.getSelectedBlock();
+    if (!selectedBlockId) return operations;
+
+    const block = blockRegistry.getBlock(selectedBlockId);
+    if (!block?.hasBlockState) return operations;
+
+    const activeState = editorState.getActiveBlockState();
+    const defaultState = block.defaultState ?? {};
+    const mergedState: BlockStateProperties = { ...defaultState, ...activeState };
+
+    const attachState = (op: PaintOperation): PaintOperation => ({
+      ...op,
+      blockState: op.blockType ? mergedState : undefined,
+    });
+    return operations.map(attachState);
   }
 
   /**

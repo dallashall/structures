@@ -24,9 +24,10 @@ import { blockRegistry } from '../BlockRegistry';
 import { textureManager } from '../TextureManager';
 import { editorState } from '../EditorState';
 import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
+import { getGeometryKey, createSlabMesh, facingToYRotation } from './GeometryFactory';
 
 import type { MaterialResolver } from './MaterialResolver';
-import type { Vector3D, BlockData, RenderSettings } from '../../types';
+import type { Vector3D, BlockData, BlockStateProperties, RenderSettings } from '../../types';
 
 // Per-instance vertex colors for layer highlight
 // Each axis maps to an RGB channel: X=red, Y=green, Z=blue
@@ -81,10 +82,12 @@ export class BlockRenderer {
    */
   createBlockMesh(blockData: BlockData, animate: boolean = true): void {
     const key = positionKey(blockData.position);
+    const geoKey = getGeometryKey(blockData.blockType, blockData.blockState);
+    const compositeKey = blockData.blockType + (geoKey ? ':' + geoKey : '');
     const existingType = this.instanceTypeMap.get(key);
 
-    // Same block type already at this position — just update highlight
-    if (existingType === blockData.blockType) {
+    // Same block+geometry already at this position — just update highlight
+    if (existingType === compositeKey) {
       const existing = this.blockInstances.get(key);
       if (existing) {
         this.updateInstanceHighlight(existing, blockData.position);
@@ -97,19 +100,25 @@ export class BlockRenderer {
       this.disposeInstance(key, false);
     }
 
-    const base = this.getOrCreateBase(blockData.blockType);
+    const base = this.getOrCreateBase(blockData.blockType, blockData.blockState);
     if (!base) return;
 
     const instance = base.createInstance(`inst_${key}`);
     instance.position = toBabylonVector(centerInCell(blockData.position));
 
+    // Apply rotation for oriented blocks
+    if (blockData.blockState?.facing) {
+      instance.rotation.y = facingToYRotation(blockData.blockState.facing);
+    }
+
     instance.metadata = {
       blockType: blockData.blockType,
+      blockState: blockData.blockState,
       position: blockData.position,
     };
 
     this.blockInstances.set(key, instance);
-    this.instanceTypeMap.set(key, blockData.blockType);
+    this.instanceTypeMap.set(key, compositeKey);
 
     this.updateInstanceHighlight(instance, blockData.position);
 
@@ -258,7 +267,11 @@ export class BlockRenderer {
    * Re-apply materials to all base meshes (instances inherit automatically)
    */
   reapplyMaterials(): void {
-    for (const [blockType, base] of this.instanceBases.entries()) {
+    for (const [compositeKey, base] of this.instanceBases.entries()) {
+      // Extract blockType from composite key (blockType or blockType:geoKey)
+      const blockType = compositeKey.includes(':')
+        ? compositeKey.slice(0, compositeKey.indexOf(':'))
+        : compositeKey;
       base.material = this.materialResolver.resolve(blockType);
     }
   }
@@ -311,31 +324,41 @@ export class BlockRenderer {
   // ---- Private helpers ----
 
   /**
-   * Get or create a hidden base mesh for a block type.
+   * Get or create a hidden base mesh for a block type + geometry variant.
    * Base meshes hold geometry (faceUV) and material; instances reference them.
+   * The cache key is blockType + geometryKey (e.g., "minecraft:oak_slab:slab_bottom").
    */
-  private getOrCreateBase(blockType: string): Mesh | null {
-    const existing = this.instanceBases.get(blockType);
+  private getOrCreateBase(blockType: string, blockState?: BlockStateProperties): Mesh | null {
+    const geoKey = getGeometryKey(blockType, blockState);
+    const compositeKey = blockType + (geoKey ? ':' + geoKey : '');
+
+    const existing = this.instanceBases.get(compositeKey);
     if (existing) return existing;
 
     const block = blockRegistry.getBlock(blockType);
     if (!block) return null;
 
     const usesTintedTexture = isTintedTextureBlock(blockType);
-    const boxOptions: Record<string, unknown> = { size: 1 };
+    const faceUVData = !usesTintedTexture ? textureManager.getBlockFaceUV3D(blockType) : null;
 
-    // Apply atlas faceUV for blocks using shared atlas material
-    if (!usesTintedTexture) {
-      const faceUVData = textureManager.getBlockFaceUV3D(blockType);
+    let base: Mesh;
+
+    // Non-cube geometry dispatch
+    if (geoKey.startsWith('slab_')) {
+      const slabType = (blockState?.type ?? 'bottom') as 'top' | 'bottom' | 'double';
+      base = createSlabMesh(this.scene, slabType, faceUVData ?? undefined);
+      base.name = `base_${compositeKey}`;
+    } else {
+      // Default: cube geometry
+      const boxOptions: Record<string, unknown> = { size: 1 };
       if (faceUVData) {
-        const toVector4 = (uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 => {
-          return new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
-        };
+        const toVector4 = (uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 =>
+          new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
         boxOptions.faceUV = faceUVData.map(toVector4);
       }
+      base = MeshBuilder.CreateBox(`base_${compositeKey}`, boxOptions, this.scene);
     }
 
-    const base = MeshBuilder.CreateBox(`base_${blockType}`, boxOptions, this.scene);
     base.isVisible = false; // Hidden base — instances are visible
     base.material = this.materialResolver.resolve(blockType);
 
@@ -346,7 +369,7 @@ export class BlockRenderer {
     // Edge rendering on base propagates to instances
     this.applyEdgeRendering(base);
 
-    this.instanceBases.set(blockType, base);
+    this.instanceBases.set(compositeKey, base);
     return base;
   }
 

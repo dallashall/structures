@@ -1,6 +1,7 @@
 import { editorState } from './EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import { toolRegistry } from './tools/ToolRegistry';
+import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
 /**
@@ -12,6 +13,8 @@ import type { PaintMode } from '../types';
  * Shortcuts:
  * - 1-9: Select block from quick-select slot and apply to active material slot
  * - F: Toggle foreground/background material slot
+ * - T: Rotate facing direction (when stateful block selected)
+ * - Y: Flip slab half (when stateful block selected)
  * - W/S: Increment/decrement Z layer (height - up/down)
  * - A/D: Decrement/increment X layer (width - left/right)
  * - X/C: Decrement/increment Y layer (depth - forward/back)
@@ -92,6 +95,26 @@ class KeyboardManager {
     if (event.key === 'f' || event.key === 'F') {
       event.preventDefault();
       editorState.toggleMaterialSlot();
+    }
+
+    // T key: Rotate facing direction (when stateful block selected)
+    if (event.key === 't' || event.key === 'T') {
+      const selectedBlockId = editorState.getSelectedBlock();
+      const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
+      if (selectedBlock?.hasBlockState) {
+        event.preventDefault();
+        editorState.rotateFacing();
+      }
+    }
+
+    // Y key: Flip slab half (when stateful block selected)
+    if (event.key === 'y' || event.key === 'Y') {
+      const selectedBlockId = editorState.getSelectedBlock();
+      const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
+      if (selectedBlock?.hasBlockState) {
+        event.preventDefault();
+        editorState.flipHalf();
+      }
     }
 
     // Layer navigation shortcuts

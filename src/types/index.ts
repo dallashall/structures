@@ -112,6 +112,12 @@ export interface BlockStateProperties {
 
   // Material variant (for blocks with multiple textures)
   variant?: string; // 'oak', 'spruce', 'birch', etc.
+
+  // Slab type (distinct from half — slabs use 'type', stairs/doors use 'half')
+  type?: 'top' | 'bottom' | 'double';
+
+  // Door hinge side
+  hinge?: 'left' | 'right';
 }
 
 /**

@@ -1,9 +1,10 @@
-import { Box, Paper, Stack, IconButton } from '@mui/material';
+import { Box, Paper, Stack, IconButton, Divider } from '@mui/material';
 import { Apps } from '@mui/icons-material';
-import type { Block, PaintMode } from '../types';
+import type { Block, PaintMode, BlockStateProperties } from '../types';
 import { ToolPanel } from './ToolPanel';
 import { QuickSelectPalette } from './QuickSelectPalette';
 import { FullPaletteMenu } from './FullPaletteMenu';
+import { BlockStateControls } from './BlockStateControls';
 import { editorState } from '../core/EditorState';
 
 interface ActionBarPanelProps {
@@ -11,6 +12,8 @@ interface ActionBarPanelProps {
   quickSelectSlots: (string | null)[];
   selectedBlock: string | null;
   blocks: Block[];
+  activeBlockState: BlockStateProperties;
+  hasBlockState: boolean;
   onPaintModeChange: (mode: PaintMode) => void;
   onSelectSlot: (index: number) => void;
   onAssignSlot: (index: number) => void;
@@ -31,11 +34,15 @@ export function ActionBarPanel({
   quickSelectSlots,
   selectedBlock,
   blocks,
+  activeBlockState,
+  hasBlockState,
   onPaintModeChange,
   onSelectSlot,
   onAssignSlot,
   onCollapse,
 }: ActionBarPanelProps) {
+  const handleSetBlockState = (state: BlockStateProperties) => editorState.setActiveBlockState(state);
+
   return (
     <Paper
       elevation={0}
@@ -54,6 +61,16 @@ export function ActionBarPanel({
           paintMode={paintMode}
           onPaintModeChange={onPaintModeChange}
         />
+        {hasBlockState && (
+          <>
+            <Divider />
+            <BlockStateControls
+              activeBlockState={activeBlockState}
+              hasBlockState={hasBlockState}
+              onSetBlockState={handleSetBlockState}
+            />
+          </>
+        )}
         <QuickSelectPalette
           slots={quickSelectSlots}
           blocks={blocks}

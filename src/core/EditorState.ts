@@ -1,6 +1,7 @@
 import { EventEmitter } from './EventEmitter';
 import { quickSelectStore } from './QuickSelectStore';
 import { renderSettingsStore } from './RenderSettingsStore';
+import { blockRegistry } from './BlockRegistry';
 import { DEFAULT_RENDER_SETTINGS } from '../types';
 import type {
   LayoutMode,
@@ -14,6 +15,7 @@ import type {
   DepthConfig,
   CircleDrawMode,
   RenderSettings,
+  BlockStateProperties,
 } from '../types';
 
 /**
@@ -22,6 +24,7 @@ import type {
 export interface PreviewBlock {
   position: Vector3D;
   blockType: string | null; // null = erase
+  blockState?: BlockStateProperties;
 }
 
 /**
@@ -92,9 +95,31 @@ class EditorState extends EventEmitter {
   private sliceGuideVisibility: { x: boolean; y: boolean; z: boolean } = { x: false, y: false, z: false };
   private renderSettings: RenderSettings = { ...DEFAULT_RENDER_SETTINGS };
   private isRenderSettingsModalOpen = false;
+  private activeBlockState: BlockStateProperties = {};
 
   private constructor() {
     super();
+
+    // Auto-apply defaultState when selected block changes
+    this.on('block:selected', this.handleBlockSelected);
+  }
+
+  /**
+   * When the selected block changes, reset activeBlockState to that block's
+   * defaultState (or clear it if the block has no block state).
+   */
+  private handleBlockSelected = (blockId: string | null): void => {
+    if (!blockId) {
+      this.activeBlockState = {};
+      return;
+    }
+    const block = blockRegistry.getBlock(blockId);
+    if (block?.hasBlockState && block.defaultState) {
+      this.activeBlockState = { ...block.defaultState };
+    } else {
+      this.activeBlockState = {};
+    }
+    this.emit('blockstate:applied', { ...this.activeBlockState });
   }
 
   static getInstance(): EditorState {
@@ -688,6 +713,68 @@ class EditorState extends EventEmitter {
    */
   isSliceGuideVisible(axis: 'x' | 'y' | 'z'): boolean {
     return this.sliceGuideVisibility[axis];
+  }
+
+  // --- Block State (orientation/variant for non-cube blocks) ---
+
+  /**
+   * Set the active block state used during placement
+   */
+  setActiveBlockState = (state: BlockStateProperties): void => {
+    this.activeBlockState = { ...state };
+    this.emit('blockstate:applied', { ...this.activeBlockState });
+  }
+
+  /**
+   * Get the active block state
+   */
+  getActiveBlockState(): BlockStateProperties {
+    return { ...this.activeBlockState };
+  }
+
+  /**
+   * Rotate facing clockwise: N → E → S → W → N
+   */
+  rotateFacing = (): void => {
+    const cycle: Array<'north' | 'east' | 'south' | 'west'> = ['north', 'east', 'south', 'west'];
+    const current = this.activeBlockState.facing as typeof cycle[number] | undefined;
+    const idx = current ? cycle.indexOf(current) : -1;
+    const next = cycle[(idx + 1) % cycle.length];
+    this.activeBlockState = { ...this.activeBlockState, facing: next };
+    this.emit('blockstate:applied', { ...this.activeBlockState });
+  }
+
+  /**
+   * Flip half/type between top and bottom.
+   * Uses 'type' for slabs, 'half' for stairs/doors.
+   */
+  flipHalf = (): void => {
+    if (this.activeBlockState.type !== undefined) {
+      // Slab: toggle top/bottom (skip double)
+      const next = this.activeBlockState.type === 'bottom' ? 'top' : 'bottom';
+      this.activeBlockState = { ...this.activeBlockState, type: next };
+    } else if (this.activeBlockState.half !== undefined) {
+      // Stairs/doors
+      const half = this.activeBlockState.half;
+      if (half === 'bottom') {
+        this.activeBlockState = { ...this.activeBlockState, half: 'top' };
+      } else if (half === 'top') {
+        this.activeBlockState = { ...this.activeBlockState, half: 'bottom' };
+      } else if (half === 'lower') {
+        this.activeBlockState = { ...this.activeBlockState, half: 'upper' };
+      } else {
+        this.activeBlockState = { ...this.activeBlockState, half: 'lower' };
+      }
+    }
+    this.emit('blockstate:applied', { ...this.activeBlockState });
+  }
+
+  /**
+   * Reset active block state to empty
+   */
+  resetBlockState = (): void => {
+    this.activeBlockState = {};
+    this.emit('blockstate:applied', {});
   }
 
   // --- Render Settings ---
