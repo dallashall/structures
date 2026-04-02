@@ -16,7 +16,9 @@ export interface Dimensions {
   depth: number;
 }
 
-export type Direction = "north" | "south" | "east" | "west";
+// Axis-based direction types — universal coordinate system
+export type AxisDirection = `${'x' | 'y' | 'z'}${'+' | '-'}`;
+export type HorizontalDirection = `${'x' | 'y'}${'+' | '-'}`;
 
 // Layout modes for editor
 export type LayoutMode = "tabbed" | "quad";
@@ -78,8 +80,8 @@ export interface LayerState {
  * Blockstate properties - Minecraft-compatible state properties
  */
 export interface BlockStateProperties {
-  // Directional properties
-  facing?: "north" | "south" | "east" | "west" | "up" | "down";
+  // Directional properties (uses universal axis-based coordinate system)
+  facing?: AxisDirection;
   axis?: "x" | "y" | "z";
 
   // Shape properties
@@ -92,12 +94,7 @@ export interface BlockStateProperties {
     | "outer_right";
 
   // Connection properties (fences, walls, glass panes)
-  north?: boolean;
-  south?: boolean;
-  east?: boolean;
-  west?: boolean;
-  up?: boolean;
-  down?: boolean;
+  connections?: Partial<Record<AxisDirection, boolean>>;
 
   // State properties
   waterlogged?: boolean;
@@ -239,7 +236,7 @@ export interface BlockData {
 
 export interface MetaBlock {
   position: Vector3D;
-  direction: Direction;
+  direction: HorizontalDirection;
   isConfirmed: boolean; // Whether the user has finalized this position
 }
 

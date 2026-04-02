@@ -16,6 +16,7 @@ import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
 import { editorState } from '../core/EditorState';
 import { BlockIndex } from '../core/BlockIndex';
+import { normalizeLegacyDirections } from '../core/DirectionMapping';
 import type { Vector3D, BlockData, BlockStateProperties } from '../types';
 
 const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
@@ -98,10 +99,11 @@ class BlockProjection extends EventEmitter {
     switch (event.type) {
       case 'model:blockPlaced': {
         const data = event.data as { position: Vector3D; blockType: string; blockState?: BlockStateProperties };
+        const blockState = data.blockState ? normalizeLegacyDirections(data.blockState) : data.blockState;
         this.snapshot.blocks.set(data.position, {
           position: data.position,
           blockType: data.blockType,
-          blockState: data.blockState,
+          blockState,
         });
         this.snapshot.latestEventId = event.id!;
         break;
@@ -117,10 +119,11 @@ class BlockProjection extends EventEmitter {
       case 'model:blocksPlaced': {
         const data = event.data as { blocks: Array<{ position: Vector3D; blockType: string; blockState?: BlockStateProperties }> };
         for (const block of data.blocks) {
+          const blockState = block.blockState ? normalizeLegacyDirections(block.blockState) : block.blockState;
           this.snapshot.blocks.set(block.position, {
             position: block.position,
             blockType: block.blockType,
-            blockState: block.blockState,
+            blockState,
           });
         }
         this.snapshot.latestEventId = event.id!;

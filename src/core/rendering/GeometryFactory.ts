@@ -28,8 +28,13 @@ export function getGeometryKey(blockId: string, blockState?: BlockStatePropertie
     return `slab_${slabType}`;
   }
 
-  // Future: stairs, doors
-  // if (name.includes('stair')) { ... }
+  if (name.includes('stair')) {
+    const half = blockState?.half ?? 'bottom';
+    const shape = blockState?.shape ?? 'straight';
+    return `stair_${half}_${shape}`;
+  }
+
+  // Future: doors
   // if (name.includes('door')) { ... }
 
   return ''; // cube — default geometry
@@ -89,6 +94,128 @@ export function createSlabMesh(
   return mesh;
 }
 
+export type StairShape = 'straight' | 'inner_left' | 'inner_right' | 'outer_left' | 'outer_right';
+
+/**
+ * Create a stair mesh by merging sub-boxes.
+ *
+ * All stairs have a full-width lower slab (half the cell height).
+ * The upper portion varies by shape:
+ * - straight: back half (1×0.5×0.5)
+ * - inner_left: back half + front-left quarter
+ * - inner_right: back half + front-right quarter
+ * - outer_left: back-left quarter only (0.5×0.5×0.5)
+ * - outer_right: back-right quarter only (0.5×0.5×0.5)
+ *
+ * Default orientation faces back (+Z in Babylon = +Y in our system).
+ * Per-instance rotation handles the 4 facing directions.
+ *
+ * "bottom" half: lower slab at y=-0.25, upper at y=+0.25
+ * "top" half: vertically mirrored
+ */
+export function createStairMesh(
+  scene: Scene,
+  half: 'top' | 'bottom',
+  shape: StairShape,
+  faceUVData?: Array<{ u0: number; v0: number; u1: number; v1: number }>,
+): Mesh {
+  const subMeshes: Mesh[] = [];
+
+  // Y offsets: bottom half has slab below, step above. Top half is mirrored.
+  const slabY = half === 'bottom' ? -0.25 : 0.25;
+  const stepY = half === 'bottom' ? 0.25 : -0.25;
+  // For top-half stairs, the step is on the front side (z flipped)
+  const zSign = half === 'bottom' ? -1 : 1;
+
+  // 1. Lower slab (always full-width 1×0.5×1)
+  const slabOptions: Record<string, unknown> = { width: 1, height: 0.5, depth: 1 };
+  if (faceUVData) {
+    const adjusted = faceUVData.map(adjustSideFaceUV(half === 'bottom' ? 'bottom' : 'top'));
+    slabOptions.faceUV = adjusted.map(uvToVector4);
+  }
+  const slab = MeshBuilder.CreateBox('stair_slab', slabOptions, scene);
+  slab.position.y = slabY;
+  subMeshes.push(slab);
+
+  // 2. Upper portion — varies by shape
+  const upperBoxes = getStairUpperBoxes(shape, stepY, zSign, faceUVData);
+  for (const boxDef of upperBoxes) {
+    const opts: Record<string, unknown> = {
+      width: boxDef.width,
+      height: 0.5,
+      depth: boxDef.depth,
+    };
+    if (faceUVData) {
+      const adjusted = faceUVData.map(adjustSideFaceUV(half === 'bottom' ? 'top' : 'bottom'));
+      opts.faceUV = adjusted.map(uvToVector4);
+    }
+    const box = MeshBuilder.CreateBox('stair_step', opts, scene);
+    box.position.set(boxDef.x, stepY, boxDef.z);
+    subMeshes.push(box);
+  }
+
+  // Bake positions into vertices before merging
+  for (const m of subMeshes) {
+    m.bakeCurrentTransformIntoVertices();
+  }
+
+  const merged = Mesh.MergeMeshes(subMeshes, true, true, undefined, false, false);
+  if (!merged) {
+    // Fallback — shouldn't happen
+    return MeshBuilder.CreateBox('stair_fallback', { size: 1 }, scene);
+  }
+
+  merged.name = 'stair';
+  return merged;
+}
+
+/**
+ * Get upper portion sub-box definitions for a stair shape.
+ * All positions assume default facing (south), bottom half.
+ */
+function getStairUpperBoxes(
+  shape: StairShape,
+  _stepY: number,
+  zSign: number,
+  _faceUVData?: Array<{ u0: number; v0: number; u1: number; v1: number }>,
+): Array<{ width: number; depth: number; x: number; z: number }> {
+  // "Back" = the direction opposite to facing = -Z for south-facing.
+  // For bottom half, back is -Z (zSign = -1). For top half, it's +Z (zSign = 1).
+  const backZ = zSign * 0.25;
+
+  switch (shape) {
+    case 'straight':
+      // Full-width back half
+      return [{ width: 1, depth: 0.5, x: 0, z: backZ }];
+
+    case 'inner_left':
+      // Back half + front-right quarter (inner corner fills more)
+      return [
+        { width: 1, depth: 0.5, x: 0, z: backZ },
+        { width: 0.5, depth: 0.5, x: 0.25, z: -backZ },
+      ];
+
+    case 'inner_right':
+      // Back half + front-left quarter
+      return [
+        { width: 1, depth: 0.5, x: 0, z: backZ },
+        { width: 0.5, depth: 0.5, x: -0.25, z: -backZ },
+      ];
+
+    case 'outer_left':
+      // Only back-left quarter
+      return [{ width: 0.5, depth: 0.5, x: -0.25, z: backZ }];
+
+    case 'outer_right':
+      // Only back-right quarter
+      return [{ width: 0.5, depth: 0.5, x: 0.25, z: backZ }];
+  }
+}
+
+function uvToVector4(uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 {
+  return new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
+}
+
 /**
  * Adjust UV coordinates for slab side faces.
  * Side faces (indices 0-3 in BabylonJS face order) are halved vertically.
@@ -110,18 +237,3 @@ function adjustSideFaceUV(slabType: 'top' | 'bottom') {
   };
 }
 
-/**
- * Convert a facing direction to a Y-axis rotation in radians.
- * Used for per-instance rotation of oriented blocks.
- *
- * Assumes the mesh faces south (+Z in Babylon = +Y in our system) by default.
- */
-export function facingToYRotation(facing: string): number {
-  switch (facing) {
-    case 'south': return 0;
-    case 'west': return Math.PI / 2;
-    case 'north': return Math.PI;
-    case 'east': return -Math.PI / 2;
-    default: return 0;
-  }
-}

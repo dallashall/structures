@@ -42,6 +42,7 @@ import { CameraRig } from './rendering/CameraRig';
 import { BlockRenderer } from './rendering/BlockRenderer';
 import { PreviewRenderer } from './rendering/PreviewRenderer';
 import { positionKey } from './rendering/babylonUtils';
+import { shapeCatalog } from './shapes/ShapeCatalog';
 
 import type { BlockData, RenderSettings } from '../types';
 import type { ShadowSystem } from './rendering/ShadowSetup';
@@ -290,7 +291,8 @@ export class Babylon3D {
       return;
     }
 
-    const blocks = (await blockProjection.getBlocks()).toArray();
+    const blockIndex = await blockProjection.getBlocks();
+    const blocks = blockIndex.toArray();
     const blockKeys = new Set(
       blocks.map((b: BlockData) => positionKey(b.position))
     );
@@ -303,9 +305,10 @@ export class Babylon3D {
       }
     }
 
-    // Add/update meshes
+    // Add/update meshes — resolve derived state reactively
     for (const blockData of blocks) {
-      this.blockRenderer.createBlockMesh(blockData, false);
+      const resolved = shapeCatalog.resolveBlockState(blockData.position, blockIndex) ?? blockData;
+      this.blockRenderer.createBlockMesh(resolved, false);
     }
 
     // Update slice planes

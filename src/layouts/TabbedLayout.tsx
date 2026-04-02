@@ -6,6 +6,7 @@ import type { ViewType, Project, LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
+import { BlockOrientationPreview } from "../components/BlockOrientationPreview";
 
 interface TabbedLayoutProps {
   activeView: ViewType;
@@ -158,6 +159,7 @@ export function TabbedLayout({
                   </Typography>
                 </Box>
               )}
+              <BlockOrientationPreview viewType={view} />
               <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
                 <Canvas2DView
                   viewType={view}

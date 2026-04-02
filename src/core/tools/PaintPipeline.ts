@@ -205,7 +205,8 @@ export class PaintPipeline {
   /**
    * Attach the active block state from EditorState to each placement operation.
    * Merges the block's defaultState with the user's activeBlockState.
-   * Only applies to blocks that have hasBlockState=true.
+   * Only attaches user intent (facing, half, type) — derived state (shape,
+   * connections) is computed reactively at read time by shapeCatalog.resolveBlockState().
    */
   static attachBlockState(
     operations: PaintOperation[],
@@ -220,10 +221,10 @@ export class PaintPipeline {
     const defaultState = block.defaultState ?? {};
     const mergedState: BlockStateProperties = { ...defaultState, ...activeState };
 
-    const attachState = (op: PaintOperation): PaintOperation => ({
-      ...op,
-      blockState: op.blockType ? mergedState : undefined,
-    });
+    const attachState = (op: PaintOperation): PaintOperation => {
+      if (!op.blockType) return op;
+      return { ...op, blockState: mergedState };
+    };
     return operations.map(attachState);
   }
 

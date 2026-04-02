@@ -1,5 +1,6 @@
 import { EventEmitter } from './EventEmitter';
 import type { Block, BlockStateProperties, BlockVariant } from '../types';
+import { convertBlockStateFromMc } from './DirectionMapping';
 
 /**
  * BlockRegistry - Catalog of available Minecraft blocks
@@ -174,7 +175,9 @@ class BlockRegistry extends EventEmitter {
           bedrockId: canonicalId,  // Can be converted if needed
           textures: (canonicalBlock as any).textures,
           hasBlockState: (canonicalBlock as any).hasBlockState || false,
-          defaultState: (canonicalBlock as any).defaultState,
+          defaultState: (canonicalBlock as any).defaultState
+            ? convertBlockStateFromMc((canonicalBlock as any).defaultState)
+            : undefined,
           isCube: (canonicalBlock as any).isCube ?? true,
           isTransparent: (canonicalBlock as any).isTransparent ?? false,
           variants: (canonicalBlock as any).variants

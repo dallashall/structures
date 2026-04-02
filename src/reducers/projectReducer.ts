@@ -137,7 +137,7 @@ export function projectReducer(
         dimensions: event.payload.dimensions,
         metaBlock: {
           position: { x: 0, y: 0, z: 0 },
-          direction: 'north',
+          direction: 'y-',
           isConfirmed: false,
         },
         blocks: new BlockIndex(),

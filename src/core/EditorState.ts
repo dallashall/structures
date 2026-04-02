@@ -16,7 +16,9 @@ import type {
   CircleDrawMode,
   RenderSettings,
   BlockStateProperties,
+  HorizontalDirection,
 } from '../types';
+import { rotateRight } from './DirectionMath';
 
 /**
  * PreviewBlock - Represents a ghost/preview block to be rendered
@@ -733,13 +735,11 @@ class EditorState extends EventEmitter {
   }
 
   /**
-   * Rotate facing clockwise: N → E → S → W → N
+   * Rotate facing clockwise (character's right): x+ → y+ → x- → y- → x+
    */
   rotateFacing = (): void => {
-    const cycle: Array<'north' | 'east' | 'south' | 'west'> = ['north', 'east', 'south', 'west'];
-    const current = this.activeBlockState.facing as typeof cycle[number] | undefined;
-    const idx = current ? cycle.indexOf(current) : -1;
-    const next = cycle[(idx + 1) % cycle.length];
+    const current = this.activeBlockState.facing;
+    const next = current ? rotateRight(current as HorizontalDirection) : 'x+';
     this.activeBlockState = { ...this.activeBlockState, facing: next };
     this.emit('blockstate:applied', { ...this.activeBlockState });
   }

@@ -5,7 +5,7 @@ import {
   Typography,
   Tooltip,
 } from '@mui/material';
-import type { BlockStateProperties } from '../types';
+import type { BlockStateProperties, AxisDirection } from '../types';
 
 interface BlockStateControlsProps {
   activeBlockState: BlockStateProperties;
@@ -18,7 +18,7 @@ interface BlockStateControlsProps {
  *
  * Shows controls relevant to the currently selected block type:
  * - Slabs: top/bottom/double toggle
- * - Stairs (future): facing direction + half
+ * - Stairs: facing direction + half
  * - Doors (future): facing + hinge + open
  *
  * Only renders when the selected block has hasBlockState=true.
@@ -32,9 +32,10 @@ export function BlockStateControls({
 
   // Determine which controls to show based on current state
   const showSlabControls = activeBlockState.type !== undefined;
+  const showHalfControls = activeBlockState.half !== undefined;
   const showFacingControls = activeBlockState.facing !== undefined;
 
-  if (!showSlabControls && !showFacingControls) return null;
+  if (!showSlabControls && !showHalfControls && !showFacingControls) return null;
 
   const handleSlabTypeChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -45,9 +46,18 @@ export function BlockStateControls({
     }
   };
 
+  const handleHalfChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newHalf: 'top' | 'bottom' | null,
+  ) => {
+    if (newHalf !== null) {
+      onSetBlockState({ ...activeBlockState, half: newHalf });
+    }
+  };
+
   const handleFacingChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newFacing: 'north' | 'east' | 'south' | 'west' | null,
+    newFacing: AxisDirection | null,
   ) => {
     if (newFacing !== null) {
       onSetBlockState({ ...activeBlockState, facing: newFacing });
@@ -123,6 +133,45 @@ export function BlockStateControls({
         </ToggleButtonGroup>
       )}
 
+      {/* Half controls (stairs) */}
+      {showHalfControls && (
+        <ToggleButtonGroup
+          value={activeBlockState.half}
+          exclusive
+          onChange={handleHalfChange}
+          size="small"
+          fullWidth
+          sx={{
+            '& .MuiToggleButton-root': {
+              py: 0.5,
+              px: 0.5,
+              fontSize: '0.6rem',
+              lineHeight: 1.2,
+              border: 1,
+              borderColor: 'divider',
+              '&.Mui-selected': {
+                bgcolor: 'info.main',
+                color: 'info.contrastText',
+                '&:hover': {
+                  bgcolor: 'info.dark',
+                },
+              },
+            },
+          }}
+        >
+          <ToggleButton value="bottom" aria-label="Bottom half">
+            <Tooltip title="Bottom stair [Y]" placement="top">
+              <Box>Bot</Box>
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="top" aria-label="Top half">
+            <Tooltip title="Top stair [Y]" placement="top">
+              <Box>Top</Box>
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+
       {/* Facing direction controls */}
       {showFacingControls && (
         <ToggleButtonGroup
@@ -149,24 +198,24 @@ export function BlockStateControls({
             },
           }}
         >
-          <ToggleButton value="north" aria-label="Facing north">
-            <Tooltip title="North [T]" placement="top">
-              <Box>N</Box>
+          <ToggleButton value="y-" aria-label="Facing -Y">
+            <Tooltip title="-Y [T]" placement="top">
+              <Box>-Y</Box>
             </Tooltip>
           </ToggleButton>
-          <ToggleButton value="east" aria-label="Facing east">
-            <Tooltip title="East [T]" placement="top">
-              <Box>E</Box>
+          <ToggleButton value="x+" aria-label="Facing +X">
+            <Tooltip title="+X [T]" placement="top">
+              <Box>+X</Box>
             </Tooltip>
           </ToggleButton>
-          <ToggleButton value="south" aria-label="Facing south">
-            <Tooltip title="South [T]" placement="top">
-              <Box>S</Box>
+          <ToggleButton value="y+" aria-label="Facing +Y">
+            <Tooltip title="+Y [T]" placement="top">
+              <Box>+Y</Box>
             </Tooltip>
           </ToggleButton>
-          <ToggleButton value="west" aria-label="Facing west">
-            <Tooltip title="West [T]" placement="top">
-              <Box>W</Box>
+          <ToggleButton value="x-" aria-label="Facing -X">
+            <Tooltip title="-X [T]" placement="top">
+              <Box>-X</Box>
             </Tooltip>
           </ToggleButton>
         </ToggleButtonGroup>

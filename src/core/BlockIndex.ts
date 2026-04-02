@@ -1,6 +1,14 @@
 import type { Vector3D, BlockData } from '../types';
 
 /**
+ * Read-only interface for block lookups.
+ * Implemented by BlockIndex and OverlayBlockIndex.
+ */
+export interface BlockIndexReader {
+  get(position: Vector3D): BlockData | null;
+}
+
+/**
  * BlockIndex - Efficient block storage with layer-based queries
  *
  * Combines direct lookup (Map) with spatial indexing (multi-key text index).
@@ -8,7 +16,7 @@ import type { Vector3D, BlockData } from '../types';
  *
  * This is a data structure, not a singleton - used by Project.blocks
  */
-export class BlockIndex {
+export class BlockIndex implements BlockIndexReader {
   private blocks = new Map<string, BlockData>();
 
   // Multi-key text index for layer-based queries

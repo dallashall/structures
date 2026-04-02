@@ -97,7 +97,7 @@ export const mockProject: Project = {
   dimensions: { width: 10, height: 8, depth: 10 },
   metaBlock: {
     position: { x: 5, y: 0, z: 5 },
-    direction: 'north',
+    direction: 'y-',
     isConfirmed: true,
   },
   blocks: new BlockIndex(),

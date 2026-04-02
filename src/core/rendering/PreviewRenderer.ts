@@ -14,7 +14,7 @@ import { blockRegistry } from '../BlockRegistry';
 import { editorState } from '../EditorState';
 import { draftingService } from '../DraftingService';
 import { toBabylonVector, positionKey, centerInCell } from './babylonUtils';
-import { getGeometryKey, createSlabMesh, facingToYRotation } from './GeometryFactory';
+import { shapeCatalog } from '../shapes/ShapeCatalog';
 
 import type { MaterialResolver } from './MaterialResolver';
 
@@ -34,7 +34,7 @@ export class PreviewRenderer {
    */
   updatePreviewMeshes(): void {
     const editorPreview = editorState.getPreviewBlocks() || [];
-    const draftPreview = draftingService.getPreview() || [];
+    const draftPreview = draftingService.getResolvedPreview() || [];
     const allPreviewBlocks = [...editorPreview, ...draftPreview];
 
     const newPreviewKeys = new Set(
@@ -64,7 +64,7 @@ export class PreviewRenderer {
 
   /**
    * Create a ghost/preview mesh (semi-transparent)
-   * Uses GeometryFactory for non-cube shapes (slabs, etc.)
+   * Delegates geometry creation to the block's shape.
    */
   private createPreviewMesh(previewBlock: import('../EditorState').PreviewBlock): void {
     const key = positionKey(previewBlock.position);
@@ -72,12 +72,12 @@ export class PreviewRenderer {
     const block = blockRegistry.getBlock(previewBlock.blockType!);
     if (!block) return;
 
-    const geoKey = getGeometryKey(previewBlock.blockType!, previewBlock.blockState);
+    const blockShape = shapeCatalog.resolve(previewBlock.blockType!);
     let mesh: Mesh;
 
-    if (geoKey.startsWith('slab_')) {
-      const slabType = (previewBlock.blockState?.type ?? 'bottom') as 'top' | 'bottom' | 'double';
-      mesh = createSlabMesh(this.scene, slabType);
+    const customMesh = blockShape.createMesh(this.scene, previewBlock.blockState ?? {});
+    if (customMesh) {
+      mesh = customMesh;
       mesh.name = `preview_${key}`;
     } else {
       mesh = MeshBuilder.CreateBox(
@@ -89,9 +89,10 @@ export class PreviewRenderer {
 
     mesh.position = toBabylonVector(centerInCell(previewBlock.position));
 
-    // Apply rotation for oriented blocks
-    if (previewBlock.blockState?.facing) {
-      mesh.rotation.y = facingToYRotation(previewBlock.blockState.facing);
+    // Apply per-instance rotation from shape
+    const rotation = blockShape.getRotation(previewBlock.blockState);
+    if (rotation !== 0) {
+      mesh.rotation.y = rotation;
     }
 
     const deleteMode = editorState.getDeleteMode();

@@ -5,6 +5,7 @@ import type { Project, LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
+import { BlockOrientationPreview } from "../components/BlockOrientationPreview";
 
 interface QuadLayoutProps {
   project: Project;
@@ -152,6 +153,7 @@ export function QuadLayout({
             Y: {activeLayers.y}
           </Typography>
         </Box>
+        <BlockOrientationPreview viewType="front" />
         <div ref={frontContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="front"
@@ -230,6 +232,7 @@ export function QuadLayout({
             X: {activeLayers.x}
           </Typography>
         </Box>
+        <BlockOrientationPreview viewType="left" />
         <div ref={leftContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="left"
@@ -308,6 +311,7 @@ export function QuadLayout({
             Z: {activeLayers.z}
           </Typography>
         </Box>
+        <BlockOrientationPreview viewType="top" />
         <div ref={topContainerRef} style={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="top"

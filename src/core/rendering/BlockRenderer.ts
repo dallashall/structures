@@ -24,7 +24,7 @@ import { blockRegistry } from '../BlockRegistry';
 import { textureManager } from '../TextureManager';
 import { editorState } from '../EditorState';
 import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
-import { getGeometryKey, createSlabMesh, facingToYRotation } from './GeometryFactory';
+import { shapeCatalog } from '../shapes/ShapeCatalog';
 
 import type { MaterialResolver } from './MaterialResolver';
 import type { Vector3D, BlockData, BlockStateProperties, RenderSettings } from '../../types';
@@ -82,7 +82,8 @@ export class BlockRenderer {
    */
   createBlockMesh(blockData: BlockData, animate: boolean = true): void {
     const key = positionKey(blockData.position);
-    const geoKey = getGeometryKey(blockData.blockType, blockData.blockState);
+    const shape = shapeCatalog.resolve(blockData.blockType);
+    const geoKey = shape.getGeometryKey(blockData.blockState);
     const compositeKey = blockData.blockType + (geoKey ? ':' + geoKey : '');
     const existingType = this.instanceTypeMap.get(key);
 
@@ -106,9 +107,10 @@ export class BlockRenderer {
     const instance = base.createInstance(`inst_${key}`);
     instance.position = toBabylonVector(centerInCell(blockData.position));
 
-    // Apply rotation for oriented blocks
-    if (blockData.blockState?.facing) {
-      instance.rotation.y = facingToYRotation(blockData.blockState.facing);
+    // Apply per-instance rotation from shape
+    const rotation = shape.getRotation(blockData.blockState);
+    if (rotation !== 0) {
+      instance.rotation.y = rotation;
     }
 
     instance.metadata = {
@@ -329,7 +331,8 @@ export class BlockRenderer {
    * The cache key is blockType + geometryKey (e.g., "minecraft:oak_slab:slab_bottom").
    */
   private getOrCreateBase(blockType: string, blockState?: BlockStateProperties): Mesh | null {
-    const geoKey = getGeometryKey(blockType, blockState);
+    const blockShape = shapeCatalog.resolve(blockType);
+    const geoKey = blockShape.getGeometryKey(blockState);
     const compositeKey = blockType + (geoKey ? ':' + geoKey : '');
 
     const existing = this.instanceBases.get(compositeKey);
@@ -343,10 +346,9 @@ export class BlockRenderer {
 
     let base: Mesh;
 
-    // Non-cube geometry dispatch
-    if (geoKey.startsWith('slab_')) {
-      const slabType = (blockState?.type ?? 'bottom') as 'top' | 'bottom' | 'double';
-      base = createSlabMesh(this.scene, slabType, faceUVData ?? undefined);
+    const customMesh = blockShape.createMesh(this.scene, blockState ?? {}, faceUVData ?? undefined);
+    if (customMesh) {
+      base = customMesh;
       base.name = `base_${compositeKey}`;
     } else {
       // Default: cube geometry

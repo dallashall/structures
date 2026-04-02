@@ -6,6 +6,7 @@ import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { renderLoop } from "../RenderLoop";
 import { confirmMetaBlockCommand } from "../../commands/ConfirmMetaBlockCommand";
+import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 import { ViewState } from "./ViewState";
 import { Canvas2DRenderer } from "./Canvas2DRenderer";
@@ -94,7 +95,9 @@ export class Canvas2D {
     for (let layer = minLayer; layer <= maxLayer; layer++) {
       const blocksAtLayer = blockIndex.getBlocksAtLayer(depthAxis, layer);
       for (const blockData of blocksAtLayer) {
-        blocks.push(blockData);
+        // Resolve derived state (stair shape, connections) reactively
+        const resolved = shapeCatalog.resolveBlockState(blockData.position, blockIndex);
+        blocks.push(resolved ?? blockData);
       }
     }
 
@@ -115,7 +118,7 @@ export class Canvas2D {
       return;
     }
 
-    const draftPreview = draftingService.getPreview();
+    const draftPreview = draftingService.getResolvedPreview();
     this.resolvedDraftBlocks = resolvePreviewToGrid(
       draftPreview,
       this.viewState,
