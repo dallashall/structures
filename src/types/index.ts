@@ -86,12 +86,10 @@ export interface BlockStateProperties {
 
   // Shape properties
   half?: "upper" | "lower" | "top" | "bottom";
-  shape?:
-    | "straight"
-    | "inner_left"
-    | "inner_right"
-    | "outer_left"
-    | "outer_right";
+  // Stair shape with absolute coordinates (no rotation)
+  // straight_{facing} or {type}_{facing}_{cornerSide}
+  // Examples: "straight_x+", "outer_y+_x-", "inner_y-_x+"
+  shape?: string;
 
   // Connection properties (fences, walls, glass panes)
   connections?: Partial<Record<AxisDirection, boolean>>;

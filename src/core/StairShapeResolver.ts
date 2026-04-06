@@ -1,74 +1,73 @@
 /**
- * StairShapeResolver - Pure functions for calculating stair shape from neighbors
+ * StairShapeResolver - Mirror the actual Minecraft logic
  *
- * Implements Minecraft Java Edition's stair auto-join algorithm:
- * - Check the block in front (in facing direction): outer corners
- * - Check the block behind (opposite facing): inner corners
- * - Otherwise: straight
+ * A stair has a "front" (short step side, = facing direction) and
+ * a "back" (tall side, = opposite of facing).
  *
- * Shape depends only on neighbors' facing and half — never cascades.
+ * Rules:
+ * 1. Check front neighbor: perpendicular stair there → INNER corner
+ *    (our back stays tall; the extra quarter is on the neighbor's back side)
+ * 2. Check back neighbor: perpendicular stair there → OUTER corner
+ *    (only one quarter stays tall, on the neighbor's back side)
+ * 3. Only same-half stairs join (bottom with bottom, top with top)
  */
 
 import type { Vector3D, HorizontalDirection } from '../types';
 import type { BlockIndexReader } from './BlockIndex';
-import {
-  directionToOffset,
-  oppositeDirection,
-  rotateLeft,
-  rotateRight,
-  addOffset,
-} from './DirectionMath';
+import { directionToOffset, oppositeDirection, addOffset } from './DirectionMath';
 
-type StairShape = 'straight' | 'inner_left' | 'inner_right' | 'outer_left' | 'outer_right';
-
-/**
- * Check if a block ID is a stair block.
- * Used internally by the shape algorithm — external code should use ShapeCatalog.
- */
 function isStairBlock(blockId: string): boolean {
   return blockId.replace('minecraft:', '').includes('stair');
 }
 
 /**
- * Calculate the stair shape for a block at the given position,
- * based on neighboring stairs in the block index.
+ * Returns shape string encoding the geometry directly:
+ *   "straight_{facing}"
+ *   "{inner|outer}_{facing}_{cornerEdge}"
+ *
+ * cornerEdge = the neighbor's back (tall side), which is the axis
+ * direction where the extra/remaining quarter block goes.
+ *
+ * Example: "inner_y+_x-" means:
+ *   - Inner corner, we face y+
+ *   - The extra front quarter is on the x- side
+ *     (because the connecting neighbor's tall side faces x-)
  */
 export function calculateStairShape(
   position: Vector3D,
   facing: HorizontalDirection,
   half: 'top' | 'bottom',
   blockIndex: BlockIndexReader,
-): StairShape {
-  // Check block in front (in the facing direction)
+): string {
+  const backDir = oppositeDirection(facing);
+
+  // Check FRONT neighbor (step / half-block side)
   const frontPos = addOffset(position, directionToOffset(facing));
-  const frontBlock = blockIndex.get(frontPos);
+  const frontNeighbor = blockIndex.get(frontPos);
 
-  if (frontBlock && isStairBlock(frontBlock.blockType)) {
-    const frontState = frontBlock.blockState;
-    const frontFacing = frontState?.facing as HorizontalDirection | undefined;
-    const frontHalf = frontState?.half as 'top' | 'bottom' | undefined;
+  if (frontNeighbor && isStairBlock(frontNeighbor.blockType)) {
+    const nFacing = frontNeighbor.blockState?.facing as HorizontalDirection | undefined;
+    const nHalf = frontNeighbor.blockState?.half as 'top' | 'bottom' | undefined;
 
-    if (frontFacing && frontHalf === half) {
-      if (frontFacing === rotateLeft(facing)) return 'outer_left';
-      if (frontFacing === rotateRight(facing)) return 'outer_right';
+    if (nFacing && nHalf === half && nFacing !== facing && nFacing !== oppositeDirection(facing)) {
+      const cornerEdge = oppositeDirection(nFacing);
+      return `inner_${facing}_${cornerEdge}`;
     }
   }
 
-  // Check block behind (opposite the facing direction)
-  const behindPos = addOffset(position, directionToOffset(oppositeDirection(facing)));
-  const behindBlock = blockIndex.get(behindPos);
+  // Check BACK neighbor (tall / full-block side)
+  const backPos = addOffset(position, directionToOffset(backDir));
+  const backNeighbor = blockIndex.get(backPos);
 
-  if (behindBlock && isStairBlock(behindBlock.blockType)) {
-    const behindState = behindBlock.blockState;
-    const behindFacing = behindState?.facing as HorizontalDirection | undefined;
-    const behindHalf = behindState?.half as 'top' | 'bottom' | undefined;
+  if (backNeighbor && isStairBlock(backNeighbor.blockType)) {
+    const nFacing = backNeighbor.blockState?.facing as HorizontalDirection | undefined;
+    const nHalf = backNeighbor.blockState?.half as 'top' | 'bottom' | undefined;
 
-    if (behindFacing && behindHalf === half) {
-      if (behindFacing === rotateLeft(facing)) return 'inner_left';
-      if (behindFacing === rotateRight(facing)) return 'inner_right';
+    if (nFacing && nHalf === half && nFacing !== facing && nFacing !== oppositeDirection(facing)) {
+      const cornerEdge = oppositeDirection(nFacing);
+      return `outer_${facing}_${cornerEdge}`;
     }
   }
 
-  return 'straight';
+  return `straight_${facing}`;
 }
-

@@ -94,20 +94,24 @@ export function createSlabMesh(
   return mesh;
 }
 
-export type StairShape = 'straight' | 'inner_left' | 'inner_right' | 'outer_left' | 'outer_right';
-
 /**
  * Create a stair mesh by merging sub-boxes.
  *
  * All stairs have a full-width lower slab (half the cell height).
  * The upper portion varies by shape:
  * - straight: back half (1×0.5×0.5)
- * - inner_left: back half + front-left quarter
- * - inner_right: back half + front-right quarter
- * - outer_left: back-left quarter only (0.5×0.5×0.5)
- * - outer_right: back-right quarter only (0.5×0.5×0.5)
+ * - inner corner: back half + front quarter (side determined by neighbor position)
+ * - outer corner: back quarter only (side determined by neighbor position)
  *
- * Default orientation faces back (+Z in Babylon = +Y in our system).
+ * Shape string format:
+ * - "straight_{facing}" - e.g., "straight_y+"
+ * - "inner_{facing}_{cornerEdge}" - e.g., "inner_y+_x-"
+ * - "outer_{facing}_{cornerEdge}" - e.g., "outer_y+_x+"
+ *
+ * cornerEdge = the neighbor's back (tall side), which determines
+ * where the extra/remaining quarter block goes.
+ *
+ * Default orientation faces y+ (north, +Z in Babylon).
  * Per-instance rotation handles the 4 facing directions.
  *
  * "bottom" half: lower slab at y=-0.25, upper at y=+0.25
@@ -116,7 +120,7 @@ export type StairShape = 'straight' | 'inner_left' | 'inner_right' | 'outer_left
 export function createStairMesh(
   scene: Scene,
   half: 'top' | 'bottom',
-  shape: StairShape,
+  shape: string,
   faceUVData?: Array<{ u0: number; v0: number; u1: number; v1: number }>,
 ): Mesh {
   const subMeshes: Mesh[] = [];
@@ -171,45 +175,61 @@ export function createStairMesh(
 
 /**
  * Get upper portion sub-box definitions for a stair shape.
- * All positions assume default facing (south), bottom half.
+ *
+ * Shape format: "straight_{facing}" or "{inner|outer}_{facing}_{cornerEdge}"
+ * cornerEdge is the world-space direction where the quarter goes.
+ *
+ * Geometry is built in the default y+ frame, then rotated per-instance.
+ * We must inverse-rotate the cornerEdge into the default frame's X axis.
+ *
+ * Babylon uses left-handed coords, so X-axis facings (x+, x-) flip the
+ * perpendicular mapping compared to Y-axis facings (y+, y-).
+ *
+ * Lookup (verified by tracing rotation matrix):
+ *   y+, x+ → +0.25    x+, y+ → -0.25
+ *   y+, x- → -0.25    x+, y- → +0.25
+ *   y-, x+ → -0.25    x-, y+ → +0.25
+ *   y-, x- → +0.25    x-, y- → -0.25
  */
 function getStairUpperBoxes(
-  shape: StairShape,
+  shape: string,
   _stepY: number,
   zSign: number,
   _faceUVData?: Array<{ u0: number; v0: number; u1: number; v1: number }>,
 ): Array<{ width: number; depth: number; x: number; z: number }> {
-  // "Back" = the direction opposite to facing = -Z for south-facing.
-  // For bottom half, back is -Z (zSign = -1). For top half, it's +Z (zSign = 1).
   const backZ = zSign * 0.25;
+  const frontZ = -backZ;
 
-  switch (shape) {
-    case 'straight':
-      // Full-width back half
-      return [{ width: 1, depth: 0.5, x: 0, z: backZ }];
+  const parts = shape.split('_');
+  const shapeType = parts[0];
 
-    case 'inner_left':
-      // Back half + front-right quarter (inner corner fills more)
-      return [
-        { width: 1, depth: 0.5, x: 0, z: backZ },
-        { width: 0.5, depth: 0.5, x: 0.25, z: -backZ },
-      ];
-
-    case 'inner_right':
-      // Back half + front-left quarter
-      return [
-        { width: 1, depth: 0.5, x: 0, z: backZ },
-        { width: 0.5, depth: 0.5, x: -0.25, z: -backZ },
-      ];
-
-    case 'outer_left':
-      // Only back-left quarter
-      return [{ width: 0.5, depth: 0.5, x: -0.25, z: backZ }];
-
-    case 'outer_right':
-      // Only back-right quarter
-      return [{ width: 0.5, depth: 0.5, x: 0.25, z: backZ }];
+  if (shapeType === 'straight') {
+    return [{ width: 1, depth: 0.5, x: 0, z: backZ }];
   }
+
+  // Transform world-space cornerEdge into default-frame X position.
+  // X-axis facings need an extra sign flip due to left-handed rotation.
+  const facing = parts[1];
+  const cornerEdge = parts[2];
+  const facingAxis = facing.startsWith('x') ? -1 : 1;
+  const facingSign = facing.endsWith('+') ? 1 : -1;
+  const cornerSign = cornerEdge.endsWith('+') ? 1 : -1;
+  const xQuadrant = facingAxis * facingSign * cornerSign * 0.25;
+
+  if (shapeType === 'inner') {
+    // Full back half + front quarter on cornerEdge side
+    return [
+      { width: 1, depth: 0.5, x: 0, z: backZ },
+      { width: 0.5, depth: 0.5, x: xQuadrant, z: frontZ },
+    ];
+  }
+
+  if (shapeType === 'outer') {
+    // Only back quarter on cornerEdge side
+    return [{ width: 0.5, depth: 0.5, x: xQuadrant, z: backZ }];
+  }
+
+  return [{ width: 1, depth: 0.5, x: 0, z: backZ }];
 }
 
 function uvToVector4(uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 {

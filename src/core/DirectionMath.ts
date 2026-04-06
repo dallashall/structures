@@ -67,13 +67,20 @@ export function rotateRight(dir: HorizontalDirection): HorizontalDirection {
 /**
  * Convert facing direction to Y-axis rotation in radians for BabylonJS.
  * Default mesh orientation faces y+ (+Z in Babylon = +Y in our system).
+ * Positive rotation is clockwise when viewed from above (+Z).
+ *
+ * Rotation mapping (CW from north):
+ * - 0° → y+ (north)
+ * - 90° → x+ (east)
+ * - 180° → y- (south)
+ * - 270° → x- (west)
  */
 export function directionToYRotation(dir: AxisDirection): number {
   switch (dir) {
     case 'y+': return 0;
-    case 'x-': return Math.PI / 2;
+    case 'x+': return Math.PI / 2;
     case 'y-': return Math.PI;
-    case 'x+': return -Math.PI / 2;
+    case 'x-': return -Math.PI / 2;
     default: return 0;
   }
 }
