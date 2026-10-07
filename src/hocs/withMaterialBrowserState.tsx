@@ -45,7 +45,7 @@ export function withMaterialBrowserState<P extends object>(
         handleMaterialBrowserChange,
       );
       editorState.on(
-        "materialbrowser:search:updated",
+        "materialbrowser:search:entered",
         handleSearchChange,
       );
       editorState.on("materialbrowser:tab:switched", handleTabChange);
@@ -56,7 +56,7 @@ export function withMaterialBrowserState<P extends object>(
           handleMaterialBrowserChange,
         );
         editorState.off(
-          "materialbrowser:search:updated",
+          "materialbrowser:search:entered",
           handleSearchChange,
         );
         editorState.off("materialbrowser:tab:switched", handleTabChange);

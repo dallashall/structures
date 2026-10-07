@@ -50,12 +50,12 @@ export interface PreviewBlock {
  * - paintmode:selected - When paint mode is selected
  * - paintbehavior:selected - When paint behavior is selected
  * - shapefillmode:selected - When shape fill mode is selected
- * - depthconfig:updated - When depth config is updated
+ * - depthconfig:applied - When depth config is updated
  * - curvecontrol:updated - When curve control state is updated
  * - placementmode:toggled - When placement mode is toggled
  * - actionbar:toggled - When action bar expanded state is toggled
  * - materialbrowser:toggled - When material browser is toggled open/closed
- * - materialbrowser:search:updated - When material browser search query is updated
+ * - materialbrowser:search:entered - When material browser search query is updated
  * - materialbrowser:tab:switched - When material browser tab is switched
  * - drag:started - When a block drag operation starts
  * - drag:cleared - When a block drag operation is cleared
@@ -342,7 +342,7 @@ class EditorState extends EventEmitter {
    */
   setDepthConfig = (config: Partial<DepthConfig>): void => {
     this.depthConfig = { ...this.depthConfig, ...config };
-    this.emit('depthconfig:updated', this.depthConfig);
+    this.emit('depthconfig:applied', this.depthConfig);
   }
 
   /**
@@ -436,7 +436,7 @@ class EditorState extends EventEmitter {
    */
   setMaterialBrowserSearchQuery = (query: string): void => {
     this.materialBrowserSearchQuery = query;
-    this.emit('materialbrowser:search:updated', query);
+    this.emit('materialbrowser:search:entered', query);
   }
 
   /**
@@ -533,7 +533,7 @@ class EditorState extends EventEmitter {
 
     if (this.foregroundSlotIndex !== index) {
       this.foregroundSlotIndex = index;
-      this.emit('quickselect:foreground:changed', index);
+      this.emit('quickselect:foreground:selected', index);
 
       // If foreground is active, emit block:selected to update UI
       if (this.activeMaterialSlot === 'foreground') {
@@ -560,7 +560,7 @@ class EditorState extends EventEmitter {
 
     if (this.backgroundSlotIndex !== index) {
       this.backgroundSlotIndex = index;
-      this.emit('quickselect:background:changed', index);
+      this.emit('quickselect:background:selected', index);
 
       // If background is active, emit block:selected to update UI
       if (this.activeMaterialSlot === 'background') {
@@ -669,8 +669,8 @@ class EditorState extends EventEmitter {
 
       // Notify listeners
       this.emit('quickselect:assigned', [...this.quickSelectSlots]);
-      this.emit('quickselect:foreground:changed', state.foregroundIndex);
-      this.emit('quickselect:background:changed', state.backgroundIndex);
+      this.emit('quickselect:foreground:selected', state.foregroundIndex);
+      this.emit('quickselect:background:selected', state.backgroundIndex);
       this.emit('materialslot:toggled', state.activeMode);
       this.emit('block:selected', this.getSelectedBlock());
     } catch (error) {

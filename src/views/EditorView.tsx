@@ -148,7 +148,7 @@ function EditorViewComponent(props: EditorViewProps) {
     void confirmMetaBlockCommand.execute();
   };
 
-  // Keyboard shortcuts handled by KeyboardManager singleton
+  // Keyboard shortcuts handled by HotkeyDispatcher singleton
 
   return (
     <Box sx={{ height: "100%", overflow: "hidden" }}>

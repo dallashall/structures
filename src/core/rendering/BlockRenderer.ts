@@ -21,7 +21,7 @@ import {
 } from '@babylonjs/core';
 import type { AbstractMesh } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
-import { textureManager } from '../TextureManager';
+import { textureResolver } from '../TextureResolver';
 import { editorState } from '../EditorState';
 import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
 import { shapeCatalog } from '../shapes/ShapeCatalog';
@@ -342,7 +342,7 @@ export class BlockRenderer {
     if (!block) return null;
 
     const usesTintedTexture = isTintedTextureBlock(blockType);
-    const faceUVData = !usesTintedTexture ? textureManager.getBlockFaceUV3D(blockType) : null;
+    const faceUVData = !usesTintedTexture ? textureResolver.getBlockFaceUV3D(blockType) : null;
 
     let base: Mesh;
 

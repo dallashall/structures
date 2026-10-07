@@ -6,7 +6,7 @@ import { NewProjectDialog } from "./components/NewProjectDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
 import { openProjectCommand } from "./commands/OpenProjectCommand";
-import { keyboardManager } from "./core/KeyboardManager";
+import { hotkeyDispatcher } from "./core/HotkeyDispatcher";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -168,8 +168,8 @@ export function App() {
 
   // Initialize keyboard shortcuts (once on mount)
   useEffect(() => {
-    keyboardManager.initialize();
-    return () => keyboardManager.destroy();
+    hotkeyDispatcher.initialize();
+    return () => hotkeyDispatcher.destroy();
   }, []);
 
   // Check for preview mode in hash on mount and hash changes

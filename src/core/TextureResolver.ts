@@ -3,7 +3,7 @@ import type { AtlasMetadata, LoadedTexture } from '../types';
 import { blockRegistry } from './BlockRegistry';
 
 /**
- * TextureManager - Manages texture atlas and block UV mapping
+ * TextureResolver - Manages texture atlas and block UV mapping
  *
  * Singleton class that provides:
  * - Texture atlas loading (Minecraft-style stitched textures)
@@ -14,8 +14,8 @@ import { blockRegistry } from './BlockRegistry';
  * - atlas:ready - When the atlas image and metadata are both available
  * - atlas:error - When the atlas fails to load
  */
-class TextureManager extends EventEmitter {
-  private static instance: TextureManager;
+class TextureResolver extends EventEmitter {
+  private static instance: TextureResolver;
 
   private atlas: LoadedTexture | null = null;
   private atlasMetadata: AtlasMetadata | null = null;
@@ -30,11 +30,11 @@ class TextureManager extends EventEmitter {
     this.loadAtlas();
   }
 
-  static getInstance(): TextureManager {
-    if (!TextureManager.instance) {
-      TextureManager.instance = new TextureManager();
+  static getInstance(): TextureResolver {
+    if (!TextureResolver.instance) {
+      TextureResolver.instance = new TextureResolver();
     }
-    return TextureManager.instance;
+    return TextureResolver.instance;
   }
 
   /**
@@ -400,4 +400,4 @@ class TextureManager extends EventEmitter {
   }
 }
 
-export const textureManager = TextureManager.getInstance();
+export const textureResolver = TextureResolver.getInstance();

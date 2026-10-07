@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import { textureManager } from '../core/TextureManager';
+import { textureResolver } from '../core/TextureResolver';
 import { blockRegistry } from '../core/BlockRegistry';
 
 interface BlockTextureSwatchProps {
@@ -30,7 +30,7 @@ export function BlockTextureSwatch({
   fallbackColor = '#888',
 }: BlockTextureSwatchProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isAtlasLoaded, setIsAtlasLoaded] = useState(textureManager.isAtlasLoaded());
+  const [isAtlasLoaded, setIsAtlasLoaded] = useState(textureResolver.isAtlasLoaded());
 
   // Map size to pixel dimensions
   const sizeMap = {
@@ -48,8 +48,8 @@ export function BlockTextureSwatch({
     };
 
     if (!isAtlasLoaded) {
-      textureManager.on('atlas:ready', handleAtlasLoaded);
-      return () => textureManager.off('atlas:ready', handleAtlasLoaded);
+      textureResolver.on('atlas:ready', handleAtlasLoaded);
+      return () => textureResolver.off('atlas:ready', handleAtlasLoaded);
     }
   }, [isAtlasLoaded]);
 
@@ -70,7 +70,7 @@ export function BlockTextureSwatch({
     const block = blockRegistry.getBlock(blockId);
 
     // Try tinted texture first (for glass variants)
-    const tintedTexture = textureManager.getTintedTexture(blockId, 0);
+    const tintedTexture = textureResolver.getTintedTexture(blockId, 0);
     if (tintedTexture) {
       // Fixed 0.15 opacity for glass
       if (block?.isTransparent) {
@@ -89,7 +89,7 @@ export function BlockTextureSwatch({
       return;
     }
 
-    const atlas = textureManager.getAtlas();
+    const atlas = textureResolver.getAtlas();
     if (!atlas) {
       ctx.fillStyle = fallbackColor;
       ctx.fillRect(0, 0, pixelSize, pixelSize);
@@ -102,7 +102,7 @@ export function BlockTextureSwatch({
       return;
     }
 
-    const coords = textureManager.getBlockFaceCoords(blockId, 0);
+    const coords = textureResolver.getBlockFaceCoords(blockId, 0);
     if (!coords) {
       ctx.fillStyle = fallbackColor;
       ctx.fillRect(0, 0, pixelSize, pixelSize);

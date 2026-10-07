@@ -20,7 +20,7 @@ interface LayerControlsProps {
  * Shows current X/Y/Z layer values in a compact read-only display.
  * Click the settings button to open a popover with full controls.
  *
- * Layer keys come from SHORTCUTS and are handled globally by KeyboardManager.
+ * Layer keys come from SHORTCUTS and are handled globally by HotkeyDispatcher.
  * The step buttons show them in their tooltips.
  */
 export function LayerControls({

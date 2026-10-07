@@ -1,5 +1,5 @@
 /**
- * Shortcuts - Keys bound by KeyboardManager and CameraGestures
+ * Shortcuts - Keys bound by HotkeyDispatcher and CameraGestures
  *
  * Tooltips read the same values, so a hint cannot name a key that is not bound.
  * Tool keys live in ToolRegistry, next to each tool's registration.

@@ -1,7 +1,7 @@
 import type { ViewType } from "../../types";
 import type { GridBlock } from "./GridBlock";
 import { blockRegistry } from "../BlockRegistry";
-import { textureManager } from "../TextureManager";
+import { textureResolver } from "../TextureResolver";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 /**
@@ -90,7 +90,7 @@ function renderBlockTexture(
   cellSize: number,
   opacity: number,
 ): boolean {
-  const tintedTexture = textureManager.getTintedTexture(block.id, faceIndex);
+  const tintedTexture = textureResolver.getTintedTexture(block.id, faceIndex);
   if (tintedTexture) {
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = block.isTransparent ? opacity * 0.15 : opacity;
@@ -109,10 +109,10 @@ function renderBlockTexture(
     return true;
   }
 
-  const atlas = textureManager.getAtlas();
+  const atlas = textureResolver.getAtlas();
   if (!atlas || !atlas.loaded) return false;
 
-  const coords = textureManager.getBlockFaceCoords(block.id, faceIndex);
+  const coords = textureResolver.getBlockFaceCoords(block.id, faceIndex);
   if (!coords) return false;
 
   ctx.imageSmoothingEnabled = false;

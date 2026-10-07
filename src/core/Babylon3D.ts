@@ -31,7 +31,7 @@ import { projectView } from '../projections/ProjectView';
 import { blockProjection } from '../projections/BlockProjection';
 import { modelProjection } from '../projections/ModelProjection';
 import { draftingService } from './DraftingService';
-import { textureManager } from './TextureManager';
+import { textureResolver } from './TextureResolver';
 import { editorState } from './EditorState';
 import { renderLoop } from './RenderLoop';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
@@ -358,7 +358,7 @@ class Babylon3D {
     editorState.on('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.on('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
-    textureManager.on('atlas:ready', this.boundHandlers.atlasLoaded);
+    textureResolver.on('atlas:ready', this.boundHandlers.atlasLoaded);
   }
 
   private unsubscribeFromEvents(): void {
@@ -374,7 +374,7 @@ class Babylon3D {
     editorState.off('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.off('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
-    textureManager.off('atlas:ready', this.boundHandlers.atlasLoaded);
+    textureResolver.off('atlas:ready', this.boundHandlers.atlasLoaded);
   }
 
   // -- Private: render loop --
@@ -402,7 +402,7 @@ class Babylon3D {
     // Atlas must be ready before creating any block meshes — otherwise
     // MaterialResolver falls back to colorless materials that get cached
     // in BlockRenderer's instanceTypeMap, blocking future updates
-    await textureManager.waitForAtlas();
+    await textureResolver.waitForAtlas();
     if (!this.blockRenderer || !this.cameraRig) return;
 
     const project = await projectView.getProject();

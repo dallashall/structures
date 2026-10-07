@@ -16,7 +16,7 @@ import {
 } from '@babylonjs/core';
 import type { BaseTexture } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
-import { textureManager } from '../TextureManager';
+import { textureResolver } from '../TextureResolver';
 import { hexToColor3 } from './babylonUtils';
 import { resolvePBRCategory, isLuminousBlock } from './PBRCategoryMap';
 
@@ -162,7 +162,7 @@ export class MaterialResolver {
 
   private createStandardBlockMaterial(blockId: string, block: any, blockName: string): StandardMaterial {
     // Try tinted texture first (for glass, grass, leaves)
-    const tintedTexture = textureManager.getTintedTexture(blockId, 0);
+    const tintedTexture = textureResolver.getTintedTexture(blockId, 0);
     let material: StandardMaterial;
 
     if (tintedTexture) {
@@ -216,7 +216,7 @@ export class MaterialResolver {
   }
 
   private createStandardAtlasMaterial(blockId: string, block: any, blockName: string): StandardMaterial | null {
-    const atlas = textureManager.getAtlas();
+    const atlas = textureResolver.getAtlas();
     if (!atlas || !atlas.loaded) return null;
 
     const material = new StandardMaterial(`atlas_${blockId}`, this.scene);
@@ -262,7 +262,7 @@ export class MaterialResolver {
 
   private createPBRBlockMaterial(blockId: string, block: any, blockName: string): PBRMaterial {
     // Try tinted texture first (for glass, grass, leaves)
-    const tintedTexture = textureManager.getTintedTexture(blockId, 0);
+    const tintedTexture = textureResolver.getTintedTexture(blockId, 0);
     if (tintedTexture) {
       return this.createPBRTintedMaterial(blockId, blockName, block, tintedTexture);
     }
@@ -318,7 +318,7 @@ export class MaterialResolver {
   }
 
   private createPBRAtlasMaterial(blockId: string, block: any, blockName: string): PBRMaterial | null {
-    const atlas = textureManager.getAtlas();
+    const atlas = textureResolver.getAtlas();
     if (!atlas || !atlas.loaded) return null;
 
     const preset = resolvePBRCategory(blockId);

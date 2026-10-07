@@ -6,7 +6,7 @@ import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
 /**
- * KeyboardManager - Handles global keyboard shortcuts
+ * HotkeyDispatcher - Handles global keyboard shortcuts
  *
  * Singleton that manages all application-level keyboard shortcuts.
  * Follows architecture: business logic in singletons, not components.
@@ -20,17 +20,17 @@ import type { PaintMode } from '../types';
  * - A/D: Decrement/increment X layer (width - left/right)
  * - X/C: Decrement/increment Y layer (depth - forward/back)
  */
-class KeyboardManager {
-  private static instance: KeyboardManager;
+class HotkeyDispatcher {
+  private static instance: HotkeyDispatcher;
   private isInitialized = false;
 
   private constructor() {}
 
-  static getInstance(): KeyboardManager {
-    if (!KeyboardManager.instance) {
-      KeyboardManager.instance = new KeyboardManager();
+  static getInstance(): HotkeyDispatcher {
+    if (!HotkeyDispatcher.instance) {
+      HotkeyDispatcher.instance = new HotkeyDispatcher();
     }
-    return KeyboardManager.instance;
+    return HotkeyDispatcher.instance;
   }
 
   /**
@@ -39,7 +39,7 @@ class KeyboardManager {
    */
   initialize(): void {
     if (this.isInitialized) {
-      console.warn('KeyboardManager already initialized');
+      console.warn('HotkeyDispatcher already initialized');
       return;
     }
 
@@ -169,4 +169,4 @@ class KeyboardManager {
   };
 }
 
-export const keyboardManager = KeyboardManager.getInstance();
+export const hotkeyDispatcher = HotkeyDispatcher.getInstance();

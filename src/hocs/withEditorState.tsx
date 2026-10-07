@@ -52,7 +52,7 @@ const EDITOR_EVENTS = [
   "paintmode:selected",
   "paintbehavior:selected",
   "shapefillmode:selected",
-  "depthconfig:updated",
+  "depthconfig:applied",
   "placementmode:toggled",
   "actionbar:toggled",
   "quickselect:assigned",

@@ -23,7 +23,7 @@ export interface ToolRegistration {
  * ToolRegistry - Singleton registry for all canvas tools
  *
  * Tools register at module load time. Canvas2D looks up and instantiates tools
- * by name. KeyboardManager resolves hotkeys to tool names.
+ * by name. HotkeyDispatcher resolves hotkeys to tool names.
  *
  * Usage:
  *   toolRegistry.register({ name: 'point', hotkey: 'b', label: 'Point', create: ... });

@@ -12,7 +12,7 @@ import { convertBlockStateFromMc } from './DirectionMapping';
  * - Fuzzy search functionality
  *
  * Events:
- * - blocks:loaded - When blocks are loaded into the registry
+ * - blocks:registered - When blocks are loaded into the registry
  * - blocks:loading - When blocks start loading
  * - blocks:error - When blocks fail to load
  */
@@ -93,7 +93,7 @@ class BlockRegistry extends EventEmitter {
    */
   registerBlock(block: Block): void {
     this.blocks.set(block.id, block);
-    this.emit('blocks:loaded', this.getAllBlocks());
+    this.emit('blocks:registered', this.getAllBlocks());
   }
 
   /**
@@ -192,7 +192,7 @@ class BlockRegistry extends EventEmitter {
       }
 
       this.isLoaded = true;
-      this.emit('blocks:loaded', this.getAllBlocks());
+      this.emit('blocks:registered', this.getAllBlocks());
       console.log(`Block registry loaded: ${this.blocks.size} blocks`);
     } catch (error) {
       this.emit('blocks:error', error);
