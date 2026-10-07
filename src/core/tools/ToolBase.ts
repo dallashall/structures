@@ -2,6 +2,7 @@ import type { Vector3D } from "../../types";
 import type { ViewState } from "../canvas2d/ViewState";
 import type { GuideGeometry } from "../painting/strategies/GuideGeometry";
 import { throttled } from "../../utils/throttle";
+import { wheelZoomFactor } from "../../utils/wheelZoom";
 
 /**
  * Modifier key state
@@ -232,21 +233,15 @@ export abstract class ToolBase {
     this.onUp(e, pos);
   };
 
-  private _onWheel = throttled((e: WheelEvent): void => {
+  private _onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-
-    let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 15;
-    else if (e.deltaMode === 2) delta *= 100;
-
-    const zoomChange = delta > 0 ? -0.15 : 0.15;
     const changed = this.viewState.applyZoom(
-      zoomChange,
+      wheelZoomFactor(e),
       e.offsetX,
       e.offsetY,
     );
     if (changed) this.requestRender();
-  }, 30);
+  };
 
   private _onPointerEnter = (e: PointerEvent): void => {
     const pos = this.resolvePosition(e);

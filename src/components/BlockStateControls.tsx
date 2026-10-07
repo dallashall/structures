@@ -3,9 +3,12 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-  Tooltip,
 } from '@mui/material';
 import type { BlockStateProperties, AxisDirection } from '../types';
+
+import { SHORTCUTS } from '../core/Shortcuts';
+
+import { ShortcutTooltip } from './ShortcutTooltip';
 
 interface BlockStateControlsProps {
   activeBlockState: BlockStateProperties;
@@ -116,19 +119,19 @@ export function BlockStateControls({
           }}
         >
           <ToggleButton value="bottom" aria-label="Bottom slab">
-            <Tooltip title="Bottom slab [Y]" placement="top">
+            <ShortcutTooltip title="Bottom slab" shortcut={SHORTCUTS.flipHalf} shortcutHint="flips" placement="top">
               <Box>Bot</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="top" aria-label="Top slab">
-            <Tooltip title="Top slab [Y]" placement="top">
+            <ShortcutTooltip title="Top slab" shortcut={SHORTCUTS.flipHalf} shortcutHint="flips" placement="top">
               <Box>Top</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="double" aria-label="Double slab">
-            <Tooltip title="Double slab" placement="top">
+            <ShortcutTooltip title="Double slab" placement="top">
               <Box>Dbl</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
         </ToggleButtonGroup>
       )}
@@ -160,14 +163,14 @@ export function BlockStateControls({
           }}
         >
           <ToggleButton value="bottom" aria-label="Bottom half">
-            <Tooltip title="Bottom stair [Y]" placement="top">
+            <ShortcutTooltip title="Bottom stair" shortcut={SHORTCUTS.flipHalf} shortcutHint="flips" placement="top">
               <Box>Bot</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="top" aria-label="Top half">
-            <Tooltip title="Top stair [Y]" placement="top">
+            <ShortcutTooltip title="Top stair" shortcut={SHORTCUTS.flipHalf} shortcutHint="flips" placement="top">
               <Box>Top</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
         </ToggleButtonGroup>
       )}
@@ -199,24 +202,24 @@ export function BlockStateControls({
           }}
         >
           <ToggleButton value="y-" aria-label="Facing -Y">
-            <Tooltip title="-Y [T]" placement="top">
+            <ShortcutTooltip title="Facing -Y" shortcut={SHORTCUTS.rotateFacing} shortcutHint="rotates" placement="top">
               <Box>-Y</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="x+" aria-label="Facing +X">
-            <Tooltip title="+X [T]" placement="top">
+            <ShortcutTooltip title="Facing +X" shortcut={SHORTCUTS.rotateFacing} shortcutHint="rotates" placement="top">
               <Box>+X</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="y+" aria-label="Facing +Y">
-            <Tooltip title="+Y [T]" placement="top">
+            <ShortcutTooltip title="Facing +Y" shortcut={SHORTCUTS.rotateFacing} shortcutHint="rotates" placement="top">
               <Box>+Y</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
           <ToggleButton value="x-" aria-label="Facing -X">
-            <Tooltip title="-X [T]" placement="top">
+            <ShortcutTooltip title="Facing -X" shortcut={SHORTCUTS.rotateFacing} shortcutHint="rotates" placement="top">
               <Box>-X</Box>
-            </Tooltip>
+            </ShortcutTooltip>
           </ToggleButton>
         </ToggleButtonGroup>
       )}

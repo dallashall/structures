@@ -39,6 +39,8 @@ class EventLog extends EventEmitter {
   private constructor() {
     super();
     this.initPromise = this.initDatabase();
+    // Without a persistence grant, the browser may evict IndexedDB under storage pressure
+    void navigator.storage?.persist?.();
   }
 
   static getInstance(): EventLog {

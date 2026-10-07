@@ -69,7 +69,6 @@ class RenderLoop extends EventEmitter {
     if (this.isRunning) return;
 
     this.isRunning = true;
-    console.log('RenderLoop: Started');
 
     const tick = () => {
       // Just emit tick - projections are kept fresh by event listeners

@@ -2,7 +2,6 @@ import {
   Box,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Divider,
 } from "@mui/material";
 import {
@@ -13,6 +12,10 @@ import {
   Timeline,
 } from "@mui/icons-material";
 import type { PaintMode } from "../types";
+
+import { toolShortcut } from "../core/Shortcuts";
+
+import { ShortcutTooltip } from "./ShortcutTooltip";
 
 interface ToolPanelProps {
   paintMode: PaintMode;
@@ -74,41 +77,41 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
           },
         }}
       >
-        <Tooltip title="Point (B)" placement="right">
+        <ShortcutTooltip title="Point" shortcut={toolShortcut("point")} placement="right">
           <ToggleButton value="point" aria-label="Point mode">
             <Brush fontSize="small" />
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
 
-        <Tooltip title="Fill" placement="right">
+        <ShortcutTooltip title="Fill" shortcut={toolShortcut("fill")} placement="right">
           <ToggleButton value="fill" aria-label="Fill mode">
             <FormatColorFill fontSize="small" />
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
 
-        <Tooltip title="Rectangle (R)" placement="right">
+        <ShortcutTooltip title="Rectangle" shortcut={toolShortcut("outline")} placement="right">
           <ToggleButton value="outline" aria-label="Outline mode">
             <BorderOuter fontSize="small" />
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
 
-        <Tooltip title="Circle (O)" placement="right">
+        <ShortcutTooltip title="Circle" shortcut={toolShortcut("circle")} placement="right">
           <ToggleButton value="circle" aria-label="Circle mode">
             <Circle fontSize="small" />
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
 
-        <Tooltip title="Arch (G)" placement="right">
+        <ShortcutTooltip title="Arch" shortcut={toolShortcut("arch")} placement="right">
           <ToggleButton value="arch" aria-label="Arch mode">
             <Box sx={{ fontSize: "1.2rem", fontWeight: "bold" }}>⌒</Box>
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
 
-        <Tooltip title="Curve (V)" placement="right">
+        <ShortcutTooltip title="Curve" shortcut={toolShortcut("curve")} placement="right">
           <ToggleButton value="curve" aria-label="Curve mode">
             <Timeline fontSize="small" />
           </ToggleButton>
-        </Tooltip>
+        </ShortcutTooltip>
       </ToggleButtonGroup>
 
       <Divider sx={{ my: 1 }} />

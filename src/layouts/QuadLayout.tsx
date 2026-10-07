@@ -329,7 +329,7 @@ export function QuadLayout({
         sx={{
           bgcolor: "grey.50",
           border: 1,
-          borderColor: "secondary.light",
+          borderColor: "grey.500",
           borderRadius: 0,
           overflow: "hidden",
           position: "relative",
@@ -338,7 +338,7 @@ export function QuadLayout({
             position: "absolute",
             inset: 0,
             boxShadow: (theme) =>
-              `inset 0 0 8px ${theme.palette.secondary.light}55`,
+              `inset 0 0 8px ${theme.palette.grey[500]}55`,
             pointerEvents: "none",
             zIndex: 5,
           },
@@ -360,7 +360,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "secondary.main",
+              color: "grey.100",
               fontWeight: "medium",
             }}
           >

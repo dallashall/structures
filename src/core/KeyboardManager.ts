@@ -1,6 +1,7 @@
 import { editorState } from './EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import { toolRegistry } from './tools/ToolRegistry';
+import { SHORTCUTS, matchesShortcut } from './Shortcuts';
 import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
@@ -92,13 +93,13 @@ class KeyboardManager {
     }
 
     // F key: Toggle between foreground and background
-    if (event.key === 'f' || event.key === 'F') {
+    if (matchesShortcut(event, SHORTCUTS.swapMaterialSlot)) {
       event.preventDefault();
       editorState.toggleMaterialSlot();
     }
 
     // T key: Rotate facing direction (when stateful block selected)
-    if (event.key === 't' || event.key === 'T') {
+    if (matchesShortcut(event, SHORTCUTS.rotateFacing)) {
       const selectedBlockId = editorState.getSelectedBlock();
       const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
       if (selectedBlock?.hasBlockState) {
@@ -108,7 +109,7 @@ class KeyboardManager {
     }
 
     // Y key: Flip slab half (when stateful block selected)
-    if (event.key === 'y' || event.key === 'Y') {
+    if (matchesShortcut(event, SHORTCUTS.flipHalf)) {
       const selectedBlockId = editorState.getSelectedBlock();
       const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
       if (selectedBlock?.hasBlockState) {
@@ -122,13 +123,13 @@ class KeyboardManager {
     const activeLayers = editorState.getActiveLayers();
 
     // W/S keys: Z layer (height - up/down)
-    if (event.key === 'w' || event.key === 'W') {
+    if (matchesShortcut(event, SHORTCUTS.layerZUp)) {
       event.preventDefault();
       const nextLayer = (activeLayers.z + 1) % model.dimensions.depth;
       editorState.setActiveLayer('z', nextLayer);
     }
 
-    if (event.key === 's' || event.key === 'S') {
+    if (matchesShortcut(event, SHORTCUTS.layerZDown)) {
       event.preventDefault();
       const nextLayer = activeLayers.z === 0
         ? model.dimensions.depth - 1
@@ -137,7 +138,7 @@ class KeyboardManager {
     }
 
     // A/D keys: X layer (width - left/right)
-    if (event.key === 'a' || event.key === 'A') {
+    if (matchesShortcut(event, SHORTCUTS.layerXDown)) {
       event.preventDefault();
       const nextLayer = activeLayers.x === 0
         ? model.dimensions.width - 1
@@ -145,14 +146,14 @@ class KeyboardManager {
       editorState.setActiveLayer('x', nextLayer);
     }
 
-    if (event.key === 'd' || event.key === 'D') {
+    if (matchesShortcut(event, SHORTCUTS.layerXUp)) {
       event.preventDefault();
       const nextLayer = (activeLayers.x + 1) % model.dimensions.width;
       editorState.setActiveLayer('x', nextLayer);
     }
 
     // X/C keys: Y layer (depth - forward/back)
-    if (event.key === 'x' || event.key === 'X') {
+    if (matchesShortcut(event, SHORTCUTS.layerYDown)) {
       event.preventDefault();
       const nextLayer = activeLayers.y === 0
         ? model.dimensions.height - 1
@@ -160,7 +161,7 @@ class KeyboardManager {
       editorState.setActiveLayer('y', nextLayer);
     }
 
-    if (event.key === 'c' || event.key === 'C') {
+    if (matchesShortcut(event, SHORTCUTS.layerYUp)) {
       event.preventDefault();
       const nextLayer = (activeLayers.y + 1) % model.dimensions.height;
       editorState.setActiveLayer('y', nextLayer);

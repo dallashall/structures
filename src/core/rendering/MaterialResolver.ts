@@ -14,6 +14,7 @@ import {
   Scene,
   Material,
 } from '@babylonjs/core';
+import type { BaseTexture } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
 import { textureManager } from '../TextureManager';
 import { hexToColor3 } from './babylonUtils';
@@ -171,9 +172,8 @@ export class MaterialResolver {
       material = atlasMaterial ?? this.createColorMaterial(blockId, block.color);
     }
 
-    // Apply emissive to luminous blocks (same as PBR path)
     if (isLuminousBlock(blockName)) {
-      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
+      this.applyGlow(material, material.diffuseTexture, block.color);
     }
 
     return material;
@@ -311,7 +311,7 @@ export class MaterialResolver {
     }
 
     if (isLuminousBlock(blockName)) {
-      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
+      this.applyGlow(material, babylonTexture, block.color);
     }
 
     return material;
@@ -353,7 +353,7 @@ export class MaterialResolver {
     }
 
     if (isLuminousBlock(blockName)) {
-      material.emissiveColor = hexToColor3(block.color).scale(this.emissiveScale);
+      this.applyGlow(material, babylonTexture, block.color);
     }
 
     return material;
@@ -367,10 +367,30 @@ export class MaterialResolver {
     material.roughness = preset.roughness;
 
     if (isLuminousBlock(id)) {
-      material.emissiveColor = hexToColor3(color).scale(this.emissiveScale);
+      this.applyGlow(material, null, color);
     }
 
     return material;
+  }
+
+  /**
+   * Make a luminous block glow with its own texture, so the pattern stays visible
+   * instead of washing out under a flat tint. A scale above 1 pushes the face past
+   * the bloom threshold. A scale at or below 0 leaves the block lit like any other.
+   */
+  private applyGlow(
+    material: PBRMaterial | StandardMaterial,
+    texture: BaseTexture | null,
+    color: string,
+  ): void {
+    if (this.emissiveScale <= 0) return;
+
+    if (texture) {
+      material.emissiveTexture = texture;
+      material.emissiveColor = Color3.White().scale(this.emissiveScale);
+    } else {
+      material.emissiveColor = hexToColor3(color).scale(this.emissiveScale);
+    }
   }
 
   destroy(): void {

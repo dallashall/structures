@@ -78,10 +78,6 @@ class TextureManager extends EventEmitter {
       };
 
       this.emit('atlas:loaded', this.atlas);
-      console.log('✅ Texture atlas loaded:', {
-        size: `${this.atlas.width}x${this.atlas.height}`,
-        textures: this.atlasMetadata?.textureCount || 0,
-      });
     } catch (error) {
       this.emit('atlas:error', error);
       console.error('❌ Failed to load texture atlas:', error);

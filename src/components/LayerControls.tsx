@@ -3,6 +3,8 @@ import { Settings } from '@mui/icons-material';
 
 import type { Dimensions, LayerState } from '../types';
 
+import { SHORTCUTS } from '../core/Shortcuts';
+
 import { LayerDimensionControl } from './LayerDimensionControl';
 import { DialogTrigger } from './DialogTrigger';
 
@@ -18,8 +20,8 @@ interface LayerControlsProps {
  * Shows current X/Y/Z layer values in a compact read-only display.
  * Click the settings button to open a popover with full controls.
  *
- * Keyboard shortcuts (x/Shift+x, y/Shift+y, z/Shift+z) are handled
- * globally in the EditorView.
+ * Layer keys come from SHORTCUTS and are handled globally by KeyboardManager.
+ * The step buttons show them in their tooltips.
  */
 export function LayerControls({
   maxDimensions,
@@ -108,6 +110,8 @@ export function LayerControls({
                 onIncrement={handleXIncrement}
                 onDecrement={handleXDecrement}
                 onChange={handleXChange}
+                incrementShortcut={SHORTCUTS.layerXUp}
+                decrementShortcut={SHORTCUTS.layerXDown}
               />
 
               {/* Y Layer Control */}
@@ -118,6 +122,8 @@ export function LayerControls({
                 onIncrement={handleYIncrement}
                 onDecrement={handleYDecrement}
                 onChange={handleYChange}
+                incrementShortcut={SHORTCUTS.layerYUp}
+                decrementShortcut={SHORTCUTS.layerYDown}
               />
 
               {/* Z Layer Control */}
@@ -128,6 +134,8 @@ export function LayerControls({
                 onIncrement={handleZIncrement}
                 onDecrement={handleZDecrement}
                 onChange={handleZChange}
+                incrementShortcut={SHORTCUTS.layerZUp}
+                decrementShortcut={SHORTCUTS.layerZDown}
               />
             </Stack>
           </Box>

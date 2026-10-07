@@ -48,6 +48,9 @@ export type ShapeFillMode = "outline" | "filled";
 // Lighting presets for 3D renderer
 export type LightingPreset = "day" | "night" | "cloudy";
 
+// color: flat clearColor. skybox: environment texture. ground: environment texture projected onto a floor.
+export type BackgroundMode = "color" | "skybox" | "ground";
+
 // Depth painting modes
 export type DepthPaintMode = "through" | "until-collision";
 
@@ -354,6 +357,9 @@ export interface RenderSettings {
 
   // Lighting preset
   lightingPreset: LightingPreset;
+
+  // Background
+  backgroundMode: BackgroundMode;
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
@@ -379,6 +385,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   exposure: 1.0,
   layerHighlightEnabled: false,
   lightingPreset: "night",
+  backgroundMode: "skybox",
 };
 
 // Utility type for event handlers

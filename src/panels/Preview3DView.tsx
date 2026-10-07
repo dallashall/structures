@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   IconButton,
@@ -12,13 +11,16 @@ import {
 import {
   ZoomIn,
   ZoomOut,
+  FitScreen,
   RestartAlt,
   Tune,
 } from "@mui/icons-material";
-import { Babylon3D } from "../core/Babylon3D";
+import { babylon3d } from "../core/Babylon3D";
 import { editorState } from "../core/EditorState";
 import { RenderSettingsModal } from "../components/RenderSettingsModal";
+import { withEditorState } from "../hocs/withEditorState";
 
+import type { WithEditorStateProps } from "../hocs/withEditorState";
 import type { RenderSettings } from "../types";
 
 // Axis colors that work in dark/light mode
@@ -28,127 +30,62 @@ const AXIS_COLORS = {
   z: { main: "#27ae60", hover: "#229954", bg: "rgba(39, 174, 96, 0.1)" },
 };
 
-interface Preview3DViewProps {
+interface Preview3DViewOwnProps {
   width: number;
   height: number;
   isVisible?: boolean;
 }
 
+type Preview3DViewProps = Preview3DViewOwnProps & WithEditorStateProps;
+
 /**
- * Preview3DView - Thin React wrapper for Babylon3D
+ * Preview3DView - Dumb rendering component for the 3D preview panel.
  *
- * Pure TypeScript controller handles all BabylonJS rendering and interactions.
- * This component just mounts/unmounts the controller and provides the canvas element.
- *
- * ARCHITECTURAL NOTE:
- * This component is technically an HOC for the native HTML canvas element.
- * It uses React hooks (useEffect, useRef) to manage the lifecycle of the
- * Babylon3D and sync props to it. This is an accepted exception to
- * the "minimal hooks" rule because:
- * - All business logic lives in the Babylon3D class
- * - The component only handles React ↔ DOM lifecycle management
- * - It's a bridge between React's declarative props and imperative BabylonJS APIs
+ * All BabylonJS logic lives in the babylon3d singleton.
+ * Editor state comes via withEditorState HOC props.
+ * This component only renders UI and delegates actions.
  */
-export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const controllerRef = React.useRef<Babylon3D | null>(null);
+function Preview3DViewInner({
+  width,
+  height,
+  isVisible,
+  sliceGuideVisibility,
+  renderSettings,
+  renderSettingsModalOpen,
+}: Preview3DViewProps) {
   const theme = useTheme();
 
-  // Render cache for slice guide visibility (source of truth is EditorState)
-  const [sliceGuideVisibility, setSliceGuideVisibility] = React.useState(
-    editorState.getSliceGuideVisibility()
-  );
-
-  // Render settings state
-  const [renderSettingsOpen, setRenderSettingsOpen] = React.useState(false);
-  const [renderSettings, setRenderSettings] = React.useState<RenderSettings>(
-    editorState.getRenderSettings()
-  );
-
-  // Create and mount controller
-  React.useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const controller = new Babylon3D(canvasRef.current);
-    controllerRef.current = controller;
-
-    // Expose controller to window for programmatic control
-    (window as any).babylon3d = controller;
-
-    // Initialize with async project data
-    void controller.init();
-
-    return () => {
-      controller.destroy();
-      controllerRef.current = null;
-      delete (window as any).babylon3d;
-    };
-  }, []);
-
-  // Pause/resume render loop based on visibility
-  React.useEffect(() => {
-    if (!controllerRef.current) return;
-    if (isVisible === false) {
-      controllerRef.current.pause();
-    } else {
-      controllerRef.current.resume();
-    }
-  }, [isVisible]);
-
-  // Handle resize
-  React.useEffect(() => {
-    controllerRef.current?.resize(width, height);
-  }, [width, height]);
-
-  // Subscribe to slice guide visibility changes for button styling
-  React.useEffect(() => {
-    const handleSliceGuideToggled = () => {
-      setSliceGuideVisibility(editorState.getSliceGuideVisibility());
-    };
-    editorState.on('sliceguide:axis:toggled', handleSliceGuideToggled);
-    return () => {
-      editorState.off('sliceguide:axis:toggled', handleSliceGuideToggled);
-    };
-  }, []);
-
-  // Subscribe to render settings changes
-  React.useEffect(() => {
-    const handleRenderSettingsApplied = (settings: RenderSettings) => {
-      setRenderSettings(settings);
-    };
-    editorState.on('rendersettings:applied', handleRenderSettingsApplied);
-    return () => {
-      editorState.off('rendersettings:applied', handleRenderSettingsApplied);
-    };
-  }, []);
-
-  // Handle axis visibility toggles via EditorState
-  const handleToggleX = () => { editorState.toggleSliceGuide('x'); };
-  const handleToggleY = () => { editorState.toggleSliceGuide('y'); };
-  const handleToggleZ = () => { editorState.toggleSliceGuide('z'); };
-
-  // Handle camera controls
-  const handleCameraView = (view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom') => {
-    controllerRef.current?.setCameraView(view);
+  // Ref callback — attaches the singleton to the canvas element.
+  // Idempotent: calling with the same canvas is a no-op.
+  const handleCanvasMount = (canvas: HTMLCanvasElement | null): void => {
+    if (canvas) babylon3d.attach(canvas);
   };
 
-  const handleZoomIn = () => {
-    controllerRef.current?.zoomCamera(-2);
-  };
+  // Sync visibility to singleton (idempotent)
+  babylon3d.setVisible(isVisible !== false);
 
-  const handleZoomOut = () => {
-    controllerRef.current?.zoomCamera(2);
-  };
+  // Slice guide toggles
+  const handleToggleX = (): void => { editorState.toggleSliceGuide('x'); };
+  const handleToggleY = (): void => { editorState.toggleSliceGuide('y'); };
+  const handleToggleZ = (): void => { editorState.toggleSliceGuide('z'); };
 
-  const handleResetCamera = () => {
-    controllerRef.current?.resetCamera();
-  };
+  // Camera controls
+  const handleCameraFront = (): void => { babylon3d.setCameraView('front'); };
+  const handleCameraBack = (): void => { babylon3d.setCameraView('back'); };
+  const handleCameraLeft = (): void => { babylon3d.setCameraView('left'); };
+  const handleCameraRight = (): void => { babylon3d.setCameraView('right'); };
+  const handleCameraTop = (): void => { babylon3d.setCameraView('top'); };
+  const handleCameraBottom = (): void => { babylon3d.setCameraView('bottom'); };
+  const handleZoomIn = (): void => { babylon3d.zoomCamera(-2); };
+  const handleZoomOut = (): void => { babylon3d.zoomCamera(2); };
+  const handleFitModel = (): void => { babylon3d.fitToModel(); };
+  const handleResetCamera = (): void => { babylon3d.resetCamera(); };
 
-  // Render settings handlers
-  const handleOpenSettings = () => { setRenderSettingsOpen(true); };
-  const handleCloseSettings = () => { setRenderSettingsOpen(false); };
-  const handleApplySettings = (settings: RenderSettings) => { editorState.setRenderSettings(settings); };
-  const handleResetSettings = () => { editorState.resetRenderSettings(); };
+  // Render settings modal
+  const handleOpenSettings = (): void => { editorState.setRenderSettingsModalOpen(true); };
+  const handleCloseSettings = (): void => { editorState.setRenderSettingsModalOpen(false); };
+  const handleApplySettings = (settings: RenderSettings): void => { editorState.setRenderSettings(settings); };
+  const handleResetSettings = (): void => { editorState.resetRenderSettings(); };
 
   return (
     <Box
@@ -160,7 +97,7 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
       }}
     >
       <canvas
-        ref={canvasRef}
+        ref={handleCanvasMount}
         style={{
           display: "block",
           width: `${width}px`,
@@ -308,22 +245,22 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
             <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
               Camera:
             </Typography>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('front')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraFront} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Front
             </Button>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('back')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraBack} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Back
             </Button>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('left')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraLeft} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Left
             </Button>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('right')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraRight} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Right
             </Button>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('top')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraTop} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Top
             </Button>
-            <Button size="small" variant="outlined" onClick={() => handleCameraView('bottom')} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
+            <Button size="small" variant="outlined" onClick={handleCameraBottom} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
               Bottom
             </Button>
           </Stack>
@@ -344,6 +281,11 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
                   <ZoomOut fontSize="small" />
                 </IconButton>
               </Tooltip>
+              <Tooltip title="Fit Model to View">
+                <IconButton onClick={handleFitModel} size="small">
+                  <FitScreen fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Reset Camera">
                 <IconButton onClick={handleResetCamera} size="small">
                   <RestartAlt fontSize="small" />
@@ -356,7 +298,7 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
 
       {/* Render Settings Modal */}
       <RenderSettingsModal
-        isOpen={renderSettingsOpen}
+        isOpen={renderSettingsModalOpen}
         settings={renderSettings}
         onClose={handleCloseSettings}
         onApply={handleApplySettings}
@@ -365,3 +307,5 @@ export function Preview3DView({ width, height, isVisible }: Preview3DViewProps) 
     </Box>
   );
 }
+
+export const Preview3DView = withEditorState(Preview3DViewInner);

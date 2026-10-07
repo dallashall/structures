@@ -56,7 +56,7 @@ export function WelcomeView({
 
   const handleDeleteProjectById = async (projectId: string) => {
     await storage.deleteProject(projectId);
-    const projectList = storage.listProjects();
+    const projectList = await storage.listProjects();
     setProjects(projectList);
     // Clear selection if deleted project was selected
     if (selectedProjectId === projectId) {
@@ -88,14 +88,22 @@ export function WelcomeView({
     <Box sx={{ p: 4, height: "100%", overflow: "hidden" }}>
       <Stack spacing={3} sx={{ height: "100%" }}>
         {/* Header */}
-        <Box>
-          <Typography variant="h3" component="h1">
-            Structures
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Design 3D Minecraft structures using a 2D pixel-art editor
-          </Typography>
-        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Box
+            component="img"
+            src="/logo-256.png"
+            alt=""
+            sx={{ width: 72, height: 72 }}
+          />
+          <Box>
+            <Typography variant="h3" component="h1">
+              Structures
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Design 3D Minecraft structures using a 2D pixel-art editor
+            </Typography>
+          </Box>
+        </Stack>
 
         <Divider />
 

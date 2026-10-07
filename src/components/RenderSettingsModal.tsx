@@ -20,14 +20,15 @@ import {
   Select,
   MenuItem,
   Stack,
-  Box,
   Divider,
   IconButton,
   TextField,
 } from '@mui/material';
 import { ExpandMore, Close } from '@mui/icons-material';
 
-import type { RenderSettings, LightingPreset } from '../types';
+import type { RenderSettings, LightingPreset, BackgroundMode } from '../types';
+
+import { SettingRow } from './SettingRow';
 
 interface RenderSettingsModalProps {
   isOpen: boolean;
@@ -35,19 +36,6 @@ interface RenderSettingsModalProps {
   onClose: () => void;
   onApply: (settings: RenderSettings) => void;
   onReset: () => void;
-}
-
-function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ minHeight: 36 }}>
-      <Typography variant="body2" sx={{ color: 'text.secondary', minWidth: 140 }}>
-        {label}
-      </Typography>
-      <Box sx={{ flex: 1, maxWidth: 200, display: 'flex', justifyContent: 'flex-end' }}>
-        {children}
-      </Box>
-    </Stack>
-  );
 }
 
 export function RenderSettingsModal({
@@ -73,6 +61,10 @@ export function RenderSettingsModal({
     onApply({ ...settings, lightingPreset: event.target.value as LightingPreset });
   };
 
+  const handleBackgroundChange = (event: any) => {
+    onApply({ ...settings, backgroundMode: event.target.value as BackgroundMode });
+  };
+
   const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onApply({ ...settings, edgesColor: event.target.value });
   };
@@ -93,12 +85,12 @@ export function RenderSettingsModal({
         },
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
-        <Typography variant="h6">Render Settings</Typography>
-        <IconButton onClick={onClose} size="small">
-          <Close />
-        </IconButton>
-      </DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
+          <Typography variant="h6" component="div">Render Settings</Typography>
+          <IconButton onClick={onClose} size="small">
+            <Close />
+          </IconButton>
+        </DialogTitle>
 
       <Divider />
 
@@ -151,6 +143,18 @@ export function RenderSettingsModal({
                   <MenuItem value="day">Day</MenuItem>
                   <MenuItem value="night">Night</MenuItem>
                   <MenuItem value="cloudy">Cloudy</MenuItem>
+                </Select>
+              </SettingRow>
+              <SettingRow label="Background">
+                <Select
+                  value={settings.backgroundMode}
+                  onChange={handleBackgroundChange}
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value="color">Flat Color</MenuItem>
+                  <MenuItem value="skybox">Sky</MenuItem>
+                  <MenuItem value="ground">Sky + Ground</MenuItem>
                 </Select>
               </SettingRow>
               <Divider sx={{ my: 0.5 }} />

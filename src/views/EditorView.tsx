@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Stack } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import type { ViewType } from "../types";
 
 import {
@@ -76,12 +77,27 @@ function EditorViewComponent(props: EditorViewProps) {
     onBackToWelcome,
   } = props;
 
-  // No project loaded
+  const handleBackToProjects = () => {
+    if (onBackToWelcome) {
+      onBackToWelcome();
+    }
+  };
+
   if (!project) {
     return (
-      <Box sx={{ p: 4 }}>
-        <p>No project loaded</p>
-      </Box>
+      <Stack
+        spacing={2}
+        sx={{ height: "100%", alignItems: "center", justifyContent: "center" }}
+      >
+        <Typography variant="h6">No project loaded</Typography>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBack />}
+          onClick={handleBackToProjects}
+        >
+          Back to Projects
+        </Button>
+      </Stack>
     );
   }
 
@@ -97,12 +113,6 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   // Handlers
-  const handleBackToProjects = () => {
-    if (onBackToWelcome) {
-      onBackToWelcome();
-    }
-  };
-
   const handleViewTabChange = (
     _event: React.SyntheticEvent,
     newValue: string,

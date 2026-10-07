@@ -6,14 +6,11 @@
  * - created, modified timestamps
  *
  * Rebuilds incrementally from snapshot when new metadata:* events arrive.
- * Creates new snapshot every 15 events to optimize replay performance.
  */
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
 import { editorState } from '../core/EditorState';
-
-const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
 
 export interface Metadata {
   id: string;
@@ -37,8 +34,6 @@ class MetadataProjection extends EventEmitter {
   private static instance: MetadataProjection;
 
   private snapshot: MetadataSnapshot | null = null;
-  private eventsSinceSnapshot = 0;
-
   private constructor() {
     super();
 
@@ -73,13 +68,6 @@ class MetadataProjection extends EventEmitter {
 
     // Apply event to snapshot
     this.applyEvent(event);
-    this.eventsSinceSnapshot++;
-
-    // Create new snapshot if threshold reached
-    if (this.eventsSinceSnapshot >= SNAPSHOT_THRESHOLD) {
-      this.createSnapshot();
-      this.eventsSinceSnapshot = 0;
-    }
 
     // Notify listeners
     this.emit('metadata:rebuilt');
@@ -134,26 +122,6 @@ class MetadataProjection extends EventEmitter {
     }
 
     this.emit('metadata:rebuilt');
-  }
-
-  /**
-   * Create snapshot (persist to localStorage for fast startup)
-   */
-  private createSnapshot(): void {
-    if (!this.snapshot) return;
-
-    try {
-      const serialized = JSON.stringify({
-        latestEventId: this.snapshot.latestEventId,
-        id: this.snapshot.id,
-        name: this.snapshot.name,
-        created: this.snapshot.created.toISOString(),
-        modified: this.snapshot.modified.toISOString(),
-      });
-      localStorage.setItem('metadata-snapshot', serialized);
-    } catch (error) {
-      console.error('Failed to create metadata snapshot:', error);
-    }
   }
 
   /**
@@ -239,7 +207,6 @@ class MetadataProjection extends EventEmitter {
    */
   reset(): void {
     this.snapshot = null;
-    this.eventsSinceSnapshot = 0;
   }
 }
 

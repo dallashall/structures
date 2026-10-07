@@ -56,6 +56,11 @@ export class Canvas2D {
     );
   };
 
+  private handleModelRebuilt = (): void => {
+    this.viewState.fitIfUnadjusted();
+    this.resolvePersistentBlocks();
+  };
+
   private handleRequestRender = (): void => {
     this.needsRender = true;
   };
@@ -217,7 +222,7 @@ export class Canvas2D {
 
     // Persistent block resolution
     blockProjection.on("blocks:rebuilt", this.resolvePersistentBlocks);
-    modelProjection.on("model:rebuilt", this.resolvePersistentBlocks);
+    modelProjection.on("model:rebuilt", this.handleModelRebuilt);
     editorState.on("layer:adjusted", this.resolvePersistentBlocks);
 
     // Draft block resolution
@@ -242,7 +247,7 @@ export class Canvas2D {
     renderLoop.unregister();
 
     blockProjection.off("blocks:rebuilt", this.resolvePersistentBlocks);
-    modelProjection.off("model:rebuilt", this.resolvePersistentBlocks);
+    modelProjection.off("model:rebuilt", this.handleModelRebuilt);
     editorState.off("layer:adjusted", this.resolvePersistentBlocks);
 
     draftingService.off("draft:updated", this.resolveDraftBlocks);

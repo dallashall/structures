@@ -4,19 +4,27 @@
  * Pure functions and preset data for day/night/cloudy lighting.
  * Adjusts hemisphere light, directional light, scene clear color,
  * environment intensity, emissive material scaling, and point light parameters.
+ * Light colors come from SkyPresets, so the lights carry the same key/fill contrast as the baked sky.
  * Lights are found by name from the scene graph (no stored references).
  */
 
 import { Color3, Color4, Scene } from "@babylonjs/core";
 import type { HemisphericLight, DirectionalLight } from "@babylonjs/core";
 
+import { SKY_PRESETS } from "./SkyPresets";
+
 import type { LightingPreset } from "../../types";
+import type { SkyColor } from "./SkyPresets";
+
+// Share of the sky's fill hue in the hemispheric light. The rest is white, so ambient light
+// tints the blocks without washing out their texture colors.
+const HEMISPHERIC_TINT = 0.5;
 
 interface LightingPresetConfig {
   hemisphericIntensity: number;
-  hemisphericGroundColor: Color3;
+  // Brightness of the light bouncing up from the ground. Its hue comes from the sky's ground color.
+  hemisphericGroundLevel: number;
   directionalIntensity: number;
-  directionalColor: Color3;
   clearColor: Color4;
   environmentIntensity: number;
   emissiveScale: number;
@@ -26,35 +34,42 @@ interface LightingPresetConfig {
 const PRESETS: Record<LightingPreset, LightingPresetConfig> = {
   day: {
     hemisphericIntensity: 0.9,
-    hemisphericGroundColor: new Color3(0.2, 0.2, 0.2),
+    hemisphericGroundLevel: 0.2,
     directionalIntensity: 1.5,
-    directionalColor: new Color3(1.0, 0.95, 0.85),
     clearColor: new Color4(0.5, 0.8, 0.9, 1.0),
     environmentIntensity: 0.9,
-    emissiveScale: -0.5,
+    emissiveScale: 0,
     emissiveLightIntensity: 0.0,
   },
   night: {
-    hemisphericIntensity: 0.1,
-    hemisphericGroundColor: new Color3(0.02, 0.02, 0.05),
-    directionalIntensity: 0.3,
-    directionalColor: new Color3(0.6, 0.65, 0.8),
+    hemisphericIntensity: 0.35,
+    hemisphericGroundLevel: 0.05,
+    directionalIntensity: 0.5,
     clearColor: new Color4(0.02, 0.02, 0.05, 1.0),
-    environmentIntensity: 0.2,
-    emissiveScale: 0.5,
-    emissiveLightIntensity: 5.0,
+    environmentIntensity: 0.6,
+    emissiveScale: 0.9,
+    emissiveLightIntensity: 12.0,
   },
   cloudy: {
     hemisphericIntensity: 0.5,
-    hemisphericGroundColor: new Color3(0.12, 0.13, 0.13),
+    hemisphericGroundLevel: 0.13,
     directionalIntensity: 0.7,
-    directionalColor: new Color3(0.8, 0.8, 0.85),
     clearColor: new Color4(0.12, 0.15, 0.15, 1.0),
     environmentIntensity: 0.5,
     emissiveScale: 0.1,
     emissiveLightIntensity: 0.5,
   },
 };
+
+const toColor3 = (c: SkyColor): Color3 => new Color3(c.r, c.g, c.b);
+
+// Same hue, brightest channel scaled to `level`
+const withLevel = (c: SkyColor, level: number): Color3 => {
+  const peak = Math.max(c.r, c.g, c.b);
+  return toColor3(c).scale(peak > 0 ? level / peak : 0);
+};
+
+const multiply = (a: SkyColor, b: SkyColor): SkyColor => ({ r: a.r * b.r, g: a.g * b.g, b: a.b * b.b });
 
 /**
  * Apply a lighting preset to the scene.
@@ -65,17 +80,20 @@ export function applyLightingPreset(
   preset: LightingPreset,
 ): void {
   const config = PRESETS[preset];
+  const sky = SKY_PRESETS[preset];
 
   const hemiLight = scene.getLightByName("light") as HemisphericLight | null;
   if (hemiLight) {
     hemiLight.intensity = config.hemisphericIntensity;
-    hemiLight.groundColor = config.hemisphericGroundColor;
+    const fillHue = withLevel(multiply(sky.zenith, sky.fillTint), 1);
+    hemiLight.diffuse = Color3.Lerp(Color3.White(), fillHue, HEMISPHERIC_TINT);
+    hemiLight.groundColor = withLevel(sky.ground, config.hemisphericGroundLevel);
   }
 
   const dirLight = scene.getLightByName("dirLight") as DirectionalLight | null;
   if (dirLight) {
     dirLight.intensity = config.directionalIntensity;
-    dirLight.diffuse = config.directionalColor;
+    dirLight.diffuse = toColor3(sky.sunColor);
   }
 
   scene.clearColor = config.clearColor;

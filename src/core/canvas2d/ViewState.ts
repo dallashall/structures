@@ -16,13 +16,18 @@ import { CoordinateConverter } from "../painting/CoordinateConverter";
  */
 export class ViewState {
   private zoom = 1.0;
+  private fitZoom = 1.0;
   private pan = { x: 0, y: 0 };
   private canvasWidth: number;
   private canvasHeight: number;
+  // Set once the user zooms or pans. Until then the grid re-fits on resize and dimension changes.
+  private isUserAdjusted = false;
 
   private readonly BASE_CELL_SIZE = 20;
   private readonly MIN_ZOOM = 0.25;
   private readonly MAX_ZOOM = 4.0;
+  // Pixels kept clear on each side for the view label, layer badge, and axis gizmo
+  private readonly FIT_PADDING = 40;
 
   constructor(
     private viewType: ViewType,
@@ -31,7 +36,7 @@ export class ViewState {
   ) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
-    this.initializePan();
+    this.fitToCanvas();
   }
 
   /**
@@ -40,7 +45,7 @@ export class ViewState {
   setCanvasSize(width: number, height: number): void {
     this.canvasWidth = width;
     this.canvasHeight = height;
-    this.initializePan();
+    this.fitIfUnadjusted();
   }
 
   /**
@@ -48,24 +53,41 @@ export class ViewState {
    */
   setViewType(viewType: ViewType): void {
     this.viewType = viewType;
-    this.initializePan();
+    this.isUserAdjusted = false;
+    this.fitToCanvas();
   }
 
   /**
-   * Initialize pan to center the grid
+   * Re-fit the grid unless the user has zoomed or panned
    */
-  private initializePan(): void {
+  fitIfUnadjusted(): void {
+    if (!this.isUserAdjusted) this.fitToCanvas();
+  }
+
+  /**
+   * Zoom so the whole grid fits inside the canvas, then center it
+   */
+  private fitToCanvas(): void {
     const project = projectView.getCached();
     if (!project) return;
 
     const { gridWidth, gridHeight } = this.getGridDimensions(
       project.dimensions,
     );
-    const gridPixelWidth = gridWidth * this.BASE_CELL_SIZE;
-    const gridPixelHeight = gridHeight * this.BASE_CELL_SIZE;
+    const availableWidth = this.canvasWidth - this.FIT_PADDING * 2;
+    const availableHeight = this.canvasHeight - this.FIT_PADDING * 2;
+    if (availableWidth <= 0 || availableHeight <= 0) return;
 
-    this.pan.x = (this.canvasWidth - gridPixelWidth) / 2;
-    this.pan.y = (this.canvasHeight - gridPixelHeight) / 2;
+    const fitCellSize = Math.min(
+      availableWidth / gridWidth,
+      availableHeight / gridHeight,
+    );
+    this.fitZoom = Math.min(this.MAX_ZOOM, fitCellSize / this.BASE_CELL_SIZE);
+    this.zoom = this.fitZoom;
+
+    const cellSize = this.getCellSize();
+    this.pan.x = (this.canvasWidth - gridWidth * cellSize) / 2;
+    this.pan.y = (this.canvasHeight - gridHeight * cellSize) / 2;
   }
 
   /**
@@ -147,27 +169,21 @@ export class ViewState {
   }
 
   /**
-   * Apply zoom centered on a point
+   * Multiply zoom by a factor, keeping the point under (centerX, centerY) fixed.
+   * The lower bound drops below MIN_ZOOM when a large grid needs it to fit.
    */
-  applyZoom(delta: number, centerX: number, centerY: number): boolean {
+  applyZoom(factor: number, centerX: number, centerY: number): boolean {
     const oldZoom = this.zoom;
-    const newZoom = Math.max(
-      this.MIN_ZOOM,
-      Math.min(this.MAX_ZOOM, oldZoom + delta),
-    );
+    const minZoom = Math.min(this.MIN_ZOOM, this.fitZoom);
+    const newZoom = Math.max(minZoom, Math.min(this.MAX_ZOOM, oldZoom * factor));
 
     if (Math.abs(newZoom - oldZoom) < 0.001) return false;
 
-    const beforeX = (centerX - this.pan.x) / oldZoom;
-    const beforeY = (centerY - this.pan.y) / oldZoom;
-
+    const scale = newZoom / oldZoom;
+    this.pan.x = centerX - (centerX - this.pan.x) * scale;
+    this.pan.y = centerY - (centerY - this.pan.y) * scale;
     this.zoom = newZoom;
-
-    const afterX = (centerX - this.pan.x) / newZoom;
-    const afterY = (centerY - this.pan.y) / newZoom;
-
-    this.pan.x += (afterX - beforeX) * newZoom;
-    this.pan.y += (afterY - beforeY) * newZoom;
+    this.isUserAdjusted = true;
 
     return true;
   }
@@ -178,6 +194,7 @@ export class ViewState {
   applyPan(deltaX: number, deltaY: number): void {
     this.pan.x += deltaX;
     this.pan.y += deltaY;
+    this.isUserAdjusted = true;
   }
 
   /**

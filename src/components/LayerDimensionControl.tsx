@@ -1,6 +1,8 @@
 import { Stack, IconButton, Typography, Slider, TextField } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
 
+import { ShortcutTooltip } from './ShortcutTooltip';
+
 interface LayerDimensionControlProps {
   label: string;
   currentLayer: number;
@@ -8,6 +10,8 @@ interface LayerDimensionControlProps {
   onIncrement: () => void;
   onDecrement: () => void;
   onChange: (value: number) => void;
+  incrementShortcut?: string;
+  decrementShortcut?: string;
 }
 
 /**
@@ -23,6 +27,8 @@ export function LayerDimensionControl({
   onIncrement,
   onDecrement,
   onChange,
+  incrementShortcut,
+  decrementShortcut,
 }: LayerDimensionControlProps) {
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseInt(event.target.value, 10);
@@ -40,14 +46,19 @@ export function LayerDimensionControl({
       <Typography variant="body2">
         <strong>{label}:</strong>
       </Typography>
-      <IconButton
-        onClick={onDecrement}
-        disabled={currentLayer <= 0}
-        size="small"
-        aria-label={`Decrement ${label}`}
-      >
-        <KeyboardArrowDown />
-      </IconButton>
+      {/* The span keeps the tooltip working while the button is disabled */}
+      <ShortcutTooltip title={`Previous ${label} layer`} shortcut={decrementShortcut}>
+        <span>
+          <IconButton
+            onClick={onDecrement}
+            disabled={currentLayer <= 0}
+            size="small"
+            aria-label={`Decrement ${label}`}
+          >
+            <KeyboardArrowDown />
+          </IconButton>
+        </span>
+      </ShortcutTooltip>
 
       <TextField
         type="number"
@@ -63,14 +74,18 @@ export function LayerDimensionControl({
         sx={{ width: 80 }}
       />
 
-      <IconButton
-        onClick={onIncrement}
-        disabled={currentLayer >= maxLayer - 1}
-        size="small"
-        aria-label={`Increment ${label}`}
-      >
-        <KeyboardArrowUp />
-      </IconButton>
+      <ShortcutTooltip title={`Next ${label} layer`} shortcut={incrementShortcut}>
+        <span>
+          <IconButton
+            onClick={onIncrement}
+            disabled={currentLayer >= maxLayer - 1}
+            size="small"
+            aria-label={`Increment ${label}`}
+          >
+            <KeyboardArrowUp />
+          </IconButton>
+        </span>
+      </ShortcutTooltip>
 
       <Slider
         value={currentLayer}

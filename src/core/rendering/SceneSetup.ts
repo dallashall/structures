@@ -15,6 +15,8 @@ import {
   Scene,
 } from '@babylonjs/core';
 
+import { SUN_TRAVEL_DIRECTION } from './SkyPresets';
+
 /**
  * Setup scene lighting (hemisphere + directional)
  */
@@ -24,7 +26,8 @@ export function setupLighting(scene: Scene): void {
   light.intensity = 0.6;
 
   // Key light — positioned above and to the side for visible shadows
-  const dirLight = new DirectionalLight('dirLight', new Vector3(-1, -2, -1).normalize(), scene);
+  const sunTravel = new Vector3(SUN_TRAVEL_DIRECTION.x, SUN_TRAVEL_DIRECTION.y, SUN_TRAVEL_DIRECTION.z);
+  const dirLight = new DirectionalLight('dirLight', sunTravel.normalize(), scene);
   dirLight.position = new Vector3(20, 40, 20);
   dirLight.intensity = 1.5;
   dirLight.specular = new Color3(1, 1, 1);

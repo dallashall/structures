@@ -84,7 +84,7 @@ export class BlockRenderer {
     const key = positionKey(blockData.position);
     const shape = shapeCatalog.resolve(blockData.blockType);
     const geoKey = shape.getGeometryKey(blockData.blockState);
-    const compositeKey = blockData.blockType + (geoKey ? ':' + geoKey : '');
+    const compositeKey = blockData.blockType + (geoKey ? '|' + geoKey : '');
     const existingType = this.instanceTypeMap.get(key);
 
     // Same block+geometry already at this position — just update highlight
@@ -270,9 +270,9 @@ export class BlockRenderer {
    */
   reapplyMaterials(): void {
     for (const [compositeKey, base] of this.instanceBases.entries()) {
-      // Extract blockType from composite key (blockType or blockType:geoKey)
-      const blockType = compositeKey.includes(':')
-        ? compositeKey.slice(0, compositeKey.indexOf(':'))
+      // Extract blockType from composite key (blockType or blockType|geoKey)
+      const blockType = compositeKey.includes('|')
+        ? compositeKey.slice(0, compositeKey.indexOf('|'))
         : compositeKey;
       base.material = this.materialResolver.resolve(blockType);
     }
@@ -333,7 +333,7 @@ export class BlockRenderer {
   private getOrCreateBase(blockType: string, blockState?: BlockStateProperties): Mesh | null {
     const blockShape = shapeCatalog.resolve(blockType);
     const geoKey = blockShape.getGeometryKey(blockState);
-    const compositeKey = blockType + (geoKey ? ':' + geoKey : '');
+    const compositeKey = blockType + (geoKey ? '|' + geoKey : '');
 
     const existing = this.instanceBases.get(compositeKey);
     if (existing) return existing;

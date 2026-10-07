@@ -3,7 +3,10 @@ import { Apps } from "@mui/icons-material";
 
 import type { Block } from "../types";
 
+import { quickSelectShortcut } from "../core/Shortcuts";
+
 import { BlockTextureSwatch } from "./BlockTextureSwatch";
+import { ShortcutTooltip } from "./ShortcutTooltip";
 import { findBlockById } from "../utils/blockUtils";
 
 interface QuickSelectPaletteProps {
@@ -99,9 +102,14 @@ export function QuickSelectPalette({
 
     // Wrap with tooltip showing block name if block exists
     return (
-      <Tooltip key={index} title={block?.name || `Slot ${index + 1}`} placement="top">
+      <ShortcutTooltip
+        key={index}
+        title={block?.name || `Slot ${index + 1}`}
+        shortcut={quickSelectShortcut(index)}
+        placement="top"
+      >
         {button}
-      </Tooltip>
+      </ShortcutTooltip>
     );
   };
 

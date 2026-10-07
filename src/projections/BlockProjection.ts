@@ -5,7 +5,6 @@
  * - BlockIndex (optimized for spatial queries)
  *
  * Rebuilds incrementally from snapshot when new model:blockPlaced/model:blockRemoved events arrive.
- * Creates new snapshot every 15 events to optimize replay performance.
  *
  * This projection is optimized for rendering queries:
  * - getBlocksAtLayer(axis, layer) - fast spatial queries
@@ -18,8 +17,6 @@ import { editorState } from '../core/EditorState';
 import { BlockIndex } from '../core/BlockIndex';
 import { normalizeLegacyDirections } from '../core/DirectionMapping';
 import type { Vector3D, BlockData, BlockStateProperties } from '../types';
-
-const SNAPSHOT_THRESHOLD = 15; // Create new snapshot after N events
 
 interface BlockSnapshot {
   latestEventId: number;
@@ -36,8 +33,6 @@ class BlockProjection extends EventEmitter {
     latestEventId: 0,
     blocks: new BlockIndex(),
   };
-
-  private eventsSinceSnapshot = 0;
 
   private constructor() {
     super();
@@ -80,13 +75,6 @@ class BlockProjection extends EventEmitter {
 
     // Apply event to snapshot
     this.applyEvent(event);
-    this.eventsSinceSnapshot++;
-
-    // Create new snapshot if threshold reached
-    if (this.eventsSinceSnapshot >= SNAPSHOT_THRESHOLD) {
-      this.createSnapshot();
-      this.eventsSinceSnapshot = 0;
-    }
 
     // Notify listeners
     this.emit('blocks:rebuilt');
@@ -162,21 +150,6 @@ class BlockProjection extends EventEmitter {
   }
 
   /**
-   * Create snapshot (persist to localStorage for fast startup)
-   */
-  private createSnapshot(): void {
-    try {
-      const serialized = JSON.stringify({
-        latestEventId: this.snapshot.latestEventId,
-        blocks: this.snapshot.blocks.toArray(),
-      });
-      localStorage.setItem('block-snapshot', serialized);
-    } catch (error) {
-      console.error('Failed to create block snapshot:', error);
-    }
-  }
-
-  /**
    * Ensure projection is fresh by applying any new events
    * This guarantees reads always return latest state
    *
@@ -245,7 +218,6 @@ class BlockProjection extends EventEmitter {
       latestEventId: 0,
       blocks: new BlockIndex(),
     };
-    this.eventsSinceSnapshot = 0;
   }
 }
 

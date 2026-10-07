@@ -191,10 +191,10 @@ export function App() {
   // Load last opened project on startup
   useEffect(() => {
     const loadLastProject = async () => {
-      const lastProjectId = storage.getLastOpenedProjectId();
+      const lastProjectId = await storage.getLastOpenedProjectId();
       if (lastProjectId) {
         // If there was a last opened project, open it automatically
-        const project = storage.getProject(lastProjectId);
+        const project = await storage.getProject(lastProjectId);
         if (project) {
           // Set project ID BEFORE resetting projections so rebuild() filters correctly
           editorState.setCurrentProjectId(lastProjectId);
@@ -235,7 +235,7 @@ export function App() {
     blockProjection.reset();
     editorState.setCurrentProjectId(projectId);
     editorState.setPlacementMode(false);
-    storage.setLastOpenedProjectId(projectId);
+    await storage.setLastOpenedProjectId(projectId);
 
     // Wait for projections to rebuild with new project data
     await Promise.all([

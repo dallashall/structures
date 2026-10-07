@@ -66,6 +66,13 @@ export function Toolbar({
         alignItems="center"
         spacing={2}
       >
+        <Box
+          component="img"
+          src="/logo-256.png"
+          alt=""
+          sx={{ width: 32, height: 32 }}
+        />
+
         {/* Project Name */}
         <Typography
           variant="h5"

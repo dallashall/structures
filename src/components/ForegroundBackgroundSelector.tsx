@@ -3,8 +3,11 @@ import { SwapHoriz } from '@mui/icons-material';
 
 import type { Block } from '../types';
 
+import { SHORTCUTS } from '../core/Shortcuts';
+
 import { findBlockById } from '../utils/blockUtils';
 import { BlockTextureSwatch } from './BlockTextureSwatch';
+import { ShortcutTooltip } from './ShortcutTooltip';
 
 interface ForegroundBackgroundSelectorProps {
   foregroundBlockId: string | null;
@@ -114,7 +117,7 @@ export function ForegroundBackgroundSelector({
       </Tooltip>
 
       {/* Swap icon (bottom-left corner) */}
-      <Tooltip title="Swap foreground/background (F key)">
+      <ShortcutTooltip title="Swap foreground/background" shortcut={SHORTCUTS.swapMaterialSlot}>
         <Box
           onClick={onToggleSlot}
           sx={{
@@ -139,7 +142,7 @@ export function ForegroundBackgroundSelector({
         >
           <SwapHoriz sx={{ fontSize: 12 }} />
         </Box>
-      </Tooltip>
+      </ShortcutTooltip>
     </Box>
   );
 }

@@ -11,7 +11,7 @@ import type { Dimensions } from '../types';
  * CreateProjectCommand - Creates a new project
  *
  * Appends to: EventLog (metadata:created, model:initialized)
- * Saves to: Storage (project metadata for browser)
+ * Saves to: Storage (last opened project ID)
  * Queries: None
  * Validates: name not empty, dimensions > 0
  */
@@ -28,7 +28,6 @@ export class CreateProjectCommand {
 
     // Generate project ID
     const projectId = generateUUID();
-    const now = new Date();
 
     // Reset projections for new project
     metadataProjection.reset();
@@ -51,19 +50,7 @@ export class CreateProjectCommand {
       dimensions,
     }, projectId);
 
-    // Save project metadata to Storage for project browser
-    storage.saveProjectMetadata({
-      id: projectId,
-      name,
-      dimensions,
-      created: now,
-      modified: now,
-      blockCount: 0,
-      thumbnail: '', // Empty thumbnail for now
-    });
-
-    // Set as last opened project
-    storage.setLastOpenedProjectId(projectId);
+    await storage.setLastOpenedProjectId(projectId);
 
     return projectId;
   }
