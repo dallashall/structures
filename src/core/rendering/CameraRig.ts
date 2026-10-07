@@ -2,8 +2,12 @@
  * CameraRig - Frames, orbits, pans, and zooms the 3D camera
  *
  * Turntable model: alpha turns around the vertical axis, beta tilts, and the target is the pivot.
- * Pointer and wheel input arrive from CameraGestures. BabylonJS's own pointer and wheel inputs
- * are removed, so these methods are the only path that moves the camera.
+ * Pointer and wheel input arrive from CameraGestures. BabylonJS's own pointer, wheel, and
+ * keyboard inputs are removed, so these methods are the only path that moves the camera.
+ *
+ * Gestures move a goal pose. Once per frame the camera eases toward it, so motion is even
+ * between frames and still ends exactly where the gesture points. Animated moves (presets,
+ * framing) drive the camera directly and hand back to the goal when they finish.
  */
 
 import {
@@ -18,12 +22,13 @@ import { toBabylonVector } from './babylonUtils';
 
 import type { Dimensions } from '../../types';
 
-// Pixels of drag per radian of orbit, before inertia.
-// Inertia 0.6 multiplies each offset by 1 / (1 - 0.6) = 2.5, so 250 gives 100px per radian in total.
-const ANGULAR_SENSIBILITY = 250;
-const INERTIA = 0.6;
-// Radians of orbit per pixel of trackpad scroll. Applied directly, without inertia.
+// Pixels of pointer drag per radian of orbit
+const DRAG_PIXELS_PER_RADIAN = 100;
+// Radians of orbit per pixel of trackpad scroll
 const SCROLL_ORBIT_SPEED = 0.005;
+// Time constant of the per-frame ease toward the goal pose. Input events do not line up
+// with frames, so applying them directly moves the camera unevenly from frame to frame.
+const FOLLOW_TIME_MS = 60;
 // Beta 0 and PI are the poles, where alpha becomes undefined and the view flips
 const BETA_MARGIN = 0.01;
 const LOWER_RADIUS_LIMIT = 2;
@@ -76,6 +81,9 @@ export class CameraRig {
   private camera: ArcRotateCamera;
   private framedDimensions: Dimensions = { width: 10, height: 10, depth: 10 };
   private tween: Observer<Scene> | null = null;
+  private goal: CameraGoal;
+  private lastFrameMs = performance.now();
+  private follower: Observer<Scene>;
 
   constructor(private scene: Scene, canvas: HTMLCanvasElement) {
     this.camera = new ArcRotateCamera(
@@ -89,13 +97,17 @@ export class CameraRig {
 
     this.camera.inputs.removeByType('ArcRotateCameraPointersInput');
     this.camera.inputs.removeByType('ArcRotateCameraMouseWheelInput');
+    this.camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
     this.camera.attachControl(canvas, true);
 
     this.camera.lowerRadiusLimit = LOWER_RADIUS_LIMIT;
     this.camera.upperRadiusLimit = MIN_UPPER_RADIUS_LIMIT;
     this.camera.lowerBetaLimit = BETA_MARGIN;
     this.camera.upperBetaLimit = Math.PI - BETA_MARGIN;
-    this.camera.inertia = INERTIA;
+    this.camera.inertia = 0;
+
+    this.goal = this.currentPose();
+    this.follower = scene.onBeforeRenderObservable.add(this.followGoal);
   }
 
   getCamera(): ArcRotateCamera {
@@ -103,33 +115,33 @@ export class CameraRig {
   }
 
   /**
-   * Orbit by a pointer drag, in CSS pixels. Inertia carries the motion after release.
+   * Orbit by a pointer drag, in CSS pixels
    */
   orbitByDrag(dx: number, dy: number): void {
-    this.stopAnimation();
-    this.camera.inertialAlphaOffset -= dx / ANGULAR_SENSIBILITY;
-    this.camera.inertialBetaOffset -= dy / ANGULAR_SENSIBILITY;
+    this.beginGesture();
+    this.goal.alpha -= dx / DRAG_PIXELS_PER_RADIAN;
+    this.goal.beta = this.clampBeta(this.goal.beta - dy / DRAG_PIXELS_PER_RADIAN);
   }
 
   /**
    * Orbit by a trackpad scroll, in CSS pixels. The trackpad supplies its own momentum.
    */
   orbitByScroll(dx: number, dy: number): void {
-    this.stopAnimation();
-    this.camera.alpha -= dx * SCROLL_ORBIT_SPEED;
-    this.camera.beta = this.clampBeta(this.camera.beta - dy * SCROLL_ORBIT_SPEED);
+    this.beginGesture();
+    this.goal.alpha -= dx * SCROLL_ORBIT_SPEED;
+    this.goal.beta = this.clampBeta(this.goal.beta - dy * SCROLL_ORBIT_SPEED);
   }
 
   /**
    * Move the pivot parallel to the screen so the scene follows the pointer, in CSS pixels
    */
   pan(dx: number, dy: number, viewportHeight: number): void {
-    this.stopAnimation();
-    const worldPerPixel = (2 * this.camera.radius * Math.tan(this.camera.fov / 2)) / viewportHeight;
+    this.beginGesture();
+    const worldPerPixel = (2 * this.goal.radius * Math.tan(this.camera.fov / 2)) / viewportHeight;
     const right = this.camera.getDirection(Vector3.Right());
     const up = this.camera.getDirection(Vector3.Up());
-    this.camera.target.addInPlace(right.scaleInPlace(-dx * worldPerPixel));
-    this.camera.target.addInPlace(up.scaleInPlace(dy * worldPerPixel));
+    this.goal.target.addInPlace(right.scaleInPlace(-dx * worldPerPixel));
+    this.goal.target.addInPlace(up.scaleInPlace(dy * worldPerPixel));
   }
 
   /**
@@ -137,34 +149,35 @@ export class CameraRig {
    * The fixed point lies on the plane through the pivot that faces the camera.
    */
   zoomAt(factor: number, x: number, y: number): void {
-    this.stopAnimation();
-    const camera = this.camera;
-    const oldRadius = camera.radius;
-    const newRadius = Math.min(
-      camera.upperRadiusLimit ?? Infinity,
-      Math.max(camera.lowerRadiusLimit ?? 0, oldRadius / factor),
-    );
+    this.beginGesture();
+    const oldRadius = this.goal.radius;
+    const newRadius = this.clampRadius(oldRadius / factor);
     if (newRadius === oldRadius) return;
 
     const anchor = this.pointOnPivotPlane(x, y);
-    const scale = newRadius / oldRadius;
     // Scaling the whole rig about the anchor keeps the anchor's screen position
     if (anchor) {
-      const offset = camera.target.subtract(anchor).scaleInPlace(scale);
-      camera.target.copyFrom(anchor.addInPlace(offset));
+      const offset = this.goal.target.subtract(anchor).scaleInPlace(newRadius / oldRadius);
+      this.goal.target.copyFrom(anchor.addInPlace(offset));
     }
-    camera.radius = newRadius;
+    this.goal.radius = newRadius;
   }
 
   /**
    * Change distance by a fixed amount, toward the pivot
    */
   zoomCamera(delta: number): void {
+    this.beginGesture();
+    this.goal.radius = this.clampRadius(this.goal.radius + delta);
+  }
+
+  /**
+   * Jump the camera to the goal pose, skipping the ease and any animation.
+   * For callers that read the camera synchronously, such as tests.
+   */
+  settle(): void {
     this.stopAnimation();
-    this.camera.radius = Math.max(
-      this.camera.lowerRadiusLimit ?? 0,
-      Math.min(this.camera.upperRadiusLimit ?? Infinity, this.camera.radius + delta),
-    );
+    this.applyPose(this.goal);
   }
 
   /**
@@ -177,8 +190,8 @@ export class CameraRig {
 
     this.moveTo(
       {
-        alpha: this.camera.alpha,
-        beta: this.camera.beta,
+        alpha: this.goal.alpha,
+        beta: this.goal.beta,
         radius: largest * FRAME_DISTANCE,
         target: structureCenter(dimensions),
       },
@@ -192,13 +205,14 @@ export class CameraRig {
    */
   fitBounds(min: Vector3, max: Vector3, animate = true): void {
     const camera = this.camera;
+    const { alpha, beta } = this.goal;
     const center = Vector3.Center(min, max);
 
-    // Basis for the current angles. Only the axis lengths matter, so the handedness of right and up does not.
+    // Basis for the goal angles. Only the axis lengths matter, so the handedness of right and up does not.
     const forward = new Vector3(
-      -Math.cos(camera.alpha) * Math.sin(camera.beta),
-      -Math.cos(camera.beta),
-      -Math.sin(camera.alpha) * Math.sin(camera.beta),
+      -Math.cos(alpha) * Math.sin(beta),
+      -Math.cos(beta),
+      -Math.sin(alpha) * Math.sin(beta),
     );
     const right = Vector3.Cross(Vector3.Up(), forward).normalize();
     const up = Vector3.Cross(forward, right).normalize();
@@ -225,7 +239,7 @@ export class CameraRig {
     }
 
     camera.upperRadiusLimit = Math.max(camera.upperRadiusLimit ?? 0, distance);
-    this.moveTo({ alpha: camera.alpha, beta: camera.beta, radius: distance, target: center }, animate);
+    this.moveTo({ alpha, beta, radius: distance, target: center }, animate);
   }
 
   /**
@@ -247,8 +261,8 @@ export class CameraRig {
       {
         alpha: angles.alpha,
         beta: angles.beta,
-        radius: this.camera.radius,
-        target: this.camera.target.clone(),
+        radius: this.goal.radius,
+        target: this.goal.target.clone(),
       },
       true,
     );
@@ -271,11 +285,59 @@ export class CameraRig {
 
   destroy(): void {
     this.stopAnimation();
+    this.scene.onBeforeRenderObservable.remove(this.follower);
   }
 
   private clampBeta(beta: number): number {
     return Math.min(Math.PI - BETA_MARGIN, Math.max(BETA_MARGIN, beta));
   }
+
+  private clampRadius(radius: number): number {
+    return Math.min(
+      this.camera.upperRadiusLimit ?? Infinity,
+      Math.max(this.camera.lowerRadiusLimit ?? 0, radius),
+    );
+  }
+
+  private currentPose(): CameraGoal {
+    return {
+      alpha: this.camera.alpha,
+      beta: this.camera.beta,
+      radius: this.camera.radius,
+      target: this.camera.target.clone(),
+    };
+  }
+
+  private applyPose(pose: CameraGoal): void {
+    this.camera.alpha = pose.alpha;
+    this.camera.beta = pose.beta;
+    this.camera.radius = pose.radius;
+    this.camera.target.copyFrom(pose.target);
+  }
+
+  /**
+   * A gesture interrupts an animated move and continues from where the camera is now
+   */
+  private beginGesture(): void {
+    if (!this.tween) return;
+    this.stopAnimation();
+    this.goal = this.currentPose();
+  }
+
+  private followGoal = (): void => {
+    // Wall-clock time: the shared RenderLoop calls scene.render() directly, so engine.getDeltaTime() stays 0
+    const now = performance.now();
+    const elapsed = now - this.lastFrameMs;
+    this.lastFrameMs = now;
+    if (this.tween) return;
+
+    const k = 1 - Math.exp(-elapsed / FOLLOW_TIME_MS);
+    const camera = this.camera;
+    camera.alpha += (this.goal.alpha - camera.alpha) * k;
+    camera.beta += (this.goal.beta - camera.beta) * k;
+    camera.radius += (this.goal.radius - camera.radius) * k;
+    Vector3.LerpToRef(camera.target, this.goal.target, k, camera.target);
+  };
 
   private pointOnPivotPlane(x: number, y: number): Vector3 | null {
     const ray: Ray = this.scene.createPickingRay(x, y, null, this.camera);
@@ -289,36 +351,29 @@ export class CameraRig {
   private moveTo(goal: CameraGoal, animate: boolean): void {
     this.stopAnimation();
     const camera = this.camera;
-    camera.inertialAlphaOffset = 0;
-    camera.inertialBetaOffset = 0;
-
-    const goalAlpha = nearestAngle(camera.alpha, goal.alpha);
-    const goalBeta = this.clampBeta(goal.beta);
+    const end: CameraGoal = {
+      alpha: nearestAngle(camera.alpha, goal.alpha),
+      beta: this.clampBeta(goal.beta),
+      radius: this.clampRadius(goal.radius),
+      target: goal.target.clone(),
+    };
+    this.goal = end;
 
     if (!animate) {
-      camera.alpha = goalAlpha;
-      camera.beta = goalBeta;
-      camera.radius = goal.radius;
-      camera.target.copyFrom(goal.target);
+      this.applyPose(end);
       return;
     }
 
-    const start = {
-      alpha: camera.alpha,
-      beta: camera.beta,
-      radius: camera.radius,
-      target: camera.target.clone(),
-    };
-    // Wall-clock time: the shared RenderLoop calls scene.render() directly, so engine.getDeltaTime() stays 0
+    const start = this.currentPose();
     const startMs = performance.now();
 
     const step = (): void => {
       const t = Math.min(1, (performance.now() - startMs) / ANIMATION_MS);
       const k = easeOutCubic(t);
-      camera.alpha = start.alpha + (goalAlpha - start.alpha) * k;
-      camera.beta = start.beta + (goalBeta - start.beta) * k;
-      camera.radius = start.radius + (goal.radius - start.radius) * k;
-      Vector3.LerpToRef(start.target, goal.target, k, camera.target);
+      camera.alpha = start.alpha + (end.alpha - start.alpha) * k;
+      camera.beta = start.beta + (end.beta - start.beta) * k;
+      camera.radius = start.radius + (end.radius - start.radius) * k;
+      Vector3.LerpToRef(start.target, end.target, k, camera.target);
       if (t >= 1) this.stopAnimation();
     };
 

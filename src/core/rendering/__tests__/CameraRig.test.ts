@@ -47,6 +47,7 @@ describe('CameraRig', () => {
     const pivot = rig.getCamera().target.clone();
 
     rig.pan(40, -25, HEIGHT);
+    rig.settle();
     refreshMatrices();
 
     const after = toScreen(pivot);
@@ -62,6 +63,7 @@ describe('CameraRig', () => {
     const anchor = ray.origin.add(ray.direction.scale(distance));
 
     rig.zoomAt(1.5, 600, 150);
+    rig.settle();
     refreshMatrices();
 
     const screen = toScreen(anchor);
@@ -72,6 +74,7 @@ describe('CameraRig', () => {
 
   it('allows orbiting below the horizon down to the pole margin', () => {
     rig.orbitByScroll(0, -10000);
+    rig.settle();
     expect(rig.getCamera().beta).toBeCloseTo(Math.PI - 0.01);
   });
 
@@ -95,5 +98,20 @@ describe('CameraRig', () => {
     expect(highest).toBeLessThanOrEqual(0.92 + 1e-6);
     const touchesPadding = Math.abs(Math.min(lowest, 1 - highest) - 0.08) < 0.01;
     expect(touchesPadding).toBe(true);
+  });
+
+  it('eases toward a gesture over frames instead of jumping', () => {
+    const camera = rig.getCamera();
+    const startAlpha = camera.alpha;
+    rig.orbitByDrag(-100, 0);
+
+    expect(camera.alpha).toBe(startAlpha);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    const afterOneFrame = camera.alpha;
+    expect(afterOneFrame).toBeGreaterThan(startAlpha);
+    expect(afterOneFrame).toBeLessThanOrEqual(startAlpha + 1);
+
+    rig.settle();
+    expect(camera.alpha).toBeCloseTo(startAlpha + 1);
   });
 });
