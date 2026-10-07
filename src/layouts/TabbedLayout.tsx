@@ -58,6 +58,57 @@ export function TabbedLayout({
     }
   };
 
+  const renderViewPanel = (view: (typeof views)[number]) => (
+    <TabPanel
+      key={view}
+      value={view}
+      sx={{
+        p: 0,
+        height: renderTabBar ? "calc(100% - 48px)" : "100%",
+        position: "relative",
+      }}
+    >
+      {view === "3d" ? (
+        <Box sx={{ width: "100%", height: "100%" }}>
+          <Preview3DView />
+        </Box>
+      ) : (
+        <>
+          {/* Depth indicator */}
+          {getDepthLabel(view) && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                zIndex: 10,
+                pointerEvents: "none",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.primary",
+                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  fontWeight: "bold",
+                }}
+              >
+                {getDepthLabel(view)}
+              </Typography>
+            </Box>
+          )}
+          <BlockOrientationPreview viewType={view} />
+          <Box sx={{ width: "100%", height: "100%" }}>
+            <Canvas2DView viewType={view} />
+          </Box>
+        </>
+      )}
+    </TabPanel>
+  );
+
   return (
     <TabContext value={activeView}>
       {renderTabBar && (
@@ -73,56 +124,7 @@ export function TabbedLayout({
           </TabList>
         </Box>
       )}
-      {views.map((view) => (
-        <TabPanel
-          key={view}
-          value={view}
-          sx={{
-            p: 0,
-            height: renderTabBar ? "calc(100% - 48px)" : "100%",
-            position: "relative",
-          }}
-        >
-          {view === "3d" ? (
-            <Box sx={{ width: "100%", height: "100%" }}>
-              <Preview3DView />
-            </Box>
-          ) : (
-            <>
-              {/* Depth indicator */}
-              {getDepthLabel(view) && (
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    zIndex: 10,
-                    pointerEvents: "none",
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "text.primary",
-                      bgcolor: "rgba(255, 255, 255, 0.9)",
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {getDepthLabel(view)}
-                  </Typography>
-                </Box>
-              )}
-              <BlockOrientationPreview viewType={view} />
-              <Box sx={{ width: "100%", height: "100%" }}>
-                <Canvas2DView viewType={view} />
-              </Box>
-            </>
-          )}
-        </TabPanel>
-      ))}
+      {views.map(renderViewPanel)}
     </TabContext>
   );
 }

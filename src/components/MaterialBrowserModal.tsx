@@ -18,7 +18,11 @@ import type { Block } from '../types';
 import { pointerFollower } from '../core/PointerFollower';
 
 import { BlockTextureSwatch } from './BlockTextureSwatch';
+import { MaterialTile } from './MaterialTile';
+import { QuickSelectDropSlot } from './QuickSelectDropSlot';
 import { findBlockById } from '../utils/blockUtils';
+import { MATERIAL_CATEGORIES, filterMaterials } from '../utils/materialCategories';
+import type { MaterialCategory } from '../utils/materialCategories';
 
 interface MaterialBrowserModalProps {
   isOpen: boolean;
@@ -34,13 +38,6 @@ interface MaterialBrowserModalProps {
   onGrabBlock: (blockId: string | null) => void;
 }
 
-// Category definitions (could be moved to BlockRegistry in the future)
-const CATEGORIES = [
-  { label: 'All', filter: () => true },
-  { label: 'Building', filter: (b: Block) => b.name.toLowerCase().includes('stone') || b.name.toLowerCase().includes('brick') },
-  { label: 'Natural', filter: (b: Block) => b.name.toLowerCase().includes('grass') || b.name.toLowerCase().includes('dirt') || b.name.toLowerCase().includes('wood') },
-  { label: 'Decoration', filter: (b: Block) => b.name.toLowerCase().includes('wool') || b.name.toLowerCase().includes('glass') },
-];
 
 /**
  * MaterialBrowserModal - Full material browser with grab-and-drop interaction
@@ -111,11 +108,7 @@ export function MaterialBrowserModal({
     onClose();
   };
 
-  const matchesSearchQuery = (block: Block) =>
-    block.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-  const filteredBlocks = blocks.filter(matchesSearchQuery);
-  const currentCategoryBlocks = filteredBlocks.filter(CATEGORIES[selectedTab].filter);
+  const currentCategoryBlocks = filterMaterials(blocks, searchQuery, selectedTab);
 
   // Named handler creators for callbacks
   const createMaterialClickHandler = (blockId: string) => (event: React.MouseEvent) => {
@@ -126,86 +119,29 @@ export function MaterialBrowserModal({
     handleSlotClick(index, event);
   };
 
-  const renderTab = (category: typeof CATEGORIES[0], index: number) => (
+  const renderTab = (category: MaterialCategory, index: number) => (
     <Tab key={index} label={category.label} />
   );
 
-  const renderMaterialBlock = (block: Block) => {
-    const isGrabbed = block.id === grabbedBlockId;
+  const renderMaterialBlock = (block: Block) => (
+    <MaterialTile
+      key={block.id}
+      block={block}
+      isGrabbed={block.id === grabbedBlockId}
+      onClick={createMaterialClickHandler(block.id)}
+    />
+  );
 
-    return (
-      <Box
-        key={block.id}
-        onClick={createMaterialClickHandler(block.id)}
-        sx={{
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          p: 0.5,
-          borderRadius: 1,
-          border: 2,
-          borderColor: isGrabbed ? 'primary.main' : 'transparent',
-          bgcolor: isGrabbed ? 'action.selected' : 'transparent',
-          '&:hover': {
-            bgcolor: isGrabbed ? 'action.selected' : 'action.hover',
-          },
-          transition: 'all 0.1s',
-        }}
-      >
-        <BlockTextureSwatch blockId={block.id} blockName={block.name} size="L" fallbackColor={block.color} />
-        <Typography
-          variant="caption"
-          sx={{
-            fontSize: '0.65rem',
-            mt: 0.25,
-            textAlign: 'center',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            maxWidth: '100%',
-          }}
-        >
-          {block.name}
-        </Typography>
-      </Box>
-    );
-  };
-
-  const renderQuickSelectSlot = (blockId: string | null, index: number) => {
-    const block = findBlockById(blocks, blockId);
-
-    return (
-      <Box
-        key={index}
-        onClick={createSlotClickHandler(index)}
-        onContextMenu={handleCancel}
-        sx={{
-          width: 48,
-          height: 48,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: 2,
-          borderColor: 'divider',
-          borderRadius: 1,
-          bgcolor: 'background.paper',
-          cursor: grabbedBlockId ? 'pointer' : 'default',
-          '&:hover': {
-            borderColor: grabbedBlockId ? 'primary.main' : 'divider',
-            bgcolor: grabbedBlockId ? 'action.hover' : 'background.paper',
-          },
-          transition: 'all 0.1s',
-        }}
-      >
-        {block ? <BlockTextureSwatch blockId={block.id} blockName={block.name} size="M" fallbackColor={block.color} /> : (
-          <Typography variant="caption" color="text.disabled">
-            {index + 1}
-          </Typography>
-        )}
-      </Box>
-    );
-  };
+  const renderQuickSelectSlot = (blockId: string | null, index: number) => (
+    <QuickSelectDropSlot
+      key={index}
+      block={findBlockById(blocks, blockId) ?? null}
+      index={index}
+      isDropTarget={grabbedBlockId !== null}
+      onClick={createSlotClickHandler(index)}
+      onContextMenu={handleCancel}
+    />
+  );
 
   const grabbedBlock = findBlockById(blocks, grabbedBlockId);
 
@@ -280,7 +216,7 @@ export function MaterialBrowserModal({
         {/* Category Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
           <Tabs value={selectedTab} onChange={handleTabChange}>
-            {CATEGORIES.map(renderTab)}
+            {MATERIAL_CATEGORIES.map(renderTab)}
           </Tabs>
         </Box>
 

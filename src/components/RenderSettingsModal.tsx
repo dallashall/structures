@@ -11,24 +11,22 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Typography,
-  Switch,
-  Slider,
   Select,
   MenuItem,
-  Stack,
   Divider,
   IconButton,
   TextField,
 } from '@mui/material';
-import { ExpandMore, Close } from '@mui/icons-material';
+import { Close } from '@mui/icons-material';
+import type { SelectChangeEvent } from '@mui/material';
 
 import type { RenderSettings, LightingPreset, BackgroundMode } from '../types';
 
 import { SettingRow } from './SettingRow';
+import { SettingsSection } from './SettingsSection';
+import { SliderSetting } from './SliderSetting';
+import { SwitchSetting } from './SwitchSetting';
 
 interface RenderSettingsModalProps {
   isOpen: boolean;
@@ -54,24 +52,20 @@ export function RenderSettingsModal({
     onApply({ ...settings, [key]: value as number });
   };
 
-  const handleSelect = (key: keyof RenderSettings) => (event: any) => {
+  const handleSelect = (key: keyof RenderSettings) => (event: SelectChangeEvent<number>) => {
     onApply({ ...settings, [key]: Number(event.target.value) });
   };
 
-  const handlePresetChange = (event: any) => {
+  const handlePresetChange = (event: SelectChangeEvent<LightingPreset>) => {
     onApply({ ...settings, lightingPreset: event.target.value as LightingPreset });
   };
 
-  const handleBackgroundChange = (event: any) => {
+  const handleBackgroundChange = (event: SelectChangeEvent<BackgroundMode>) => {
     onApply({ ...settings, backgroundMode: event.target.value as BackgroundMode });
   };
 
   const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onApply({ ...settings, edgesColor: event.target.value });
-  };
-
-  const handleResetDefaults = () => {
-    onReset();
   };
 
   return (
@@ -96,314 +90,129 @@ export function RenderSettingsModal({
       <Divider />
 
       <DialogContent sx={{ p: 0 }}>
-        {/* Anti-Aliasing */}
-        <Accordion defaultExpanded disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Anti-Aliasing</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="FXAA">
-                <Switch
-                  checked={settings.fxaaEnabled}
-                  onChange={createToggleHandler('fxaaEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="MSAA Samples">
-                <Select
-                  value={settings.msaaSamples}
-                  onChange={handleSelect('msaaSamples')}
-                  size="small"
-                  sx={{ minWidth: 100 }}
-                >
-                  <MenuItem value={1}>Off (1x)</MenuItem>
-                  <MenuItem value={2}>Low (2x)</MenuItem>
-                  <MenuItem value={4}>Medium (4x)</MenuItem>
-                  <MenuItem value={8}>High (8x)</MenuItem>
-                </Select>
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <SettingsSection title="Anti-Aliasing" defaultExpanded>
+          <SwitchSetting label="FXAA" checked={settings.fxaaEnabled} onChange={createToggleHandler('fxaaEnabled')} />
+          <SettingRow label="MSAA Samples">
+            <Select
+              value={settings.msaaSamples}
+              onChange={handleSelect('msaaSamples')}
+              size="small"
+              sx={{ minWidth: 100 }}
+            >
+              <MenuItem value={1}>Off (1x)</MenuItem>
+              <MenuItem value={2}>Low (2x)</MenuItem>
+              <MenuItem value={4}>Medium (4x)</MenuItem>
+              <MenuItem value={8}>High (8x)</MenuItem>
+            </Select>
+          </SettingRow>
+        </SettingsSection>
 
-        {/* Lighting & Environment */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Lighting & Environment</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Lighting Preset">
-                <Select
-                  value={settings.lightingPreset}
-                  onChange={handlePresetChange}
-                  size="small"
-                  sx={{ minWidth: 120 }}
-                >
-                  <MenuItem value="day">Day</MenuItem>
-                  <MenuItem value="night">Night</MenuItem>
-                  <MenuItem value="cloudy">Cloudy</MenuItem>
-                </Select>
-              </SettingRow>
-              <SettingRow label="Background">
-                <Select
-                  value={settings.backgroundMode}
-                  onChange={handleBackgroundChange}
-                  size="small"
-                  sx={{ minWidth: 120 }}
-                >
-                  <MenuItem value="color">Flat Color</MenuItem>
-                  <MenuItem value="skybox">Sky</MenuItem>
-                  <MenuItem value="ground">Sky + Ground</MenuItem>
-                </Select>
-              </SettingRow>
-              <Divider sx={{ my: 0.5 }} />
+        <SettingsSection title="Lighting & Environment">
+          <SettingRow label="Lighting Preset">
+            <Select
+              value={settings.lightingPreset}
+              onChange={handlePresetChange}
+              size="small"
+              sx={{ minWidth: 120 }}
+            >
+              <MenuItem value="day">Day</MenuItem>
+              <MenuItem value="night">Night</MenuItem>
+              <MenuItem value="cloudy">Cloudy</MenuItem>
+            </Select>
+          </SettingRow>
+          <SettingRow label="Background">
+            <Select
+              value={settings.backgroundMode}
+              onChange={handleBackgroundChange}
+              size="small"
+              sx={{ minWidth: 120 }}
+            >
+              <MenuItem value="color">Flat Color</MenuItem>
+              <MenuItem value="skybox">Sky</MenuItem>
+              <MenuItem value="ground">Sky + Ground</MenuItem>
+            </Select>
+          </SettingRow>
+          <Divider sx={{ my: 0.5 }} />
 
-              <SettingRow label="PBR Materials">
-                <Switch
-                  checked={settings.pbrEnabled}
-                  onChange={createToggleHandler('pbrEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Environment Intensity">
-                <Slider
-                  value={settings.environmentIntensity}
-                  onChange={handleSlider('environmentIntensity')}
-                  min={0} max={2} step={0.1}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.pbrEnabled}
-                />
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+          <SwitchSetting label="PBR Materials" checked={settings.pbrEnabled} onChange={createToggleHandler('pbrEnabled')} />
+          <SliderSetting label="Environment Intensity" value={settings.environmentIntensity} onChange={handleSlider('environmentIntensity')} min={0} max={2} step={0.1} disabled={!settings.pbrEnabled} />
+        </SettingsSection>
 
-        {/* Edge Rendering */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Edge Rendering</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Enable Edges">
-                <Switch
-                  checked={settings.edgesEnabled}
-                  onChange={createToggleHandler('edgesEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Edge Width">
-                <Slider
-                  value={settings.edgesWidth}
-                  onChange={handleSlider('edgesWidth')}
-                  min={0.5} max={4} step={0.5}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.edgesEnabled}
-                />
-              </SettingRow>
-              <SettingRow label="Edge Color">
-                <TextField
-                  type="color"
-                  value={settings.edgesColor}
-                  onChange={handleColorChange}
-                  size="small"
-                  disabled={!settings.edgesEnabled}
-                  sx={{ width: 60 }}
-                  slotProps={{ input: { sx: { p: 0.5, height: 32 } } }}
-                />
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <SettingsSection title="Edge Rendering">
+          <SwitchSetting label="Enable Edges" checked={settings.edgesEnabled} onChange={createToggleHandler('edgesEnabled')} />
+          <SliderSetting label="Edge Width" value={settings.edgesWidth} onChange={handleSlider('edgesWidth')} min={0.5} max={4} step={0.5} disabled={!settings.edgesEnabled} />
+          <SettingRow label="Edge Color">
+            <TextField
+              type="color"
+              value={settings.edgesColor}
+              onChange={handleColorChange}
+              size="small"
+              disabled={!settings.edgesEnabled}
+              sx={{ width: 60 }}
+              slotProps={{ input: { sx: { p: 0.5, height: 32 } } }}
+            />
+          </SettingRow>
+        </SettingsSection>
 
-        {/* Shadows */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Shadows</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Enable Shadows">
-                <Switch
-                  checked={settings.shadowsEnabled}
-                  onChange={createToggleHandler('shadowsEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Shadow Quality">
-                <Select
-                  value={settings.shadowMapSize}
-                  onChange={handleSelect('shadowMapSize')}
-                  size="small"
-                  disabled={!settings.shadowsEnabled}
-                  sx={{ minWidth: 100 }}
-                >
-                  <MenuItem value={512}>Low (512)</MenuItem>
-                  <MenuItem value={1024}>Medium (1024)</MenuItem>
-                  <MenuItem value={2048}>High (2048)</MenuItem>
-                </Select>
-              </SettingRow>
-              <SettingRow label="Shadow Darkness">
-                <Slider
-                  value={settings.shadowDarkness}
-                  onChange={handleSlider('shadowDarkness')}
-                  min={0} max={1} step={0.05}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.shadowsEnabled}
-                />
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <SettingsSection title="Shadows">
+          <SwitchSetting label="Enable Shadows" checked={settings.shadowsEnabled} onChange={createToggleHandler('shadowsEnabled')} />
+          <SettingRow label="Shadow Quality">
+            <Select
+              value={settings.shadowMapSize}
+              onChange={handleSelect('shadowMapSize')}
+              size="small"
+              disabled={!settings.shadowsEnabled}
+              sx={{ minWidth: 100 }}
+            >
+              <MenuItem value={512}>Low (512)</MenuItem>
+              <MenuItem value={1024}>Medium (1024)</MenuItem>
+              <MenuItem value={2048}>High (2048)</MenuItem>
+            </Select>
+          </SettingRow>
+          <SliderSetting label="Shadow Darkness" value={settings.shadowDarkness} onChange={handleSlider('shadowDarkness')} min={0} max={1} step={0.05} disabled={!settings.shadowsEnabled} />
+        </SettingsSection>
 
-        {/* Ambient Occlusion */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Ambient Occlusion</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Enable SSAO">
-                <Switch
-                  checked={settings.ssaoEnabled}
-                  onChange={createToggleHandler('ssaoEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Radius">
-                <Slider
-                  value={settings.ssaoRadius}
-                  onChange={handleSlider('ssaoRadius')}
-                  min={0.5} max={4} step={0.25}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.ssaoEnabled}
-                />
-              </SettingRow>
-              <SettingRow label="Intensity">
-                <Slider
-                  value={settings.ssaoIntensity}
-                  onChange={handleSlider('ssaoIntensity')}
-                  min={0.5} max={2} step={0.1}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.ssaoEnabled}
-                />
-              </SettingRow>
-              <SettingRow label="Samples">
-                <Select
-                  value={settings.ssaoSamples}
-                  onChange={handleSelect('ssaoSamples')}
-                  size="small"
-                  disabled={!settings.ssaoEnabled}
-                  sx={{ minWidth: 100 }}
-                >
-                  <MenuItem value={8}>Low (8)</MenuItem>
-                  <MenuItem value={16}>Medium (16)</MenuItem>
-                  <MenuItem value={32}>High (32)</MenuItem>
-                </Select>
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <SettingsSection title="Ambient Occlusion">
+          <SwitchSetting label="Enable SSAO" checked={settings.ssaoEnabled} onChange={createToggleHandler('ssaoEnabled')} />
+          <SliderSetting label="Radius" value={settings.ssaoRadius} onChange={handleSlider('ssaoRadius')} min={0.5} max={4} step={0.25} disabled={!settings.ssaoEnabled} />
+          <SliderSetting label="Intensity" value={settings.ssaoIntensity} onChange={handleSlider('ssaoIntensity')} min={0.5} max={2} step={0.1} disabled={!settings.ssaoEnabled} />
+          <SettingRow label="Samples">
+            <Select
+              value={settings.ssaoSamples}
+              onChange={handleSelect('ssaoSamples')}
+              size="small"
+              disabled={!settings.ssaoEnabled}
+              sx={{ minWidth: 100 }}
+            >
+              <MenuItem value={8}>Low (8)</MenuItem>
+              <MenuItem value={16}>Medium (16)</MenuItem>
+              <MenuItem value={32}>High (32)</MenuItem>
+            </Select>
+          </SettingRow>
+        </SettingsSection>
 
-        {/* Post Processing */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Post Processing</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Enable Bloom">
-                <Switch
-                  checked={settings.bloomEnabled}
-                  onChange={createToggleHandler('bloomEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Bloom Intensity">
-                <Slider
-                  value={settings.bloomIntensity}
-                  onChange={handleSlider('bloomIntensity')}
-                  min={0} max={1} step={0.05}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.bloomEnabled}
-                />
-              </SettingRow>
-              <SettingRow label="Bloom Threshold">
-                <Slider
-                  value={settings.bloomThreshold}
-                  onChange={handleSlider('bloomThreshold')}
-                  min={0.1} max={1.5} step={0.05}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.bloomEnabled}
-                />
-              </SettingRow>
+        <SettingsSection title="Post Processing">
+          <SwitchSetting label="Enable Bloom" checked={settings.bloomEnabled} onChange={createToggleHandler('bloomEnabled')} />
+          <SliderSetting label="Bloom Intensity" value={settings.bloomIntensity} onChange={handleSlider('bloomIntensity')} min={0} max={1} step={0.05} disabled={!settings.bloomEnabled} />
+          <SliderSetting label="Bloom Threshold" value={settings.bloomThreshold} onChange={handleSlider('bloomThreshold')} min={0.1} max={1.5} step={0.05} disabled={!settings.bloomEnabled} />
 
-              <Divider sx={{ my: 0.5 }} />
+          <Divider sx={{ my: 0.5 }} />
 
-              <SettingRow label="Tone Mapping">
-                <Switch
-                  checked={settings.toneMapping}
-                  onChange={createToggleHandler('toneMapping')}
-                  size="small"
-                />
-              </SettingRow>
-              <SettingRow label="Contrast">
-                <Slider
-                  value={settings.contrast}
-                  onChange={handleSlider('contrast')}
-                  min={0.5} max={2} step={0.05}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.toneMapping}
-                />
-              </SettingRow>
-              <SettingRow label="Exposure">
-                <Slider
-                  value={settings.exposure}
-                  onChange={handleSlider('exposure')}
-                  min={0.5} max={2} step={0.05}
-                  size="small"
-                  valueLabelDisplay="auto"
-                  disabled={!settings.toneMapping}
-                />
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+          <SwitchSetting label="Tone Mapping" checked={settings.toneMapping} onChange={createToggleHandler('toneMapping')} />
+          <SliderSetting label="Contrast" value={settings.contrast} onChange={handleSlider('contrast')} min={0.5} max={2} step={0.05} disabled={!settings.toneMapping} />
+          <SliderSetting label="Exposure" value={settings.exposure} onChange={handleSlider('exposure')} min={0.5} max={2} step={0.05} disabled={!settings.toneMapping} />
+        </SettingsSection>
 
-        {/* Layer Highlight */}
-        <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle2">Layer Highlight</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              <SettingRow label="Highlight Active Layer">
-                <Switch
-                  checked={settings.layerHighlightEnabled}
-                  onChange={createToggleHandler('layerHighlightEnabled')}
-                  size="small"
-                />
-              </SettingRow>
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <SettingsSection title="Layer Highlight">
+          <SwitchSetting label="Highlight Active Layer" checked={settings.layerHighlightEnabled} onChange={createToggleHandler('layerHighlightEnabled')} />
+        </SettingsSection>
       </DialogContent>
 
       <Divider />
 
       <DialogActions sx={{ px: 2, py: 1.5 }}>
         <Button
-          onClick={handleResetDefaults}
+          onClick={onReset}
           variant="text"
           size="small"
           sx={{ mr: 'auto' }}

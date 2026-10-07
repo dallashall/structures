@@ -69,6 +69,10 @@ export function TabbedEditorView({
   onConfirmPlacement,
 }: TabbedEditorViewProps) {
   // Handlers for foreground/background selector
+  const handleOpenMaterialBrowser = () => {
+    editorState.setMaterialBrowserOpen(true);
+  };
+
   const handleToggleSlot = () => {
     editorState.toggleMaterialSlot();
   };
@@ -148,7 +152,7 @@ export function TabbedEditorView({
               blocks={blocks}
               onSelectSlot={onQuickSelectSlot}
               onAssignSlot={onAssignSlot}
-              onOpenBrowser={() => editorState.setMaterialBrowserOpen(true)}
+              onOpenBrowser={handleOpenMaterialBrowser}
               orientation="vertical"
             />
             <Divider />
