@@ -39,4 +39,12 @@ describe('summarizeFrames', () => {
     expect(summarizeFrames([], [], [...repeat(0, 50), ...repeat(0.02, 5)]).cameraJitter).toBeNull();
     expect(summarizeFrames([], [], [...repeat(0, 50), ...repeat(0.02, 20)]).cameraJitter).toBeCloseTo(0);
   });
+
+  it('summarizes whole-tick times separately from 3D render times', () => {
+    const ticks = [...repeat(8, 19), 20];
+    const summary = summarizeFrames(repeat(16, 20), repeat(3, 20), [], ticks);
+    expect(summary.tickMean).toBeCloseTo(8.6);
+    expect(summary.tickP95).toBe(20);
+    expect(summary.renderMean).toBeCloseTo(3);
+  });
 });

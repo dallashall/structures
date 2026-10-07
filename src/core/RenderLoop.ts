@@ -25,6 +25,8 @@ class RenderLoop extends EventEmitter {
   private animationFrameId: number | null = null;
   private isRunning = false;
   private registeredViewCount = 0;
+  // CPU time of the previous tick across every view. GPU work runs after the tick returns.
+  private lastTickMs = 0;
 
   private constructor() {
     super();
@@ -73,7 +75,9 @@ class RenderLoop extends EventEmitter {
     const tick = () => {
       // Just emit tick - projections are kept fresh by event listeners
       // Views read cached state and stack: model → preview → hover
+      const startMs = performance.now();
       this.emit('tick');
+      this.lastTickMs = performance.now() - startMs;
 
       // Schedule next frame
       if (this.isRunning) {
@@ -98,6 +102,10 @@ class RenderLoop extends EventEmitter {
     }
 
     console.log('RenderLoop: Stopped');
+  }
+
+  getLastTickMs(): number {
+    return this.lastTickMs;
   }
 
   /**

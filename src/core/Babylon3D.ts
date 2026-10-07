@@ -410,7 +410,14 @@ class Babylon3D {
     const startMs = performance.now();
     this.scene.render();
     const renderMs = performance.now() - startMs;
-    frameStats.recordFrame(startMs, renderMs, this.measureCameraStep());
+    frameStats.recordFrame({
+      startMs,
+      renderMs,
+      tickMs: renderLoop.getLastTickMs(),
+      cameraStep: this.measureCameraStep(),
+      bufferWidth: this.engine?.getRenderWidth() ?? 0,
+      bufferHeight: this.engine?.getRenderHeight() ?? 0,
+    });
   }
 
   /**

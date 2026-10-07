@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { FrameStatsSummary } from '../utils/frameStats';
+import type { FrameStatsReport } from '../core/FrameStats';
 
 import { frameStats } from '../core/FrameStats';
 
@@ -8,7 +8,7 @@ import { frameStats } from '../core/FrameStats';
  * Props injected by withFrameStats HOC
  */
 export interface WithFrameStatsProps {
-  stats: FrameStatsSummary | null;
+  stats: FrameStatsReport | null;
 }
 
 /**
@@ -18,7 +18,7 @@ export function withFrameStats<P extends object>(
   Component: React.ComponentType<P & WithFrameStatsProps>,
 ) {
   return function WithFrameStats(props: P) {
-    const [stats, setStats] = React.useState<FrameStatsSummary | null>(frameStats.getLatest());
+    const [stats, setStats] = React.useState<FrameStatsReport | null>(frameStats.getLatest());
 
     React.useEffect(() => {
       frameStats.on('framestats:sampled', setStats);

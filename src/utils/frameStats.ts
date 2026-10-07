@@ -6,6 +6,9 @@ export interface FrameStatsSummary {
   intervalMax: number;
   renderMean: number;
   renderP95: number;
+  // CPU time of the whole shared frame loop: every 2D view plus the 3D view
+  tickMean: number;
+  tickP95: number;
   // Frames whose interval exceeded LONG_FRAME_FACTOR times the median
   longFrames: number;
   // Coefficient of variation of per-frame camera steps while moving. 0 means perfectly even.
@@ -32,15 +35,18 @@ function percentile(sorted: number[], p: number): number {
 /**
  * Summarize recent frames.
  * intervals: ms between consecutive frames. renderTimes: ms spent in scene.render().
- * cameraSteps: how far the camera moved each frame.
+ * cameraSteps: how far the camera moved each frame. tickTimes: ms spent in each whole loop tick.
  */
 export function summarizeFrames(
   intervals: number[],
   renderTimes: number[],
   cameraSteps: number[],
+  tickTimes: number[] = [],
 ): FrameStatsSummary {
   const sortedIntervals = [...intervals].sort(ascending);
   const sortedRender = [...renderTimes].sort(ascending);
+  const sortedTicks = [...tickTimes].sort(ascending);
+  const mean = (values: number[]): number => (values.length ? values.reduce(sum, 0) / values.length : 0);
   const meanInterval = intervals.length ? intervals.reduce(sum, 0) / intervals.length : 0;
   const median = percentile(sortedIntervals, 0.5);
   const isLong = (interval: number): boolean => interval > median * LONG_FRAME_FACTOR;
@@ -49,10 +55,10 @@ export function summarizeFrames(
   const moving = cameraSteps.filter(isMoving);
   let cameraJitter: number | null = null;
   if (moving.length >= MIN_MOVING_FRAMES) {
-    const mean = moving.reduce(sum, 0) / moving.length;
-    const squaredDeviation = (total: number, step: number): number => total + (step - mean) ** 2;
+    const meanStep = mean(moving);
+    const squaredDeviation = (total: number, step: number): number => total + (step - meanStep) ** 2;
     const deviation = Math.sqrt(moving.reduce(squaredDeviation, 0) / moving.length);
-    cameraJitter = deviation / mean;
+    cameraJitter = deviation / meanStep;
   }
 
   return {
@@ -61,8 +67,10 @@ export function summarizeFrames(
     intervalP50: median,
     intervalP95: percentile(sortedIntervals, 0.95),
     intervalMax: sortedIntervals[sortedIntervals.length - 1] ?? 0,
-    renderMean: renderTimes.length ? renderTimes.reduce(sum, 0) / renderTimes.length : 0,
+    renderMean: mean(renderTimes),
     renderP95: percentile(sortedRender, 0.95),
+    tickMean: mean(tickTimes),
+    tickP95: percentile(sortedTicks, 0.95),
     longFrames: intervals.filter(isLong).length,
     cameraJitter,
   };
