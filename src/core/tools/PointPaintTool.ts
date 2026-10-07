@@ -4,7 +4,6 @@ import { PaintPipeline } from "./PaintPipeline";
 import { PointPaintStrategy } from "../painting/strategies/PointPaintStrategy";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
-import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
@@ -99,41 +98,7 @@ export class PointPaintTool extends ClickDragReleaseTool {
   }
 
   private async finalizeDraft(): Promise<void> {
-    const ops = Array.from(this.draftPositions.values());
-    if (ops.length === 0) {
-      draftingService.cancel();
-      return;
-    }
-
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) {
-      draftingService.cancel();
-      return;
-    }
-
-    const deleteMode = editorState.getDeleteMode();
-    const deleteOps = ops.filter(isDeleteOp(deleteMode));
-    const placeOps = ops.filter(isPlaceOp(deleteMode));
-
-    if (deleteOps.length > 0) {
-      await eventLog.append(
-        "model:blocksRemoved",
-        { positions: deleteOps.map(extractPosition) },
-        projectId,
-      );
-    }
-
-    if (placeOps.length > 0) {
-      await eventLog.append(
-        "model:blocksPlaced",
-        {
-          blocks: placeOps.map(toPlacedBlock),
-        },
-        projectId,
-      );
-    }
-
-    draftingService.cancel();
+    await draftingService.finalize(Array.from(this.draftPositions.values()));
     this.draftPositions.clear();
     this.lastPaintedCell = null;
   }
@@ -142,17 +107,3 @@ export class PointPaintTool extends ClickDragReleaseTool {
 // Helpers
 const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;
-
-const isDeleteOp = (deleteMode: boolean) => (op: PaintOperation): boolean =>
-  deleteMode || op.blockType === null;
-
-const isPlaceOp = (deleteMode: boolean) => (op: PaintOperation): boolean =>
-  !deleteMode && op.blockType !== null;
-
-const extractPosition = (op: PaintOperation) => op.position;
-
-const toPlacedBlock = (op: PaintOperation) => ({
-  position: op.position,
-  blockType: op.blockType!,
-  blockState: op.blockState,
-});

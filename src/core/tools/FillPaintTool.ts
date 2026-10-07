@@ -2,10 +2,9 @@ import { ClickDragReleaseTool } from "./ClickDragReleaseTool";
 import type { UniversalPosition } from "./ToolBase";
 import { PaintPipeline } from "./PaintPipeline";
 import { FillPaintStrategy } from "../painting/strategies/FillPaintStrategy";
+import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
-import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
-import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
  * FillPaintTool - Flood fill on click release
@@ -68,23 +67,8 @@ export class FillPaintTool extends ClickDragReleaseTool {
 
     if (finalOps.length === 0) return;
 
-    // Persist immediately (fill is a single atomic action)
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const deleteMode = editorState.getDeleteMode();
-
-    if (deleteMode) {
-      const positions = finalOps.map(extractPosition);
-      await eventLog.append("model:blocksRemoved", { positions }, projectId);
-    } else {
-      const blocks = finalOps
-        .filter(hasBlockType)
-        .map(toPlacedBlock);
-      if (blocks.length > 0) {
-        await eventLog.append("model:blocksPlaced", { blocks }, projectId);
-      }
-    }
+    // Fill is a single atomic action with no drag preview
+    await draftingService.finalize(finalOps);
 
     this.previewData = { blocks: [] };
     this.requestRender();
@@ -100,14 +84,3 @@ export class FillPaintTool extends ClickDragReleaseTool {
     this.requestRender();
   }
 }
-
-const extractPosition = (op: PaintOperation) => op.position;
-
-const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
-  op.blockType !== null;
-
-const toPlacedBlock = (op: PaintOperation) => ({
-  position: op.position,
-  blockType: op.blockType!,
-  blockState: op.blockState,
-});

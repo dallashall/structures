@@ -4,7 +4,6 @@ import { PaintPipeline } from "./PaintPipeline";
 import { ArchPaintStrategy } from "../painting/strategies/ArchPaintStrategy";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
-import { eventLog } from "../EventLog";
 import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
@@ -110,7 +109,7 @@ export class ArchPaintTool extends MultiClickTool {
       project.dimensions,
     );
 
-    await this.persistOps(finalOps);
+    await draftingService.finalize(finalOps);
     this.cleanup();
   }
 
@@ -130,35 +129,7 @@ export class ArchPaintTool extends MultiClickTool {
     this.requestRender();
   }
 
-  private async persistOps(
-    ops: PaintOperation[],
-  ): Promise<void> {
-    if (ops.length === 0) return;
-
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const deleteMode = editorState.getDeleteMode();
-
-    if (deleteMode) {
-      const positions = ops.map(extractPosition);
-      await eventLog.append("model:blocksRemoved", { positions }, projectId);
-    } else {
-      const blocks = ops.filter(hasBlockType).map(toPlacedBlock);
-      if (blocks.length > 0) {
-        await eventLog.append("model:blocksPlaced", { blocks }, projectId);
-      }
-    }
-  }
 }
 
 const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;
-
-const extractPosition = (op: PaintOperation) => op.position;
-
-const toPlacedBlock = (op: PaintOperation) => ({
-  position: op.position,
-  blockType: op.blockType!,
-  blockState: op.blockState,
-});

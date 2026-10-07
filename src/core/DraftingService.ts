@@ -5,7 +5,7 @@
  * - Hold preview blocks during active drawing interactions
  * - Share preview state across 2D and 3D views
  * - Provide reactively-derived preview state for accurate rendering
- * - Finalize preview by persisting to EventLog
+ * - Finalize a drawing operation by persisting it to the EventLog (the only tool write path)
  * - Cancel preview without persisting
  *
  * Key distinction: Preview state is EPHEMERAL (not persisted to EventLog).
@@ -22,6 +22,9 @@ import { blockProjection } from '../projections/BlockProjection';
 import { shapeCatalog } from './shapes/ShapeCatalog';
 import { OverlayBlockIndex } from './OverlayBlockIndex';
 import type { Vector3D, BlockStateProperties } from '../types';
+import type { PaintOperation } from './painting/strategies/PaintStrategy';
+
+type PlacedOperation = PaintOperation & { blockType: string };
 
 export interface PreviewBlock {
   position: Vector3D;
@@ -65,33 +68,34 @@ class DraftingService extends EventEmitter {
   }
 
   /**
-   * Finalize draft - persist to EventLog and clear preview.
-   * Only stores user intent (facing, half, type). Derived state
-   * is never persisted — it's recomputed at read time.
+   * Finalize a drawing operation: persist it to the EventLog, then clear the preview.
+   *
+   * In delete mode every operation removes its position. Otherwise an operation with a
+   * block type places it, and one with a null block type erases (the PaintOperation contract).
+   * Removals are appended before placements. Only user intent (facing, half, type) is
+   * persisted. Derived state is recomputed at read time.
    */
-  async finalize(): Promise<void> {
-    if (this.previewBlocks.length === 0) {
-      this.previewBlocks = [];
-      this.emit('draft:cancelled');
-      return;
-    }
-
+  async finalize(operations: PaintOperation[]): Promise<void> {
     const projectId = editorState.getCurrentProjectId();
     if (!projectId) {
-      console.error('Cannot finalize draft: no current project');
+      this.cancel();
       return;
     }
 
-    // Persist each block to EventLog as model:blockPlaced
-    for (const block of this.previewBlocks) {
-      await eventLog.append('model:blockPlaced', {
-        position: block.position,
-        blockType: block.blockType,
-        blockState: block.blockState,
-      }, projectId);
+    const deleteMode = editorState.getDeleteMode();
+    const isRemoval = (op: PaintOperation): boolean => deleteMode || op.blockType === null;
+    const isPlacement = (op: PaintOperation): op is PlacedOperation => !isRemoval(op);
+
+    const positions = operations.filter(isRemoval).map(toPosition);
+    const blocks = operations.filter(isPlacement).map(toPlacedBlock);
+
+    if (positions.length > 0) {
+      await eventLog.append('model:blocksRemoved', { positions }, projectId);
+    }
+    if (blocks.length > 0) {
+      await eventLog.append('model:blocksPlaced', { blocks }, projectId);
     }
 
-    // Clear preview
     this.previewBlocks = [];
     this.emit('draft:finalized');
   }
@@ -134,6 +138,14 @@ class DraftingService extends EventEmitter {
     return this.previewBlocks.map(resolvePreview);
   }
 }
+
+const toPosition = (op: PaintOperation): Vector3D => op.position;
+
+const toPlacedBlock = (op: PlacedOperation): PreviewBlock => ({
+  position: op.position,
+  blockType: op.blockType,
+  blockState: op.blockState,
+});
 
 /** Convert PreviewBlock → BlockData for OverlayBlockIndex */
 function toBlockData(block: PreviewBlock) {

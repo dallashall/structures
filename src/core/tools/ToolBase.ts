@@ -217,6 +217,9 @@ export abstract class ToolBase {
   private _onPointerMoveThrottled = throttled(this._onPointerMoveRaw, 10);
 
   private _onPointerUp = (e: PointerEvent): void => {
+    // A move held by the throttle would otherwise run after the release and miss the drag
+    this._onPointerMoveThrottled.flush();
+
     if (this.panning) {
       this.panning = false;
       this.canvas.releasePointerCapture(e.pointerId);
