@@ -360,6 +360,9 @@ export interface RenderSettings {
 
   // Background
   backgroundMode: BackgroundMode;
+
+  // Diagnostics
+  showFrameStats: boolean;
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
@@ -386,6 +389,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   layerHighlightEnabled: false,
   lightingPreset: "night",
   backgroundMode: "skybox",
+  showFrameStats: false,
 };
 
 // Utility type for event handlers

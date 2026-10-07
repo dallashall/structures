@@ -206,6 +206,10 @@ export function RenderSettingsModal({
         <SettingsSection title="Layer Highlight">
           <SwitchSetting label="Highlight Active Layer" checked={settings.layerHighlightEnabled} onChange={createToggleHandler('layerHighlightEnabled')} />
         </SettingsSection>
+
+        <SettingsSection title="Diagnostics">
+          <SwitchSetting label="Show Frame Stats" checked={settings.showFrameStats} onChange={createToggleHandler('showFrameStats')} />
+        </SettingsSection>
       </DialogContent>
 
       <Divider />

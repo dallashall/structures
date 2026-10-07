@@ -18,6 +18,7 @@ import {
 import { babylon3d } from "../core/Babylon3D";
 import { editorState } from "../core/EditorState";
 import { RenderSettingsModal } from "../components/RenderSettingsModal";
+import { FrameStatsOverlay } from "../components/FrameStatsOverlay";
 import { withEditorState } from "../hocs/withEditorState";
 
 import type { WithEditorStateProps } from "../hocs/withEditorState";
@@ -274,6 +275,8 @@ function Preview3DViewInner({
           </Stack>
         </Stack>
       </Box>
+
+      {renderSettings.showFrameStats && <FrameStatsOverlay />}
 
       {/* Render Settings Modal */}
       <RenderSettingsModal

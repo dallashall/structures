@@ -25,6 +25,7 @@ import {
   Engine,
   Scene,
   Color3,
+  Vector3,
 } from '@babylonjs/core';
 import type { AbstractMesh } from '@babylonjs/core';
 import { projectView } from '../projections/ProjectView';
@@ -34,6 +35,7 @@ import { draftingService } from './DraftingService';
 import { textureResolver } from './TextureResolver';
 import { editorState } from './EditorState';
 import { renderLoop } from './RenderLoop';
+import { frameStats } from './FrameStats';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import { setupLighting, setupAxes } from './rendering/SceneSetup';
 import { loadEnvironment, applyEnvironment, updateEnvironmentIntensity } from './rendering/EnvironmentSetup';
@@ -82,6 +84,7 @@ class Babylon3D {
   private paused = false;
   private enhancementsReady = false;
   private sceneUpdateQueued = false;
+  private lastCameraPose: { alpha: number; beta: number; radius: number; target: Vector3 } | null = null;
   // Project and dimensions the camera last framed. The camera re-frames only when this changes,
   // so block edits never undo the user's orbit, pan, or zoom.
   private framedKey: string | null = null;
@@ -394,9 +397,37 @@ class Babylon3D {
   // -- Private: render loop --
 
   private renderFrame(): void {
-    if (!this.paused && this.enhancementsReady) {
-      this.scene?.render();
-    }
+    if (this.paused || !this.enhancementsReady || !this.scene) return;
+
+    const startMs = performance.now();
+    this.scene.render();
+    const renderMs = performance.now() - startMs;
+    frameStats.recordFrame(startMs, renderMs, this.measureCameraStep());
+  }
+
+  /**
+   * How far the camera moved since the last frame. Radius and pivot changes are divided
+   * by the radius, so orbit, zoom, and pan steps share one unitless scale.
+   */
+  private measureCameraStep(): number {
+    const camera = this.cameraRig?.getCamera();
+    if (!camera) return 0;
+
+    const previous = this.lastCameraPose;
+    this.lastCameraPose = {
+      alpha: camera.alpha,
+      beta: camera.beta,
+      radius: camera.radius,
+      target: camera.target.clone(),
+    };
+    if (!previous) return 0;
+
+    return (
+      Math.abs(camera.alpha - previous.alpha) +
+      Math.abs(camera.beta - previous.beta) +
+      Math.abs(camera.radius - previous.radius) / camera.radius +
+      Vector3.Distance(camera.target, previous.target) / camera.radius
+    );
   }
 
   // -- Private: event handlers --
