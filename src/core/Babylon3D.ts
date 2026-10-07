@@ -40,7 +40,7 @@ import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import { setupLighting, setupAxes } from './rendering/SceneSetup';
 import { loadEnvironment, applyEnvironment, updateEnvironmentIntensity } from './rendering/EnvironmentSetup';
 import { setupShadows, registerShadowCaster, unregisterShadowCaster, disposeShadows, refreshShadowMap } from './rendering/ShadowSetup';
-import { setupPostProcessing, updatePostProcessing, disposePostProcessing } from './rendering/PostProcessingSetup';
+import { updatePostProcessing, disposePostProcessing } from './rendering/PostProcessingSetup';
 import { applyLightingPreset, getEmissiveScale, getEmissiveLightIntensity } from './rendering/LightingPresets';
 import { EmissiveLighting } from './rendering/EmissiveLighting';
 import { MaterialResolver } from './rendering/MaterialResolver';
@@ -186,7 +186,7 @@ class Babylon3D {
     this.unsubscribeFromEvents();
 
     // Destroy rendering enhancements
-    disposePostProcessing(this.postProcessing);
+    if (this.scene) disposePostProcessing(this.postProcessing, this.scene);
     this.postProcessing = null;
     this.emissiveLighting?.dispose();
     this.emissiveLighting = null;
@@ -300,14 +300,22 @@ class Babylon3D {
     if (!this.scene || !this.cameraRig || !this.materialResolver ||
         !this.blockRenderer) return;
 
-    const settings = editorState.getRenderSettings();
-    this.renderSettings = settings;
+    this.renderSettings = editorState.getRenderSettings();
 
-    // Environment texture (must complete before post-processing setup)
-    await this.loadPresetEnvironment(settings.lightingPreset);
+    // Environment texture (must complete before post-processing setup).
+    // Settings that arrive during the load only update renderSettings, so load again if the preset moved.
+    let loadedPreset: LightingPreset;
+    do {
+      loadedPreset = this.renderSettings.lightingPreset;
+      await this.loadPresetEnvironment(loadedPreset);
+      if (!this.renderSettings) return;
+    } while (this.renderSettings.lightingPreset !== loadedPreset);
 
     // Guard: detach may have been called while awaiting
     if (!this.scene || !this.cameraRig || !this.materialResolver || !this.blockRenderer) return;
+
+    // The latest settings, including any that arrived while the environment loaded
+    const settings = this.renderSettings;
 
     this.backdropRenderer?.setMode(settings.backgroundMode);
 
@@ -339,7 +347,7 @@ class Babylon3D {
 
     // Post-processing (needs camera)
     const camera = this.cameraRig.getCamera();
-    this.postProcessing = setupPostProcessing(this.scene, camera, settings);
+    this.postProcessing = updatePostProcessing(this.postProcessing, this.scene, camera, settings);
 
     // All enhancements ready — safe to start rendering
     this.enhancementsReady = true;
@@ -554,6 +562,13 @@ class Babylon3D {
 
   private handleRenderSettingsApplied(settings: RenderSettings): void {
     if (!this.scene || !this.materialResolver || !this.blockRenderer || !this.cameraRig) return;
+
+    // Until initRenderingEnhancements finishes, it applies the latest settings itself.
+    // Building pipelines here first would collide with the environment's RGBD decode.
+    if (!this.enhancementsReady) {
+      this.renderSettings = settings;
+      return;
+    }
 
     const prev = this.renderSettings;
     this.renderSettings = settings;

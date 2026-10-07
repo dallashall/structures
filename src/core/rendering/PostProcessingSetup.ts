@@ -17,6 +17,10 @@ import {
 
 import type { RenderSettings } from '../../types';
 
+// Pipeline manager keys. A new pipeline replaces any registered pipeline with the same name.
+const SSAO_PIPELINE = 'ssao';
+const DEFAULT_PIPELINE = 'default';
+
 export interface PostProcessingPipelines {
   ssao: SSAO2RenderingPipeline | null;
   defaultPipeline: DefaultRenderingPipeline | null;
@@ -36,7 +40,7 @@ export function setupPostProcessing(
 
   // 1. SSAO first (writes to GBuffer)
   if (settings.ssaoEnabled) {
-    ssao = new SSAO2RenderingPipeline('ssao', scene, {
+    ssao = new SSAO2RenderingPipeline(SSAO_PIPELINE, scene, {
       ssaoRatio: 0.5,
       blurRatio: 0.5,
     });
@@ -45,11 +49,11 @@ export function setupPostProcessing(
     ssao.samples = settings.ssaoSamples;
     ssao.maxZ = 100;
     ssao.minZAspect = 0.5;
-    scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline('ssao', camera);
+    scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline(SSAO_PIPELINE, camera);
   }
 
   // 2. Default pipeline second (bloom + tone mapping)
-  defaultPipeline = new DefaultRenderingPipeline('default', true, scene, [camera]);
+  defaultPipeline = new DefaultRenderingPipeline(DEFAULT_PIPELINE, true, scene, [camera]);
 
   defaultPipeline.bloomEnabled = settings.bloomEnabled;
   defaultPipeline.bloomWeight = settings.bloomIntensity;
@@ -78,9 +82,7 @@ export function setupPostProcessing(
 }
 
 /**
- * Update post-processing from new settings.
- * Disposes and recreates pipelines when features are toggled on/off;
- * updates parameters in-place when just tweaking values.
+ * Replace the pipelines with ones built from new settings
  */
 export function updatePostProcessing(
   current: PostProcessingPipelines | null,
@@ -88,16 +90,18 @@ export function updatePostProcessing(
   camera: Camera,
   settings: RenderSettings
 ): PostProcessingPipelines {
-  // Dispose existing and recreate (simplest correct approach)
-  disposePostProcessing(current);
+  disposePostProcessing(current, scene);
   return setupPostProcessing(scene, camera, settings);
 }
 
 /**
- * Dispose all post-processing pipelines
+ * Dispose the pipelines and unregister them from the scene.
+ * SSAO2RenderingPipeline.dispose() detaches its cameras but stays registered. A disposed
+ * pipeline left in the manager makes every later scene.render() throw.
  */
-export function disposePostProcessing(pipelines: PostProcessingPipelines | null): void {
+export function disposePostProcessing(pipelines: PostProcessingPipelines | null, scene: Scene): void {
   if (!pipelines) return;
   pipelines.ssao?.dispose();
+  scene.postProcessRenderPipelineManager.removePipeline(SSAO_PIPELINE);
   pipelines.defaultPipeline?.dispose();
 }
