@@ -1,230 +1,128 @@
 /**
- * ModelProjection tests - verify model state materialization
+ * ModelProjection tests - model state replayed from the event log
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { eventLog } from '../../core/EventLog';
 import { modelProjection } from '../ModelProjection';
+import { startProject, append, appendToOtherProject } from '../../test/projectFixture';
+
+const DIMENSIONS = { width: 16, height: 16, depth: 16 };
+
+const blockAt = async (x: number, y: number, z: number) =>
+  (await modelProjection.getModel()).blocks.get({ x, y, z });
 
 describe('ModelProjection', () => {
   beforeEach(async () => {
-    await eventLog.clear();
-    localStorage.clear();
+    await startProject();
+    await append('model:initialized', { dimensions: DIMENSIONS });
   });
 
-  describe('model:initialized', () => {
-    it('should initialize dimensions', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 32, height: 16, depth: 32 },
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      expect(model.dimensions).toEqual({
-        width: 32,
-        height: 16,
-        depth: 32,
-      });
-    });
+  it('takes dimensions from model:initialized', async () => {
+    const model = await modelProjection.getModel();
+    expect(model.dimensions).toEqual(DIMENSIONS);
+    expect(model.blocks.size).toBe(0);
   });
 
-  describe('model:blockPlaced', () => {
-    it('should add block to index', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
+  it('places and removes single blocks', async () => {
+    await append('model:blockPlaced', { position: { x: 5, y: 10, z: 3 }, blockType: 'stone' });
+    expect((await blockAt(5, 10, 3))?.blockType).toBe('stone');
 
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 5, y: 10, z: 3 },
-        blockType: 'stone',
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      const block = model.blocks.get({ x: 5, y: 10, z: 3 });
-
-      expect(block).toBeDefined();
-      expect(block?.blockType).toBe('stone');
-    });
-
-    it('should handle multiple blocks', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 0, y: 0, z: 0 },
-        blockType: 'stone',
-      });
-
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 1, y: 1, z: 1 },
-        blockType: 'dirt',
-      });
-
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 2, y: 2, z: 2 },
-        blockType: 'wood',
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      expect(model.blocks.toArray().length).toBeGreaterThanOrEqual(3);
-    });
+    await append('model:blockRemoved', { position: { x: 5, y: 10, z: 3 } });
+    expect(await blockAt(5, 10, 3)).toBeNull();
   });
 
-  describe('model:blockRemoved', () => {
-    it('should remove block from index', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 5, y: 10, z: 3 },
-        blockType: 'stone',
-      });
-
-      await eventLog.append('model:blockRemoved', {
-        position: { x: 5, y: 10, z: 3 },
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      const block = model.blocks.get({ x: 5, y: 10, z: 3 });
-
-      expect(block).toBeNull();
+  it('places and removes batches of blocks', async () => {
+    await append('model:blocksPlaced', {
+      blocks: [
+        { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' },
+        { position: { x: 1, y: 0, z: 0 }, blockType: 'dirt' },
+        { position: { x: 2, y: 0, z: 0 }, blockType: 'oak_planks' },
+      ],
     });
+    await append('model:blocksRemoved', { positions: [{ x: 0, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }] });
+
+    const model = await modelProjection.getModel();
+    expect(model.blocks.size).toBe(1);
+    expect(model.blocks.get({ x: 1, y: 0, z: 0 })?.blockType).toBe('dirt');
   });
 
-  describe('model:dimensionExpanded', () => {
-    it('should update dimensions', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      await eventLog.append('model:dimensionExpanded', {
-        newDimensions: { width: 32, height: 16, depth: 16 },
-        shift: { x: 0, y: 0, z: 0 },
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      expect(model.dimensions.width).toBe(32);
+  it('shifts blocks and the meta block when dimensions expand', async () => {
+    await append('model:blockPlaced', { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' });
+    await append('model:metaBlockPlaced', { position: { x: 1, y: 1, z: 1 } });
+    await append('model:dimensionExpanded', {
+      newDimensions: { width: 24, height: 16, depth: 16 },
+      shift: { x: 8, y: 0, z: 0 },
     });
 
-    it('should shift blocks when expanding', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 0, y: 0, z: 0 },
-        blockType: 'stone',
-      });
-
-      await eventLog.append('model:dimensionExpanded', {
-        newDimensions: { width: 32, height: 16, depth: 16 },
-        shift: { x: 8, y: 0, z: 0 },
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      const block = model.blocks.get({ x: 8, y: 0, z: 0 });
-
-      expect(block).toBeDefined();
-      expect(block?.blockType).toBe('stone');
-    });
+    const model = await modelProjection.getModel();
+    expect(model.dimensions).toEqual({ width: 24, height: 16, depth: 16 });
+    expect(model.blocks.get({ x: 0, y: 0, z: 0 })).toBeNull();
+    expect(model.blocks.get({ x: 8, y: 0, z: 0 })?.blockType).toBe('stone');
+    expect(model.metaBlock.position).toEqual({ x: 9, y: 1, z: 1 });
   });
 
-  describe('model:metaBlockPlaced', () => {
-    it('should update metaBlock position', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      await eventLog.append('model:metaBlockPlaced', {
-        position: { x: 5, y: 5, z: 5 },
-      });
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      expect(model.metaBlock.position).toEqual({ x: 5, y: 5, z: 5 });
+  it('drops blocks that fall outside the bounds when dimensions shrink', async () => {
+    await append('model:blocksPlaced', {
+      blocks: [
+        { position: { x: 2, y: 0, z: 0 }, blockType: 'stone' },
+        { position: { x: 12, y: 0, z: 0 }, blockType: 'dirt' },
+      ],
     });
+    await append('model:dimensionShrunk', {
+      newDimensions: { width: 8, height: 16, depth: 16 },
+      shift: { x: -2, y: 0, z: 0 },
+    });
+
+    const model = await modelProjection.getModel();
+    expect(model.dimensions.width).toBe(8);
+    expect(model.blocks.size).toBe(1);
+    expect(model.blocks.get({ x: 0, y: 0, z: 0 })?.blockType).toBe('stone');
   });
 
-  describe('model:metaBlockConfirmed', () => {
-    it('should set metaBlock as confirmed', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
+  it('places and confirms the meta block', async () => {
+    await append('model:metaBlockPlaced', { position: { x: 5, y: 5, z: 5 } });
+    await append('model:metaBlockConfirmed', {});
 
-      await eventLog.append('model:metaBlockConfirmed', {});
-
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-      expect(model.metaBlock.isConfirmed).toBe(true);
-    });
+    const { metaBlock } = await modelProjection.getModel();
+    expect(metaBlock.position).toEqual({ x: 5, y: 5, z: 5 });
+    expect(metaBlock.isConfirmed).toBe(true);
   });
 
-  describe('emit model:rebuilt', () => {
-    it('should emit after processing event', async () => {
-      let emitted = false;
+  it('ignores events for other projects', async () => {
+    await appendToOtherProject('model:blockPlaced', { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' });
+    await appendToOtherProject('model:initialized', { dimensions: { width: 4, height: 4, depth: 4 } });
 
-      modelProjection.on('model:rebuilt', () => {
-        emitted = true;
-      });
-
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
-
-      // Give projection time to process and emit
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(emitted).toBe(true);
-    });
+    const model = await modelProjection.getModel();
+    expect(model.dimensions).toEqual(DIMENSIONS);
+    expect(model.blocks.size).toBe(0);
   });
 
-  describe('decoupling', () => {
-    it('should only process model:* events', async () => {
-      await eventLog.append('model:initialized', {
-        dimensions: { width: 16, height: 16, depth: 16 },
-      });
+  it('emits model:rebuilt for model events only', async () => {
+    let count = 0;
+    const countRebuilds = (): void => { count++; };
+    modelProjection.on('model:rebuilt', countRebuilds);
 
-      await eventLog.append('metadata:created', {
-        id: 'test-id',
-        name: 'Test Project',
-      });
+    await append('model:blockPlaced', { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' });
+    await append('metadata:renamed', { newName: 'Renamed' });
 
-      await eventLog.append('model:blockPlaced', {
-        position: { x: 0, y: 0, z: 0 },
-        blockType: 'stone',
-      });
+    modelProjection.off('model:rebuilt', countRebuilds);
+    expect(count).toBe(1);
+  });
 
-      // Give projection time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const model = await modelProjection.getModel();
-
-      // Should have processed model events but not metadata
-      expect(model.dimensions.width).toBe(16);
-      expect(model.blocks.toArray().length).toBeGreaterThanOrEqual(1);
+  it('replays the log after a reset, as when a project is reopened', async () => {
+    await append('model:blocksPlaced', {
+      blocks: [
+        { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' },
+        { position: { x: 1, y: 0, z: 0 }, blockType: 'dirt' },
+      ],
     });
+    await append('model:metaBlockConfirmed', {});
+
+    modelProjection.reset();
+    const model = await modelProjection.getModel();
+
+    expect(model.dimensions).toEqual(DIMENSIONS);
+    expect(model.blocks.size).toBe(2);
+    expect(model.metaBlock.isConfirmed).toBe(true);
   });
 });

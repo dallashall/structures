@@ -190,7 +190,7 @@ export class CameraRig {
    * Zoom and pan so an axis-aligned box fills the view, keeping the viewing angle.
    * Every corner of the box lands inside the viewport with FIT_PADDING clear on each edge.
    */
-  fitBounds(min: Vector3, max: Vector3): void {
+  fitBounds(min: Vector3, max: Vector3, animate = true): void {
     const camera = this.camera;
     const center = Vector3.Center(min, max);
 
@@ -225,7 +225,7 @@ export class CameraRig {
     }
 
     camera.upperRadiusLimit = Math.max(camera.upperRadiusLimit ?? 0, distance);
-    this.moveTo({ alpha: camera.alpha, beta: camera.beta, radius: distance, target: center }, true);
+    this.moveTo({ alpha: camera.alpha, beta: camera.beta, radius: distance, target: center }, animate);
   }
 
   /**

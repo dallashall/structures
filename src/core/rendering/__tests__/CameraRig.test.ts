@@ -79,14 +79,7 @@ describe('CameraRig', () => {
     const min = new Vector3(2, 0, 3);
     const max = new Vector3(14, 6, 9);
     rig.getCamera().alpha = 0.6;
-    rig.fitBounds(min, max);
-    // fitBounds animates; jump to the end by running the tween with a long elapsed time
-    const end = performance.now() + 1000;
-    const realNow = performance.now.bind(performance);
-    const afterAnimation = (): number => end;
-    performance.now = afterAnimation;
-    scene.onBeforeRenderObservable.notifyObservers(scene);
-    performance.now = realNow;
+    rig.fitBounds(min, max, false);
     refreshMatrices();
 
     const corners = [];
