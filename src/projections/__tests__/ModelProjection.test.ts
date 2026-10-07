@@ -46,6 +46,30 @@ describe('ModelProjection', () => {
     expect(model.blocks.get({ x: 1, y: 0, z: 0 })?.blockType).toBe('dirt');
   });
 
+  it('keeps block state and converts legacy facing names, like BlockProjection', async () => {
+    await append('model:blockPlaced', {
+      position: { x: 0, y: 0, z: 0 },
+      blockType: 'oak_stairs',
+      blockState: { facing: 'front', half: 'top' },
+    });
+
+    expect((await blockAt(0, 0, 0))?.blockState).toEqual({ facing: 'y-', half: 'top' });
+  });
+
+  it('keeps block state when dimensions expand', async () => {
+    await append('model:blockPlaced', {
+      position: { x: 0, y: 0, z: 0 },
+      blockType: 'oak_slab',
+      blockState: { type: 'top' },
+    });
+    await append('model:dimensionExpanded', {
+      newDimensions: { width: 20, height: 16, depth: 16 },
+      shift: { x: 4, y: 0, z: 0 },
+    });
+
+    expect((await blockAt(4, 0, 0))?.blockState).toEqual({ type: 'top' });
+  });
+
   it('shifts blocks and the meta block when dimensions expand', async () => {
     await append('model:blockPlaced', { position: { x: 0, y: 0, z: 0 }, blockType: 'stone' });
     await append('model:metaBlockPlaced', { position: { x: 1, y: 1, z: 1 } });

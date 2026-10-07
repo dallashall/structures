@@ -236,7 +236,6 @@ export class Canvas2D {
     // Render-only events (no data resolution needed)
     editorState.on("block:selected", this.handleRequestRender);
     editorState.on("paintbehavior:selected", this.handleRequestRender);
-    editorState.on("deletemode:changed", this.handleRequestRender);
 
     // Tool switching
     editorState.on("paintmode:selected", this.handleToolChange);
@@ -258,7 +257,6 @@ export class Canvas2D {
 
     editorState.off("block:selected", this.handleRequestRender);
     editorState.off("paintbehavior:selected", this.handleRequestRender);
-    editorState.off("deletemode:changed", this.handleRequestRender);
 
     editorState.off("paintmode:selected", this.handleToolChange);
   }

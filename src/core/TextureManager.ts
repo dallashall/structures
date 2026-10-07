@@ -11,7 +11,7 @@ import { blockRegistry } from './BlockRegistry';
  * - Fallback to colors when atlas unavailable
  *
  * Events:
- * - atlas:loaded - When the atlas finishes loading
+ * - atlas:ready - When the atlas image and metadata are both available
  * - atlas:error - When the atlas fails to load
  */
 class TextureManager extends EventEmitter {
@@ -77,10 +77,10 @@ class TextureManager extends EventEmitter {
         loaded: true,
       };
 
-      this.emit('atlas:loaded', this.atlas);
+      this.emit('atlas:ready', this.atlas);
     } catch (error) {
       this.emit('atlas:error', error);
-      console.error('❌ Failed to load texture atlas:', error);
+      console.error('Failed to load texture atlas:', error);
       throw error;
     }
   }

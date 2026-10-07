@@ -1,15 +1,20 @@
 import { Box, Stack, Typography, Button, Divider } from "@mui/material";
-import { useState, useEffect } from "react";
 import { Add, FolderOpen } from "@mui/icons-material";
-import { storage } from "../core/Storage";
-import { ProjectCard } from "../components/ProjectCard";
+
 import type { StorageMetadata } from "../types";
 
-interface WelcomeViewProps {
+import { withProjectListState } from "../hocs/withProjectListState";
+import type { WithProjectListStateProps } from "../hocs/withProjectListState";
+
+import { ProjectCard } from "../components/ProjectCard";
+
+interface WelcomeViewOwnProps {
   onNewProject: () => void;
   onOpenProject: (projectId: string) => void;
   onLoadFromFile: () => void;
 }
+
+type WelcomeViewProps = WelcomeViewOwnProps & WithProjectListStateProps;
 
 /**
  * WelcomeView - Initial landing screen with project browser
@@ -21,66 +26,46 @@ interface WelcomeViewProps {
  * - Select project to show metadata panel
  * - Open and delete actions for selected project
  *
- * Uses MUI Grid and Box components for layout.
+ * Project list and selection come from withProjectListState.
  */
-export function WelcomeView({
+function WelcomeViewComponent({
   onNewProject,
   onOpenProject,
   onLoadFromFile,
+  projects,
+  isLoadingProjects,
+  selectedProjectId,
+  onSelectProject,
+  onDeleteProject,
 }: WelcomeViewProps) {
-  const [projects, setProjects] = useState<StorageMetadata[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load projects on mount
-  useEffect(() => {
-    const loadProjects = async () => {
-      setIsLoading(true);
-      const projectList = await storage.listProjects();
-      setProjects(projectList);
-      setIsLoading(false);
-    };
-
-    loadProjects();
-  }, []);
-
-  const handleProjectClick = (projectId: string) => {
-    setSelectedProjectId(projectId);
-  };
-
-  const handleOpenProjectById = (projectId: string) => {
-    onOpenProject(projectId);
-  };
-
-  const handleDeleteProjectById = async (projectId: string) => {
-    await storage.deleteProject(projectId);
-    const projectList = await storage.listProjects();
-    setProjects(projectList);
-    // Clear selection if deleted project was selected
-    if (selectedProjectId === projectId) {
-      setSelectedProjectId(null);
-    }
-  };
-
-  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const isSelectedProject = (project: StorageMetadata): boolean =>
+    project.id === selectedProjectId;
+  const selectedProject = projects.find(isSelectedProject);
 
   // Named handler creator for project click
   const createProjectClickHandler = (projectId: string) => () => {
-    handleProjectClick(projectId);
+    onSelectProject(projectId);
   };
+
+  const renderProjectCard = (project: StorageMetadata) => (
+    <ProjectCard
+      key={project.id}
+      project={project}
+      isSelected={selectedProjectId === project.id}
+      onClick={createProjectClickHandler(project.id)}
+    />
+  );
 
   // Named handlers for selected project actions
   const handleOpenSelected = () => {
     if (selectedProject) {
-      handleOpenProjectById(selectedProject.id);
+      onOpenProject(selectedProject.id);
     }
   };
 
   const handleDeleteSelected = () => {
     if (selectedProject) {
-      handleDeleteProjectById(selectedProject.id);
+      onDeleteProject(selectedProject.id);
     }
   };
 
@@ -129,7 +114,7 @@ export function WelcomeView({
         <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: "hidden" }}>
           {/* Project Grid */}
           <Box sx={{ flex: 2, overflow: "auto" }}>
-            {isLoading ? (
+            {isLoadingProjects ? (
               <Typography variant="body1">Loading projects...</Typography>
             ) : projects.length === 0 ? (
               <Box
@@ -154,14 +139,7 @@ export function WelcomeView({
                   gap: 2,
                 }}
               >
-                {projects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isSelected={selectedProjectId === project.id}
-                    onClick={createProjectClickHandler(project.id)}
-                  />
-                ))}
+                {projects.map(renderProjectCard)}
               </Box>
             )}
           </Box>
@@ -203,3 +181,5 @@ export function WelcomeView({
     </Box>
   );
 }
+
+export const WelcomeView = withProjectListState<WelcomeViewOwnProps>(WelcomeViewComponent);

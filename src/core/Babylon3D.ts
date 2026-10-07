@@ -358,7 +358,7 @@ class Babylon3D {
     editorState.on('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.on('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
-    textureManager.on('atlas:loaded', this.boundHandlers.atlasLoaded);
+    textureManager.on('atlas:ready', this.boundHandlers.atlasLoaded);
   }
 
   private unsubscribeFromEvents(): void {
@@ -374,7 +374,7 @@ class Babylon3D {
     editorState.off('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.off('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
-    textureManager.off('atlas:loaded', this.boundHandlers.atlasLoaded);
+    textureManager.off('atlas:ready', this.boundHandlers.atlasLoaded);
   }
 
   // -- Private: render loop --

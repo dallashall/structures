@@ -139,6 +139,10 @@ function EditorViewComponent(props: EditorViewProps) {
     }
   };
 
+  const handleMaterialBrowserClose = () => {
+    editorState.setMaterialBrowserOpen(false);
+  };
+
   const handleConfirmMetaBlockPlacement = () => {
     // Command handles exiting placement mode after event is persisted
     void confirmMetaBlockCommand.execute();
@@ -256,7 +260,7 @@ function EditorViewComponent(props: EditorViewProps) {
         searchQuery={materialBrowserSearchQuery}
         selectedTab={materialBrowserSelectedTab}
         quickSelectSlots={quickSelectSlots}
-        onClose={() => editorState.setMaterialBrowserOpen(false)}
+        onClose={handleMaterialBrowserClose}
         onSearchChange={editorState.setMaterialBrowserSearchQuery}
         onTabChange={editorState.setMaterialBrowserSelectedTab}
         onAssignSlot={handleAssignSlot}

@@ -48,8 +48,8 @@ export function BlockTextureSwatch({
     };
 
     if (!isAtlasLoaded) {
-      textureManager.on('atlas:loaded', handleAtlasLoaded);
-      return () => textureManager.off('atlas:loaded', handleAtlasLoaded);
+      textureManager.on('atlas:ready', handleAtlasLoaded);
+      return () => textureManager.off('atlas:ready', handleAtlasLoaded);
     }
   }, [isAtlasLoaded]);
 

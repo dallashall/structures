@@ -45,7 +45,8 @@ export function RenderSettingsModal({
   onApply,
   onReset,
 }: RenderSettingsModalProps) {
-  const handleToggle = (key: keyof RenderSettings) => {
+  // Named handler creator: one toggle handler per boolean setting
+  const createToggleHandler = (key: keyof RenderSettings) => () => {
     onApply({ ...settings, [key]: !settings[key] });
   };
 
@@ -105,7 +106,7 @@ export function RenderSettingsModal({
               <SettingRow label="FXAA">
                 <Switch
                   checked={settings.fxaaEnabled}
-                  onChange={() => handleToggle('fxaaEnabled')}
+                  onChange={createToggleHandler('fxaaEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -162,7 +163,7 @@ export function RenderSettingsModal({
               <SettingRow label="PBR Materials">
                 <Switch
                   checked={settings.pbrEnabled}
-                  onChange={() => handleToggle('pbrEnabled')}
+                  onChange={createToggleHandler('pbrEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -190,7 +191,7 @@ export function RenderSettingsModal({
               <SettingRow label="Enable Edges">
                 <Switch
                   checked={settings.edgesEnabled}
-                  onChange={() => handleToggle('edgesEnabled')}
+                  onChange={createToggleHandler('edgesEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -229,7 +230,7 @@ export function RenderSettingsModal({
               <SettingRow label="Enable Shadows">
                 <Switch
                   checked={settings.shadowsEnabled}
-                  onChange={() => handleToggle('shadowsEnabled')}
+                  onChange={createToggleHandler('shadowsEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -270,7 +271,7 @@ export function RenderSettingsModal({
               <SettingRow label="Enable SSAO">
                 <Switch
                   checked={settings.ssaoEnabled}
-                  onChange={() => handleToggle('ssaoEnabled')}
+                  onChange={createToggleHandler('ssaoEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -321,7 +322,7 @@ export function RenderSettingsModal({
               <SettingRow label="Enable Bloom">
                 <Switch
                   checked={settings.bloomEnabled}
-                  onChange={() => handleToggle('bloomEnabled')}
+                  onChange={createToggleHandler('bloomEnabled')}
                   size="small"
                 />
               </SettingRow>
@@ -351,7 +352,7 @@ export function RenderSettingsModal({
               <SettingRow label="Tone Mapping">
                 <Switch
                   checked={settings.toneMapping}
-                  onChange={() => handleToggle('toneMapping')}
+                  onChange={createToggleHandler('toneMapping')}
                   size="small"
                 />
               </SettingRow>
@@ -389,7 +390,7 @@ export function RenderSettingsModal({
               <SettingRow label="Highlight Active Layer">
                 <Switch
                   checked={settings.layerHighlightEnabled}
-                  onChange={() => handleToggle('layerHighlightEnabled')}
+                  onChange={createToggleHandler('layerHighlightEnabled')}
                   size="small"
                 />
               </SettingRow>

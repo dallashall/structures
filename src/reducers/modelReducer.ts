@@ -7,8 +7,15 @@
  */
 
 import { BlockIndex } from '../core/BlockIndex';
+import { normalizeLegacyDirections } from '../core/DirectionMapping';
 import type { Event } from '../core/EventLog';
-import type { Dimensions, Vector3D, MetaBlock } from '../types';
+import type { BlockData, BlockStateProperties, Dimensions, Vector3D, MetaBlock } from '../types';
+
+interface PlacedBlock {
+  position: Vector3D;
+  blockType: string;
+  blockState?: BlockStateProperties;
+}
 
 export interface Model {
   dimensions: Dimensions;
@@ -49,6 +56,25 @@ const shiftPosition = (position: Vector3D, shift: Vector3D): Vector3D => ({
 const hasShift = (shift: Vector3D): boolean =>
   shift.x !== 0 || shift.y !== 0 || shift.z !== 0;
 
+// Same normalization as BlockProjection, so both projections hold identical block data
+const toBlockData = ({ position, blockType, blockState }: PlacedBlock): BlockData => ({
+  position,
+  blockType,
+  blockState: blockState ? normalizeLegacyDirections(blockState) : blockState,
+});
+
+const shiftBlocks = (blocks: BlockIndex, shift: Vector3D, dimensions?: Dimensions): BlockIndex => {
+  const shifted = new BlockIndex();
+  const moveBlock = (block: BlockData): void => {
+    const position = shiftPosition(block.position, shift);
+    if (!dimensions || isInside(position, dimensions)) {
+      shifted.set(position, { ...block, position });
+    }
+  };
+  blocks.forEach(moveBlock);
+  return shifted;
+};
+
 const isInside = (position: Vector3D, dimensions: Dimensions): boolean =>
   position.x >= 0 &&
   position.x < dimensions.width &&
@@ -69,11 +95,8 @@ export function applyModelEvent(model: Model, event: Event): boolean {
     }
 
     case 'model:blockPlaced': {
-      const data = event.data as { position: Vector3D; blockType: string };
-      model.blocks.set(data.position, {
-        position: data.position,
-        blockType: data.blockType,
-      });
+      const data = event.data as PlacedBlock;
+      model.blocks.set(data.position, toBlockData(data));
       return true;
     }
 
@@ -84,12 +107,9 @@ export function applyModelEvent(model: Model, event: Event): boolean {
     }
 
     case 'model:blocksPlaced': {
-      const data = event.data as { blocks: Array<{ position: Vector3D; blockType: string }> };
+      const data = event.data as { blocks: PlacedBlock[] };
       for (const block of data.blocks) {
-        model.blocks.set(block.position, {
-          position: block.position,
-          blockType: block.blockType,
-        });
+        model.blocks.set(block.position, toBlockData(block));
       }
       return true;
     }
@@ -107,12 +127,7 @@ export function applyModelEvent(model: Model, event: Event): boolean {
       model.dimensions = data.newDimensions;
 
       if (hasShift(data.shift)) {
-        const newBlocks = new BlockIndex();
-        model.blocks.forEach((block) => {
-          const newPos = shiftPosition(block.position, data.shift);
-          newBlocks.set(newPos, { ...block, position: newPos });
-        });
-        model.blocks = newBlocks;
+        model.blocks = shiftBlocks(model.blocks, data.shift);
         model.metaBlock = {
           ...model.metaBlock,
           position: shiftPosition(model.metaBlock.position, data.shift),
@@ -124,16 +139,8 @@ export function applyModelEvent(model: Model, event: Event): boolean {
     case 'model:dimensionShrunk': {
       const data = event.data as { newDimensions: Dimensions; shift: Vector3D };
       model.dimensions = data.newDimensions;
-
       // Blocks shifted outside the new bounds are dropped
-      const newBlocks = new BlockIndex();
-      model.blocks.forEach((block) => {
-        const newPos = shiftPosition(block.position, data.shift);
-        if (isInside(newPos, data.newDimensions)) {
-          newBlocks.set(newPos, { ...block, position: newPos });
-        }
-      });
-      model.blocks = newBlocks;
+      model.blocks = shiftBlocks(model.blocks, data.shift, data.newDimensions);
 
       if (hasShift(data.shift)) {
         model.metaBlock = {

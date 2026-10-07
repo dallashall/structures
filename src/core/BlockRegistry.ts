@@ -193,10 +193,10 @@ class BlockRegistry extends EventEmitter {
 
       this.isLoaded = true;
       this.emit('blocks:loaded', this.getAllBlocks());
-      console.log(`✅ Block registry loaded: ${this.blocks.size} blocks`);
+      console.log(`Block registry loaded: ${this.blocks.size} blocks`);
     } catch (error) {
       this.emit('blocks:error', error);
-      console.error('❌ Failed to load block registry:', error);
+      console.error('Failed to load block registry:', error);
       throw error;
     }
   }

@@ -5,12 +5,8 @@ import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
-import { storage } from "./core/Storage";
-import { editorState } from "./core/EditorState";
+import { openProjectCommand } from "./commands/OpenProjectCommand";
 import { keyboardManager } from "./core/KeyboardManager";
-import { metadataProjection } from "./projections/MetadataProjection";
-import { modelProjection } from "./projections/ModelProjection";
-import { blockProjection } from "./projections/BlockProjection";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -188,31 +184,15 @@ export function App() {
     return () => window.removeEventListener("hashchange", checkHash);
   }, []);
 
-  // Load last opened project on startup
+  // Reopen the last project on startup
   useEffect(() => {
-    const loadLastProject = async () => {
-      const lastProjectId = await storage.getLastOpenedProjectId();
-      if (lastProjectId) {
-        // If there was a last opened project, open it automatically
-        const project = await storage.getProject(lastProjectId);
-        if (project) {
-          // Set project ID BEFORE resetting projections so rebuild() filters correctly
-          editorState.setCurrentProjectId(lastProjectId);
-          editorState.setPlacementMode(false);
-          metadataProjection.reset();
-          modelProjection.reset();
-          blockProjection.reset();
-          await Promise.all([
-            metadataProjection.ensureFresh(),
-            modelProjection.ensureFresh(),
-            blockProjection.ensureFresh(),
-          ]);
-          setCurrentView("editor");
-        }
+    const reopenLastProject = async () => {
+      if (await openProjectCommand.executeLastOpened()) {
+        setCurrentView("editor");
       }
     };
 
-    void loadLastProject();
+    void reopenLastProject();
   }, []);
 
   // Handle new project
@@ -229,22 +209,9 @@ export function App() {
 
   // Handle open project from welcome screen
   const handleOpenProject = async (projectId: string) => {
-    // Reset projections and rebuild for new project
-    metadataProjection.reset();
-    modelProjection.reset();
-    blockProjection.reset();
-    editorState.setCurrentProjectId(projectId);
-    editorState.setPlacementMode(false);
-    await storage.setLastOpenedProjectId(projectId);
-
-    // Wait for projections to rebuild with new project data
-    await Promise.all([
-      metadataProjection.ensureFresh(),
-      modelProjection.ensureFresh(),
-      blockProjection.ensureFresh(),
-    ]);
-
-    setCurrentView("editor");
+    if (await openProjectCommand.execute(projectId)) {
+      setCurrentView("editor");
+    }
   };
 
   // Handle back to welcome (close current project)
