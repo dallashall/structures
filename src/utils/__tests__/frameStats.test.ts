@@ -9,6 +9,7 @@ const repeat = (value: number, count: number): number[] => {
   const constant = (): number => value;
   return Array.from({ length: count }, constant);
 };
+const decayingStep = (_: unknown, i: number): number => 0.1 * Math.exp((-33 / 60) * i);
 // Alternating double and empty frames, as when input events miss frames
 const alternateSteps = (_: unknown, i: number): number => (i % 2 === 0 ? 0.04 : 0.01);
 
@@ -28,16 +29,23 @@ describe('summarizeFrames', () => {
     expect(summary.intervalMax).toBe(50);
   });
 
-  it('reports zero jitter for even camera steps and positive jitter for uneven ones', () => {
+  it('reports near-zero jitter for even steps and for a smooth ease-out', () => {
     expect(summarizeFrames([], [], repeat(0.02, 30)).cameraJitter).toBeCloseTo(0);
 
-    const uneven = Array.from({ length: 30 }, alternateSteps);
-    expect(summarizeFrames([], [], uneven).cameraJitter).toBeCloseTo(0.6);
+    // Each 30fps frame keeps exp(-33/60) of the remaining distance, as CameraRig's ease does
+    const easeOut = Array.from({ length: 12 }, decayingStep);
+    expect(summarizeFrames([], [], easeOut).cameraJitter).toBeLessThan(0.2);
   });
 
-  it('ignores frames where the camera rests and needs enough moving frames', () => {
-    expect(summarizeFrames([], [], [...repeat(0, 50), ...repeat(0.02, 5)]).cameraJitter).toBeNull();
-    expect(summarizeFrames([], [], [...repeat(0, 50), ...repeat(0.02, 20)]).cameraJitter).toBeCloseTo(0);
+  it('reports high jitter when steps alternate between big and small', () => {
+    const uneven = Array.from({ length: 30 }, alternateSteps);
+    expect(summarizeFrames([], [], uneven).cameraJitter).toBeGreaterThan(0.9);
+  });
+
+  it('only counts runs of consecutive moving frames', () => {
+    const withRests = [...repeat(0, 20), ...repeat(0.02, 4), ...repeat(0, 20)];
+    expect(summarizeFrames([], [], withRests).cameraJitter).toBeNull();
+    expect(summarizeFrames([], [], [...repeat(0, 20), ...repeat(0.02, 20)]).cameraJitter).toBeCloseTo(0);
   });
 
   it('summarizes whole-tick times separately from 3D render times', () => {

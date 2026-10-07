@@ -10,7 +10,8 @@ const ms = (value: number): string => value.toFixed(1);
  *
  * frame: interval between frames (p50 / p95 / worst). render: CPU time in scene.render().
  * tick: CPU time of the whole frame loop, every 2D view included. 3D buffer: drawing size in device pixels.
- * long: frames over 1.5x the median interval. jitter: unevenness of camera steps while moving.
+ * long: frames over 1.5x the median interval. jitter: how far camera steps stray from their neighbors
+ * while moving. Under 0.2 is smooth (including the ease-out). Over 0.5 is visible stutter.
  */
 function FrameStatsOverlayComponent({ stats }: WithFrameStatsProps) {
   const lines = stats

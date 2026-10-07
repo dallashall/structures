@@ -11,7 +11,9 @@ export interface FrameStatsSummary {
   tickP95: number;
   // Frames whose interval exceeded LONG_FRAME_FACTOR times the median
   longFrames: number;
-  // Coefficient of variation of per-frame camera steps while moving. 0 means perfectly even.
+  // How far each per-frame camera step strays from the average of its two neighbors,
+  // relative to the step size, while moving. Smooth motion, including a steady ease-out,
+  // scores near 0. Stutter (big, small, big) scores near 1 or above.
   // Null when the camera did not move enough frames to judge.
   cameraJitter: number | null;
 }
@@ -20,8 +22,8 @@ export interface FrameStatsSummary {
 const LONG_FRAME_FACTOR = 1.5;
 // Steps below this are rest, not motion (radians or world units, combined)
 const MOTION_EPSILON = 1e-4;
-// Fewer moving frames than this give a jitter value dominated by noise
-const MIN_MOVING_FRAMES = 10;
+// Fewer moving step triples than this give a jitter value dominated by noise
+const MIN_MOVING_TRIPLES = 8;
 
 const ascending = (a: number, b: number): number => a - b;
 const sum = (total: number, value: number): number => total + value;
@@ -51,15 +53,19 @@ export function summarizeFrames(
   const median = percentile(sortedIntervals, 0.5);
   const isLong = (interval: number): boolean => interval > median * LONG_FRAME_FACTOR;
 
-  const isMoving = (step: number): boolean => step > MOTION_EPSILON;
-  const moving = cameraSteps.filter(isMoving);
-  let cameraJitter: number | null = null;
-  if (moving.length >= MIN_MOVING_FRAMES) {
-    const meanStep = mean(moving);
-    const squaredDeviation = (total: number, step: number): number => total + (step - meanStep) ** 2;
-    const deviation = Math.sqrt(moving.reduce(squaredDeviation, 0) / moving.length);
-    cameraJitter = deviation / meanStep;
+  // Compare each step with the straight line between its neighbors. Only runs of three
+  // consecutive moving frames count, so rest frames never pair with moving ones.
+  let residualTotal = 0;
+  let stepTotal = 0;
+  let triples = 0;
+  for (let i = 1; i < cameraSteps.length - 1; i++) {
+    const [before, step, after] = [cameraSteps[i - 1], cameraSteps[i], cameraSteps[i + 1]];
+    if (before <= MOTION_EPSILON || step <= MOTION_EPSILON || after <= MOTION_EPSILON) continue;
+    residualTotal += Math.abs(step - (before + after) / 2);
+    stepTotal += step;
+    triples++;
   }
+  const cameraJitter = triples >= MIN_MOVING_TRIPLES ? residualTotal / stepTotal : null;
 
   return {
     frames: intervals.length,
