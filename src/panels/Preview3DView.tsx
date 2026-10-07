@@ -30,13 +30,7 @@ const AXIS_COLORS = {
   z: { main: "#27ae60", hover: "#229954", bg: "rgba(39, 174, 96, 0.1)" },
 };
 
-interface Preview3DViewOwnProps {
-  width: number;
-  height: number;
-  isVisible?: boolean;
-}
-
-type Preview3DViewProps = Preview3DViewOwnProps & WithEditorStateProps;
+type Preview3DViewProps = WithEditorStateProps;
 
 /**
  * Preview3DView - Dumb rendering component for the 3D preview panel.
@@ -46,23 +40,11 @@ type Preview3DViewProps = Preview3DViewOwnProps & WithEditorStateProps;
  * This component only renders UI and delegates actions.
  */
 function Preview3DViewInner({
-  width,
-  height,
-  isVisible,
   sliceGuideVisibility,
   renderSettings,
   renderSettingsModalOpen,
 }: Preview3DViewProps) {
   const theme = useTheme();
-
-  // Ref callback — attaches the singleton to the canvas element.
-  // Idempotent: calling with the same canvas is a no-op.
-  const handleCanvasMount = (canvas: HTMLCanvasElement | null): void => {
-    if (canvas) babylon3d.attach(canvas);
-  };
-
-  // Sync visibility to singleton (idempotent)
-  babylon3d.setVisible(isVisible !== false);
 
   // Slice guide toggles
   const handleToggleX = (): void => { editorState.toggleSliceGuide('x'); };
@@ -96,14 +78,11 @@ function Preview3DViewInner({
         bgcolor: "#1a1a1a",
       }}
     >
-      <canvas
-        ref={handleCanvasMount}
-        style={{
-          display: "block",
-          width: `${width}px`,
-          height: `${height}px`,
-          boxSizing: "border-box",
-        }}
+      {/* babylon3d.mountCanvas attaches on mount and pauses on unmount. The engine follows the canvas size. */}
+      <Box
+        component="canvas"
+        ref={babylon3d.mountCanvas}
+        sx={{ display: "block", width: "100%", height: "100%" }}
       />
 
       {/* Slice Guides Toggle Buttons + Settings */}

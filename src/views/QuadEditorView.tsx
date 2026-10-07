@@ -1,5 +1,5 @@
 import { Box, Stack, Paper, Divider } from '@mui/material';
-import type { Project, Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
+import type { Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { QuadLayout } from '../layouts/QuadLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
@@ -9,9 +9,7 @@ import { QuickSelectPalette } from '../components/QuickSelectPalette';
 import { editorState } from '../core/EditorState';
 
 interface QuadEditorViewProps {
-  project: Project;
   activeLayers: LayerState;
-  selectedBlock: string | null;
   foregroundBlock: string | null;
   backgroundBlock: string | null;
   activeMaterialSlot: 'foreground' | 'background';
@@ -41,9 +39,7 @@ interface QuadEditorViewProps {
  * Includes layer controls, action bar, and meta block placement UI.
  */
 export function QuadEditorView({
-  project,
   activeLayers,
-  selectedBlock,
   foregroundBlock,
   backgroundBlock,
   activeMaterialSlot,
@@ -86,9 +82,7 @@ export function QuadEditorView({
       <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
         <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
           <QuadLayout
-            project={project}
             activeLayers={activeLayers}
-            selectedBlockId={selectedBlock}
           />
         </Box>
 

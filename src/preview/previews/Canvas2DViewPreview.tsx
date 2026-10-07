@@ -1,6 +1,5 @@
 import { Box, Typography } from '@mui/material';
 import { Canvas2DView } from '../../panels/Canvas2DView';
-import { mockProject } from '../mockData';
 
 export function Canvas2DViewPreview() {
   return (
@@ -13,14 +12,7 @@ export function Canvas2DViewPreview() {
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Front View</Typography>
         <Box sx={{ height: '400px', width: '400px', border: 1, borderColor: 'grey.300' }}>
-          <Canvas2DView
-            viewType="front"
-            project={mockProject}
-            activeLayers={{ x: 5, y: 3, z: 7 }}
-            width={400}
-            height={400}
-            selectedBlockId="stone"
-          />
+          <Canvas2DView viewType="front" />
         </Box>
       </Box>
     </Box>

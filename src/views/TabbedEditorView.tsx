@@ -1,6 +1,6 @@
 import { Box, Stack, Tab, Paper, Divider } from '@mui/material';
 import { TabList, TabContext } from '@mui/lab';
-import type { Project, Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
+import type { Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { TabbedLayout } from '../layouts/TabbedLayout';
 import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
@@ -10,10 +10,8 @@ import { QuickSelectPalette } from '../components/QuickSelectPalette';
 import { editorState } from '../core/EditorState';
 
 interface TabbedEditorViewProps {
-  project: Project;
   activeView: ViewType;
   activeLayers: LayerState;
-  selectedBlock: string | null;
   foregroundBlock: string | null;
   backgroundBlock: string | null;
   activeMaterialSlot: 'foreground' | 'background';
@@ -45,10 +43,8 @@ interface TabbedEditorViewProps {
  * Includes layer controls, action bar, and meta block placement UI.
  */
 export function TabbedEditorView({
-  project,
   activeView,
   activeLayers,
-  selectedBlock,
   foregroundBlock,
   backgroundBlock,
   activeMaterialSlot,
@@ -108,9 +104,7 @@ export function TabbedEditorView({
           <TabbedLayout
             activeView={activeView}
             onViewChange={(key) => onViewChange(key as ViewType)}
-            project={project}
             activeLayers={activeLayers}
-            selectedBlockId={selectedBlock}
           />
         </Box>
 

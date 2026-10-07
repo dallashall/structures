@@ -33,6 +33,7 @@ export class Canvas2D {
   private viewState: ViewState;
   private renderer: Canvas2DRenderer;
   private activeTool: ToolBase | null = null;
+  private resizeObserver: ResizeObserver;
   private needsRender = true;
 
   // Pre-resolved grid data — converted once at data-change time
@@ -59,6 +60,16 @@ export class Canvas2D {
   private handleModelRebuilt = (): void => {
     this.viewState.fitIfUnadjusted();
     this.resolvePersistentBlocks();
+  };
+
+  private handleResizeObserved = (entries: ResizeObserverEntry[]): void => {
+    const box = entries[0]?.contentRect;
+    if (!box) return;
+    const width = Math.round(box.width);
+    const height = Math.round(box.height);
+    if (width !== this.canvas.width || height !== this.canvas.height) {
+      this.resize(width, height);
+    }
   };
 
   private handleRequestRender = (): void => {
@@ -163,6 +174,10 @@ export class Canvas2D {
     this.viewState = new ViewState(viewType, canvas.width, canvas.height);
     this.renderer = new Canvas2DRenderer(ctx, canvas);
 
+    // The canvas fills its container with CSS. Its drawing buffer follows that size 1:1.
+    this.resizeObserver = new ResizeObserver(this.handleResizeObserved);
+    this.resizeObserver.observe(canvas);
+
     this.subscribeToEvents();
     this.resolvePersistentBlocks();
     this.setTool(editorState.getPaintMode());
@@ -187,6 +202,7 @@ export class Canvas2D {
   }
 
   destroy(): void {
+    this.resizeObserver.disconnect();
     this.activeTool?.deactivate();
     this.activeTool = null;
     this.unsubscribeFromEvents();

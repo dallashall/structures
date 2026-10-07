@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { TabbedLayout } from '../../layouts/TabbedLayout';
-import { mockProject } from '../mockData';
 import type { ViewType } from '../../types';
 
 export function TabbedLayoutPreview() {
@@ -22,9 +21,7 @@ export function TabbedLayoutPreview() {
         <TabbedLayout
           activeView={activeView}
           onViewChange={handleViewChange}
-          project={mockProject}
           activeLayers={{ x: 5, y: 3, z: 7 }}
-          selectedBlockId="stone"
         />
       </Box>
     </Box>

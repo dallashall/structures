@@ -1,16 +1,13 @@
-import React from "react";
 import { Box, Typography } from "@mui/material";
 
-import type { Project, LayerState } from "../types";
+import type { LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
 import { BlockOrientationPreview } from "../components/BlockOrientationPreview";
 
 interface QuadLayoutProps {
-  project: Project;
   activeLayers: LayerState;
-  selectedBlockId: string | null;
 }
 
 /**
@@ -23,60 +20,8 @@ interface QuadLayoutProps {
  * - 3D Preview (bottom-right)
  */
 export function QuadLayout({
-  project,
   activeLayers,
-  selectedBlockId,
 }: QuadLayoutProps) {
-  const frontContainerRef = React.useRef<HTMLDivElement>(null);
-  const leftContainerRef = React.useRef<HTMLDivElement>(null);
-  const topContainerRef = React.useRef<HTMLDivElement>(null);
-  const preview3DContainerRef = React.useRef<HTMLDivElement>(null);
-
-  const [canvasSizes, setCanvasSizes] = React.useState({
-    front: { width: 400, height: 300 },
-    left: { width: 400, height: 300 },
-    top: { width: 400, height: 300 },
-    preview3D: { width: 400, height: 300 },
-  });
-
-  // Measure container sizes for canvas dimensions
-  React.useEffect(() => {
-    const updateSizes = () => {
-      if (frontContainerRef.current) {
-        const rect = frontContainerRef.current.getBoundingClientRect();
-        setCanvasSizes((prev) => ({
-          ...prev,
-          front: { width: rect.width, height: rect.height },
-        }));
-      }
-      if (leftContainerRef.current) {
-        const rect = leftContainerRef.current.getBoundingClientRect();
-        setCanvasSizes((prev) => ({
-          ...prev,
-          left: { width: rect.width, height: rect.height },
-        }));
-      }
-      if (topContainerRef.current) {
-        const rect = topContainerRef.current.getBoundingClientRect();
-        setCanvasSizes((prev) => ({
-          ...prev,
-          top: { width: rect.width, height: rect.height },
-        }));
-      }
-      if (preview3DContainerRef.current) {
-        const rect = preview3DContainerRef.current.getBoundingClientRect();
-        setCanvasSizes((prev) => ({
-          ...prev,
-          preview3D: { width: rect.width, height: rect.height },
-        }));
-      }
-    };
-
-    updateSizes();
-    window.addEventListener("resize", updateSizes);
-    return () => window.removeEventListener("resize", updateSizes);
-  }, []);
-
   return (
     <Box
       sx={{
@@ -154,16 +99,11 @@ export function QuadLayout({
           </Typography>
         </Box>
         <BlockOrientationPreview viewType="front" />
-        <div ref={frontContainerRef} style={{ width: "100%", height: "100%" }}>
+        <Box sx={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="front"
-            project={project}
-            activeLayers={activeLayers}
-            width={canvasSizes.front.width}
-            height={canvasSizes.front.height}
-            selectedBlockId={selectedBlockId}
           />
-        </div>
+        </Box>
       </Box>
 
       {/* Left View */}
@@ -233,16 +173,11 @@ export function QuadLayout({
           </Typography>
         </Box>
         <BlockOrientationPreview viewType="left" />
-        <div ref={leftContainerRef} style={{ width: "100%", height: "100%" }}>
+        <Box sx={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="left"
-            project={project}
-            activeLayers={activeLayers}
-            width={canvasSizes.left.width}
-            height={canvasSizes.left.height}
-            selectedBlockId={selectedBlockId}
           />
-        </div>
+        </Box>
       </Box>
 
       {/* Top View */}
@@ -312,16 +247,11 @@ export function QuadLayout({
           </Typography>
         </Box>
         <BlockOrientationPreview viewType="top" />
-        <div ref={topContainerRef} style={{ width: "100%", height: "100%" }}>
+        <Box sx={{ width: "100%", height: "100%" }}>
           <Canvas2DView
             viewType="top"
-            project={project}
-            activeLayers={activeLayers}
-            width={canvasSizes.top.width}
-            height={canvasSizes.top.height}
-            selectedBlockId={selectedBlockId}
           />
-        </div>
+        </Box>
       </Box>
 
       {/* 3D Preview */}
@@ -367,16 +297,9 @@ export function QuadLayout({
             3D PREVIEW
           </Typography>
         </Box>
-        <div
-          ref={preview3DContainerRef}
-          style={{ width: "100%", height: "100%" }}
-        >
-          <Preview3DView
-            width={canvasSizes.preview3D.width}
-            height={canvasSizes.preview3D.height}
-            isVisible={true}
-          />
-        </div>
+        <Box sx={{ width: "100%", height: "100%" }}>
+          <Preview3DView />
+        </Box>
       </Box>
     </Box>
   );

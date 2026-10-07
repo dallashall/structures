@@ -2,7 +2,7 @@ import React from 'react';
 import { Tab, Box, Typography } from "@mui/material";
 import { TabContext, TabList, TabPanel } from "@mui/lab";
 
-import type { ViewType, Project, LayerState } from "../types";
+import type { ViewType, LayerState } from "../types";
 
 import { Canvas2DView } from "../panels/Canvas2DView";
 import { Preview3DView } from "../panels/Preview3DView";
@@ -11,9 +11,7 @@ import { BlockOrientationPreview } from "../components/BlockOrientationPreview";
 interface TabbedLayoutProps {
   activeView: ViewType;
   onViewChange: (key: React.Key) => void;
-  project: Project;
   activeLayers: LayerState;
-  selectedBlockId: string | null;
   renderTabBar?: boolean; // Whether to render the tab bar internally (default false)
 }
 
@@ -26,44 +24,9 @@ interface TabbedLayoutProps {
 export function TabbedLayout({
   activeView,
   onViewChange,
-  project,
   activeLayers,
-  selectedBlockId,
   renderTabBar = false,
 }: TabbedLayoutProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const preview3DContainerRef = React.useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = React.useState({
-    width: 800,
-    height: 600,
-  });
-  const [preview3DSize, setPreview3DSize] = React.useState({
-    width: 800,
-    height: 600,
-  });
-
-  // Measure container size for canvas dimensions
-  React.useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setCanvasSize({ width: rect.width, height: rect.height });
-      }
-      if (preview3DContainerRef.current) {
-        const rect = preview3DContainerRef.current.getBoundingClientRect();
-        setPreview3DSize({ width: rect.width, height: rect.height });
-      }
-    };
-
-    // Defer measurement until after layout is complete
-    requestAnimationFrame(() => {
-      updateSize();
-    });
-
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, [activeView]); // Re-measure when view changes
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     onViewChange(newValue);
   };
@@ -121,16 +84,9 @@ export function TabbedLayout({
           }}
         >
           {view === "3d" ? (
-            <div
-              ref={preview3DContainerRef}
-              style={{ width: "100%", height: "100%" }}
-            >
-              <Preview3DView
-                width={preview3DSize.width}
-                height={preview3DSize.height}
-                isVisible={(activeView as string) === "3d"}
-              />
-            </div>
+            <Box sx={{ width: "100%", height: "100%" }}>
+              <Preview3DView />
+            </Box>
           ) : (
             <>
               {/* Depth indicator */}
@@ -160,17 +116,9 @@ export function TabbedLayout({
                 </Box>
               )}
               <BlockOrientationPreview viewType={view} />
-              <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-                <Canvas2DView
-                  viewType={view}
-                  project={project}
-                  activeLayers={activeLayers}
-                  width={canvasSize.width}
-                  height={canvasSize.height}
-                  selectedBlockId={selectedBlockId}
-
-                />
-              </div>
+              <Box sx={{ width: "100%", height: "100%" }}>
+                <Canvas2DView viewType={view} />
+              </Box>
             </>
           )}
         </TabPanel>

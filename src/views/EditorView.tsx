@@ -190,10 +190,8 @@ function EditorViewComponent(props: EditorViewProps) {
         >
           {layoutMode === "tabbed" ? (
             <TabbedEditorView
-              project={project}
               activeView={activeView}
               activeLayers={activeLayers}
-              selectedBlock={selectedBlock}
               foregroundBlock={foregroundBlock}
               backgroundBlock={backgroundBlock}
               activeMaterialSlot={activeMaterialSlot}
@@ -219,9 +217,7 @@ function EditorViewComponent(props: EditorViewProps) {
             />
           ) : (
             <QuadEditorView
-              project={project}
               activeLayers={activeLayers}
-              selectedBlock={selectedBlock}
               foregroundBlock={foregroundBlock}
               backgroundBlock={backgroundBlock}
               activeMaterialSlot={activeMaterialSlot}

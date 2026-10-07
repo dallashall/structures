@@ -262,6 +262,20 @@ class Babylon3D {
   }
 
   /**
+   * Stable React ref callback for the preview canvas. React 18 calls it with the element
+   * on mount and with null on unmount, because its identity never changes.
+   * Unmounting pauses rendering but keeps the scene, so remounting the same canvas is instant.
+   */
+  readonly mountCanvas = (canvas: HTMLCanvasElement | null): void => {
+    if (canvas) {
+      this.attach(canvas);
+      this.setVisible(true);
+    } else {
+      this.setVisible(false);
+    }
+  };
+
+  /**
    * Pause or resume the render loop. Idempotent.
    */
   setVisible(visible: boolean): void {

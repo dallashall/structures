@@ -121,7 +121,7 @@ export function Preview3DViewPreview() {
         <Box
           sx={{ width: 800, height: 600, border: 1, borderColor: "grey.300" }}
         >
-          <Preview3DView width={800} height={600} />
+          <Preview3DView />
         </Box>
 
         <Typography variant="caption" color="text.secondary">

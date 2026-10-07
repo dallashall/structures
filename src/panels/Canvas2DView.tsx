@@ -1,72 +1,32 @@
-import React from "react";
 import { Box } from "@mui/material";
-import type { ViewType, Project, LayerState } from "../types";
-import { Canvas2D } from "../core/canvas2d";
+
+import type { ViewType } from "../types";
+
+import { canvas2DMounter } from "../core/canvas2d";
 
 interface Canvas2DViewProps {
   viewType: ViewType;
-  project: Project;
-  activeLayers: LayerState;
-  width: number;
-  height: number;
-  selectedBlockId: string | null;
 }
 
 /**
- * Canvas2DView - Thin React wrapper for Canvas2D
+ * Canvas2DView - Canvas element for one 2D view
  *
- * Pure TypeScript controller handles all rendering and interactions.
- * This component just mounts/unmounts the controller and provides the canvas element.
- *
- * ARCHITECTURAL NOTE:
- * This component is technically an HOC for the native HTML canvas element.
- * It uses React hooks (useEffect, useRef) to manage the lifecycle of the
- * Canvas2D and sync props to it. This is an accepted exception to
- * the "minimal hooks" rule because:
- * - All business logic lives in the Canvas2D singleton
- * - The component only handles React ↔ DOM lifecycle management
- * - It's a bridge between React's declarative props and imperative canvas APIs
+ * Canvas2D does all rendering and interaction. The canvas fills its container,
+ * and Canvas2D follows its size with a ResizeObserver. canvas2DMounter's ref
+ * callback creates the Canvas2D on mount and destroys it on unmount. The key
+ * remounts the canvas when the view type changes.
  */
-export function Canvas2DView({
-  viewType,
-  width,
-  height,
-}: Canvas2DViewProps) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const controllerRef = React.useRef<Canvas2D | null>(null);
-
-  // Create and mount controller
-  React.useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const controller = new Canvas2D(canvasRef.current, viewType);
-    controllerRef.current = controller;
-
-    return () => {
-      controller.destroy();
-      controllerRef.current = null;
-    };
-  }, [viewType]);
-
-  // Handle resize - controller handles all canvas manipulation
-  React.useEffect(() => {
-    controllerRef.current?.resize(width, height);
-  }, [width, height]);
-
-  // Handle view type changes
-  React.useEffect(() => {
-    controllerRef.current?.setViewType(viewType);
-  }, [viewType]);
-
+export function Canvas2DView({ viewType }: Canvas2DViewProps) {
   return (
     <Box sx={{ width: "100%", height: "100%", bgcolor: "#1a1a1a" }}>
-      <canvas
-        ref={canvasRef}
-        style={{
+      <Box
+        component="canvas"
+        key={viewType}
+        ref={canvas2DMounter.refFor(viewType)}
+        sx={{
           display: "block",
-          width: `${width}px`,
-          height: `${height}px`,
-          boxSizing: "border-box",
+          width: "100%",
+          height: "100%",
           imageRendering: "pixelated",
         }}
       />

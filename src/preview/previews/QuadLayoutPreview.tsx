@@ -1,6 +1,5 @@
 import { Box, Typography } from '@mui/material';
 import { QuadLayout } from '../../layouts/QuadLayout';
-import { mockProject } from '../mockData';
 
 export function QuadLayoutPreview() {
   return (
@@ -12,9 +11,7 @@ export function QuadLayoutPreview() {
 
       <Box sx={{ mt: 6, height: '600px', border: 1, borderColor: 'grey.300' }}>
         <QuadLayout
-          project={mockProject}
           activeLayers={{ x: 5, y: 3, z: 7 }}
-          selectedBlockId="stone"
         />
       </Box>
     </Box>
