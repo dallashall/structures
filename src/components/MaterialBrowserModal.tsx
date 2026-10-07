@@ -15,9 +15,10 @@ import { Search, Close, PanTool } from '@mui/icons-material';
 
 import type { Block } from '../types';
 
+import { pointerFollower } from '../core/PointerFollower';
+
 import { BlockTextureSwatch } from './BlockTextureSwatch';
 import { findBlockById } from '../utils/blockUtils';
-import { throttled } from '../utils/throttle';
 
 interface MaterialBrowserModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ interface MaterialBrowserModalProps {
   onTabChange: (tab: number) => void;
   quickSelectSlots: (string | null)[];
   onAssignSlot: (index: number, blockId: string) => void;
+  grabbedBlockId: string | null;
+  onGrabBlock: (blockId: string | null) => void;
 }
 
 // Category definitions (could be moved to BlockRegistry in the future)
@@ -48,6 +51,8 @@ const CATEGORIES = [
  * - Right-click to cancel/clear grabbed material
  * - Tabs for material categories
  * - Search functionality
+ *
+ * The grabbed block lives in EditorState, so closing the browser releases it.
  */
 export function MaterialBrowserModal({
   isOpen,
@@ -59,37 +64,9 @@ export function MaterialBrowserModal({
   onTabChange,
   quickSelectSlots,
   onAssignSlot,
+  grabbedBlockId,
+  onGrabBlock,
 }: MaterialBrowserModalProps) {
-  // Local state for grabbed material
-  const [grabbedBlockId, setGrabbedBlockId] = React.useState<string | null>(null);
-  // Ref to floating element for direct DOM manipulation (no re-renders)
-  const floatingElementRef = React.useRef<HTMLDivElement>(null);
-
-  // Reset grabbed material when modal opens/closes
-  React.useEffect(() => {
-    if (!isOpen) {
-      setGrabbedBlockId(null);
-    }
-  }, [isOpen]);
-
-  // Track mouse movement to position floating grabbed material
-  // Uses direct DOM manipulation with transform (GPU-accelerated, no layout reflow)
-  // Throttled to ~60fps to avoid excessive JavaScript execution
-  React.useEffect(() => {
-    const handleMouseMove = throttled((event: MouseEvent) => {
-      if (floatingElementRef.current) {
-        // Use transform instead of left/top to avoid layout reflows
-        floatingElementRef.current.style.transform =
-          `translate(${event.clientX + 10}px, ${event.clientY + 10}px) scale(1.1)`;
-      }
-    }, 16); // 16ms = ~60fps
-
-    if (grabbedBlockId) {
-      window.addEventListener('mousemove', handleMouseMove);
-      return () => window.removeEventListener('mousemove', handleMouseMove);
-    }
-  }, [grabbedBlockId]);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     event.stopPropagation(); // Prevent clearing grabbed material when changing tabs
     onTabChange(newValue);
@@ -102,7 +79,7 @@ export function MaterialBrowserModal({
   const handleMaterialClick = (blockId: string, event: React.MouseEvent) => {
     // Click to grab the material
     event.stopPropagation(); // Prevent clearing grabbed material
-    setGrabbedBlockId(blockId);
+    onGrabBlock(blockId);
   };
 
   const handleSlotClick = (index: number, event: React.MouseEvent) => {
@@ -110,14 +87,14 @@ export function MaterialBrowserModal({
     event.stopPropagation(); // Prevent clearing grabbed material
     if (grabbedBlockId) {
       onAssignSlot(index, grabbedBlockId);
-      setGrabbedBlockId(null); // Clear after dropping
+      onGrabBlock(null); // Clear after dropping
     }
   };
 
   const handleClearGrabbedMaterial = () => {
     // Click on empty space clears the grabbed material
     if (grabbedBlockId) {
-      setGrabbedBlockId(null);
+      onGrabBlock(null);
     }
   };
 
@@ -125,7 +102,7 @@ export function MaterialBrowserModal({
     // Right-click to cancel
     if (event.button === 2) {
       event.preventDefault();
-      setGrabbedBlockId(null);
+      onGrabBlock(null);
     }
   };
 
@@ -343,7 +320,7 @@ export function MaterialBrowserModal({
       {/* Floating Grabbed Material - Follows cursor */}
       {grabbedBlock && (
         <Box
-          ref={floatingElementRef}
+          ref={pointerFollower.mountFollower}
           sx={{
             position: 'fixed',
             left: 0,

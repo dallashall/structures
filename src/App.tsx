@@ -1,12 +1,13 @@
 import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
-import { useState, useEffect } from "react";
 import { WelcomeView } from "./views/WelcomeView";
 import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
 import { openProjectCommand } from "./commands/OpenProjectCommand";
-import { hotkeyDispatcher } from "./core/HotkeyDispatcher";
+import { screenRouter } from "./core/ScreenRouter";
+import { withScreenState } from "./hocs/withScreenState";
+import type { WithScreenStateProps } from "./hocs/withScreenState";
 import type { Dimensions } from "./types";
 
 // Create dark professional theme inspired by Adobe/Blender
@@ -150,88 +151,32 @@ const darkTheme = createTheme({
   },
 });
 
-type AppView = "welcome" | "editor";
-
 /**
  * App - Root application component
  *
- * Manages top-level application state and routing between:
- * - WelcomeView (project browser)
- * - EditorView (main editor)
- *
- * Handles project creation and loading flow.
+ * Renders the screen chosen by ScreenRouter: WelcomeView (project browser),
+ * EditorView (main editor), or the component preview gallery (#/preview).
+ * Handlers run commands, then tell ScreenRouter where to go.
  */
-export function App() {
-  const [currentView, setCurrentView] = useState<AppView>("welcome");
-  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-
-  // Initialize keyboard shortcuts (once on mount)
-  useEffect(() => {
-    hotkeyDispatcher.initialize();
-    return () => hotkeyDispatcher.destroy();
-  }, []);
-
-  // Check for preview mode in hash on mount and hash changes
-  useEffect(() => {
-    const checkHash = () => {
-      const hash = window.location.hash;
-      setIsPreviewMode(hash.startsWith("#/preview"));
-    };
-
-    checkHash();
-    window.addEventListener("hashchange", checkHash);
-    return () => window.removeEventListener("hashchange", checkHash);
-  }, []);
-
-  // Reopen the last project on startup
-  useEffect(() => {
-    const reopenLastProject = async () => {
-      if (await openProjectCommand.executeLastOpened()) {
-        setCurrentView("editor");
-      }
-    };
-
-    void reopenLastProject();
-  }, []);
-
-  // Handle new project
-  const handleNewProject = () => {
-    setIsNewProjectDialogOpen(true);
-  };
-
-  // Handle project creation
+function AppComponent({ screen, isNewProjectDialogOpen }: WithScreenStateProps) {
   const handleCreateProject = async (name: string, dimensions: Dimensions) => {
     await createProjectCommand.execute(name, dimensions);
-    setIsNewProjectDialogOpen(false);
-    setCurrentView("editor");
+    screenRouter.closeNewProjectDialog();
+    screenRouter.showEditor();
   };
 
-  // Handle open project from welcome screen
   const handleOpenProject = async (projectId: string) => {
     if (await openProjectCommand.execute(projectId)) {
-      setCurrentView("editor");
+      screenRouter.showEditor();
     }
   };
 
-  // Handle back to welcome (close current project)
-  const handleBackToWelcome = () => {
-    setCurrentView("welcome");
-  };
-
-  // Handle load from file
   const handleLoadFromFile = () => {
     // TODO: Implement file picker and import
     console.log("Load from file not yet implemented");
   };
 
-  // Handle close project dialog
-  const handleCloseProjectDialog = () => {
-    setIsNewProjectDialogOpen(false);
-  };
-
-  // Render preview mode if hash is #/preview
-  if (isPreviewMode) {
+  if (screen === "preview") {
     return (
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
@@ -243,22 +188,23 @@ export function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      {currentView === "welcome" ? (
+      {screen === "welcome" ? (
         <WelcomeView
-          onNewProject={handleNewProject}
+          onNewProject={screenRouter.openNewProjectDialog}
           onOpenProject={handleOpenProject}
           onLoadFromFile={handleLoadFromFile}
         />
       ) : (
-        <EditorView onBackToWelcome={handleBackToWelcome} />
+        <EditorView onBackToWelcome={screenRouter.showWelcome} />
       )}
 
-      {/* New Project Dialog */}
       <NewProjectDialog
         isOpen={isNewProjectDialogOpen}
-        onClose={handleCloseProjectDialog}
+        onClose={screenRouter.closeNewProjectDialog}
         onCreate={handleCreateProject}
       />
     </ThemeProvider>
   );
 }
+
+export const App = withScreenState(AppComponent);

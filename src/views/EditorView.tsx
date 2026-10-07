@@ -72,6 +72,7 @@ function EditorViewComponent(props: EditorViewProps) {
     isMaterialBrowserOpen,
     materialBrowserSearchQuery,
     materialBrowserSelectedTab,
+    materialBrowserGrabbedBlockId,
     activeBlockState,
     hasBlockState,
     onBackToWelcome,
@@ -260,6 +261,8 @@ function EditorViewComponent(props: EditorViewProps) {
         onSearchChange={editorState.setMaterialBrowserSearchQuery}
         onTabChange={editorState.setMaterialBrowserSelectedTab}
         onAssignSlot={handleAssignSlot}
+        grabbedBlockId={materialBrowserGrabbedBlockId}
+        onGrabBlock={editorState.setMaterialBrowserGrabbedBlock}
       />
     </Box>
   );

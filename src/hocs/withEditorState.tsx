@@ -41,6 +41,8 @@ export interface WithEditorStateProps {
   hasBlockState: boolean;
 }
 
+const increment = (count: number): number => count + 1;
+
 /** All EditorState events that should trigger a re-render */
 const EDITOR_EVENTS = [
   "layout:toggled",
@@ -108,7 +110,7 @@ export function withEditorState<P extends object>(
   Component: React.ComponentType<P & WithEditorStateProps>,
 ) {
   return function WithEditorState(props: P) {
-    const [, rerender] = React.useReducer((x: number) => x + 1, 0);
+    const [, rerender] = React.useReducer(increment, 0);
 
     React.useEffect(() => {
       for (const event of EDITOR_EVENTS) {

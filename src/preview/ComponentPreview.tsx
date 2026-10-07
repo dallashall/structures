@@ -7,7 +7,6 @@ import { LayerDepthSelectorPreview } from './previews/LayerDepthSelectorPreview'
 import { MaterialPalettePreview } from './previews/MaterialPalettePreview';
 import { ToolbarPreview } from './previews/ToolbarPreview';
 import { NewProjectDialogPreview } from './previews/NewProjectDialogPreview';
-import { FullPaletteMenuPreview } from './previews/FullPaletteMenuPreview';
 import { QuickSelectPalettePreview } from './previews/QuickSelectPalettePreview';
 import { MetaBlockPlacementModalPreview } from './previews/MetaBlockPlacementModalPreview';
 import { LayerControlsPreview } from './previews/LayerControlsPreview';
@@ -42,7 +41,6 @@ export function ComponentPreview() {
     { name: 'MaterialPalette', path: 'material-palette', component: MaterialPalettePreview },
     { name: 'Toolbar', path: 'toolbar', component: ToolbarPreview },
     { name: 'NewProjectDialog', path: 'new-project-dialog', component: NewProjectDialogPreview },
-    { name: 'FullPaletteMenu', path: 'full-palette-menu', component: FullPaletteMenuPreview },
     { name: 'QuickSelectPalette', path: 'quick-select-palette', component: QuickSelectPalettePreview },
     { name: 'MetaBlockPlacementModal', path: 'meta-block-placement-modal', component: MetaBlockPlacementModalPreview },
     { name: 'LayerControls', path: 'layer-controls', component: LayerControlsPreview },

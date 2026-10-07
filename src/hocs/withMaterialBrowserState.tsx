@@ -5,6 +5,7 @@ export interface WithMaterialBrowserStateProps {
   isMaterialBrowserOpen: boolean;
   materialBrowserSearchQuery: string;
   materialBrowserSelectedTab: number;
+  materialBrowserGrabbedBlockId: string | null;
 }
 
 /**
@@ -26,6 +27,9 @@ export function withMaterialBrowserState<P extends object>(
     const [selectedTab, setSelectedTab] = React.useState(
       editorState.getMaterialBrowserSelectedTab(),
     );
+    const [grabbedBlockId, setGrabbedBlockId] = React.useState(
+      editorState.getMaterialBrowserGrabbedBlock(),
+    );
 
     React.useEffect(() => {
       const handleMaterialBrowserChange = (isOpen: boolean) => {
@@ -40,6 +44,14 @@ export function withMaterialBrowserState<P extends object>(
         setSelectedTab(tab);
       };
 
+      const handleBlockGrabbed = (blockId: string) => {
+        setGrabbedBlockId(blockId);
+      };
+
+      const handleBlockReleased = () => {
+        setGrabbedBlockId(null);
+      };
+
       editorState.on(
         "materialbrowser:toggled",
         handleMaterialBrowserChange,
@@ -49,6 +61,8 @@ export function withMaterialBrowserState<P extends object>(
         handleSearchChange,
       );
       editorState.on("materialbrowser:tab:switched", handleTabChange);
+      editorState.on("materialbrowser:block:grabbed", handleBlockGrabbed);
+      editorState.on("materialbrowser:block:released", handleBlockReleased);
 
       return () => {
         editorState.off(
@@ -60,6 +74,8 @@ export function withMaterialBrowserState<P extends object>(
           handleSearchChange,
         );
         editorState.off("materialbrowser:tab:switched", handleTabChange);
+        editorState.off("materialbrowser:block:grabbed", handleBlockGrabbed);
+        editorState.off("materialbrowser:block:released", handleBlockReleased);
       };
     }, []);
 
@@ -69,6 +85,7 @@ export function withMaterialBrowserState<P extends object>(
         isMaterialBrowserOpen={isMaterialBrowserOpen}
         materialBrowserSearchQuery={searchQuery}
         materialBrowserSelectedTab={selectedTab}
+        materialBrowserGrabbedBlockId={grabbedBlockId}
       />
     );
   };

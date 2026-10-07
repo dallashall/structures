@@ -13,18 +13,21 @@ import {
   Typography,
   SelectChangeEvent,
 } from "@mui/material";
-import { useState } from "react";
 import { Form } from "./Form";
 import { NumberField } from "./NumberField";
 import type { Dimensions } from "../types";
 
-interface NewProjectDialogProps {
+import { withNewProjectFormState } from "../hocs/withNewProjectFormState";
+import type { WithNewProjectFormStateProps } from "../hocs/withNewProjectFormState";
+
+import { isNewProjectFormValid, resolveDimensions } from "../utils/projectPresets";
+import type { ProjectPreset } from "../utils/projectPresets";
+
+interface NewProjectDialogOwnProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string, dimensions: Dimensions) => void;
 }
-
-type PresetOption = "small" | "medium" | "large" | "custom";
 
 /**
  * NewProjectDialog - Dialog for creating new projects
@@ -35,87 +38,48 @@ type PresetOption = "small" | "medium" | "large" | "custom";
  * - Custom dimension inputs (visible when "Custom" selected)
  * - Help text explaining dimensions can be changed later
  *
- * Uses MUI Dialog and Form components for consistent theming
- * and accessibility.
+ * withNewProjectFormState holds the form while the user types.
  */
-export function NewProjectDialog({
+function NewProjectDialogComponent({
   isOpen,
   onClose,
   onCreate,
-}: NewProjectDialogProps) {
-  const [name, setName] = useState("");
-  const [preset, setPreset] = useState<PresetOption>("small");
-  const [customWidth, setCustomWidth] = useState(16);
-  const [customHeight, setCustomHeight] = useState(16);
-  const [customDepth, setCustomDepth] = useState(16);
+  newProjectForm,
+  onNewProjectFormChange,
+  onNewProjectFormReset,
+}: NewProjectDialogOwnProps & WithNewProjectFormStateProps) {
+  const { name, preset, customDimensions } = newProjectForm;
 
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setName(event.target.value);
+    onNewProjectFormChange({ name: event.target.value });
   };
 
-  const handlePresetChange = (event: SelectChangeEvent<PresetOption>) => {
-    setPreset(event.target.value as PresetOption);
+  const handlePresetChange = (event: SelectChangeEvent<ProjectPreset>) => {
+    onNewProjectFormChange({ preset: event.target.value as ProjectPreset });
   };
 
-  const handleCustomWidthChange = (value: number) => {
-    setCustomWidth(value);
+  const handleCustomWidthChange = (width: number) => {
+    onNewProjectFormChange({ customDimensions: { ...customDimensions, width } });
   };
 
-  const handleCustomHeightChange = (value: number) => {
-    setCustomHeight(value);
+  const handleCustomHeightChange = (height: number) => {
+    onNewProjectFormChange({ customDimensions: { ...customDimensions, height } });
   };
 
-  const handleCustomDepthChange = (value: number) => {
-    setCustomDepth(value);
+  const handleCustomDepthChange = (depth: number) => {
+    onNewProjectFormChange({ customDimensions: { ...customDimensions, depth } });
   };
 
   const handleCreate = () => {
-    if (!name.trim()) {
-      return;
-    }
-
-    const dimensions = getDimensions();
-    onCreate(name, dimensions);
-
-    // Reset form
-    setName("");
-    setPreset("small");
-    setCustomWidth(16);
-    setCustomHeight(16);
-    setCustomDepth(16);
+    if (!isNewProjectFormValid(newProjectForm)) return;
+    onCreate(name, resolveDimensions(newProjectForm));
+    onNewProjectFormReset();
   };
 
   const handleCancel = () => {
-    // Reset form
-    setName("");
-    setPreset("small");
-    setCustomWidth(16);
-    setCustomHeight(16);
-    setCustomDepth(16);
-
+    onNewProjectFormReset();
     onClose();
   };
-
-  const getDimensions = (): Dimensions => {
-    switch (preset) {
-      case "small":
-        return { width: 16, height: 16, depth: 16 };
-      case "medium":
-        return { width: 32, height: 32, depth: 32 };
-      case "large":
-        return { width: 64, height: 64, depth: 64 };
-      case "custom":
-        return {
-          width: customWidth,
-          height: customHeight,
-          depth: customDepth,
-        };
-      default:
-        return { width: 16, height: 16, depth: 16 };
-    }
-  };
-
-  const isFormValid = name.trim().length > 0;
 
   return (
     <Dialog open={isOpen} onClose={handleCancel}>
@@ -151,21 +115,21 @@ export function NewProjectDialog({
             <>
               <NumberField
                 label="Width"
-                value={customWidth}
+                value={customDimensions.width}
                 onChange={handleCustomWidthChange}
                 minValue={1}
                 maxValue={256}
               />
               <NumberField
                 label="Height"
-                value={customHeight}
+                value={customDimensions.height}
                 onChange={handleCustomHeightChange}
                 minValue={1}
                 maxValue={256}
               />
               <NumberField
                 label="Depth"
-                value={customDepth}
+                value={customDimensions.depth}
                 onChange={handleCustomDepthChange}
                 minValue={1}
                 maxValue={256}
@@ -185,7 +149,7 @@ export function NewProjectDialog({
         <Button
           variant="contained"
           onClick={handleCreate}
-          disabled={!isFormValid}
+          disabled={!isNewProjectFormValid(newProjectForm)}
         >
           Create
         </Button>
@@ -193,3 +157,5 @@ export function NewProjectDialog({
     </Dialog>
   );
 }
+
+export const NewProjectDialog = withNewProjectFormState<NewProjectDialogOwnProps>(NewProjectDialogComponent);

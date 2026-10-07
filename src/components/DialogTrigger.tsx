@@ -1,7 +1,10 @@
 import React from 'react';
 import { Popover } from "@mui/material";
 
-interface DialogTriggerProps {
+import { withDisclosureState } from "../hocs/withDisclosureState";
+import type { WithDisclosureStateProps } from "../hocs/withDisclosureState";
+
+interface DialogTriggerOwnProps {
   /** Type of overlay */
   type: "modal" | "popover";
   /** Children: [trigger element, dialog render function] */
@@ -11,7 +14,7 @@ interface DialogTriggerProps {
 /**
  * DialogTrigger - Pattern for triggering dialogs/popovers from a button
  *
- * Manages open/close state internally and provides a close function to the dialog.
+ * withDisclosureState holds the open state. The dialog render function receives the close function.
  * Supports both modal dialogs and popover dialogs.
  *
  * Usage:
@@ -20,31 +23,23 @@ interface DialogTriggerProps {
  *   {(close) => <Dialog open onClose={close}>...</Dialog>}
  * </DialogTrigger>
  */
-export function DialogTrigger({ type, children }: DialogTriggerProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-
+function DialogTriggerComponent({
+  type,
+  children,
+  anchorEl,
+  onOpen,
+  onClose,
+}: DialogTriggerOwnProps & WithDisclosureStateProps) {
+  const isOpen = anchorEl !== null;
   const [triggerElement, dialogRenderFn] = children;
-
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setIsOpen(true);
-    if (type === "popover") {
-      setAnchorEl(event.currentTarget);
-    }
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
-    setAnchorEl(null);
-  };
 
   // Clone trigger element and add onClick handler
   const trigger = React.cloneElement(triggerElement, {
-    onClick: handleOpen,
+    onClick: onOpen,
   });
 
   // Render dialog with close function
-  const dialog = dialogRenderFn(handleClose);
+  const dialog = dialogRenderFn(onClose);
 
   if (type === "modal") {
     // For modal dialogs, wrap in MUI Dialog
@@ -62,7 +57,7 @@ export function DialogTrigger({ type, children }: DialogTriggerProps) {
         <Popover
           open={isOpen}
           anchorEl={anchorEl}
-          onClose={handleClose}
+          onClose={onClose}
           anchorOrigin={{
             vertical: "bottom",
             horizontal: "left",
@@ -78,3 +73,5 @@ export function DialogTrigger({ type, children }: DialogTriggerProps) {
     );
   }
 }
+
+export const DialogTrigger = withDisclosureState<DialogTriggerOwnProps>(DialogTriggerComponent);
