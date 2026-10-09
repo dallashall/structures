@@ -5,7 +5,7 @@ import type { Vector3D } from '../types';
 /**
  * SetMetaBlockCommand - Place or move the meta block
  *
- * Appends model:metaBlockPlaced event to EventLog
+ * Appends one metablock-place action holding model:metaBlockPlaced
  */
 class SetMetaBlockCommand {
   private static instance: SetMetaBlockCommand;
@@ -26,10 +26,10 @@ class SetMetaBlockCommand {
       return;
     }
 
-    // Append to EventLog
-    await eventLog.append('model:metaBlockPlaced', {
-      position,
-    }, projectId);
+    await eventLog.appendAction(projectId, {
+      kind: 'metablock-place',
+      events: [{ type: 'model:metaBlockPlaced', data: { position } }],
+    });
 
     console.log(`Meta block placed at (${position.x}, ${position.y}, ${position.z})`);
   }

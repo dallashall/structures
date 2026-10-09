@@ -4,7 +4,7 @@
  * Maintains snapshot of:
  * - BlockIndex (optimized for spatial queries)
  *
- * Rebuilds incrementally from snapshot when new model:blockPlaced/model:blockRemoved events arrive.
+ * Applies new model:* events in place. An undo or redo replays the whole project.
  *
  * This projection is optimized for rendering queries:
  * - getBlocksAtLayer(axis, layer) - fast spatial queries
@@ -13,15 +13,19 @@
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
-import { editorState } from '../core/EditorState';
-import { BlockIndex } from '../core/BlockIndex';
-import { normalizeLegacyDirections } from '../core/DirectionMapping';
-import type { Vector3D, BlockData, BlockStateProperties } from '../types';
+import { ModelReplayer } from './ModelReplayer';
+import type { BlockIndex } from '../core/BlockIndex';
+import type { Vector3D, BlockData } from '../types';
 
-interface BlockSnapshot {
-  latestEventId: number;
-  blocks: BlockIndex;
-}
+// Events that change blocks. Dimension changes shift or drop blocks.
+const BLOCK_EVENT_TYPES = [
+  'model:blockPlaced',
+  'model:blockRemoved',
+  'model:blocksPlaced',
+  'model:blocksRemoved',
+  'model:dimensionExpanded',
+  'model:dimensionShrunk',
+];
 
 /**
  * BlockProjection singleton
@@ -29,19 +33,13 @@ interface BlockSnapshot {
 class BlockProjection extends EventEmitter {
   private static instance: BlockProjection;
 
-  private snapshot: BlockSnapshot = {
-    latestEventId: 0,
-    blocks: new BlockIndex(),
-  };
+  private replayer = new ModelReplayer(this.handleReplayed.bind(this));
 
   private constructor() {
     super();
 
-    // Listen to event log
     eventLog.on('event:appended', this.handleEvent.bind(this));
-
-    // Initial rebuild from event log
-    this.rebuild();
+    void this.replayer.ensureFresh();
   }
 
   static getInstance(): BlockProjection {
@@ -51,131 +49,21 @@ class BlockProjection extends EventEmitter {
     return BlockProjection.instance;
   }
 
-  /**
-   * Handle new event from log
-   */
   private handleEvent(event: Event): void {
-    // Only process block events (both single and bulk)
-    const blockEventTypes = [
-      'model:blockPlaced',
-      'model:blockRemoved',
-      'model:blocksPlaced',
-      'model:blocksRemoved',
-    ];
-
-    if (!blockEventTypes.includes(event.type)) {
-      return;
+    if (this.replayer.receive(event) === 'applied' && BLOCK_EVENT_TYPES.includes(event.type)) {
+      this.emit('blocks:rebuilt');
     }
+  }
 
-    // Only process events for current project
-    const currentProjectId = editorState.getCurrentProjectId();
-    if (event.projectId !== currentProjectId) {
-      return;
-    }
-
-    // Apply event to snapshot
-    this.applyEvent(event);
-
-    // Notify listeners
+  private handleReplayed(): void {
     this.emit('blocks:rebuilt');
   }
 
   /**
-   * Apply single event to snapshot
-   */
-  private applyEvent(event: Event): void {
-    switch (event.type) {
-      case 'model:blockPlaced': {
-        const data = event.data as { position: Vector3D; blockType: string; blockState?: BlockStateProperties };
-        const blockState = data.blockState ? normalizeLegacyDirections(data.blockState) : data.blockState;
-        this.snapshot.blocks.set(data.position, {
-          position: data.position,
-          blockType: data.blockType,
-          blockState,
-        });
-        this.snapshot.latestEventId = event.id!;
-        break;
-      }
-
-      case 'model:blockRemoved': {
-        const data = event.data as { position: Vector3D };
-        this.snapshot.blocks.delete(data.position);
-        this.snapshot.latestEventId = event.id!;
-        break;
-      }
-
-      case 'model:blocksPlaced': {
-        const data = event.data as { blocks: Array<{ position: Vector3D; blockType: string; blockState?: BlockStateProperties }> };
-        for (const block of data.blocks) {
-          const blockState = block.blockState ? normalizeLegacyDirections(block.blockState) : block.blockState;
-          this.snapshot.blocks.set(block.position, {
-            position: block.position,
-            blockType: block.blockType,
-            blockState,
-          });
-        }
-        this.snapshot.latestEventId = event.id!;
-        break;
-      }
-
-      case 'model:blocksRemoved': {
-        const data = event.data as { positions: Vector3D[] };
-        for (const position of data.positions) {
-          this.snapshot.blocks.delete(position);
-        }
-        this.snapshot.latestEventId = event.id!;
-        break;
-      }
-    }
-  }
-
-  /**
-   * Rebuild from event log (from snapshot forward)
-   */
-  private async rebuild(): Promise<void> {
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const events = await eventLog.getEvents({
-      fromId: this.snapshot.latestEventId + 1,
-      types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
-      projectId,
-    });
-
-    for (const event of events) {
-      this.applyEvent(event);
-    }
-
-    this.emit('blocks:rebuilt');
-  }
-
-  /**
-   * Ensure projection is fresh by applying any new events
-   * This guarantees reads always return latest state
-   *
-   * OPTIMIZED: Returns instantly (O(1)) if no new events since last check
+   * Apply any events appended since the last read
    */
   async ensureFresh(): Promise<void> {
-    const latestEventId = await eventLog.getLatestEventId();
-
-    // No new events? Return instantly (O(1) version check)
-    if (latestEventId === this.snapshot.latestEventId) {
-      return;
-    }
-
-    // New events exist - fetch and apply
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const events = await eventLog.getEvents({
-      fromId: this.snapshot.latestEventId + 1,
-      types: ['model:blockPlaced', 'model:blockRemoved', 'model:blocksPlaced', 'model:blocksRemoved'],
-      projectId,
-    });
-
-    for (const event of events) {
-      this.applyEvent(event);
-    }
+    await this.replayer.ensureFresh();
   }
 
   /**
@@ -183,7 +71,7 @@ class BlockProjection extends EventEmitter {
    * Use this in render loops where ensureFresh() was already called
    */
   getCached(): BlockIndex {
-    return this.snapshot.blocks;
+    return this.replayer.getModel().blocks;
   }
 
   /**
@@ -191,7 +79,7 @@ class BlockProjection extends EventEmitter {
    */
   async getBlocks(): Promise<BlockIndex> {
     await this.ensureFresh();
-    return this.snapshot.blocks;
+    return this.replayer.getModel().blocks;
   }
 
   /**
@@ -199,7 +87,7 @@ class BlockProjection extends EventEmitter {
    */
   async getBlock(position: Vector3D): Promise<BlockData | null> {
     await this.ensureFresh();
-    return this.snapshot.blocks.get(position);
+    return this.replayer.getModel().blocks.get(position);
   }
 
   /**
@@ -207,17 +95,14 @@ class BlockProjection extends EventEmitter {
    */
   async getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): Promise<BlockData[]> {
     await this.ensureFresh();
-    return this.snapshot.blocks.getBlocksAtLayer(axis, layer);
+    return this.replayer.getModel().blocks.getBlocksAtLayer(axis, layer);
   }
 
   /**
    * Reset projection (clear snapshot for new project)
    */
   reset(): void {
-    this.snapshot = {
-      latestEventId: 0,
-      blocks: new BlockIndex(),
-    };
+    this.replayer.reset();
   }
 }
 

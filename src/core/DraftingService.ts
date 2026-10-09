@@ -16,7 +16,7 @@
  */
 
 import { EventEmitter } from './EventEmitter';
-import { eventLog } from './EventLog';
+import { eventLog, type ActionDraft } from './EventLog';
 import { editorState } from './EditorState';
 import { blockProjection } from '../projections/BlockProjection';
 import { shapeCatalog } from './shapes/ShapeCatalog';
@@ -68,7 +68,8 @@ class DraftingService extends EventEmitter {
   }
 
   /**
-   * Finalize a drawing operation: persist it to the EventLog, then clear the preview.
+   * Finalize a drawing operation: persist it to the EventLog as one paint action, then clear the preview.
+   * Undo reverts the whole action.
    *
    * In delete mode every operation removes its position. Otherwise an operation with a
    * block type places it, and one with a null block type erases (the PaintOperation contract).
@@ -89,11 +90,15 @@ class DraftingService extends EventEmitter {
     const positions = operations.filter(isRemoval).map(toPosition);
     const blocks = operations.filter(isPlacement).map(toPlacedBlock);
 
+    const events: ActionDraft['events'] = [];
     if (positions.length > 0) {
-      await eventLog.append('model:blocksRemoved', { positions }, projectId);
+      events.push({ type: 'model:blocksRemoved', data: { positions } });
     }
     if (blocks.length > 0) {
-      await eventLog.append('model:blocksPlaced', { blocks }, projectId);
+      events.push({ type: 'model:blocksPlaced', data: { blocks } });
+    }
+    if (events.length > 0) {
+      await eventLog.appendAction(projectId, { kind: 'paint', tool: editorState.getPaintMode(), events });
     }
 
     this.previewBlocks = [];

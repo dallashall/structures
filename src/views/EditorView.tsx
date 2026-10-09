@@ -25,6 +25,7 @@ import { Toolbar } from "../layouts/Toolbar";
 import { ToolOptionsBar } from "../components/ToolOptionsBar";
 import { MetaBlockPlacementModal } from "../components/MetaBlockPlacementModal";
 import { MaterialBrowserModal } from "../components/MaterialBrowserModal";
+import { HistoryToast } from "../components/HistoryToast";
 import { TabbedEditorView } from "./TabbedEditorView";
 import { QuadEditorView } from "./QuadEditorView";
 
@@ -264,6 +265,8 @@ function EditorViewComponent(props: EditorViewProps) {
         grabbedBlockId={materialBrowserGrabbedBlockId}
         onGrabBlock={editorState.setMaterialBrowserGrabbedBlock}
       />
+
+      <HistoryToast />
     </Box>
   );
 }

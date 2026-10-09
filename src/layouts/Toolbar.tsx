@@ -14,6 +14,7 @@ import { ViewList } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
 import type { SaveState } from '../core/Storage';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
+import { UndoRedoButtons } from '../components/UndoRedoButtons';
 
 interface ToolbarProps {
   projectName: string | null;
@@ -32,6 +33,7 @@ interface ToolbarProps {
  * Displays:
  * - Project name (left)
  * - Save status indicator (center, between name and controls)
+ * - Undo and redo buttons (after the save status)
  * - Projects button (right)
  * - View mode selector (right)
  *
@@ -90,6 +92,8 @@ export function Toolbar({
           <>
             <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
             <SaveStatusIndicator saveState={saveState} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <UndoRedoButtons />
           </>
         )}
 

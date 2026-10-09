@@ -8,7 +8,8 @@
 
 import { BlockIndex } from '../core/BlockIndex';
 import { normalizeLegacyDirections } from '../core/DirectionMapping';
-import type { Event } from '../core/EventLog';
+import { ACTION_STARTED, type Event } from '../core/EventLog';
+import { foldHistory, isActionStart } from './historyReducer';
 import type { BlockData, BlockStateProperties, Dimensions, Vector3D, MetaBlock } from '../types';
 
 interface PlacedBlock {
@@ -34,6 +35,9 @@ export const MODEL_EVENT_TYPES = [
   'model:metaBlockPlaced',
   'model:metaBlockConfirmed',
 ];
+
+// Everything replayModel reads: model events plus the action markers that decide which are undone
+export const REPLAY_EVENT_TYPES = [...MODEL_EVENT_TYPES, ACTION_STARTED];
 
 export function createEmptyModel(): Model {
   return {
@@ -165,4 +169,19 @@ export function applyModelEvent(model: Model, event: Event): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * Replay one project's events in ID order into a fresh model.
+ * Events of undone actions are skipped. The markers in the same list decide which actions are undone.
+ */
+export function replayModel(events: Event[]): Model {
+  const { undone } = foldHistory(events.filter(isActionStart));
+  const model = createEmptyModel();
+  for (const event of events) {
+    if (!event.actionId || !undone.has(event.actionId)) {
+      applyModelEvent(model, event);
+    }
+  }
+  return model;
 }

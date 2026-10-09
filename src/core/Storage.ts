@@ -11,7 +11,7 @@
 
 import { EventEmitter } from './EventEmitter';
 import { eventLog, type Event } from './EventLog';
-import { applyModelEvent, createEmptyModel, type Model } from '../reducers/modelReducer';
+import { replayModel } from '../reducers/modelReducer';
 import type { StorageMetadata } from '../types';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'pending' | 'error';
@@ -31,7 +31,7 @@ interface ProjectReplay {
   name: string;
   created: number;
   modified: number;
-  model: Model;
+  events: Event[];
 }
 
 const replayProjectEvent = (replay: ProjectReplay, event: Event): void => {
@@ -42,18 +42,21 @@ const replayProjectEvent = (replay: ProjectReplay, event: Event): void => {
     return;
   }
 
-  applyModelEvent(replay.model, event);
+  replay.events.push(event);
 };
 
-const toStorageMetadata = (replay: ProjectReplay): StorageMetadata => ({
-  id: replay.id,
-  name: replay.name,
-  created: new Date(replay.created),
-  modified: new Date(replay.modified),
-  dimensions: replay.model.dimensions,
-  blockCount: replay.model.blocks.size,
-  thumbnail: '',
-});
+const toStorageMetadata = (replay: ProjectReplay): StorageMetadata => {
+  const model = replayModel(replay.events);
+  return {
+    id: replay.id,
+    name: replay.name,
+    created: new Date(replay.created),
+    modified: new Date(replay.modified),
+    dimensions: model.dimensions,
+    blockCount: model.blocks.size,
+    thumbnail: '',
+  };
+};
 
 const byCreated = (a: StorageMetadata, b: StorageMetadata): number =>
   a.created.getTime() - b.created.getTime();
@@ -115,7 +118,7 @@ class Storage extends EventEmitter {
           name: data.name,
           created: event.timestamp,
           modified: event.timestamp,
-          model: createEmptyModel(),
+          events: [],
         });
         continue;
       }

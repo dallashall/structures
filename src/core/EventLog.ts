@@ -8,10 +8,15 @@
  */
 
 import { EventEmitter } from './EventEmitter';
+import { generateUUID } from '../utils/uuid';
 
 const DB_NAME = 'mc-blueprint-events';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'events';
+const ACTION_ID_INDEX = 'actionId';
+
+export const ACTION_STARTED = 'action:started';
+export const ACTION_ENDED = 'action:ended';
 
 export interface Event {
   id?: number;       // Auto-increment (omit when appending)
@@ -19,6 +24,29 @@ export interface Event {
   data: unknown;     // Event-specific payload
   timestamp: number; // When it happened
   projectId?: string; // Project this event belongs to
+  actionId?: string; // Shared by every event one user action wrote. Absent on events outside undo history.
+}
+
+export type EditKind =
+  | 'paint'
+  | 'dimension-expand'
+  | 'dimension-shrink'
+  | 'metablock-place'
+  | 'metablock-confirm';
+
+export type ActionKind = EditKind | 'undo' | 'redo';
+
+/**
+ * Payload of an action:started marker
+ */
+export interface ActionStartedData {
+  kind: ActionKind;
+  tool?: string;    // Paint tool name, for paint actions
+  target?: string;  // Action ID an undo or redo acts on
+}
+
+export interface ActionDraft extends ActionStartedData {
+  events: Array<{ type: string; data: unknown }>;
 }
 
 export interface EventQuery {
@@ -28,6 +56,13 @@ export interface EventQuery {
   projectId?: string;  // Filter by project ID
 }
 
+const toKeyRange = ({ fromId, toId }: EventQuery): IDBKeyRange | null => {
+  if (fromId !== undefined && toId !== undefined) return IDBKeyRange.bound(fromId, toId);
+  if (fromId !== undefined) return IDBKeyRange.lowerBound(fromId);
+  if (toId !== undefined) return IDBKeyRange.upperBound(toId);
+  return null;
+};
+
 /**
  * EventLog singleton - IndexedDB-backed event store
  */
@@ -35,6 +70,7 @@ class EventLog extends EventEmitter {
   private static instance: EventLog;
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void>;
+  private pendingActions = new Set<Promise<string>>();
 
   private constructor() {
     super();
@@ -69,18 +105,21 @@ class EventLog extends EventEmitter {
       };
 
       request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        const openRequest = event.target as IDBOpenDBRequest;
+        const db = openRequest.result;
+        const store = db.objectStoreNames.contains(STORE_NAME)
+          ? openRequest.transaction!.objectStore(STORE_NAME)
+          : db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
 
-        // Create events store
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: 'id',
-          autoIncrement: true,
-        });
+        if (!store.indexNames.contains('type')) {
+          store.createIndex('type', 'type', { unique: false });
+        }
+        // Events without an actionId are left out of this index
+        if (!store.indexNames.contains(ACTION_ID_INDEX)) {
+          store.createIndex(ACTION_ID_INDEX, ACTION_ID_INDEX, { unique: false });
+        }
 
-        // Create index on type for filtered queries
-        store.createIndex('type', 'type', { unique: false });
-
-        console.log('EventLog: Database schema created');
+        console.log(`EventLog: Database schema at version ${DB_VERSION}`);
       };
     });
   }
@@ -132,17 +171,102 @@ class EventLog extends EventEmitter {
   }
 
   /**
+   * Append one user action: an action:started marker, its events, and an action:ended marker.
+   *
+   * All of them commit in one transaction, so the log never holds part of an action.
+   * IndexedDB serializes readwrite transactions on a store, so the action's IDs are consecutive.
+   * event:appended fires for each event only after the commit. Returns the action ID.
+   */
+  async appendAction(projectId: string, draft: ActionDraft): Promise<string> {
+    const write = this.writeAction(projectId, draft);
+    this.pendingActions.add(write);
+    const forget = (): void => { this.pendingActions.delete(write); };
+    write.then(forget, forget);
+    return write;
+  }
+
+  private async writeAction(projectId: string, { events, ...started }: ActionDraft): Promise<string> {
+    await this.ensureReady();
+
+    const actionId = generateUUID();
+    const timestamp = Date.now();
+    const toEvent = ({ type, data }: { type: string; data: unknown }): Event =>
+      ({ type, data, timestamp, projectId, actionId });
+    const batch = [
+      toEvent({ type: ACTION_STARTED, data: started }),
+      ...events.map(toEvent),
+      toEvent({ type: ACTION_ENDED, data: {} }),
+    ];
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const saved: Event[] = [];
+
+      const addEvent = (event: Event): void => {
+        const request = store.add(event);
+        request.onsuccess = () => {
+          saved.push({ ...event, id: request.result as number });
+        };
+      };
+      batch.forEach(addEvent);
+
+      transaction.oncomplete = () => {
+        const emitAppended = (event: Event): void => { this.emit('event:appended', event); };
+        saved.forEach(emitAppended);
+        resolve(actionId);
+      };
+
+      transaction.onerror = () => {
+        console.error('Failed to append action:', transaction.error);
+        reject(transaction.error);
+      };
+    });
+  }
+
+  /**
+   * Resolves when every appendAction call made so far has committed or failed
+   */
+  async settled(): Promise<void> {
+    await Promise.allSettled([...this.pendingActions]);
+  }
+
+  /**
+   * Get every event one action wrote, markers included, in ID order
+   */
+  async getActionEvents(actionId: string): Promise<Event[]> {
+    await this.ensureReady();
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(STORE_NAME, 'readonly');
+      const index = transaction.objectStore(STORE_NAME).index(ACTION_ID_INDEX);
+      const request = index.getAll(actionId);
+
+      request.onsuccess = () => resolve(request.result as Event[]);
+      request.onerror = () => {
+        console.error('Failed to get action events:', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  /**
    * Get events matching query
    */
   async getEvents(query: EventQuery = {}): Promise<Event[]> {
     await this.ensureReady();
+
+    // IDBKeyRange.bound throws on an inverted range
+    if (query.fromId !== undefined && query.toId !== undefined && query.fromId > query.toId) {
+      return [];
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
 
       const events: Event[] = [];
-      const request = store.openCursor();
+      const request = store.openCursor(toKeyRange(query));
 
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
@@ -150,18 +274,13 @@ class EventLog extends EventEmitter {
         if (cursor) {
           const evt = cursor.value as Event;
 
-          // Apply filters
-          const matchesId =
-            (query.fromId === undefined || evt.id! >= query.fromId) &&
-            (query.toId === undefined || evt.id! <= query.toId);
-
           const matchesType =
             !query.types || query.types.includes(evt.type);
 
           const matchesProject =
             !query.projectId || evt.projectId === query.projectId;
 
-          if (matchesId && matchesType && matchesProject) {
+          if (matchesType && matchesProject) {
             events.push(evt);
           }
 

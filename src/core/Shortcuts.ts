@@ -18,7 +18,15 @@ export const SHORTCUTS = {
   layerYUp: 'C',
   layerYDown: 'X',
   frameStructure: 'Home',
+  // Pressed with Ctrl or Cmd. Redo adds Shift.
+  undo: 'Z',
 } as const;
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+
+// Key cap text for tooltips, e.g. "Ctrl+Z" or "⌘Z"
+export const UNDO_SHORTCUT_LABEL = IS_MAC ? '⌘Z' : 'Ctrl+Z';
+export const REDO_SHORTCUT_LABEL = IS_MAC ? '⇧⌘Z' : 'Ctrl+Shift+Z';
 
 // Keys 1-9 select the first nine quick-select slots
 const QUICK_SELECT_KEY_COUNT = 9;
@@ -34,4 +42,11 @@ export function toolShortcut(toolName: string): string | null {
 
 export function matchesShortcut(event: KeyboardEvent, key: string): boolean {
   return event.key.toLowerCase() === key.toLowerCase();
+}
+
+/**
+ * True when Ctrl or Cmd is held. Both count on every platform.
+ */
+export function hasPrimaryModifier(event: KeyboardEvent): boolean {
+  return event.ctrlKey || event.metaKey;
 }

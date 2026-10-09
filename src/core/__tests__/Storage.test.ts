@@ -53,6 +53,21 @@ describe('Storage', () => {
     expect(project?.blockCount).toBe(1);
   });
 
+  it('leaves undone actions out of the block count', async () => {
+    await createProject('a', 'Alpha');
+    const placeStone = (x: number) => eventLog.appendAction('a', {
+      kind: 'paint',
+      events: [{ type: 'model:blockPlaced', data: { position: { x, y: 0, z: 0 }, blockType: 'stone' } }],
+    });
+    await placeStone(0);
+    const second = await placeStone(1);
+    await eventLog.appendAction('a', { kind: 'undo', target: second, events: [] });
+
+    const [project] = await storage.listProjects();
+
+    expect(project.blockCount).toBe(1);
+  });
+
   it('removes the project and clears last opened on delete', async () => {
     await createProject('a', 'Alpha');
     await storage.setLastOpenedProjectId('a');

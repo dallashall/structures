@@ -6,26 +6,17 @@
  * - blocks (BlockIndex)
  * - metaBlock (position, direction, isConfirmed)
  *
- * Rebuilds incrementally from snapshot when new model:* events arrive.
+ * Applies new model:* events in place. An undo or redo replays the whole project.
  */
 
 import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
-import { editorState } from '../core/EditorState';
-import {
-  applyModelEvent,
-  createEmptyModel,
-  MODEL_EVENT_TYPES,
-  type Model,
-} from '../reducers/modelReducer';
+import { ModelReplayer } from './ModelReplayer';
+import type { Model } from '../reducers/modelReducer';
 import type { BlockIndex } from '../core/BlockIndex';
 import type { Dimensions, MetaBlock } from '../types';
 
 export type { Model };
-
-interface ModelSnapshot extends Model {
-  latestEventId: number;
-}
 
 /**
  * ModelProjection singleton
@@ -33,16 +24,13 @@ interface ModelSnapshot extends Model {
 class ModelProjection extends EventEmitter {
   private static instance: ModelProjection;
 
-  private snapshot: ModelSnapshot = { latestEventId: 0, ...createEmptyModel() };
+  private replayer = new ModelReplayer(this.handleReplayed.bind(this));
 
   private constructor() {
     super();
 
-    // Listen to event log
     eventLog.on('event:appended', this.handleEvent.bind(this));
-
-    // Initial rebuild from event log
-    this.rebuild();
+    void this.replayer.ensureFresh();
   }
 
   static getInstance(): ModelProjection {
@@ -52,80 +40,21 @@ class ModelProjection extends EventEmitter {
     return ModelProjection.instance;
   }
 
-  /**
-   * Handle new event from log
-   */
   private handleEvent(event: Event): void {
-    // Only process model events
-    if (!event.type.startsWith('model:')) {
-      return;
-    }
-
-    // Only process events for current project
-    const currentProjectId = editorState.getCurrentProjectId();
-
-    if (event.projectId !== currentProjectId) {
-      return;
-    }
-    this.applyEvent(event);
-
-    // Notify listeners
-    this.emit('model:rebuilt');
-  }
-
-  private applyEvent(event: Event): void {
-    if (applyModelEvent(this.snapshot, event)) {
-      this.snapshot.latestEventId = event.id!;
+    if (this.replayer.receive(event) === 'applied') {
+      this.emit('model:rebuilt');
     }
   }
 
-  /**
-   * Rebuild from event log (from snapshot forward)
-   */
-  private async rebuild(): Promise<void> {
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const events = await eventLog.getEvents({
-      fromId: this.snapshot.latestEventId + 1,
-      types: MODEL_EVENT_TYPES,
-      projectId,
-    });
-
-    for (const event of events) {
-      this.applyEvent(event);
-    }
-
+  private handleReplayed(): void {
     this.emit('model:rebuilt');
   }
 
   /**
-   * Ensure projection is fresh by applying any new events
-   * This guarantees reads always return latest state
-   *
-   * OPTIMIZED: Returns instantly (O(1)) if no new events since last check
+   * Apply any events appended since the last read
    */
   async ensureFresh(): Promise<void> {
-    const latestEventId = await eventLog.getLatestEventId();
-
-    // No new events? Return instantly (O(1) version check)
-    if (latestEventId === this.snapshot.latestEventId) {
-      return;
-    }
-
-    // New events exist - fetch and apply
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) return;
-
-    const events = await eventLog.getEvents({
-      fromId: this.snapshot.latestEventId + 1,
-      types: MODEL_EVENT_TYPES,
-      projectId,
-    });
-
-    for (const event of events) {
-      this.applyEvent(event);
-    }
+    await this.replayer.ensureFresh();
   }
 
   /**
@@ -134,11 +63,7 @@ class ModelProjection extends EventEmitter {
   async getModel(): Promise<Model> {
     await this.ensureFresh();
 
-    return {
-      dimensions: this.snapshot.dimensions,
-      blocks: this.snapshot.blocks,
-      metaBlock: this.snapshot.metaBlock,
-    };
+    return this.toModel();
   }
 
   /**
@@ -146,11 +71,7 @@ class ModelProjection extends EventEmitter {
    * Use in render loops where ensureFresh() was already called
    */
   getCached(): Model {
-    return {
-      dimensions: this.snapshot.dimensions,
-      blocks: this.snapshot.blocks,
-      metaBlock: this.snapshot.metaBlock,
-    };
+    return this.toModel();
   }
 
   /**
@@ -158,7 +79,7 @@ class ModelProjection extends EventEmitter {
    */
   async getDimensions(): Promise<Dimensions> {
     await this.ensureFresh();
-    return this.snapshot.dimensions;
+    return this.replayer.getModel().dimensions;
   }
 
   /**
@@ -166,7 +87,7 @@ class ModelProjection extends EventEmitter {
    */
   async getBlocks(): Promise<BlockIndex> {
     await this.ensureFresh();
-    return this.snapshot.blocks;
+    return this.replayer.getModel().blocks;
   }
 
   /**
@@ -174,14 +95,20 @@ class ModelProjection extends EventEmitter {
    */
   async getMetaBlock(): Promise<MetaBlock> {
     await this.ensureFresh();
-    return this.snapshot.metaBlock;
+    return this.replayer.getModel().metaBlock;
   }
 
   /**
    * Reset projection (clear snapshot for new project)
    */
   reset(): void {
-    this.snapshot = { latestEventId: 0, ...createEmptyModel() };
+    this.replayer.reset();
+  }
+
+  // A copy of the top-level fields, so a later replay cannot change what a caller holds
+  private toModel(): Model {
+    const { dimensions, blocks, metaBlock } = this.replayer.getModel();
+    return { dimensions, blocks, metaBlock };
   }
 }
 

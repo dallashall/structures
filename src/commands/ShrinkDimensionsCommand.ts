@@ -9,7 +9,7 @@ type Direction = 'x+' | 'x-' | 'y+' | 'y-' | 'z+' | 'z-';
 /**
  * ShrinkDimensionsCommand - Shrinks project dimensions
  *
- * Appends to: EventLog (model:dimensionShrunk)
+ * Appends to: EventLog (one dimension-shrink action holding model:dimensionShrunk)
  * Queries: ModelProjection (current dimensions) + BlockProjection (to prevent orphaning)
  * Validates: no blocks would be orphaned (outside new dimensions)
  *
@@ -67,8 +67,10 @@ export class ShrinkDimensionsCommand {
       throw new Error('No current project');
     }
 
-    // Append to EventLog
-    await eventLog.append('model:dimensionShrunk', shrinkResult, projectId);
+    await eventLog.appendAction(projectId, {
+      kind: 'dimension-shrink',
+      events: [{ type: 'model:dimensionShrunk', data: shrinkResult }],
+    });
   }
 
   private calculateShrink(

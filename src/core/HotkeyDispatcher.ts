@@ -1,7 +1,8 @@
 import { editorState } from './EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import { toolRegistry } from './tools/ToolRegistry';
-import { SHORTCUTS, matchesShortcut } from './Shortcuts';
+import { SHORTCUTS, hasPrimaryModifier, matchesShortcut } from './Shortcuts';
+import { editHistory } from './EditHistory';
 import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
@@ -19,6 +20,9 @@ import type { PaintMode } from '../types';
  * - W/S: Increment/decrement Z layer (height - up/down)
  * - A/D: Decrement/increment X layer (width - left/right)
  * - X/C: Decrement/increment Y layer (depth - forward/back)
+ * - Ctrl/Cmd+Z: Undo. Ctrl/Cmd+Shift+Z: Redo.
+ *
+ * Any other key held with Ctrl or Cmd passes through to the browser.
  */
 class HotkeyDispatcher {
   private static instance: HotkeyDispatcher;
@@ -66,6 +70,14 @@ class HotkeyDispatcher {
       target.tagName === 'TEXTAREA' ||
       target.isContentEditable
     ) {
+      return;
+    }
+
+    if (hasPrimaryModifier(event)) {
+      if (matchesShortcut(event, SHORTCUTS.undo)) {
+        event.preventDefault();
+        void (event.shiftKey ? editHistory.redo() : editHistory.undo());
+      }
       return;
     }
 

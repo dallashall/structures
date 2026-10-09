@@ -11,6 +11,7 @@ import { startProject, PROJECT_ID } from '../../test/projectFixture';
 const stone = (x: number) => ({ position: { x, y: 0, z: 0 }, blockType: 'stone' });
 const erase = (x: number) => ({ position: { x, y: 0, z: 0 }, blockType: null });
 const toTypeAndData = (event: Event) => [event.type, event.data];
+const toActionId = (event: Event) => event.actionId;
 
 describe('DraftingService.finalize', () => {
   beforeEach(async () => {
@@ -19,21 +20,25 @@ describe('DraftingService.finalize', () => {
     draftingService.cancel();
   });
 
-  it('appends removals before placements for the current project', async () => {
+  it('appends one paint action with removals before placements for the current project', async () => {
+    editorState.setPaintMode('fill');
     await draftingService.finalize([stone(1), erase(2), stone(3)]);
 
     const events = await eventLog.getEvents({ projectId: PROJECT_ID });
     expect(events.map(toTypeAndData)).toEqual([
+      ['action:started', { kind: 'paint', tool: 'fill' }],
       ['model:blocksRemoved', { positions: [{ x: 2, y: 0, z: 0 }] }],
       ['model:blocksPlaced', { blocks: [{ ...stone(1), blockState: undefined }, { ...stone(3), blockState: undefined }] }],
+      ['action:ended', {}],
     ]);
+    expect(new Set(events.map(toActionId)).size).toBe(1);
   });
 
   it('removes every position in delete mode, typed or not', async () => {
     editorState.setPaintBehavior('delete');
     await draftingService.finalize([stone(1), erase(2)]);
 
-    const events = await eventLog.getEvents({ projectId: PROJECT_ID });
+    const events = await eventLog.getEvents({ projectId: PROJECT_ID, types: ['model:blocksRemoved'] });
     expect(events.map(toTypeAndData)).toEqual([
       ['model:blocksRemoved', { positions: [{ x: 1, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }] }],
     ]);

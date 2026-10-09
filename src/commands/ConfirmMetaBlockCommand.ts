@@ -5,7 +5,7 @@ import { modelProjection } from '../projections/ModelProjection';
 /**
  * ConfirmMetaBlockCommand - Finalize meta block placement
  *
- * Appends model:metaBlockConfirmed event to EventLog
+ * Appends one metablock-confirm action holding model:metaBlockConfirmed
  */
 class ConfirmMetaBlockCommand {
   private static instance: ConfirmMetaBlockCommand;
@@ -45,7 +45,10 @@ class ConfirmMetaBlockCommand {
     }
 
     console.log('ConfirmMetaBlockCommand: Appending confirmation event');
-    await eventLog.append('model:metaBlockConfirmed', {}, projectId);
+    await eventLog.appendAction(projectId, {
+      kind: 'metablock-confirm',
+      events: [{ type: 'model:metaBlockConfirmed', data: {} }],
+    });
 
     // Exit placement mode after confirming
     // This is safe because the event has been persisted to the log

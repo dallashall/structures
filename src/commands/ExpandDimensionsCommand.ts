@@ -8,7 +8,7 @@ type Direction = 'x+' | 'x-' | 'y+' | 'y-' | 'z+' | 'z-';
 /**
  * ExpandDimensionsCommand - Expands project dimensions
  *
- * Appends to: EventLog (model:dimensionExpanded)
+ * Appends to: EventLog (one dimension-expand action holding model:dimensionExpanded)
  * Queries: ModelProjection (current dimensions)
  * Validates: dimensions don't exceed max limits
  *
@@ -39,8 +39,10 @@ export class ExpandDimensionsCommand {
       throw new Error('No current project');
     }
 
-    // Append to EventLog
-    await eventLog.append('model:dimensionExpanded', expansionResult, projectId);
+    await eventLog.appendAction(projectId, {
+      kind: 'dimension-expand',
+      events: [{ type: 'model:dimensionExpanded', data: expansionResult }],
+    });
   }
 
   private calculateExpansion(
