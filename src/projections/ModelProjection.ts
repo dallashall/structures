@@ -7,6 +7,10 @@
  * - metaBlock (position, direction, isConfirmed)
  *
  * Applies new model:* events in place. An undo or redo replays the whole project.
+ *
+ * Notifications:
+ * - model:rebuilt - any model state may differ
+ * - model:blocks-rebuilt - blocks may differ. BlockProjection forwards it as blocks:rebuilt.
  */
 
 import { EventEmitter } from '../core/EventEmitter';
@@ -15,6 +19,16 @@ import { ModelReplayer } from './ModelReplayer';
 import type { Model } from '../reducers/modelReducer';
 import type { BlockIndex } from '../core/BlockIndex';
 import type { Dimensions, MetaBlock } from '../types';
+
+// Events that change blocks. Dimension changes shift or drop blocks.
+const BLOCK_EVENT_TYPES = [
+  'model:blockPlaced',
+  'model:blockRemoved',
+  'model:blocksPlaced',
+  'model:blocksRemoved',
+  'model:dimensionExpanded',
+  'model:dimensionShrunk',
+];
 
 export type { Model };
 
@@ -41,12 +55,16 @@ class ModelProjection extends EventEmitter {
   }
 
   private handleEvent(event: Event): void {
-    if (this.replayer.receive(event) === 'applied') {
-      this.emit('model:rebuilt');
+    if (this.replayer.receive(event) !== 'applied') return;
+
+    if (BLOCK_EVENT_TYPES.includes(event.type)) {
+      this.emit('model:blocks-rebuilt');
     }
+    this.emit('model:rebuilt');
   }
 
   private handleReplayed(): void {
+    this.emit('model:blocks-rebuilt');
     this.emit('model:rebuilt');
   }
 

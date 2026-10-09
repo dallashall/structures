@@ -51,13 +51,22 @@ export class FillPaintTool extends ClickDragReleaseTool {
       activeLayers,
     );
 
-    // FillPaintStrategy is async (uses blockProjection.getBlock)
-    const baseOps = await this.strategy.calculateOperations(
-      model,
-      selectedBlock,
-      project.dimensions,
-      constrainAxis,
-    );
+    // The fill reads the model across an await, so undo and redo wait until it commits
+    draftingService.start();
+
+    let baseOps: Awaited<ReturnType<typeof this.strategy.calculateOperations>>;
+    try {
+      // FillPaintStrategy is async (uses blockProjection.getBlock)
+      baseOps = await this.strategy.calculateOperations(
+        model,
+        selectedBlock,
+        project.dimensions,
+        constrainAxis,
+      );
+    } catch (error) {
+      draftingService.cancel();
+      throw error;
+    }
 
     const finalOps = PaintPipeline.process(
       baseOps,
@@ -65,7 +74,10 @@ export class FillPaintTool extends ClickDragReleaseTool {
       project.dimensions,
     );
 
-    if (finalOps.length === 0) return;
+    if (finalOps.length === 0) {
+      draftingService.cancel();
+      return;
+    }
 
     // Fill is a single atomic action with no drag preview
     await draftingService.finalize(finalOps);

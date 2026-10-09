@@ -2,9 +2,9 @@
  * History reducer - folds action:started markers into undo and redo stacks.
  *
  * History is linear. An undo must target the top of the undo stack and a redo the top of the
- * redo stack. A marker that targets anything else changes nothing, so two tabs or a race between
- * an undo and a paint stroke cannot corrupt the stacks. A new edit discards the redo stack, and
- * the discarded actions stay undone permanently.
+ * redo stack. A marker that targets anything else changes nothing, so a writer with stale stacks
+ * cannot reorder history. Its step is lost instead. A new edit discards the redo stack, and the
+ * discarded actions stay undone permanently.
  */
 
 import { ACTION_STARTED, type ActionStartedData, type Event } from '../core/EventLog';

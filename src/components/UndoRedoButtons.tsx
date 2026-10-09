@@ -1,4 +1,4 @@
-import { IconButton, Stack } from '@mui/material';
+import { Box, IconButton, Stack } from '@mui/material';
 import { Redo, Undo } from '@mui/icons-material';
 
 import { REDO_SHORTCUT_LABEL, UNDO_SHORTCUT_LABEL } from '../core/Shortcuts';
@@ -16,18 +16,18 @@ function UndoRedoButtonsComponent({ canUndo, canRedo, onUndo, onRedo }: WithEdit
     <Stack direction="row" spacing={0.5}>
       <ShortcutTooltip title="Undo" shortcut={UNDO_SHORTCUT_LABEL}>
         {/* A disabled button fires no events, so the tooltip needs a wrapper to anchor on */}
-        <span>
+        <Box component="span">
           <IconButton aria-label="Undo" disabled={!canUndo} onClick={onUndo}>
             <Undo />
           </IconButton>
-        </span>
+        </Box>
       </ShortcutTooltip>
       <ShortcutTooltip title="Redo" shortcut={REDO_SHORTCUT_LABEL}>
-        <span>
+        <Box component="span">
           <IconButton aria-label="Redo" disabled={!canRedo} onClick={onRedo}>
             <Redo />
           </IconButton>
-        </span>
+        </Box>
       </ShortcutTooltip>
     </Stack>
   );

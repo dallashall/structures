@@ -1,10 +1,10 @@
 /**
  * BlockProjection - Optimized block index for rendering
  *
- * Maintains snapshot of:
- * - BlockIndex (optimized for spatial queries)
+ * Exposes the BlockIndex (optimized for spatial queries).
  *
- * Applies new model:* events in place. An undo or redo replays the whole project.
+ * Reads the blocks of ModelProjection's model, so both always hold the same state
+ * and an undo replays the project once.
  *
  * This projection is optimized for rendering queries:
  * - getBlocksAtLayer(axis, layer) - fast spatial queries
@@ -12,20 +12,9 @@
  */
 
 import { EventEmitter } from '../core/EventEmitter';
-import { eventLog, type Event } from '../core/EventLog';
-import { ModelReplayer } from './ModelReplayer';
+import { modelProjection } from './ModelProjection';
 import type { BlockIndex } from '../core/BlockIndex';
 import type { Vector3D, BlockData } from '../types';
-
-// Events that change blocks. Dimension changes shift or drop blocks.
-const BLOCK_EVENT_TYPES = [
-  'model:blockPlaced',
-  'model:blockRemoved',
-  'model:blocksPlaced',
-  'model:blocksRemoved',
-  'model:dimensionExpanded',
-  'model:dimensionShrunk',
-];
 
 /**
  * BlockProjection singleton
@@ -33,13 +22,9 @@ const BLOCK_EVENT_TYPES = [
 class BlockProjection extends EventEmitter {
   private static instance: BlockProjection;
 
-  private replayer = new ModelReplayer(this.handleReplayed.bind(this));
-
   private constructor() {
     super();
-
-    eventLog.on('event:appended', this.handleEvent.bind(this));
-    void this.replayer.ensureFresh();
+    modelProjection.on('model:blocks-rebuilt', this.handleBlocksRebuilt.bind(this));
   }
 
   static getInstance(): BlockProjection {
@@ -49,13 +34,7 @@ class BlockProjection extends EventEmitter {
     return BlockProjection.instance;
   }
 
-  private handleEvent(event: Event): void {
-    if (this.replayer.receive(event) === 'applied' && BLOCK_EVENT_TYPES.includes(event.type)) {
-      this.emit('blocks:rebuilt');
-    }
-  }
-
-  private handleReplayed(): void {
+  private handleBlocksRebuilt(): void {
     this.emit('blocks:rebuilt');
   }
 
@@ -63,7 +42,7 @@ class BlockProjection extends EventEmitter {
    * Apply any events appended since the last read
    */
   async ensureFresh(): Promise<void> {
-    await this.replayer.ensureFresh();
+    await modelProjection.ensureFresh();
   }
 
   /**
@@ -71,7 +50,7 @@ class BlockProjection extends EventEmitter {
    * Use this in render loops where ensureFresh() was already called
    */
   getCached(): BlockIndex {
-    return this.replayer.getModel().blocks;
+    return modelProjection.getCached().blocks;
   }
 
   /**
@@ -79,7 +58,7 @@ class BlockProjection extends EventEmitter {
    */
   async getBlocks(): Promise<BlockIndex> {
     await this.ensureFresh();
-    return this.replayer.getModel().blocks;
+    return modelProjection.getCached().blocks;
   }
 
   /**
@@ -87,7 +66,7 @@ class BlockProjection extends EventEmitter {
    */
   async getBlock(position: Vector3D): Promise<BlockData | null> {
     await this.ensureFresh();
-    return this.replayer.getModel().blocks.get(position);
+    return modelProjection.getCached().blocks.get(position);
   }
 
   /**
@@ -95,14 +74,14 @@ class BlockProjection extends EventEmitter {
    */
   async getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): Promise<BlockData[]> {
     await this.ensureFresh();
-    return this.replayer.getModel().blocks.getBlocksAtLayer(axis, layer);
+    return modelProjection.getCached().blocks.getBlocksAtLayer(axis, layer);
   }
 
   /**
    * Reset projection (clear snapshot for new project)
    */
   reset(): void {
-    this.replayer.reset();
+    modelProjection.reset();
   }
 }
 

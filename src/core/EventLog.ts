@@ -11,9 +11,11 @@ import { EventEmitter } from './EventEmitter';
 import { generateUUID } from '../utils/uuid';
 
 const DB_NAME = 'mc-blueprint-events';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'events';
 const ACTION_ID_INDEX = 'actionId';
+// Keys are [projectId, id], so one project's events read in ID order without touching other projects
+const PROJECT_INDEX = 'projectId_id';
 
 export const ACTION_STARTED = 'action:started';
 export const ACTION_ENDED = 'action:ended';
@@ -63,6 +65,9 @@ const toKeyRange = ({ fromId, toId }: EventQuery): IDBKeyRange | null => {
   return null;
 };
 
+const toProjectKeyRange = (projectId: string, { fromId, toId }: EventQuery): IDBKeyRange =>
+  IDBKeyRange.bound([projectId, fromId ?? -Infinity], [projectId, toId ?? Infinity]);
+
 /**
  * EventLog singleton - IndexedDB-backed event store
  */
@@ -100,8 +105,14 @@ class EventLog extends EventEmitter {
 
       request.onsuccess = () => {
         this.db = request.result;
+        this.db.onversionchange = this.handleVersionChange;
         console.log('EventLog: IndexedDB initialized');
         resolve();
+      };
+
+      // The open waits until every other tab closes its connection. Tabs on this build close on versionchange.
+      request.onblocked = () => {
+        console.warn('EventLog: Database upgrade waits for other tabs of this app to close');
       };
 
       request.onupgradeneeded = (event) => {
@@ -118,11 +129,25 @@ class EventLog extends EventEmitter {
         if (!store.indexNames.contains(ACTION_ID_INDEX)) {
           store.createIndex(ACTION_ID_INDEX, ACTION_ID_INDEX, { unique: false });
         }
+        // Events without a projectId are left out of this index
+        if (!store.indexNames.contains(PROJECT_INDEX)) {
+          store.createIndex(PROJECT_INDEX, ['projectId', 'id'], { unique: false });
+        }
 
         console.log(`EventLog: Database schema at version ${DB_VERSION}`);
       };
     });
   }
+
+  /**
+   * Another tab opened a newer schema. This tab runs an older build, so it closes its connection
+   * to unblock the upgrade and reloads to pick up the new build.
+   */
+  private handleVersionChange = (): void => {
+    this.db?.close();
+    this.db = null;
+    window.location.reload();
+  };
 
   /**
    * Ensure database is ready
@@ -198,30 +223,34 @@ class EventLog extends EventEmitter {
       toEvent({ type: ACTION_ENDED, data: {} }),
     ];
 
-    return new Promise((resolve, reject) => {
+    const writeBatch = (resolve: (actionId: string) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const saved: Event[] = [];
 
       const addEvent = (event: Event): void => {
         const request = store.add(event);
-        request.onsuccess = () => {
+        const recordSaved = (): void => {
           saved.push({ ...event, id: request.result as number });
         };
+        request.onsuccess = recordSaved;
       };
       batch.forEach(addEvent);
 
-      transaction.oncomplete = () => {
-        const emitAppended = (event: Event): void => { this.emit('event:appended', event); };
+      const emitAppended = (event: Event): void => { this.emit('event:appended', event); };
+      const handleComplete = (): void => {
         saved.forEach(emitAppended);
         resolve(actionId);
       };
-
-      transaction.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to append action:', transaction.error);
         reject(transaction.error);
       };
-    });
+      transaction.oncomplete = handleComplete;
+      transaction.onerror = handleError;
+    };
+
+    return new Promise(writeBatch);
   }
 
   /**
@@ -237,17 +266,21 @@ class EventLog extends EventEmitter {
   async getActionEvents(actionId: string): Promise<Event[]> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const readAction = (resolve: (events: Event[]) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readonly');
       const index = transaction.objectStore(STORE_NAME).index(ACTION_ID_INDEX);
       const request = index.getAll(actionId);
 
-      request.onsuccess = () => resolve(request.result as Event[]);
-      request.onerror = () => {
+      const handleSuccess = (): void => resolve(request.result as Event[]);
+      const handleError = (): void => {
         console.error('Failed to get action events:', request.error);
         reject(request.error);
       };
-    });
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readAction);
   }
 
   /**
@@ -266,7 +299,9 @@ class EventLog extends EventEmitter {
       const store = transaction.objectStore(STORE_NAME);
 
       const events: Event[] = [];
-      const request = store.openCursor(toKeyRange(query));
+      const request = query.projectId
+        ? store.index(PROJECT_INDEX).openCursor(toProjectKeyRange(query.projectId, query))
+        : store.openCursor(toKeyRange(query));
 
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;

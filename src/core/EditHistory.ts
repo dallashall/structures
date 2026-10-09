@@ -8,7 +8,7 @@
  * Notifications:
  * - history:replayed - stacks rebuilt for a newly opened project
  * - history:step-recorded - a new edit joined the undo stack and cleared the redo stack
- * - history:step-undone / history:step-redone - payload { actionId, label }
+ * - history:step-undone / history:step-redone - payload { actionId }. Fires as soon as the stacks move.
  */
 
 import { EventEmitter } from './EventEmitter';
@@ -30,7 +30,6 @@ import {
 
 export interface HistoryStepNotice {
   actionId: string;
-  label: string;
 }
 
 const countOf = (events: Event[], type: string, field: 'blocks' | 'positions'): number => {
@@ -171,14 +170,22 @@ class EditHistory extends EventEmitter {
       this.emit('history:step-recorded');
       return;
     }
-    void this.announce(step.kind, step.actionId);
+    const notice: HistoryStepNotice = { actionId: step.actionId };
+    this.emit(step.kind === 'undo' ? 'history:step-undone' : 'history:step-redone', notice);
   };
 
-  private async announce(kind: 'undo' | 'redo', actionId: string): Promise<void> {
+  /**
+   * Human-readable name for an action in this project's history. Falls back to "Edit" when the read fails.
+   */
+  async describe(actionId: string): Promise<string> {
     const marker = this.markers.get(actionId);
-    const label = marker ? describeAction(marker, await eventLog.getActionEvents(actionId)) : 'Edit';
-    const notice: HistoryStepNotice = { actionId, label };
-    this.emit(kind === 'undo' ? 'history:step-undone' : 'history:step-redone', notice);
+    if (!marker) return 'Edit';
+    try {
+      return describeAction(marker, await eventLog.getActionEvents(actionId));
+    } catch (error) {
+      console.error('EditHistory: Failed to read action for its label', error);
+      return 'Edit';
+    }
   }
 
   private enqueueStep(kind: 'undo' | 'redo'): Promise<void> {
@@ -188,9 +195,12 @@ class EditHistory extends EventEmitter {
   }
 
   private async step(kind: 'undo' | 'redo'): Promise<void> {
-    draftingService.cancel();
+    // A stroke in progress commits after this step and clears the redo stack, so the step waits for it
+    if (draftingService.isActive()) return;
     // A paint stroke still committing would otherwise land above the action this step targets
     await eventLog.settled();
+    // Another tab may have written markers this tab never heard about
+    await this.replay(this.projectId);
 
     const stack = kind === 'undo' ? this.state.undoStack : this.state.redoStack;
     const target = stack[stack.length - 1];

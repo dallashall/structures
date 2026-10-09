@@ -1,16 +1,18 @@
 import { Box } from '@mui/material';
 
+import type { HistoryToast as HistoryToastData } from '../core/HistoryAnnouncer';
+
 import { withHistoryToast } from '../hocs/withHistoryToast';
-import type { HistoryToastMessage, WithHistoryToastProps } from '../hocs/withHistoryToast';
+import type { WithHistoryToastProps } from '../hocs/withHistoryToast';
 
 import { HistoryToastItem } from './HistoryToastItem';
 
 /**
  * HistoryToast - Stack of toasts that name each undone or redone step, newest at the bottom
  */
-function HistoryToastComponent({ messages, onExited }: WithHistoryToastProps) {
-  const renderMessage = (message: HistoryToastMessage) => (
-    <HistoryToastItem key={message.key} message={message} onExited={onExited} />
+function HistoryToastComponent({ toasts, onExited }: WithHistoryToastProps) {
+  const renderToast = (toast: HistoryToastData) => (
+    <HistoryToastItem key={toast.key} toast={toast} onExited={onExited} />
   );
 
   return (
@@ -24,7 +26,7 @@ function HistoryToastComponent({ messages, onExited }: WithHistoryToastProps) {
         pointerEvents: 'none',
       }}
     >
-      {messages.map(renderMessage)}
+      {toasts.map(renderToast)}
     </Box>
   );
 }

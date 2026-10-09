@@ -45,9 +45,11 @@ export function withEditHistory<P extends object>(
       const subscribe = (name: string): void => { editHistory.on(name, readStacks); };
       const unsubscribe = (name: string): void => { editHistory.off(name, readStacks); };
 
+      const unsubscribeAll = (): void => HISTORY_NOTIFICATIONS.forEach(unsubscribe);
+
       HISTORY_NOTIFICATIONS.forEach(subscribe);
       readStacks();
-      return () => HISTORY_NOTIFICATIONS.forEach(unsubscribe);
+      return unsubscribeAll;
     }, []);
 
     return (

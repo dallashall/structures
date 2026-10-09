@@ -51,6 +51,8 @@ export class ModelReplayer {
       void this.startReplay();
       return 'replaying';
     }
+    // The running replay picks this event up when it catches up, so the model it discards never shows it
+    if (this.pendingReplay) return 'replaying';
 
     this.latestEventId = event.id!;
     return applyModelEvent(this.model, event) ? 'applied' : 'ignored';
@@ -60,8 +62,16 @@ export class ModelReplayer {
    * Apply every event appended since the last read, from any tab
    */
   async ensureFresh(): Promise<void> {
-    if (this.pendingReplay) await this.pendingReplay;
+    await this.settleReplays();
     await this.applyNewEvents();
+    // applyNewEvents returns early when a replay starts or overtakes it
+    await this.settleReplays();
+  }
+
+  private async settleReplays(): Promise<void> {
+    while (this.pendingReplay) {
+      await this.pendingReplay;
+    }
   }
 
   private async applyNewEvents(): Promise<void> {
@@ -121,9 +131,11 @@ export class ModelReplayer {
 
     this.model = replayModel(events);
     this.latestEventId = latestEventId;
-    this.onReplayed();
 
     // Events committed during the read are past latestEventId. ensureFresh would wait on this replay.
     await this.applyNewEvents();
+    if (generation === this.generation) {
+      this.onReplayed();
+    }
   }
 }

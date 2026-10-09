@@ -38,6 +38,8 @@ export interface PreviewBlock {
 class DraftingService extends EventEmitter {
   private static instance: DraftingService;
   private previewBlocks: PreviewBlock[] = [];
+  // True from start() until finalize() or cancel(). Undo and redo wait while a stroke is in progress.
+  private active = false;
 
   private constructor() {
     super();
@@ -54,6 +56,7 @@ class DraftingService extends EventEmitter {
    * Start new draft (clear previous preview)
    */
   start(): void {
+    this.active = true;
     this.previewBlocks = [];
     this.emit('draft:started');
   }
@@ -97,11 +100,15 @@ class DraftingService extends EventEmitter {
     if (blocks.length > 0) {
       events.push({ type: 'model:blocksPlaced', data: { blocks } });
     }
-    if (events.length > 0) {
-      await eventLog.appendAction(projectId, { kind: 'paint', tool: editorState.getPaintMode(), events });
+    try {
+      if (events.length > 0) {
+        await eventLog.appendAction(projectId, { kind: 'paint', tool: editorState.getPaintMode(), events });
+      }
+    } finally {
+      // A failed write still ends the stroke, so undo never stays blocked
+      this.previewBlocks = [];
+      this.active = false;
     }
-
-    this.previewBlocks = [];
     this.emit('draft:finalized');
   }
 
@@ -109,8 +116,13 @@ class DraftingService extends EventEmitter {
    * Cancel draft - discard preview without persisting
    */
   cancel(): void {
+    this.active = false;
     this.previewBlocks = [];
     this.emit('draft:cancelled');
+  }
+
+  isActive(): boolean {
+    return this.active;
   }
 
   /**

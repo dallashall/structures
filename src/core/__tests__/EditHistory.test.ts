@@ -9,6 +9,7 @@ import { modelProjection } from '../../projections/ModelProjection';
 import { blockProjection } from '../../projections/BlockProjection';
 import { startProject, append, appendAction, paintStone, PROJECT_ID } from '../../test/projectFixture';
 import { toolRegistry } from '../tools/ToolRegistry';
+import { draftingService } from '../DraftingService';
 
 const DIMENSIONS = { width: 16, height: 16, depth: 16 };
 
@@ -122,7 +123,7 @@ describe('EditHistory', () => {
     expect(editHistory.canRedo()).toBe(true);
   });
 
-  it('names the reverted action in history:step-undone and history:step-redone', async () => {
+  it('names the action each history:step-undone and history:step-redone points at', async () => {
     toolRegistry.register({ name: 'test-fill', hotkey: '', label: 'Fill', create: () => { throw new Error('unused'); } });
     await appendAction({
       kind: 'paint',
@@ -135,11 +136,11 @@ describe('EditHistory', () => {
 
     const undone = nextNotice('history:step-undone');
     await editHistory.undo();
-    expect((await undone).label).toBe('Fill (2 blocks, 1 removed)');
+    expect(await editHistory.describe((await undone).actionId)).toBe('Fill (2 blocks, 1 removed)');
 
     const redone = nextNotice('history:step-redone');
     await editHistory.redo();
-    expect((await redone).label).toBe('Fill (2 blocks, 1 removed)');
+    expect(await editHistory.describe((await redone).actionId)).toBe('Fill (2 blocks, 1 removed)');
     toolRegistry.unregister('test-fill');
   });
 
@@ -149,5 +150,32 @@ describe('EditHistory', () => {
 
     const undoMarkers = await eventLog.getEvents({ projectId: PROJECT_ID, types: ['action:started'] });
     expect(undoMarkers[undoMarkers.length - 1].data).toEqual({ kind: 'undo', target });
+  });
+
+  it('waits out a stroke in progress', async () => {
+    await paintStone(0);
+    draftingService.start();
+
+    await editHistory.undo();
+    expect(await stoneXs()).toEqual([0]);
+
+    draftingService.cancel();
+    await editHistory.undo();
+    expect(await stoneXs()).toEqual([]);
+  });
+
+  it('targets the newest action even when another tab wrote it', async () => {
+    await paintStone(0);
+    // Another tab's write commits without event:appended in this tab
+    const otherTabAction = await eventLog.appendAction(PROJECT_ID, {
+      kind: 'paint',
+      events: [{ type: 'model:blockPlaced', data: { position: { x: 1, y: 0, z: 0 }, blockType: 'stone' } }],
+    });
+
+    const undone = nextNotice('history:step-undone');
+    await editHistory.undo();
+
+    expect((await undone).actionId).toBe(otherTabAction);
+    expect(await stoneXs()).toEqual([0]);
   });
 });
