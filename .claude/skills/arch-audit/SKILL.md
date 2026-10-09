@@ -170,7 +170,7 @@ For each changed file, read it completely and check for violations:
     - Singletons: PascalCase (e.g., `ProjectManager.ts`)
 
 11. **Missing HOC Pattern**
-    - HOCs should be named `withXxxState`
+    - HOCs should be named `withXxx` (camelCase, `with` prefix)
     - Should use `useEffect` to subscribe to singleton events
     - Should only pass props to wrapped component
     - Should not contain business logic
@@ -381,7 +381,7 @@ Check:
 ### After Creating/Editing HOCs
 
 Check:
-- Named `withXxxState`
+- Named `withXxx` (camelCase, `with` prefix)
 - Uses `useEffect` to subscribe to singleton events
 - Only passes props to wrapped component
 - No business logic

@@ -70,7 +70,7 @@ Review the proposed implementation plan (it will be in the conversation context)
    - Must emit events on state changes
 
 9. **HOC pattern violations**
-   - HOCs must follow `withXxxState` naming
+   - HOCs must follow `withXxx` naming (camelCase, `with` prefix)
    - Must subscribe to singleton events in `useEffect`
    - Must pass data as props only
 
@@ -88,7 +88,7 @@ Review the proposed implementation plan (it will be in the conversation context)
 - No rendering logic
 
 **If creating/modifying an HOC (`src/hocs/`):**
-- Must follow `withXxxState` naming pattern
+- Must follow `withXxx` naming (camelCase, `with` prefix)
 - Must use `useEffect` to subscribe to singleton events
 - Must pass data as props to wrapped component
 - No business logic
