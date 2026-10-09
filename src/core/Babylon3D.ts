@@ -47,6 +47,7 @@ import { MaterialResolver } from './rendering/MaterialResolver';
 import { CameraRig } from './rendering/CameraRig';
 import { CameraGestures } from './rendering/CameraGestures';
 import { BlockRenderer } from './rendering/BlockRenderer';
+import { staggerTiming } from './rendering/GrowAnimator';
 import { PreviewRenderer } from './rendering/PreviewRenderer';
 import { BackdropRenderer } from './rendering/BackdropRenderer';
 import { positionKey, toBabylonVector } from './rendering/babylonUtils';
@@ -56,6 +57,9 @@ import type { BlockData, LightingPreset, Project, RenderSettings } from '../type
 import type { CameraView } from './rendering/CameraRig';
 import type { ShadowSystem } from './rendering/ShadowSetup';
 import type { PostProcessingPipelines } from './rendering/PostProcessingSetup';
+
+const toShownKey = ({ id, dimensions: { width, height, depth } }: Project): string =>
+  `${id}:${width}x${height}x${depth}`;
 
 class Babylon3D {
   private static instance: Babylon3D;
@@ -88,6 +92,8 @@ class Babylon3D {
   // Project and dimensions the camera last framed. The camera re-frames only when this changes,
   // so block edits never undo the user's orbit, pan, or zoom.
   private framedKey: string | null = null;
+  // Project and size the meshes on screen show. Blocks animate only while this stays the same.
+  private shownKey: string | null = null;
 
   // Resize observer (watches canvas size changes directly)
   private resizeObserver: ResizeObserver | null = null;
@@ -95,6 +101,7 @@ class Babylon3D {
   // Bound event handlers (for cleanup)
   private boundHandlers = {
     queueSceneUpdate: this.queueSceneUpdate.bind(this),
+    animationSettled: this.handleAnimationSettled.bind(this),
     renderFrame: this.renderFrame.bind(this),
     previewChanged: this.handlePreviewChanged.bind(this),
     layerChanged: this.handleLayerChanged.bind(this),
@@ -140,6 +147,8 @@ class Babylon3D {
     this.cameraGestures = new CameraGestures(canvas, this.cameraRig);
     this.materialResolver = new MaterialResolver(this.scene);
     this.blockRenderer = new BlockRenderer(this.scene, this.materialResolver);
+    // Shadows draw once per update. Redraw them when growing and shrinking blocks reach their final size.
+    this.blockRenderer.setAnimationSettledCallback(this.boundHandlers.animationSettled);
     this.previewRenderer = new PreviewRenderer(this.scene, this.materialResolver);
     this.backdropRenderer = new BackdropRenderer(this.scene);
 
@@ -209,6 +218,7 @@ class Babylon3D {
     this.cameraRig?.destroy();
     this.cameraRig = null;
     this.framedKey = null;
+    this.shownKey = null;
 
     // Dispose engine/scene
     this.scene?.dispose();
@@ -481,18 +491,35 @@ class Babylon3D {
       blocks.map((b: BlockData) => positionKey(b.position))
     );
 
-    // Remove meshes no longer in project
-    for (const key of this.blockRenderer.getBlockMeshes().keys()) {
-      if (!blockKeys.has(key)) {
-        const [x, y, z] = key.split(',').map(Number);
-        this.blockRenderer.removeBlockMesh({ x, y, z }, false);
-      }
-    }
+    // A project switch or a size change can move every block, so those updates show at once
+    const shownKey = toShownKey(project);
+    const animate = shownKey === this.shownKey;
+    this.shownKey = shownKey;
 
-    // Add/update meshes — resolve derived state reactively
-    for (const blockData of blocks) {
-      const resolved = shapeCatalog.resolveBlockState(blockData.position, blockIndex) ?? blockData;
-      this.blockRenderer.createBlockMesh(resolved, false);
+    const isRemoved = (key: string): boolean => !blockKeys.has(key);
+    const removedKeys = [...this.blockRenderer.getBlockMeshes().keys()].filter(isRemoved);
+    const removeKey = (key: string, index: number): void => {
+      const [x, y, z] = key.split(',').map(Number);
+      const shrink = animate ? staggerTiming(index, removedKeys.length) : null;
+      this.blockRenderer!.removeBlockMesh({ x, y, z }, shrink);
+    };
+    removedKeys.forEach(removeKey);
+
+
+    // Resolve derived state reactively. Only a new block or a new block type grows in.
+    // A derived shape change (a stair turning a corner) swaps at once.
+    const resolveBlock = (blockData: BlockData): BlockData =>
+      shapeCatalog.resolveBlockState(blockData.position, blockIndex) ?? blockData;
+    const resolved = blocks.map(resolveBlock);
+    const isNewType = (blockData: BlockData): boolean =>
+      this.blockRenderer!.getBlockType(positionKey(blockData.position)) !== blockData.blockType;
+    const added = new Set(resolved.filter(isNewType));
+
+    // BlockIndex lists blocks in the order events placed them, so a stroke grows in stroke order
+    let addedIndex = 0;
+    for (const blockData of resolved) {
+      const grow = animate && added.has(blockData) ? staggerTiming(addedIndex++, added.size) : null;
+      this.blockRenderer.createBlockMesh(blockData, grow);
     }
 
     // Update slice planes
@@ -535,8 +562,7 @@ class Babylon3D {
    */
   private frameIfProjectChanged(project: Project): void {
     if (!this.cameraRig) return;
-    const { width, height, depth } = project.dimensions;
-    const key = `${project.id}:${width}x${height}x${depth}`;
+    const key = toShownKey(project);
     if (key === this.framedKey) return;
 
     const isFirstFrame = this.framedKey === null;
@@ -637,6 +663,10 @@ class Babylon3D {
     for (const mesh of this.blockRenderer.getBlockMeshes().values()) {
       registerShadowCaster(this.shadowSystem, mesh);
     }
+  }
+
+  private handleAnimationSettled(): void {
+    refreshShadowMap(this.shadowSystem);
   }
 
   private handleResizeObserved(entries: ResizeObserverEntry[]): void {

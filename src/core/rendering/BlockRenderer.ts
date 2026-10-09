@@ -14,9 +14,6 @@ import {
   MeshBuilder,
   Mesh,
   InstancedMesh,
-  Animation,
-  EasingFunction,
-  ElasticEase,
   Scene,
 } from '@babylonjs/core';
 import type { AbstractMesh } from '@babylonjs/core';
@@ -25,6 +22,7 @@ import { textureResolver } from '../TextureResolver';
 import { editorState } from '../EditorState';
 import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
 import { shapeCatalog } from '../shapes/ShapeCatalog';
+import { GrowAnimator, type StepTiming } from './GrowAnimator';
 
 import type { MaterialResolver } from './MaterialResolver';
 import type { Vector3D, BlockData, BlockStateProperties, RenderSettings } from '../../types';
@@ -60,9 +58,12 @@ export class BlockRenderer {
   private onMeshCreated: ((mesh: AbstractMesh) => void) | null = null;
   private onMeshDestroyed: ((mesh: AbstractMesh) => void) | null = null;
 
+  private animator: GrowAnimator;
+
   constructor(scene: Scene, materialResolver: MaterialResolver) {
     this.scene = scene;
     this.materialResolver = materialResolver;
+    this.animator = new GrowAnimator(scene);
   }
 
   /**
@@ -78,9 +79,9 @@ export class BlockRenderer {
   }
 
   /**
-   * Create an instanced block mesh (or update existing)
+   * Create an instanced block mesh (or update existing). With a timing, the block grows into place.
    */
-  createBlockMesh(blockData: BlockData, animate: boolean = true): void {
+  createBlockMesh(blockData: BlockData, grow: StepTiming | null = null): void {
     const key = positionKey(blockData.position);
     const shape = shapeCatalog.resolve(blockData.blockType);
     const geoKey = shape.getGeometryKey(blockData.blockState);
@@ -127,37 +128,15 @@ export class BlockRenderer {
     // Notify shadow system
     this.onMeshCreated?.(instance);
 
-    if (animate) {
-      instance.scaling.y = 0;
-
-      const scaleAnim = new Animation(
-        'scaleYAnimation',
-        'scaling.y',
-        60,
-        Animation.ANIMATIONTYPE_FLOAT,
-        Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
-
-      scaleAnim.setKeys([
-        { frame: 0, value: 0 },
-        { frame: 36, value: 1 },
-      ]);
-
-      const easing = new ElasticEase();
-      easing.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
-      easing.oscillations = 1;
-      easing.springiness = 2;
-      scaleAnim.setEasingFunction(easing);
-
-      instance.animations = [scaleAnim];
-      this.scene.beginAnimation(instance, 0, 36, false);
+    if (grow) {
+      this.animator.grow(instance, grow);
     }
   }
 
   /**
-   * Remove a block mesh with optional animation
+   * Remove a block mesh. With a timing, the block shrinks out before it is disposed.
    */
-  removeBlockMesh(position: Vector3D, animate: boolean = true): void {
+  removeBlockMesh(position: Vector3D, shrink: StepTiming | null = null): void {
     const key = positionKey(position);
     const instance = this.blockInstances.get(key);
     if (!instance) return;
@@ -165,50 +144,36 @@ export class BlockRenderer {
     // Unregister from shadow system
     this.onMeshDestroyed?.(instance);
 
-    // Remove from tracking maps immediately
+    // Remove from tracking maps immediately, so a block placed here during the shrink gets its own instance
     const blockType = this.instanceTypeMap.get(key);
     this.blockInstances.delete(key);
     this.instanceTypeMap.delete(key);
 
-    if (animate) {
-      const fadeAnim = new Animation(
-        'fadeOutAnimation',
-        'visibility',
-        60,
-        Animation.ANIMATIONTYPE_FLOAT,
-        Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
-
-      const scaleAnim = new Animation(
-        'scaleDownAnimation',
-        'scaling.y',
-        60,
-        Animation.ANIMATIONTYPE_FLOAT,
-        Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
-
-      fadeAnim.setKeys([
-        { frame: 0, value: 1 },
-        { frame: 12, value: 0 },
-      ]);
-
-      scaleAnim.setKeys([
-        { frame: 0, value: 1 },
-        { frame: 12, value: 0 },
-      ]);
-
-      instance.animations = [fadeAnim, scaleAnim];
-      const animatable = this.scene.beginAnimation(instance, 0, 12, false);
-
-      const handleAnimationEnd = (): void => {
-        instance.dispose();
-        if (blockType) this.cleanupBaseIfEmpty(blockType);
-      };
-      animatable.onAnimationEnd = handleAnimationEnd;
-    } else {
+    const disposeRemoved = (): void => {
       instance.dispose();
       if (blockType) this.cleanupBaseIfEmpty(blockType);
+    };
+
+    if (shrink) {
+      this.animator.shrink(instance, shrink, disposeRemoved);
+    } else {
+      this.animator.cancel(instance);
+      disposeRemoved();
     }
+  }
+
+  /**
+   * Block type of the instance at a position key, or null when the position is empty
+   */
+  getBlockType(key: string): string | null {
+    return (this.blockInstances.get(key)?.metadata as { blockType?: string } | undefined)?.blockType ?? null;
+  }
+
+  /**
+   * Run once each time every grow and shrink has finished
+   */
+  setAnimationSettledCallback(onSettled: () => void): void {
+    this.animator.setSettledCallback(onSettled);
   }
 
   setLayerHighlightEnabled(enabled: boolean): void {
@@ -299,6 +264,8 @@ export class BlockRenderer {
    * Clear all instances and base meshes
    */
   clearAll(): void {
+    // Disposing the bases below also disposes instances still shrinking out
+    this.animator.clear();
     for (const instance of this.blockInstances.values()) {
       this.onMeshDestroyed?.(instance);
       instance.dispose();
@@ -387,6 +354,7 @@ export class BlockRenderer {
     }
 
     const blockType = this.instanceTypeMap.get(key);
+    this.animator.cancel(instance);
     instance.dispose();
     this.blockInstances.delete(key);
     this.instanceTypeMap.delete(key);
