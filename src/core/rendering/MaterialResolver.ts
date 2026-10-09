@@ -20,6 +20,17 @@ import { textureResolver } from '../TextureResolver';
 import { hexToColor3 } from './babylonUtils';
 import { resolvePBRCategory, isLuminousBlock } from './PBRCategoryMap';
 
+/**
+ * Ghosts ignore scene lights, so every face shows the same tint under any lighting preset.
+ * With lighting disabled, StandardMaterial outputs its emissive color alone.
+ */
+function applyUnlitColor(material: StandardMaterial, color: Color3): void {
+  material.disableLighting = true;
+  material.emissiveColor = color;
+  material.diffuseColor = Color3.Black();
+  material.specularColor = Color3.Black();
+}
+
 export class MaterialResolver {
   private scene: Scene;
   private pbrEnabled = false;
@@ -28,7 +39,7 @@ export class MaterialResolver {
   // Cached materials (one per block type)
   private materials = new Map<string, Material>();
 
-  // Cached ghost materials (semi-transparent versions for preview, always StandardMaterial)
+  // Cached ghost materials (semi-transparent, unlit versions for preview, always StandardMaterial)
   private ghostMaterials = new Map<string, StandardMaterial>();
 
   constructor(scene: Scene) {
@@ -105,8 +116,7 @@ export class MaterialResolver {
     }
 
     const material = new StandardMaterial(`ghost_${color}`, this.scene);
-    material.diffuseColor = hexToColor3(color);
-    material.specularColor = new Color3(0.3, 0.3, 0.3);
+    applyUnlitColor(material, hexToColor3(color));
     material.alpha = 0.5;
     material.transparencyMode = 2;
 
@@ -128,14 +138,11 @@ export class MaterialResolver {
     const baseColor = hexToColor3(color);
 
     // Mix original color with red (60% original, 40% red)
-    material.diffuseColor = new Color3(
+    applyUnlitColor(material, new Color3(
       baseColor.r * 0.6 + 1.0 * 0.4,
       baseColor.g * 0.6,
       baseColor.b * 0.6
-    );
-
-    material.specularColor = new Color3(0.3, 0.1, 0.1);
-    material.emissiveColor = new Color3(0.2, 0, 0);
+    ));
     material.alpha = 0.6;
     material.transparencyMode = 2;
 
