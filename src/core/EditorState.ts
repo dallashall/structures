@@ -92,8 +92,6 @@ class EditorState extends EventEmitter {
   private isMaterialBrowserOpen = false;
   private materialBrowserSearchQuery = '';
   private materialBrowserSelectedTab = 0;
-  // Block picked up in the material browser, waiting to be dropped into a quick-select slot
-  private materialBrowserGrabbedBlock: string | null = null;
   private activeDragBlockId: string | null = null;
   private currentProjectId: string | null = null;
   private sliceGuideVisibility: { x: boolean; y: boolean; z: boolean } = { x: false, y: false, z: false };
@@ -421,8 +419,6 @@ class EditorState extends EventEmitter {
       if (isOpen) {
         this.materialBrowserSearchQuery = '';
         this.materialBrowserSelectedTab = 0;
-      } else {
-        this.setMaterialBrowserGrabbedBlock(null);
       }
       this.emit('materialbrowser:toggled', isOpen);
     }
@@ -465,21 +461,8 @@ class EditorState extends EventEmitter {
     return this.materialBrowserSelectedTab;
   }
 
-  /**
-   * Pick up a block in the material browser, or release it with null
-   */
-  setMaterialBrowserGrabbedBlock = (blockId: string | null): void => {
-    if (this.materialBrowserGrabbedBlock === blockId) return;
-    this.materialBrowserGrabbedBlock = blockId;
-    if (blockId) {
-      this.emit('materialbrowser:block:grabbed', blockId);
-    } else {
-      this.emit('materialbrowser:block:released');
-    }
-  }
-
-  getMaterialBrowserGrabbedBlock(): string | null {
-    return this.materialBrowserGrabbedBlock;
+  toggleMaterialBrowser = (): void => {
+    this.setMaterialBrowserOpen(!this.isMaterialBrowserOpen);
   }
 
   /**
@@ -594,6 +577,14 @@ class EditorState extends EventEmitter {
         void quickSelectStore.setBackground(projectId, index);
       }
     }
+  }
+
+  /**
+   * Put a block in the quick-select slot that the active material slot (foreground or background) points at
+   */
+  assignToActiveSlot = (blockId: string): void => {
+    const index = this.activeMaterialSlot === 'foreground' ? this.foregroundSlotIndex : this.backgroundSlotIndex;
+    this.setQuickSelectSlot(index, blockId);
   }
 
   /**

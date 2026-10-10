@@ -1,5 +1,5 @@
-import type React from 'react';
 import { Box, Typography } from '@mui/material';
+import { useDraggable } from '@dnd-kit/core';
 
 import type { Block } from '../types';
 
@@ -7,31 +7,44 @@ import { BlockTextureSwatch } from './BlockTextureSwatch';
 
 interface MaterialTileProps {
   block: Block;
-  isGrabbed: boolean;
-  onClick: (event: React.MouseEvent) => void;
+  onPick: (blockId: string) => void;
 }
 
 /**
- * MaterialTile - One block in the material browser grid. Click picks it up.
+ * MaterialTile - One block in the material browser grid
+ *
+ * Press and drag onto a quick-select slot to assign it there. A click puts it in the active slot.
+ * The drag ends on release, so nothing stays attached to the pointer.
  */
-export function MaterialTile({ block, isGrabbed, onClick }: MaterialTileProps) {
+export function MaterialTile({ block, onPick }: MaterialTileProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `material-${block.id}`,
+    data: { blockId: block.id },
+  });
+
+  const handleClick = (): void => onPick(block.id);
+
   return (
     <Box
-      onClick={onClick}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={handleClick}
+      title={block.name}
       sx={{
-        cursor: 'pointer',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         p: 0.5,
         borderRadius: 1,
         border: 2,
-        borderColor: isGrabbed ? 'primary.main' : 'transparent',
-        bgcolor: isGrabbed ? 'action.selected' : 'transparent',
-        '&:hover': {
-          bgcolor: isGrabbed ? 'action.selected' : 'action.hover',
-        },
-        transition: 'all 0.1s',
+        borderColor: isDragging ? 'primary.main' : 'transparent',
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: 'none',
+        '&:hover': { bgcolor: 'action.hover' },
       }}
     >
       <BlockTextureSwatch blockId={block.id} blockName={block.name} size="L" fallbackColor={block.color} />

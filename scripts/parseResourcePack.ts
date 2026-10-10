@@ -13,6 +13,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { mergeTextureFragments } from './mergeTextureFragments';
+
 import type {
   CanonicalBlock,
   CanonicalBlocks,
@@ -703,9 +705,13 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(canonicalBlocks, null, 2));
+  // The second pass adds one entry per texture, so face textures like barrel_top become entries too
+  const { blocks, hidden, merged } = mergeTextureFragments(canonicalBlocks);
+  console.log(`\nTexture fragments: ${hidden.length} hidden, ${merged.length} blocks merged`);
+
+  fs.writeFileSync(outputPath, JSON.stringify(blocks, null, 2));
   console.log(`\nCanonical blocks written to: ${outputPath}`);
-  console.log(`Total blocks: ${Object.keys(canonicalBlocks).length}`);
+  console.log(`Total blocks: ${Object.keys(blocks).length}`);
 }
 
 // Run if called directly

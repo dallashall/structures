@@ -1,5 +1,5 @@
-import type React from 'react';
 import { Box, Typography } from '@mui/material';
+import { useDroppable } from '@dnd-kit/core';
 
 import type { Block } from '../types';
 
@@ -8,43 +8,46 @@ import { BlockTextureSwatch } from './BlockTextureSwatch';
 interface QuickSelectDropSlotProps {
   block: Block | null;
   index: number;
-  // True while a material is grabbed, so the slot accepts a drop
-  isDropTarget: boolean;
-  onClick: (event: React.MouseEvent) => void;
-  onContextMenu: (event: React.MouseEvent) => void;
+  // True while a material drag is in progress, so the slot shows it accepts a drop
+  isAccepting: boolean;
 }
 
 /**
- * QuickSelectDropSlot - One quick-select slot in the material browser. Click drops the grabbed material.
+ * QuickSelectDropSlot - One quick-select slot in the material browser. A material dropped on it fills it.
  */
-export function QuickSelectDropSlot({ block, index, isDropTarget, onClick, onContextMenu }: QuickSelectDropSlotProps) {
+export function QuickSelectDropSlot({ block, index, isAccepting }: QuickSelectDropSlotProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot-${index}`,
+    data: { slotIndex: index },
+  });
+
   return (
     <Box
-      onClick={onClick}
-      onContextMenu={onContextMenu}
+      ref={setNodeRef}
       sx={{
-        width: 48,
-        height: 48,
+        position: 'relative',
+        width: 52,
+        height: 52,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         border: 2,
-        borderColor: 'divider',
+        borderStyle: isAccepting && !isOver ? 'dashed' : 'solid',
+        borderColor: isOver ? 'primary.light' : isAccepting ? 'primary.main' : 'divider',
         borderRadius: 1,
-        bgcolor: 'background.paper',
-        cursor: isDropTarget ? 'pointer' : 'default',
-        '&:hover': {
-          borderColor: isDropTarget ? 'primary.main' : 'divider',
-          bgcolor: isDropTarget ? 'action.hover' : 'background.paper',
-        },
-        transition: 'all 0.1s',
+        bgcolor: isOver ? 'primary.dark' : 'background.paper',
+        boxShadow: isOver ? 6 : 0,
+        transform: isOver ? 'scale(1.12)' : 'none',
+        transition: 'transform 0.1s, background-color 0.1s, border-color 0.1s',
       }}
     >
-      {block ? <BlockTextureSwatch blockId={block.id} blockName={block.name} size="M" fallbackColor={block.color} /> : (
-        <Typography variant="caption" color="text.disabled">
-          {index + 1}
-        </Typography>
-      )}
+      {block && <BlockTextureSwatch blockId={block.id} blockName={block.name} size="M" fallbackColor={block.color} />}
+      <Typography
+        variant="caption"
+        sx={{ position: 'absolute', bottom: 1, right: 4, fontSize: '0.65rem', fontWeight: 'bold', color: 'text.secondary' }}
+      >
+        {index + 1}
+      </Typography>
     </Box>
   );
 }

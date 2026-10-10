@@ -10,6 +10,7 @@
     "build:atlas:squareful": "npm run build:atlas -- --pack squareful",
     "build:atlas:excaliber": "npm run build:atlas -- --pack excaliber",
     "parse:pack": "tsx scripts/parseResourcePack.ts",
+    "merge:fragments": "tsx scripts/mergeTextureFragments.ts data/canonical-blocks.json public/data/canonical-blocks.json",
     "generate:manifest": "tsx scripts/generatePackManifest.ts",
     "generate:env": "tsx scripts/generateEnvironments.ts",
     "preview": "vite preview",
@@ -29,7 +30,8 @@
     "@mui/lab": "^7.0.1-beta.22",
     "@mui/material": "^7.3.8",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-window": "^2.3.3"
   },
   "devDependencies": {
     "@types/node": "^25.4.0",

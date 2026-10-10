@@ -20,6 +20,7 @@ import type { PaintMode } from '../types';
  * - W/S: Increment/decrement Z layer (height - up/down)
  * - A/D: Decrement/increment X layer (width - left/right)
  * - X/C: Decrement/increment Y layer (depth - forward/back)
+ * - E: Open or close the material browser
  * - Ctrl/Cmd+Z: Undo. Ctrl/Cmd+Shift+Z: Redo.
  *
  * Any other key held with Ctrl or Cmd passes through to the browser.
@@ -78,6 +79,12 @@ class HotkeyDispatcher {
         event.preventDefault();
         void (event.shiftKey ? editHistory.redo() : editHistory.undo());
       }
+      return;
+    }
+
+    if (matchesShortcut(event, SHORTCUTS.materialBrowser)) {
+      event.preventDefault();
+      editorState.toggleMaterialBrowser();
       return;
     }
 

@@ -16,10 +16,6 @@ import {
   withStorageState,
   WithStorageStateProps,
 } from "../hocs/withStorageState";
-import {
-  withMaterialBrowserState,
-  WithMaterialBrowserStateProps,
-} from "../hocs/withMaterialBrowserState";
 
 import { Toolbar } from "../layouts/Toolbar";
 import { ToolOptionsBar } from "../components/ToolOptionsBar";
@@ -46,8 +42,7 @@ interface EditorViewProps
     WithProjectStateProps,
     WithEditorStateProps,
     WithBlockRegistryProps,
-    WithStorageStateProps,
-    WithMaterialBrowserStateProps {
+    WithStorageStateProps {
   onBackToWelcome?: () => void;
 }
 
@@ -70,10 +65,6 @@ function EditorViewComponent(props: EditorViewProps) {
     isPlacementMode,
     isActionBarExpanded,
     saveState,
-    isMaterialBrowserOpen,
-    materialBrowserSearchQuery,
-    materialBrowserSelectedTab,
-    materialBrowserGrabbedBlockId,
     activeBlockState,
     hasBlockState,
     onBackToWelcome,
@@ -253,17 +244,13 @@ function EditorViewComponent(props: EditorViewProps) {
 
       {/* Material Browser Modal */}
       <MaterialBrowserModal
-        isOpen={isMaterialBrowserOpen}
         blocks={blocks}
-        searchQuery={materialBrowserSearchQuery}
-        selectedTab={materialBrowserSelectedTab}
         quickSelectSlots={quickSelectSlots}
         onClose={handleMaterialBrowserClose}
         onSearchChange={editorState.setMaterialBrowserSearchQuery}
         onTabChange={editorState.setMaterialBrowserSelectedTab}
-        onAssignSlot={handleAssignSlot}
-        grabbedBlockId={materialBrowserGrabbedBlockId}
-        onGrabBlock={editorState.setMaterialBrowserGrabbedBlock}
+        onAssignSlot={editorState.setQuickSelectSlot}
+        onPick={editorState.assignToActiveSlot}
       />
 
       <HistoryToast />
@@ -273,8 +260,6 @@ function EditorViewComponent(props: EditorViewProps) {
 
 // Export with HOCs - all props are injected by HOCs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const EditorView = withMaterialBrowserState(
-  withStorageState(
-    withBlockRegistry(withEditorState(withProjectState(EditorViewComponent))),
-  ),
+export const EditorView = withStorageState(
+  withBlockRegistry(withEditorState(withProjectState(EditorViewComponent))),
 ) as any;

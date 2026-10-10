@@ -1,91 +1,81 @@
 import React from 'react';
-import { editorState } from "../core/EditorState";
+
+import type { Block } from '../types';
+
+import { blockRegistry } from '../core/BlockRegistry';
+import { editorState } from '../core/EditorState';
+
+import { filterMaterials } from '../utils/materialCategories';
 
 export interface WithMaterialBrowserStateProps {
-  isMaterialBrowserOpen: boolean;
-  materialBrowserSearchQuery: string;
-  materialBrowserSelectedTab: number;
-  materialBrowserGrabbedBlockId: string | null;
+  isOpen: boolean;
+  // Current values, so the search field and tabs respond on every keystroke and click
+  searchQuery: string;
+  selectedTab: number;
+  // Filtered with deferred copies of the query and tab. React renders them at low priority.
+  results: Block[];
+  // True while results still reflect an older query or tab
+  isStale: boolean;
+  gridWidth: number;
+  onGridResize: (size: { width: number }) => void;
 }
 
 /**
  * withMaterialBrowserState - HOC that provides material browser state
  *
- * Subscribes to EditorStateManager material browser state changes
- * including open/close, search query, and selected tab.
+ * Subscribes to EditorState for open/close, search query, and selected tab,
+ * and to BlockRegistry for the pickable blocks. Typing never waits on the grid:
+ * the grid filters with useDeferredValue copies of the query and tab.
  */
 export function withMaterialBrowserState<P extends object>(
   Component: React.ComponentType<P & WithMaterialBrowserStateProps>,
 ) {
   return function WithMaterialBrowserState(props: P) {
-    const [isMaterialBrowserOpen, setIsMaterialBrowserOpen] = React.useState(
-      editorState.getMaterialBrowserOpen(),
-    );
-    const [searchQuery, setSearchQuery] = React.useState(
-      editorState.getMaterialBrowserSearchQuery(),
-    );
-    const [selectedTab, setSelectedTab] = React.useState(
-      editorState.getMaterialBrowserSelectedTab(),
-    );
-    const [grabbedBlockId, setGrabbedBlockId] = React.useState(
-      editorState.getMaterialBrowserGrabbedBlock(),
-    );
+    const [isOpen, setIsOpen] = React.useState(editorState.getMaterialBrowserOpen());
+    const [searchQuery, setSearchQuery] = React.useState(editorState.getMaterialBrowserSearchQuery());
+    const [selectedTab, setSelectedTab] = React.useState(editorState.getMaterialBrowserSelectedTab());
+    const [pickableBlocks, setPickableBlocks] = React.useState<Block[]>(blockRegistry.getPickableBlocks());
+    const [gridWidth, setGridWidth] = React.useState(0);
 
     React.useEffect(() => {
-      const handleMaterialBrowserChange = (isOpen: boolean) => {
-        setIsMaterialBrowserOpen(isOpen);
+      // Opening resets the query and tab without emitting their own events
+      const handleToggled = (open: boolean): void => {
+        setIsOpen(open);
+        setSearchQuery(editorState.getMaterialBrowserSearchQuery());
+        setSelectedTab(editorState.getMaterialBrowserSelectedTab());
       };
+      const handleBlocksRegistered = (): void => setPickableBlocks(blockRegistry.getPickableBlocks());
 
-      const handleSearchChange = (query: string) => {
-        setSearchQuery(query);
-      };
-
-      const handleTabChange = (tab: number) => {
-        setSelectedTab(tab);
-      };
-
-      const handleBlockGrabbed = (blockId: string) => {
-        setGrabbedBlockId(blockId);
-      };
-
-      const handleBlockReleased = () => {
-        setGrabbedBlockId(null);
-      };
-
-      editorState.on(
-        "materialbrowser:toggled",
-        handleMaterialBrowserChange,
-      );
-      editorState.on(
-        "materialbrowser:search:entered",
-        handleSearchChange,
-      );
-      editorState.on("materialbrowser:tab:switched", handleTabChange);
-      editorState.on("materialbrowser:block:grabbed", handleBlockGrabbed);
-      editorState.on("materialbrowser:block:released", handleBlockReleased);
-
+      editorState.on('materialbrowser:toggled', handleToggled);
+      editorState.on('materialbrowser:search:entered', setSearchQuery);
+      editorState.on('materialbrowser:tab:switched', setSelectedTab);
+      blockRegistry.on('blocks:registered', handleBlocksRegistered);
       return () => {
-        editorState.off(
-          "materialbrowser:toggled",
-          handleMaterialBrowserChange,
-        );
-        editorState.off(
-          "materialbrowser:search:entered",
-          handleSearchChange,
-        );
-        editorState.off("materialbrowser:tab:switched", handleTabChange);
-        editorState.off("materialbrowser:block:grabbed", handleBlockGrabbed);
-        editorState.off("materialbrowser:block:released", handleBlockReleased);
+        editorState.off('materialbrowser:toggled', handleToggled);
+        editorState.off('materialbrowser:search:entered', setSearchQuery);
+        editorState.off('materialbrowser:tab:switched', setSelectedTab);
+        blockRegistry.off('blocks:registered', handleBlocksRegistered);
       };
     }, []);
+
+    const deferredQuery = React.useDeferredValue(searchQuery);
+    const deferredTab = React.useDeferredValue(selectedTab);
+    const filterResults = (): Block[] => filterMaterials(pickableBlocks, deferredQuery, deferredTab);
+    const results = React.useMemo(filterResults, [pickableBlocks, deferredQuery, deferredTab]);
+    const isStale = deferredQuery !== searchQuery || deferredTab !== selectedTab;
+
+    const handleGridResize = React.useCallback(({ width }: { width: number }): void => setGridWidth(width), []);
 
     return (
       <Component
         {...props}
-        isMaterialBrowserOpen={isMaterialBrowserOpen}
-        materialBrowserSearchQuery={searchQuery}
-        materialBrowserSelectedTab={selectedTab}
-        materialBrowserGrabbedBlockId={grabbedBlockId}
+        isOpen={isOpen}
+        searchQuery={searchQuery}
+        selectedTab={selectedTab}
+        results={results}
+        isStale={isStale}
+        gridWidth={gridWidth}
+        onGridResize={handleGridResize}
       />
     );
   };

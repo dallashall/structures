@@ -1,9 +1,9 @@
-import { Box, IconButton, Tooltip, ButtonBase } from "@mui/material";
+import { Box, IconButton, ButtonBase } from "@mui/material";
 import { Apps } from "@mui/icons-material";
 
 import type { Block } from "../types";
 
-import { quickSelectShortcut } from "../core/Shortcuts";
+import { SHORTCUTS, quickSelectShortcut } from "../core/Shortcuts";
 
 import { BlockTextureSwatch } from "./BlockTextureSwatch";
 import { ShortcutTooltip } from "./ShortcutTooltip";
@@ -133,7 +133,7 @@ export function QuickSelectPalette({
 
       {/* 10th item - Open Material Browser button */}
       {isVertical && onOpenBrowser && (
-        <Tooltip title="Open Material Browser" placement="right">
+        <ShortcutTooltip title="Open Material Browser" shortcut={SHORTCUTS.materialBrowser} placement="right">
           <IconButton
             onClick={onOpenBrowser}
             aria-label="Open material browser"
@@ -151,7 +151,7 @@ export function QuickSelectPalette({
           >
             <Apps fontSize="small" />
           </IconButton>
-        </Tooltip>
+        </ShortcutTooltip>
       )}
     </Box>
   );

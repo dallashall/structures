@@ -227,6 +227,7 @@ export interface Block {
   // Block properties
   isCube: boolean; // Whether block is a simple cube
   isTransparent: boolean; // For rendering transparency (glass)
+  hidden?: boolean; // A face or state texture of another block. Renders where placed, never listed for picking.
 }
 
 export interface BlockData {

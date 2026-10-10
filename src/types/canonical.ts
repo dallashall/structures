@@ -62,6 +62,8 @@ export interface CanonicalBlock {
   isTransparent?: boolean;
   /** Parent model reference (e.g., "block/cube_all") */
   parentModel?: string;
+  /** A face or state texture of another block. It renders where placed but never lists in the material browser. */
+  hidden?: boolean;
 }
 
 /**

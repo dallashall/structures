@@ -65,6 +65,14 @@ class BlockRegistry extends EventEmitter {
   }
 
   /**
+   * Blocks a user can pick: every block except face and state textures of other blocks
+   */
+  getPickableBlocks(): Block[] {
+    const isPickable = (block: Block): boolean => !block.hidden;
+    return this.getAllBlocks().filter(isPickable);
+  }
+
+  /**
    * Get blocks filtered by category
    */
   getBlocksByCategory(category: string): Block[] {
@@ -180,6 +188,7 @@ class BlockRegistry extends EventEmitter {
             : undefined,
           isCube: (canonicalBlock as any).isCube ?? true,
           isTransparent: (canonicalBlock as any).isTransparent ?? false,
+          hidden: (canonicalBlock as any).hidden ?? false,
           variants: (canonicalBlock as any).variants
             ? (canonicalBlock as any).variants.map((variantName: string) => ({
                 textureName: variantName,

@@ -7,291 +7,130 @@ import {
   Box,
   Tabs,
   Tab,
-  Typography,
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { Search, Close, PanTool } from '@mui/icons-material';
+import { Search, Close } from '@mui/icons-material';
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 
 import type { Block } from '../types';
 
-import { pointerFollower } from '../core/PointerFollower';
+import { SHORTCUTS } from '../core/Shortcuts';
 
-import { BlockTextureSwatch } from './BlockTextureSwatch';
-import { MaterialTile } from './MaterialTile';
-import { QuickSelectDropSlot } from './QuickSelectDropSlot';
-import { findBlockById } from '../utils/blockUtils';
-import { MATERIAL_CATEGORIES, filterMaterials } from '../utils/materialCategories';
+import { withMaterialBrowserState } from '../hocs/withMaterialBrowserState';
+import type { WithMaterialBrowserStateProps } from '../hocs/withMaterialBrowserState';
+
+import { MaterialGrid } from './MaterialGrid';
+import { MaterialDragOverlay } from './MaterialDragOverlay';
+import { QuickSelectDropBar } from './QuickSelectDropBar';
+
+import { MATERIAL_CATEGORIES } from '../utils/materialCategories';
 import type { MaterialCategory } from '../utils/materialCategories';
 
+// A press must travel this far before it becomes a drag, so a plain click still picks
+const DRAG_ACTIVATION_PX = 4;
+
 interface MaterialBrowserModalProps {
-  isOpen: boolean;
+  // Every block, hidden ones included, so slots show whatever they hold
   blocks: Block[];
+  quickSelectSlots: (string | null)[];
   onClose: () => void;
-  searchQuery: string;
-  selectedTab: number;
   onSearchChange: (query: string) => void;
   onTabChange: (tab: number) => void;
-  quickSelectSlots: (string | null)[];
   onAssignSlot: (index: number, blockId: string) => void;
-  grabbedBlockId: string | null;
-  onGrabBlock: (blockId: string | null) => void;
+  onPick: (blockId: string) => void;
 }
 
+const renderTab = (category: MaterialCategory, index: number) => <Tab key={index} label={category.label} />;
 
 /**
- * MaterialBrowserModal - Full material browser with grab-and-drop interaction
+ * MaterialBrowserModal - Searchable, windowed material browser
  *
- * Minecraft-style material browser with:
- * - Click to grab a material
- * - Click slot to drop grabbed material
- * - Right-click to cancel/clear grabbed material
- * - Tabs for material categories
- * - Search functionality
- *
- * The grabbed block lives in EditorState, so closing the browser releases it.
+ * Drag a material onto a quick-select slot to assign it. Click a material to put it in the active slot.
  */
-export function MaterialBrowserModal({
-  isOpen,
+function MaterialBrowserModalComponent({
   blocks,
+  quickSelectSlots,
   onClose,
-  searchQuery,
-  selectedTab,
   onSearchChange,
   onTabChange,
-  quickSelectSlots,
   onAssignSlot,
-  grabbedBlockId,
-  onGrabBlock,
-}: MaterialBrowserModalProps) {
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    event.stopPropagation(); // Prevent clearing grabbed material when changing tabs
-    onTabChange(newValue);
+  onPick,
+  isOpen,
+  searchQuery,
+  selectedTab,
+  results,
+  isStale,
+  gridWidth,
+  onGridResize,
+}: MaterialBrowserModalProps & WithMaterialBrowserStateProps) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_PX } }));
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => onTabChange(newValue);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>): void => onSearchChange(event.target.value);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent): void => {
+    const blockId = (active.data.current as { blockId?: string } | undefined)?.blockId;
+    const slotIndex = (over?.data.current as { slotIndex?: number } | undefined)?.slotIndex;
+    if (blockId && slotIndex !== undefined) onAssignSlot(slotIndex, blockId);
   };
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onSearchChange(event.target.value);
-  };
-
-  const handleMaterialClick = (blockId: string, event: React.MouseEvent) => {
-    // Click to grab the material
-    event.stopPropagation(); // Prevent clearing grabbed material
-    onGrabBlock(blockId);
-  };
-
-  const handleSlotClick = (index: number, event: React.MouseEvent) => {
-    // If we have a grabbed material, drop it into the slot
-    event.stopPropagation(); // Prevent clearing grabbed material
-    if (grabbedBlockId) {
-      onAssignSlot(index, grabbedBlockId);
-      onGrabBlock(null); // Clear after dropping
-    }
-  };
-
-  const handleClearGrabbedMaterial = () => {
-    // Click on empty space clears the grabbed material
-    if (grabbedBlockId) {
-      onGrabBlock(null);
-    }
-  };
-
-  const handleCancel = (event: React.MouseEvent) => {
-    // Right-click to cancel
-    if (event.button === 2) {
-      event.preventDefault();
-      onGrabBlock(null);
-    }
-  };
-
-  const handleClose = (event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent clearing grabbed material when closing
-    onClose();
-  };
-
-  const currentCategoryBlocks = filterMaterials(blocks, searchQuery, selectedTab);
-
-  // Named handler creators for callbacks
-  const createMaterialClickHandler = (blockId: string) => (event: React.MouseEvent) => {
-    handleMaterialClick(blockId, event);
-  };
-
-  const createSlotClickHandler = (index: number) => (event: React.MouseEvent) => {
-    handleSlotClick(index, event);
-  };
-
-  const renderTab = (category: MaterialCategory, index: number) => (
-    <Tab key={index} label={category.label} />
-  );
-
-  const renderMaterialBlock = (block: Block) => (
-    <MaterialTile
-      key={block.id}
-      block={block}
-      isGrabbed={block.id === grabbedBlockId}
-      onClick={createMaterialClickHandler(block.id)}
-    />
-  );
-
-  const renderQuickSelectSlot = (blockId: string | null, index: number) => (
-    <QuickSelectDropSlot
-      key={index}
-      block={findBlockById(blocks, blockId) ?? null}
-      index={index}
-      isDropTarget={grabbedBlockId !== null}
-      onClick={createSlotClickHandler(index)}
-      onContextMenu={handleCancel}
-    />
-  );
-
-  const grabbedBlock = findBlockById(blocks, grabbedBlockId);
 
   return (
-    <>
-      <Dialog
-        open={isOpen}
-        onClose={onClose}
-        maxWidth="md"
-        fullWidth
-        onClick={handleClearGrabbedMaterial}
-        onContextMenu={handleCancel}
-        slotProps={{
-          paper: {
-            sx: {
-              height: '80vh',
-              maxHeight: 600,
-            },
-          },
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            Material Browser
-            {grabbedBlock && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  px: 1,
-                  py: 0.5,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  borderRadius: 1,
-                  fontSize: '0.75rem',
-                }}
-              >
-                <PanTool fontSize="small" />
-                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                  {grabbedBlock.name}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-          <IconButton onClick={handleClose} size="small" aria-label="Close">
-            <Close />
-          </IconButton>
-        </DialogTitle>
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      slotProps={{ paper: { sx: { height: '80vh', maxHeight: 640 } } }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
+        Material Browser ({SHORTCUTS.materialBrowser})
+        <IconButton onClick={onClose} size="small" aria-label="Close">
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Search Bar */}
-        <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search materials..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Box>
-
-        {/* Category Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
-          <Tabs value={selectedTab} onChange={handleTabChange}>
-            {MATERIAL_CATEGORIES.map(renderTab)}
-          </Tabs>
-        </Box>
-
-        {/* Materials Grid */}
-        <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }} onContextMenu={handleCancel}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))',
-              gap: 1,
-            }}
-          >
-            {currentCategoryBlocks.map(renderMaterialBlock)}
+      {/* No auto-scroll: every drag to the slot bar crosses the grid's bottom edge, which would scroll it */}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd} autoScroll={false}>
+        <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
+            <TextField
+              fullWidth
+              autoFocus
+              size="small"
+              placeholder="Search materials..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
           </Box>
 
-          {currentCategoryBlocks.length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="body2" color="text.secondary">
-                No materials found
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </DialogContent>
-
-        {/* Quick Select Slots - Fixed at bottom */}
-        <Box sx={{ px: 2, py: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
-          <Typography variant="subtitle2" sx={{ mb: 0.75, fontWeight: 'bold', fontSize: '0.7rem' }}>
-            {grabbedBlock ? 'Click a slot to drop material' : 'Quick Select (1-9)'}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-            {quickSelectSlots.map(renderQuickSelectSlot)}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+            <Tabs value={selectedTab} onChange={handleTabChange}>
+              {MATERIAL_CATEGORIES.map(renderTab)}
+            </Tabs>
           </Box>
-        </Box>
-      </Dialog>
 
-      {/* Floating Grabbed Material - Follows cursor */}
-      {grabbedBlock && (
-        <Box
-          ref={pointerFollower.mountFollower}
-          sx={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            zIndex: 2000,
-            pointerEvents: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            bgcolor: 'background.paper',
-            border: 2,
-            borderColor: 'primary.main',
-            borderRadius: 1,
-            boxShadow: 6,
-            p: 0.5,
-            willChange: 'transform',
-          }}
-        >
-          <BlockTextureSwatch blockId={grabbedBlock.id} blockName={grabbedBlock.name} size="L" fallbackColor={grabbedBlock.color} />
-          <Typography
-            variant="caption"
-            sx={{
-              fontSize: '0.65rem',
-              mt: 0.25,
-              textAlign: 'center',
-              maxWidth: 80,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {grabbedBlock.name}
-          </Typography>
-        </Box>
-      )}
-    </>
+          <Box sx={{ px: 1.5, py: 1, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <MaterialGrid blocks={results} width={gridWidth} isStale={isStale} onResize={onGridResize} onPick={onPick} />
+          </Box>
+        </DialogContent>
+
+        <QuickSelectDropBar slots={quickSelectSlots} blocks={blocks} />
+        <MaterialDragOverlay blocks={blocks} />
+      </DndContext>
+    </Dialog>
   );
 }
+
+export const MaterialBrowserModal = withMaterialBrowserState<MaterialBrowserModalProps>(MaterialBrowserModalComponent);

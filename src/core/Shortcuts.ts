@@ -18,6 +18,7 @@ export const SHORTCUTS = {
   layerYUp: 'C',
   layerYDown: 'X',
   frameStructure: 'Home',
+  materialBrowser: 'E',
   // Pressed with Ctrl or Cmd. Redo adds Shift.
   undo: 'Z',
 } as const;
