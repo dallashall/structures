@@ -20,12 +20,12 @@ import type { AbstractMesh } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
 import { textureResolver } from '../TextureResolver';
 import { editorState } from '../EditorState';
-import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock, hexToColor4 } from './babylonUtils';
+import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock } from './babylonUtils';
 import { shapeCatalog } from '../shapes/ShapeCatalog';
 import { GrowAnimator, type StepTiming } from './GrowAnimator';
 
 import type { MaterialResolver } from './MaterialResolver';
-import type { Vector3D, BlockData, BlockStateProperties, RenderSettings } from '../../types';
+import type { Vector3D, BlockData, BlockStateProperties } from '../../types';
 
 // Per-instance vertex colors for layer highlight
 // Each axis maps to an RGB channel: X=red, Y=green, Z=blue
@@ -45,11 +45,6 @@ export class BlockRenderer {
 
   // Position key -> block type (for detecting type changes)
   private instanceTypeMap = new Map<string, string>();
-
-  // Edge rendering state
-  private edgesEnabled = false;
-  private edgesWidth = 1.0;
-  private edgesColor = '#000000';
 
   // Layer highlight
   private layerHighlightEnabled = false;
@@ -244,28 +239,13 @@ export class BlockRenderer {
   }
 
   /**
-   * Update edge rendering settings on all base meshes (instances inherit)
-   */
-  updateEdgeRendering(settings: RenderSettings): void {
-    this.edgesEnabled = settings.edgesEnabled;
-    this.edgesWidth = settings.edgesWidth;
-    this.edgesColor = settings.edgesColor;
-
-    for (const base of this.instanceBases.values()) {
-      if (settings.edgesEnabled) {
-        this.applyEdgeRendering(base);
-      } else {
-        base.disableEdgesRendering();
-      }
-    }
-  }
-
-  /**
    * Clear all instances and base meshes
    */
   clearAll(): void {
     // Disposing the bases below also disposes instances still shrinking out
     this.animator.clear();
+    // Each dispose would otherwise free the scene's active-mesh lists once per block
+    this.scene.blockfreeActiveMeshesAndRenderingGroups = true;
     for (const instance of this.blockInstances.values()) {
       this.onMeshDestroyed?.(instance);
       instance.dispose();
@@ -277,6 +257,7 @@ export class BlockRenderer {
       base.dispose();
     }
     this.instanceBases.clear();
+    this.scene.blockfreeActiveMeshesAndRenderingGroups = false;
   }
 
   /**
@@ -335,9 +316,6 @@ export class BlockRenderer {
     base.registerInstancedBuffer('color', 4);
     base.instancedBuffers.color = COLOR_NORMAL;
 
-    // Edge rendering on base propagates to instances
-    this.applyEdgeRendering(base);
-
     this.instanceBases.set(compositeKey, base);
     return base;
   }
@@ -373,12 +351,5 @@ export class BlockRenderer {
       base.dispose();
       this.instanceBases.delete(blockType);
     }
-  }
-
-  private applyEdgeRendering(mesh: Mesh): void {
-    if (!this.edgesEnabled) return;
-    mesh.enableEdgesRendering();
-    mesh.edgesWidth = this.edgesWidth;
-    mesh.edgesColor = hexToColor4(this.edgesColor);
   }
 }

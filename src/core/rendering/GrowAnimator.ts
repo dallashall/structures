@@ -122,11 +122,14 @@ export class GrowAnimator {
       if (t >= 1) finished.push(tween);
     }
 
+    // Shrinks finish by disposing their mesh. Each dispose would otherwise free the active-mesh lists.
+    this.scene.blockfreeActiveMeshesAndRenderingGroups = true;
     for (const tween of finished) {
       this.tweens.delete(tween.mesh);
       tween.mesh.scaling.setAll(tween.to);
       tween.onDone?.();
     }
+    this.scene.blockfreeActiveMeshesAndRenderingGroups = false;
 
     if (finished.length > 0 && this.tweens.size === 0) {
       this.detach();

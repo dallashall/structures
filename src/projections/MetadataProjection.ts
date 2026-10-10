@@ -34,6 +34,8 @@ class MetadataProjection extends EventEmitter {
   private static instance: MetadataProjection;
 
   private snapshot: MetadataSnapshot | null = null;
+  // Every event up to this ID has been read. Model events move it too, so a read never rescans them.
+  private readThroughId = 0;
   private constructor() {
     super();
 
@@ -132,27 +134,24 @@ class MetadataProjection extends EventEmitter {
    */
   async ensureFresh(): Promise<void> {
     const latestEventId = await eventLog.getLatestEventId();
+    if (latestEventId <= this.readThroughId) return;
 
-    // No new events? Return instantly (O(1) version check)
-    if (this.snapshot && latestEventId === this.snapshot.latestEventId) {
-      return;
-    }
-
-    // New events exist (or no snapshot yet) - fetch and apply
     const projectId = editorState.getCurrentProjectId();
     if (!projectId) return;
 
-    const fromId = this.snapshot ? this.snapshot.latestEventId + 1 : undefined;
-
     const events = await eventLog.getEvents({
-      fromId,
+      fromId: this.readThroughId + 1,
+      toId: latestEventId,
       types: ['metadata:created', 'metadata:renamed'],
       projectId,
     });
 
     for (const event of events) {
-      this.applyEvent(event);
+      if (!this.snapshot || event.id! > this.snapshot.latestEventId) {
+        this.applyEvent(event);
+      }
     }
+    this.readThroughId = Math.max(this.readThroughId, latestEventId);
   }
 
   /**
@@ -207,6 +206,7 @@ class MetadataProjection extends EventEmitter {
    */
   reset(): void {
     this.snapshot = null;
+    this.readThroughId = 0;
   }
 }
 

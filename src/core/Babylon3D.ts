@@ -39,7 +39,7 @@ import { frameStats } from './FrameStats';
 import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
 import { setupLighting, setupAxes } from './rendering/SceneSetup';
 import { loadEnvironment, applyEnvironment, updateEnvironmentIntensity } from './rendering/EnvironmentSetup';
-import { setupShadows, registerShadowCaster, unregisterShadowCaster, disposeShadows, refreshShadowMap } from './rendering/ShadowSetup';
+import { setupShadows, registerShadowCaster, unregisterShadowCasters, disposeShadows, refreshShadowMap } from './rendering/ShadowSetup';
 import { updatePostProcessing, disposePostProcessing } from './rendering/PostProcessingSetup';
 import { applyLightingPreset, getEmissiveScale, getEmissiveLightIntensity } from './rendering/LightingPresets';
 import { EmissiveLighting } from './rendering/EmissiveLighting';
@@ -94,6 +94,8 @@ class Babylon3D {
   private framedKey: string | null = null;
   // Project and size the meshes on screen show. Blocks animate only while this stays the same.
   private shownKey: string | null = null;
+  // Meshes to drop from the shadow render list in one pass. flushShadowCasters empties it.
+  private removedShadowCasters = new Set<AbstractMesh>();
 
   // Resize observer (watches canvas size changes directly)
   private resizeObserver: ResizeObserver | null = null;
@@ -201,6 +203,7 @@ class Babylon3D {
     this.emissiveLighting = null;
     disposeShadows(this.shadowSystem);
     this.shadowSystem = null;
+    this.removedShadowCasters.clear();
 
     // Destroy modules
     this.slicePlaneVisualizer?.destroy();
@@ -294,7 +297,7 @@ class Babylon3D {
   setVisible(visible: boolean): void {
     if (visible && this.paused) {
       this.paused = false;
-      refreshShadowMap(this.shadowSystem);
+      this.refreshShadows();
     } else if (!visible) {
       this.paused = true;
     }
@@ -342,7 +345,7 @@ class Babylon3D {
     // Shadow system with mesh lifecycle callbacks
     this.shadowSystem = setupShadows(this.scene, settings);
     const handleMeshCreated = (mesh: AbstractMesh): void => { registerShadowCaster(this.shadowSystem, mesh); };
-    const handleMeshDestroyed = (mesh: AbstractMesh): void => { unregisterShadowCaster(this.shadowSystem, mesh); };
+    const handleMeshDestroyed = (mesh: AbstractMesh): void => { this.removedShadowCasters.add(mesh); };
     this.blockRenderer.setMeshLifecycleCallbacks(handleMeshCreated, handleMeshDestroyed);
 
     // Emissive point lights for luminous blocks
@@ -351,9 +354,8 @@ class Babylon3D {
       getEmissiveLightIntensity(settings.lightingPreset),
     );
 
-    // Layer highlight + edge rendering
+    // Layer highlight
     this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
-    this.blockRenderer.updateEdgeRendering(settings);
 
     // Post-processing (needs camera)
     const camera = this.cameraRig.getCamera();
@@ -478,6 +480,7 @@ class Babylon3D {
     const project = await projectView.getProject();
     if (!project) {
       this.blockRenderer.clearAll();
+      this.flushShadowCasters();
       this.emissiveLighting?.clearAll();
       return;
     }
@@ -503,7 +506,10 @@ class Babylon3D {
       const shrink = animate ? staggerTiming(index, removedKeys.length) : null;
       this.blockRenderer!.removeBlockMesh({ x, y, z }, shrink);
     };
+    // Each dispose would otherwise free the scene's active-mesh lists once per block
+    this.scene!.blockfreeActiveMeshesAndRenderingGroups = true;
     removedKeys.forEach(removeKey);
+    this.scene!.blockfreeActiveMeshesAndRenderingGroups = false;
 
 
     // Resolve derived state reactively. Only a new block or a new block type grows in.
@@ -534,7 +540,7 @@ class Babylon3D {
     this.previewRenderer?.updatePreviewMeshes();
 
     // Refresh shadow map (renders once, not every frame)
-    refreshShadowMap(this.shadowSystem);
+    this.refreshShadows();
   }
 
   /**
@@ -585,6 +591,7 @@ class Babylon3D {
     this.materialResolver.clearAllCaches();
     // Base meshes have faceUV baked into geometry — must rebuild, not just reapply materials
     this.blockRenderer.clearAll();
+    this.flushShadowCasters();
     this.queueSceneUpdate();
     this.previewRenderer?.updatePreviewMeshes();
   }
@@ -648,14 +655,24 @@ class Babylon3D {
       }
     }
 
-    // Edge rendering
-    this.blockRenderer.updateEdgeRendering(settings);
-
     // Post-processing
     const camera = this.cameraRig.getCamera();
     this.postProcessing = updatePostProcessing(
       this.postProcessing, this.scene, camera, settings
     );
+  }
+
+  private flushShadowCasters(): void {
+    unregisterShadowCasters(this.shadowSystem, this.removedShadowCasters);
+    this.removedShadowCasters.clear();
+  }
+
+  /**
+   * Drop removed casters, then draw the shadow map once
+   */
+  private refreshShadows(): void {
+    this.flushShadowCasters();
+    refreshShadowMap(this.shadowSystem);
   }
 
   private reregisterAllShadowCasters(): void {
@@ -666,7 +683,7 @@ class Babylon3D {
   }
 
   private handleAnimationSettled(): void {
-    refreshShadowMap(this.shadowSystem);
+    this.refreshShadows();
   }
 
   private handleResizeObserved(entries: ResizeObserverEntry[]): void {

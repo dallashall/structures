@@ -70,19 +70,29 @@ export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSyst
 }
 
 /**
- * Register a mesh as a shadow caster
+ * Register a mesh as a shadow caster. Callers register each mesh once.
+ *
+ * Appends to the render list directly. ShadowGenerator.addShadowCaster scans the whole list
+ * for duplicates and walks the scene for child meshes, so registering N blocks costs O(N²).
  */
 export function registerShadowCaster(shadowSystem: ShadowSystem | null, mesh: AbstractMesh): void {
-  if (!shadowSystem) return;
-  shadowSystem.generator.addShadowCaster(mesh);
+  const shadowMap = shadowSystem?.generator.getShadowMap();
+  if (!shadowMap) return;
+  shadowMap.renderList ??= [];
+  shadowMap.renderList.push(mesh);
 }
 
 /**
- * Unregister a mesh as a shadow caster
+ * Unregister a batch of shadow casters in one pass over the render list.
+ * ShadowGenerator.removeShadowCaster splices one mesh per scan, which costs O(N²) for N removals.
  */
-export function unregisterShadowCaster(shadowSystem: ShadowSystem | null, mesh: AbstractMesh): void {
-  if (!shadowSystem) return;
-  shadowSystem.generator.removeShadowCaster(mesh);
+export function unregisterShadowCasters(shadowSystem: ShadowSystem | null, meshes: Set<AbstractMesh>): void {
+  const renderList = shadowSystem?.generator.getShadowMap()?.renderList;
+  if (!renderList || meshes.size === 0) return;
+  const isKept = (mesh: AbstractMesh): boolean => !meshes.has(mesh);
+  const kept = renderList.filter(isKept);
+  renderList.length = 0;
+  renderList.push(...kept);
 }
 
 /**

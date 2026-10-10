@@ -77,6 +77,8 @@ class EditHistory extends EventEmitter {
   private markers = new Map<string, ActionStartedData>();
   // Highest marker ID folded into state
   private latestMarkerId = 0;
+  // Highest event ID this tab has accounted for, any project. A higher ID in the log came from another tab.
+  private latestSeenEventId = 0;
   // Markers that arrive while replay() reads the log. Null when no replay is running.
   private bufferedMarkers: Event[] | null = null;
   private generation = 0;
@@ -129,11 +131,14 @@ class EditHistory extends EventEmitter {
     }
 
     this.bufferedMarkers = [];
+    // Read before the markers, so an event committed during the read counts as unseen
+    const latestEventId = await eventLog.getLatestEventId();
     const markers = await eventLog.getEvents({ projectId, types: [ACTION_STARTED] });
     if (generation !== this.generation) return;
 
     const buffered = this.bufferedMarkers;
     this.bufferedMarkers = null;
+    this.latestSeenEventId = Math.max(this.latestSeenEventId, latestEventId);
     this.state = foldHistory(markers);
     markers.forEach(this.rememberMarker);
     buffered.forEach(this.applyMarker);
@@ -145,6 +150,7 @@ class EditHistory extends EventEmitter {
   };
 
   private handleEvent = (event: Event): void => {
+    this.latestSeenEventId = Math.max(this.latestSeenEventId, event.id!);
     if (event.type !== ACTION_STARTED || event.projectId !== this.projectId) return;
 
     if (this.bufferedMarkers) {
@@ -199,8 +205,10 @@ class EditHistory extends EventEmitter {
     if (draftingService.isActive()) return;
     // A paint stroke still committing would otherwise land above the action this step targets
     await eventLog.settled();
-    // Another tab may have written markers this tab never heard about
-    await this.replay(this.projectId);
+    // Another tab may have written markers this tab never heard about. Only then are the stacks stale.
+    if ((await eventLog.getLatestEventId()) > this.latestSeenEventId) {
+      await this.replay(this.projectId);
+    }
 
     const stack = kind === 'undo' ? this.state.undoStack : this.state.redoStack;
     const target = stack[stack.length - 1];

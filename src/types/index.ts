@@ -326,10 +326,6 @@ export interface RenderSettings {
   // Environment
   environmentIntensity: number;
 
-  // Edges
-  edgesEnabled: boolean;
-  edgesWidth: number;
-  edgesColor: string;
 
   // Shadows
   shadowsEnabled: boolean;
@@ -370,9 +366,6 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   msaaSamples: 4,
   pbrEnabled: true,
   environmentIntensity: 0.5,
-  edgesEnabled: true,
-  edgesWidth: 1.0,
-  edgesColor: "#000000",
   shadowsEnabled: true,
   shadowMapSize: 1024,
   shadowDarkness: 0.5,

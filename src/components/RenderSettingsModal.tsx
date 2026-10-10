@@ -1,7 +1,7 @@
 /**
  * RenderSettingsModal - Configuration dialog for 3D render settings
  *
- * Provides controls for PBR, edges, shadows, SSAO, bloom, and tone mapping.
+ * Provides controls for PBR, shadows, SSAO, bloom, and tone mapping.
  * Changes apply immediately (live preview). Settings persist per-project.
  */
 
@@ -16,7 +16,6 @@ import {
   MenuItem,
   Divider,
   IconButton,
-  TextField,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -62,10 +61,6 @@ export function RenderSettingsModal({
 
   const handleBackgroundChange = (event: SelectChangeEvent<BackgroundMode>) => {
     onApply({ ...settings, backgroundMode: event.target.value as BackgroundMode });
-  };
-
-  const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onApply({ ...settings, edgesColor: event.target.value });
   };
 
   return (
@@ -136,22 +131,6 @@ export function RenderSettingsModal({
 
           <SwitchSetting label="PBR Materials" checked={settings.pbrEnabled} onChange={createToggleHandler('pbrEnabled')} />
           <SliderSetting label="Environment Intensity" value={settings.environmentIntensity} onChange={handleSlider('environmentIntensity')} min={0} max={2} step={0.1} disabled={!settings.pbrEnabled} />
-        </SettingsSection>
-
-        <SettingsSection title="Edge Rendering">
-          <SwitchSetting label="Enable Edges" checked={settings.edgesEnabled} onChange={createToggleHandler('edgesEnabled')} />
-          <SliderSetting label="Edge Width" value={settings.edgesWidth} onChange={handleSlider('edgesWidth')} min={0.5} max={4} step={0.5} disabled={!settings.edgesEnabled} />
-          <SettingRow label="Edge Color">
-            <TextField
-              type="color"
-              value={settings.edgesColor}
-              onChange={handleColorChange}
-              size="small"
-              disabled={!settings.edgesEnabled}
-              sx={{ width: 60 }}
-              slotProps={{ input: { sx: { p: 0.5, height: 32 } } }}
-            />
-          </SettingRow>
         </SettingsSection>
 
         <SettingsSection title="Shadows">

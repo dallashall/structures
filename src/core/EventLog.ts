@@ -294,43 +294,29 @@ class EventLog extends EventEmitter {
       return [];
     }
 
-    return new Promise((resolve, reject) => {
+    // One getAll request, not a cursor: a cursor costs one main-thread task per row,
+    // and each task waits behind any frame in progress
+    const readEvents = (resolve: (events: Event[]) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-
-      const events: Event[] = [];
       const request = query.projectId
-        ? store.index(PROJECT_INDEX).openCursor(toProjectKeyRange(query.projectId, query))
-        : store.openCursor(toKeyRange(query));
+        ? store.index(PROJECT_INDEX).getAll(toProjectKeyRange(query.projectId, query))
+        : store.getAll(toKeyRange(query));
 
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-
-        if (cursor) {
-          const evt = cursor.value as Event;
-
-          const matchesType =
-            !query.types || query.types.includes(evt.type);
-
-          const matchesProject =
-            !query.projectId || evt.projectId === query.projectId;
-
-          if (matchesType && matchesProject) {
-            events.push(evt);
-          }
-
-          cursor.continue();
-        } else {
-          // Done iterating
-          resolve(events);
-        }
+      const matchesType = (event: Event): boolean => !query.types || query.types.includes(event.type);
+      const handleSuccess = (): void => {
+        const rows = request.result as Event[];
+        resolve(rows.filter(matchesType));
       };
-
-      request.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to get events:', request.error);
         reject(request.error);
       };
-    });
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readEvents);
   }
 
   /**
