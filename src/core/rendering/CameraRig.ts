@@ -40,8 +40,8 @@ const ANIMATION_MS = 300;
 // Share of each viewport edge kept clear when fitting the model to the view
 const FIT_PADDING = 0.08;
 
-const DEFAULT_ALPHA = Math.PI / 4;
-const DEFAULT_BETA = Math.PI / 3;
+export const DEFAULT_ALPHA = Math.PI / 4;
+export const DEFAULT_BETA = Math.PI / 3;
 
 const VIEW_ANGLES = {
   left: { alpha: 0, beta: Math.PI / 2 },

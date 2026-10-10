@@ -3,6 +3,7 @@ import React from 'react';
 import type { StorageMetadata } from '../types';
 
 import { storage } from '../core/Storage';
+import { thumbnailStore } from '../core/ThumbnailStore';
 
 /**
  * Props injected by withProjectListState HOC
@@ -18,7 +19,7 @@ export interface WithProjectListStateProps {
 /**
  * HOC that bridges the Storage singleton to the project browser.
  *
- * Lists projects on mount and again on project:deleted.
+ * Lists projects on mount, and again on project:deleted and thumbnail:saved.
  * Holds which card is selected, a view-local choice that no other part of the app reads.
  */
 export function withProjectListState<P extends object>(
@@ -39,16 +40,19 @@ export function withProjectListState<P extends object>(
         setIsLoadingProjects(false);
       };
 
-      const handleProjectDeleted = (): void => {
+      const reloadProjects = (): void => {
         void loadProjects();
       };
 
       void loadProjects();
-      storage.on('project:deleted', handleProjectDeleted);
+      storage.on('project:deleted', reloadProjects);
+      // Leaving the editor saves a thumbnail, which can land after this list first loads
+      thumbnailStore.on('thumbnail:saved', reloadProjects);
 
       return () => {
         isMounted = false;
-        storage.off('project:deleted', handleProjectDeleted);
+        storage.off('project:deleted', reloadProjects);
+        thumbnailStore.off('thumbnail:saved', reloadProjects);
       };
     }, []);
 

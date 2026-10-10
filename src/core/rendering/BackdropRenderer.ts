@@ -18,6 +18,7 @@ import {
 } from '@babylonjs/core';
 
 import type { BackgroundMode } from '../../types';
+import { includeInThumbnail } from './ThumbnailCapture';
 
 // Sphere diameter. It must stay inside the camera far plane (BabylonJS default maxZ is 10000).
 const BACKDROP_SIZE = 1000;
@@ -47,6 +48,7 @@ export class BackdropRenderer {
       scene,
     );
     this.mesh.infiniteDistance = true;
+    includeInThumbnail(this.mesh);
     this.mesh.isPickable = false;
     this.mesh.material = this.material;
     this.mesh.setEnabled(false);

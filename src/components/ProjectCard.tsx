@@ -51,7 +51,7 @@ export function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) 
             sx={{
               width: '100%',
               height: '100%',
-              objectFit: 'contain',
+              objectFit: 'cover',
             }}
           />
         ) : (

@@ -5,12 +5,14 @@
  * It has no record of its own, so it cannot disagree with the events.
  * A project exists exactly when the log holds its metadata:created event.
  *
+ * Thumbnails come from ThumbnailStore, since they are derived images, not events.
  * The last opened project ID lives in a separate IndexedDB database.
  * All persistence is IndexedDB: the app writes nothing to localStorage.
  */
 
 import { EventEmitter } from './EventEmitter';
 import { eventLog, type Event } from './EventLog';
+import { thumbnailStore } from './ThumbnailStore';
 import { replayModel } from '../reducers/modelReducer';
 import type { StorageMetadata } from '../types';
 
@@ -45,7 +47,7 @@ const replayProjectEvent = (replay: ProjectReplay, event: Event): void => {
   replay.events.push(event);
 };
 
-const toStorageMetadata = (replay: ProjectReplay): StorageMetadata => {
+const toStorageMetadata = (thumbnails: Map<string, string>) => (replay: ProjectReplay): StorageMetadata => {
   const model = replayModel(replay.events);
   return {
     id: replay.id,
@@ -54,7 +56,7 @@ const toStorageMetadata = (replay: ProjectReplay): StorageMetadata => {
     modified: new Date(replay.modified),
     dimensions: model.dimensions,
     blockCount: model.blocks.size,
-    thumbnail: '',
+    thumbnail: thumbnails.get(replay.id) ?? '',
   };
 };
 
@@ -105,7 +107,7 @@ class Storage extends EventEmitter {
    */
   async listProjects(): Promise<StorageMetadata[]> {
     // Events arrive in ID order, so metadata:created precedes a project's other events
-    const events = await eventLog.getEvents();
+    const [events, thumbnails] = await Promise.all([eventLog.getEvents(), thumbnailStore.getAll()]);
     const replays = new Map<string, ProjectReplay>();
 
     for (const event of events) {
@@ -129,7 +131,7 @@ class Storage extends EventEmitter {
       }
     }
 
-    return [...replays.values()].map(toStorageMetadata).sort(byCreated);
+    return [...replays.values()].map(toStorageMetadata(thumbnails)).sort(byCreated);
   }
 
   /**
@@ -150,6 +152,7 @@ class Storage extends EventEmitter {
     }
 
     await eventLog.deleteProjectEvents(projectId);
+    await thumbnailStore.deleteProject(projectId);
 
     this.emit('project:deleted');
   }

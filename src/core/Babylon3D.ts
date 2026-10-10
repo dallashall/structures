@@ -48,6 +48,8 @@ import { CameraRig } from './rendering/CameraRig';
 import { CameraGestures } from './rendering/CameraGestures';
 import { BlockRenderer } from './rendering/BlockRenderer';
 import { staggerTiming } from './rendering/GrowAnimator';
+import { ThumbnailCapture, type Bounds } from './rendering/ThumbnailCapture';
+import { thumbnailStore } from './ThumbnailStore';
 import { PreviewRenderer } from './rendering/PreviewRenderer';
 import { BackdropRenderer } from './rendering/BackdropRenderer';
 import { positionKey, toBabylonVector } from './rendering/babylonUtils';
@@ -57,6 +59,9 @@ import type { BlockData, LightingPreset, Project, RenderSettings } from '../type
 import type { CameraView } from './rendering/CameraRig';
 import type { ShadowSystem } from './rendering/ShadowSetup';
 import type { PostProcessingPipelines } from './rendering/PostProcessingSetup';
+
+// Longer than the grow and shrink sequence, so the thumbnail shows blocks at full size
+const THUMBNAIL_DELAY_MS = 1000;
 
 const toShownKey = ({ id, dimensions: { width, height, depth } }: Project): string =>
   `${id}:${width}x${height}x${depth}`;
@@ -94,6 +99,10 @@ class Babylon3D {
   private framedKey: string | null = null;
   // Project and size the meshes on screen show. Blocks animate only while this stays the same.
   private shownKey: string | null = null;
+  private thumbnailCapture: ThumbnailCapture | null = null;
+  // Project whose scene changed since its last thumbnail. Null when the stored thumbnail is current.
+  private thumbnailProjectId: string | null = null;
+  private thumbnailTimer: ReturnType<typeof setTimeout> | null = null;
   // Meshes to drop from the shadow render list in one pass. flushShadowCasters empties it.
   private removedShadowCasters = new Set<AbstractMesh>();
 
@@ -104,6 +113,8 @@ class Babylon3D {
   private boundHandlers = {
     queueSceneUpdate: this.queueSceneUpdate.bind(this),
     animationSettled: this.handleAnimationSettled.bind(this),
+    projectSwitched: this.handleProjectSwitched.bind(this),
+    thumbnailDue: this.flushThumbnail.bind(this),
     renderFrame: this.renderFrame.bind(this),
     previewChanged: this.handlePreviewChanged.bind(this),
     layerChanged: this.handleLayerChanged.bind(this),
@@ -149,6 +160,7 @@ class Babylon3D {
     this.cameraGestures = new CameraGestures(canvas, this.cameraRig);
     this.materialResolver = new MaterialResolver(this.scene);
     this.blockRenderer = new BlockRenderer(this.scene, this.materialResolver);
+    this.thumbnailCapture = new ThumbnailCapture(this.scene);
     // Shadows draw once per update. Redraw them when growing and shrinking blocks reach their final size.
     this.blockRenderer.setAnimationSettledCallback(this.boundHandlers.animationSettled);
     this.previewRenderer = new PreviewRenderer(this.scene, this.materialResolver);
@@ -184,6 +196,10 @@ class Babylon3D {
    */
   detach(): void {
     if (!this.canvas) return;
+
+    // Leaving the editor unmounts the view, so a pending thumbnail is captured now or never
+    this.flushThumbnail();
+    this.thumbnailCapture = null;
 
     // Leave render loop
     renderLoop.off('tick', this.boundHandlers.renderFrame);
@@ -392,6 +408,7 @@ class Babylon3D {
     editorState.on('preview:rendered', this.boundHandlers.previewChanged);
 
     editorState.on('layer:adjusted', this.boundHandlers.layerChanged);
+    editorState.on('project:switched', this.boundHandlers.projectSwitched);
     editorState.on('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.on('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
@@ -408,6 +425,7 @@ class Babylon3D {
     editorState.off('preview:rendered', this.boundHandlers.previewChanged);
 
     editorState.off('layer:adjusted', this.boundHandlers.layerChanged);
+    editorState.off('project:switched', this.boundHandlers.projectSwitched);
     editorState.off('sliceguide:axis:toggled', this.boundHandlers.sliceGuideToggled);
     editorState.off('rendersettings:applied', this.boundHandlers.renderSettingsApplied);
 
@@ -511,7 +529,6 @@ class Babylon3D {
     removedKeys.forEach(removeKey);
     this.scene!.blockfreeActiveMeshesAndRenderingGroups = false;
 
-
     // Resolve derived state reactively. Only a new block or a new block type grows in.
     // A derived shape change (a stair turning a corner) swaps at once.
     const resolveBlock = (blockData: BlockData): BlockData =>
@@ -541,6 +558,11 @@ class Babylon3D {
 
     // Refresh shadow map (renders once, not every frame)
     this.refreshShadows();
+
+    // A first load also counts, so a project saved before thumbnails existed gets one
+    if (!animate || removedKeys.length > 0 || added.size > 0) {
+      this.scheduleThumbnail(project.id);
+    }
   }
 
   /**
@@ -680,6 +702,47 @@ class Babylon3D {
     for (const mesh of this.blockRenderer.getBlockMeshes().values()) {
       registerShadowCaster(this.shadowSystem, mesh);
     }
+  }
+
+  /**
+   * Capture a thumbnail once edits pause. The delay outlasts the grow and shrink sequence (SEQUENCE_MS).
+   */
+  private scheduleThumbnail(projectId: string): void {
+    this.thumbnailProjectId = projectId;
+    if (this.thumbnailTimer) clearTimeout(this.thumbnailTimer);
+    this.thumbnailTimer = setTimeout(this.boundHandlers.thumbnailDue, THUMBNAIL_DELAY_MS);
+  }
+
+  private flushThumbnail(): void {
+    if (this.thumbnailTimer) clearTimeout(this.thumbnailTimer);
+    this.thumbnailTimer = null;
+
+    const projectId = this.thumbnailProjectId;
+    if (!projectId || !this.thumbnailCapture || !this.enhancementsReady) return;
+    this.thumbnailProjectId = null;
+
+    const dataUrl = this.thumbnailCapture.capture(this.blockBounds());
+    if (dataUrl) void thumbnailStore.save(projectId, dataUrl);
+  }
+
+  // Bounds of the placed blocks in Babylon space, or of the build volume when there are none
+  private blockBounds(): Bounds {
+    const min = new Vector3(Infinity, Infinity, Infinity);
+    const max = new Vector3(-Infinity, -Infinity, -Infinity);
+    const extend = ({ position }: BlockData): void => {
+      min.minimizeInPlace(toBabylonVector(position));
+      max.maximizeInPlace(toBabylonVector({ x: position.x + 1, y: position.y + 1, z: position.z + 1 }));
+    };
+    blockProjection.getCached().forEach(extend);
+    if (min.x !== Infinity) return { min, max };
+
+    const { width, height, depth } = modelProjection.getCached().dimensions;
+    return { min: Vector3.Zero(), max: toBabylonVector({ x: width, y: height, z: depth }) };
+  }
+
+  // The scene still shows the previous project here: the projections reset after this notification
+  private handleProjectSwitched(): void {
+    this.flushThumbnail();
   }
 
   private handleAnimationSettled(): void {

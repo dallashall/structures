@@ -18,6 +18,7 @@ import {
 import type { AbstractMesh } from '@babylonjs/core';
 
 import type { RenderSettings } from '../../types';
+import { includeInThumbnail } from './ThumbnailCapture';
 
 export interface ShadowSystem {
   generator: ShadowGenerator;
@@ -59,6 +60,7 @@ export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSyst
   );
   groundPlane.position.y = 0;
   groundPlane.receiveShadows = true;
+  includeInThumbnail(groundPlane);
 
   const groundMat = new StandardMaterial('shadowGroundMat', scene);
   groundMat.diffuseColor = new Color3(0.1, 0.1, 0.1);

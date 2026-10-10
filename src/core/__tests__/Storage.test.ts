@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../EventLog';
 import { storage } from '../Storage';
+import { thumbnailStore } from '../ThumbnailStore';
 import type { StorageMetadata } from '../../types';
 
 const toName = (project: StorageMetadata): string => project.name;
@@ -76,5 +77,15 @@ describe('Storage', () => {
 
     expect(await storage.listProjects()).toEqual([]);
     expect(await storage.getLastOpenedProjectId()).toBeNull();
+  });
+
+  it('lists the stored thumbnail and deletes it with the project', async () => {
+    await createProject('a', 'Alpha');
+    await thumbnailStore.save('a', 'data:image/jpeg;base64,AAAA');
+
+    expect((await storage.listProjects())[0].thumbnail).toBe('data:image/jpeg;base64,AAAA');
+
+    await storage.deleteProject('a');
+    expect((await thumbnailStore.getAll()).has('a')).toBe(false);
   });
 });

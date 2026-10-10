@@ -23,6 +23,7 @@ import { editorState } from '../EditorState';
 import { toBabylonVector, positionKey, centerInCell, isTintedTextureBlock } from './babylonUtils';
 import { shapeCatalog } from '../shapes/ShapeCatalog';
 import { GrowAnimator, type StepTiming } from './GrowAnimator';
+import { includeInThumbnail } from './ThumbnailCapture';
 
 import type { MaterialResolver } from './MaterialResolver';
 import type { Vector3D, BlockData, BlockStateProperties } from '../../types';
@@ -101,6 +102,7 @@ export class BlockRenderer {
     if (!base) return;
 
     const instance = base.createInstance(`inst_${key}`);
+    includeInThumbnail(instance);
     instance.position = toBabylonVector(centerInCell(blockData.position));
 
     // Apply per-instance rotation from shape
@@ -310,6 +312,7 @@ export class BlockRenderer {
     }
 
     base.isVisible = false; // Hidden base — instances are visible
+    includeInThumbnail(base);
     base.material = this.materialResolver.resolve(blockType);
 
     // Register per-instance color buffer for layer highlight
