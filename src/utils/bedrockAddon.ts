@@ -3,7 +3,7 @@
  * and a resource pack that gives the item a vanilla icon. No texture file ships in either pack.
  *
  * Pack UUIDs derive from the project ID, so a later export of the same project updates the installed packs.
- * The version is the export time in seconds, which only rises.
+ * The version comes from the export time, so it rises with every export (see toPackVersion).
  */
 
 import { strToU8, zipSync } from 'fflate';
@@ -65,6 +65,19 @@ export function toAddonNames(projectName: string): AddonNames {
     itemId: `${NAMESPACE}:${slug}_wand`,
     componentId: `${NAMESPACE}:build_${slug}`,
   };
+}
+
+const DAY_MS = 86_400_000;
+const MINUTE_MS = 60_000;
+const VERSION_EPOCH_MS = Date.UTC(2026, 0, 1);
+
+/**
+ * [1, days since 2026-01-01, minute of the UTC day]. Bedrock reads each part as a 16-bit number,
+ * so a part above 65535 makes the whole manifest unreadable.
+ */
+export function toPackVersion(exportedAt: number): [number, number, number] {
+  const sinceEpoch = Math.max(0, exportedAt - VERSION_EPOCH_MS);
+  return [1, Math.floor(sinceEpoch / DAY_MS), Math.floor((sinceEpoch % DAY_MS) / MINUTE_MS)];
 }
 
 const toHex = (byte: number): string => byte.toString(16).padStart(2, '0');
@@ -160,7 +173,7 @@ const toJson = (value: unknown): Uint8Array => strToU8(`${JSON.stringify(value, 
  */
 export async function toAddonFiles(options: AddonOptions): Promise<Record<string, Uint8Array>> {
   const names = toAddonNames(options.projectName);
-  const version = [1, 0, Math.floor(options.exportedAt / 1000)];
+  const version = toPackVersion(options.exportedAt);
   const [behaviorUuid, dataUuid, scriptUuid, resourceUuid, resourceModuleUuid] = await Promise.all([
     toStableUuid(`${options.projectId}:behavior`),
     toStableUuid(`${options.projectId}:behavior:data`),

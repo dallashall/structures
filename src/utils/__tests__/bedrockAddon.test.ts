@@ -6,7 +6,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
-import { toAddonFiles, toAddonNames, toAddonScript, toMcaddon, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
+import { toAddonFiles, toAddonNames, toAddonScript, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
 import type { AddonOptions } from '../bedrockAddon';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: -1, y: 0, z: -2 } };
@@ -32,6 +32,21 @@ describe('toSlug', () => {
   });
 });
 
+describe('toPackVersion', () => {
+  const at = (iso: string): number => Date.parse(iso);
+  const isUnsigned16 = (part: number): boolean => Number.isInteger(part) && part >= 0 && part <= 65535;
+
+  it('keeps every part within the 16-bit range Bedrock reads', () => {
+    expect(toPackVersion(at('2026-10-12T17:30:00Z'))).toEqual([1, 284, 1050]);
+    expect(toPackVersion(at('2099-12-31T23:59:00Z')).every(isUnsigned16)).toBe(true);
+  });
+
+  it('rises from one export to the next', () => {
+    const toNumber = ([, day, minute]: number[]): number => day * 1440 + minute;
+    expect(toNumber(toPackVersion(at('2026-10-13T00:01:00Z')))).toBeGreaterThan(toNumber(toPackVersion(at('2026-10-12T23:59:00Z'))));
+  });
+});
+
 describe('toAddonFiles', () => {
   it('lays out a behavior pack and a resource pack with no texture files', async () => {
     const files = await toAddonFiles(OPTIONS);
@@ -49,8 +64,9 @@ describe('toAddonFiles', () => {
     const files = await toAddonFiles(OPTIONS);
     const behavior = readJson(files, 'castle_keep_BP/manifest.json');
     const resource = readJson(files, 'castle_keep_RP/manifest.json');
-    expect(behavior.dependencies).toContainEqual({ uuid: resource.header.uuid, version: [1, 0, 1_800_000_000] });
-    expect(resource.dependencies).toContainEqual({ uuid: behavior.header.uuid, version: [1, 0, 1_800_000_000] });
+    const version = toPackVersion(OPTIONS.exportedAt);
+    expect(behavior.dependencies).toContainEqual({ uuid: resource.header.uuid, version });
+    expect(resource.dependencies).toContainEqual({ uuid: behavior.header.uuid, version });
     expect(behavior.dependencies).toContainEqual({ module_name: '@minecraft/server', version: SCRIPT_API_VERSION });
   });
 
