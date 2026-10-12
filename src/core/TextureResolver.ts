@@ -23,6 +23,8 @@ class TextureResolver extends EventEmitter {
 
   // Keyed by `${blockId}_${faceIndex}`
   private tintedTextureCache = new Map<string, HTMLCanvasElement>();
+  // Keyed by `${blockId}_${faceIndex}`. Null means the face has no texture to average.
+  private faceColorCache = new Map<string, string | null>();
 
   private constructor() {
     super();
@@ -295,6 +297,50 @@ class TextureResolver extends EventEmitter {
     if (this.loadingPromise) {
       await this.loadingPromise;
     }
+  }
+
+  /**
+   * The face texture's average color as a CSS rgba(), for cells too small to show the texture.
+   * Each texel counts by its alpha, so a glass or leaf face averages over the texels that draw.
+   */
+  getFaceColor(blockId: string, faceIndex: number): string | null {
+    const cacheKey = `${blockId}_${faceIndex}`;
+    if (this.faceColorCache.has(cacheKey)) return this.faceColorCache.get(cacheKey) ?? null;
+
+    const tinted = this.getTintedTexture(blockId, faceIndex);
+    const coords = tinted ? null : this.getBlockFaceCoords(blockId, faceIndex);
+    const source = tinted ?? (coords && this.atlas?.loaded ? this.atlas.image : null);
+    if (!source) return null;
+
+    const sx = coords?.x ?? 0;
+    const sy = coords?.y ?? 0;
+    const width = Math.max(1, Math.round(coords?.width ?? (source as HTMLCanvasElement).width));
+    const height = Math.max(1, Math.round(coords?.height ?? (source as HTMLCanvasElement).height));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+    context.drawImage(source, sx, sy, width, height, 0, 0, width, height);
+    const { data } = context.getImageData(0, 0, width, height);
+
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    let alpha = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const weight = data[i + 3];
+      red += data[i] * weight;
+      green += data[i + 1] * weight;
+      blue += data[i + 2] * weight;
+      alpha += weight;
+    }
+
+    const color = alpha === 0
+      ? null
+      : `rgba(${Math.round(red / alpha)}, ${Math.round(green / alpha)}, ${Math.round(blue / alpha)}, ${(alpha / (255 * (data.length / 4))).toFixed(3)})`;
+    this.faceColorCache.set(cacheKey, color);
+    return color;
   }
 
   getTintedTexture(blockId: string, faceIndex: number = 0): HTMLCanvasElement | null {

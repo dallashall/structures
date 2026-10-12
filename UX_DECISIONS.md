@@ -97,6 +97,8 @@ This document records the interaction decisions for Structures and how the app c
 - Selective Replace: replace only a chosen block type
 - Erase: remove blocks. The preview turns red. Erase with an outline shape and depth cuts a tunnel. Erase with a filled shape and depth hollows out a volume.
 
+**Small cells:** below 12px a cell fills edge to edge with its face's average texture color. Textures and the 1px gap between cells return at 12px and up.
+
 **Zoom and pan:**
 - The grid fits the panel until the user zooms or pans.
 - The mouse wheel zooms.

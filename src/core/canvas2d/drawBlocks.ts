@@ -18,6 +18,10 @@ const FACE_INDEX_MAP: Record<ViewType, number> = {
   bottom: 5,
 };
 
+// Below this cell size a 16px texture shrinks to a few sampled texels, so cells fill with the face's
+// average color instead, edge to edge, so neighboring blocks read as one surface
+export const SOLID_COLOR_BELOW_PX = 12;
+
 export function drawPersistentBlocks(
   ctx: CanvasRenderingContext2D,
   blocks: GridBlock[],
@@ -49,20 +53,15 @@ export function drawPersistentBlocks(
       ctx.clip();
     }
 
-    const rendered = renderBlockTexture(
-      ctx,
-      block,
-      faceIndex,
-      px,
-      py,
-      cellSize,
-      gridBlock.opacity,
-    );
+    const rendered = cellSize < SOLID_COLOR_BELOW_PX
+      ? renderBlockColor(ctx, block, faceIndex, px, py, cellSize, gridBlock.opacity)
+      : renderBlockTexture(ctx, block, faceIndex, px, py, cellSize, gridBlock.opacity);
 
     if (!rendered) {
       ctx.fillStyle = block.color;
       ctx.globalAlpha = gridBlock.opacity;
-      ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+      if (cellSize < SOLID_COLOR_BELOW_PX) fillSnappedCell(ctx, px, py, cellSize);
+      else ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       ctx.globalAlpha = 1.0;
     }
 
@@ -70,6 +69,40 @@ export function drawPersistentBlocks(
       ctx.restore();
     }
   }
+}
+
+/**
+ * Returns false when the face has no texture to average, so the caller draws the catalog color
+ */
+function renderBlockColor(
+  ctx: CanvasRenderingContext2D,
+  block: { id: string; isTransparent: boolean },
+  faceIndex: number,
+  px: number,
+  py: number,
+  cellSize: number,
+  opacity: number,
+): boolean {
+  const color = textureResolver.getFaceColor(block.id, faceIndex);
+  if (!color) return false;
+
+  ctx.fillStyle = color;
+  ctx.globalAlpha = block.isTransparent ? opacity * 0.15 : opacity;
+  fillSnappedCell(ctx, px, py, cellSize);
+  ctx.globalAlpha = 1.0;
+  return true;
+}
+
+/**
+ * Fills the cell with its edges rounded to whole device pixels. Neighbors then share an edge exactly,
+ * where fractional edges would each half-cover the boundary pixel and leave a seam of background between them.
+ */
+function fillSnappedCell(ctx: CanvasRenderingContext2D, px: number, py: number, cellSize: number): void {
+  const scale = ctx.getTransform().a || 1;
+  const snap = (value: number): number => Math.round(value * scale) / scale;
+  const left = snap(px);
+  const top = snap(py);
+  ctx.fillRect(left, top, snap(px + cellSize) - left, snap(py + cellSize) - top);
 }
 
 /**
