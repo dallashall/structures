@@ -30,7 +30,7 @@ The Babylon.js modules behind the 3D view. `Babylon3D` (`src/core/Babylon3D.ts`)
 | `EmissiveLighting.ts` | class | Point lights at luminous blocks. |
 | `PBRCategoryMap.ts` | functions | Classifies blocks by name into metallic and roughness presets. |
 | `PostProcessingSetup.ts` | functions | SSAO, bloom, and tone mapping pipelines. |
-| `ThumbnailCapture.ts` | class | Renders the structure from a fixed camera into a small JPEG for the project card. Needs the engine's `preserveDrawingBuffer`. |
+| `ThumbnailCapture.ts` | class | Poses the view camera at a fixed framing, renders one frame, and crops it to a small JPEG for the project card. It never switches `scene.activeCamera`, because that breaks the SSAO prepass. Needs the engine's `preserveDrawingBuffer`. |
 | `babylonUtils.ts` | functions | Coordinate conversion, color parsing, position keys. |
 
 Babylon3D subscribes to projection, DraftingService, EditorState, and TextureResolver notifications. It forwards them to the modules. `SlicePlaneVisualizer` is the one module that subscribes to EditorState itself.

@@ -160,7 +160,7 @@ class Babylon3D {
     this.cameraGestures = new CameraGestures(canvas, this.cameraRig);
     this.materialResolver = new MaterialResolver(this.scene);
     this.blockRenderer = new BlockRenderer(this.scene, this.materialResolver);
-    this.thumbnailCapture = new ThumbnailCapture(this.scene);
+    this.thumbnailCapture = new ThumbnailCapture(this.scene, this.cameraRig.getCamera());
     // Shadows draw once per update. Redraw them when growing and shrinking blocks reach their final size.
     this.blockRenderer.setAnimationSettledCallback(this.boundHandlers.animationSettled);
     this.previewRenderer = new PreviewRenderer(this.scene, this.materialResolver);

@@ -1,23 +1,27 @@
 /**
- * ThumbnailCapture - Renders the structure from a fixed framing camera into a small JPEG
+ * ThumbnailCapture - Renders the structure from a fixed framing into a small JPEG
  *
- * The capture draws one frame into the 3D view's own canvas with a separate camera, copies it,
- * then draws the view's camera again before returning. The browser only shows the canvas after
- * the task ends, so the extra frame never appears on screen. This needs the engine's
- * preserveDrawingBuffer, which Babylon3D sets, and it runs synchronously, so detach can call it.
+ * The capture moves the view's own camera to the thumbnail framing, draws one frame into the
+ * 3D view's canvas, copies it, then puts the camera back and draws again before returning.
+ * The browser only shows the canvas after the task ends, so the extra frame never appears on screen.
+ * This needs the engine's preserveDrawingBuffer, which Babylon3D sets, and it runs synchronously,
+ * so detach can call it.
  *
- * The thumbnail camera renders only meshes on THUMBNAIL_LAYER: blocks, the sky backdrop, and
- * the shadow ground. Axes, grid lines, slice planes, and previews stay out of it.
- * Post-processing is attached to the view's camera only, so thumbnails skip it.
+ * The capture never changes scene.activeCamera. A camera change makes Babylon's prepass renderer
+ * rebuild its targets for the new camera, and the view camera's SSAO pass then reads textures
+ * that no longer exist. Thumbnails carry the view's post-processing as a result.
+ *
+ * During the capture the camera sees only meshes on THUMBNAIL_LAYER: blocks, the sky backdrop,
+ * and the shadow ground. Axes, grid lines, slice planes, and previews stay out of it.
  */
 
-import { ArcRotateCamera, Vector3 } from '@babylonjs/core';
-import type { Camera, Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core';
+import type { ArcRotateCamera, Scene } from '@babylonjs/core';
 
 import { DEFAULT_ALPHA, DEFAULT_BETA } from './CameraRig';
 
 // Bit 28: outside Babylon's default mesh mask (0x0FFFFFFF), so no mesh carries it unless tagged.
-// The view's camera keeps the default mask, which still sees tagged meshes through their low bits.
+// The view's own mask still sees tagged meshes through their low bits.
 const THUMBNAIL_LAYER = 0x10000000;
 
 const WIDTH = 320;
@@ -49,39 +53,62 @@ function fitDistance(radius: number, fov: number, canvasAspect: number): number 
   return (radius * PADDING) / Math.sin(Math.atan(tanVertical));
 }
 
+type CameraPose = Pick<
+  ArcRotateCamera,
+  'alpha' | 'beta' | 'radius' | 'layerMask' | 'inertialAlphaOffset' | 'inertialBetaOffset' | 'inertialRadiusOffset'
+> & { target: Vector3 };
+
+const toPose = (camera: ArcRotateCamera): CameraPose => ({
+  alpha: camera.alpha,
+  beta: camera.beta,
+  radius: camera.radius,
+  target: camera.target.clone(),
+  layerMask: camera.layerMask,
+  inertialAlphaOffset: camera.inertialAlphaOffset,
+  inertialBetaOffset: camera.inertialBetaOffset,
+  inertialRadiusOffset: camera.inertialRadiusOffset,
+});
+
+// setTarget would rebuild alpha, beta, and radius from the old position, so the target is copied in place
+const applyPose = (camera: ArcRotateCamera, { target, ...pose }: CameraPose): void => {
+  camera.target.copyFrom(target);
+  Object.assign(camera, pose);
+};
+
 export class ThumbnailCapture {
-  constructor(private readonly scene: Scene) {}
+  constructor(
+    private readonly scene: Scene,
+    private readonly camera: ArcRotateCamera,
+  ) {}
 
   /**
    * JPEG data URL of `bounds` seen from the default viewing angle, or null when the canvas cannot be read
    */
   capture(bounds: Bounds): string | null {
-    const engine = this.scene.getEngine();
-    const source = engine.getRenderingCanvas();
-    const viewCamera = this.scene.activeCamera;
-    if (!source || !viewCamera || source.width === 0 || source.height === 0) return null;
+    const source = this.scene.getEngine().getRenderingCanvas();
+    if (!source || source.width === 0 || source.height === 0) return null;
 
-    const center = Vector3.Center(bounds.min, bounds.max);
+    const viewPose = toPose(this.camera);
     const radius = Math.max(0.5, Vector3.Distance(bounds.min, bounds.max) / 2);
-    const camera = new ArcRotateCamera('thumbnailCamera', DEFAULT_ALPHA, DEFAULT_BETA, 1, center, this.scene);
-    camera.layerMask = THUMBNAIL_LAYER;
-    camera.fov = viewCamera.fov;
-    camera.minZ = viewCamera.minZ;
-    camera.maxZ = viewCamera.maxZ;
-    camera.radius = fitDistance(radius, camera.fov, source.width / source.height);
 
     try {
-      this.renderWith(camera);
+      // Inertia offsets are zeroed so the frame lands exactly on the thumbnail pose
+      applyPose(this.camera, {
+        alpha: DEFAULT_ALPHA,
+        beta: DEFAULT_BETA,
+        radius: fitDistance(radius, this.camera.fov, source.width / source.height),
+        target: Vector3.Center(bounds.min, bounds.max),
+        layerMask: THUMBNAIL_LAYER,
+        inertialAlphaOffset: 0,
+        inertialBetaOffset: 0,
+        inertialRadiusOffset: 0,
+      });
+      this.scene.render();
       return this.cropToDataUrl(source);
     } finally {
-      this.renderWith(viewCamera);
-      camera.dispose();
+      applyPose(this.camera, viewPose);
+      this.scene.render();
     }
-  }
-
-  private renderWith(camera: Camera): void {
-    this.scene.activeCamera = camera;
-    this.scene.render();
   }
 
   // Center crop to ASPECT, scaled down to WIDTH x HEIGHT
