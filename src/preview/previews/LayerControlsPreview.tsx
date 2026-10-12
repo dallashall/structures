@@ -7,6 +7,10 @@ import type { Dimensions, LayerState } from '../../types';
  * Preview showcase for the LayerControls component
  * Demonstrates compact layer display with expandable popover controls
  */
+const logStaticLayerChange = (dimension: 'x' | 'y' | 'z', layer: number): void => {
+  console.log('[Static] Layer change:', dimension, layer);
+};
+
 export function LayerControlsPreview() {
   const [activeLayers, setActiveLayers] = useState<LayerState>({
     x: 5,
@@ -18,10 +22,11 @@ export function LayerControlsPreview() {
   const largeDimensions: Dimensions = { width: 64, height: 64, depth: 64 };
 
   const handleLayerChange = (dimension: 'x' | 'y' | 'z', layer: number) => {
-    setActiveLayers((prev) => ({
+    const withLayer = (prev: LayerState): LayerState => ({
       ...prev,
       [dimension]: layer,
-    }));
+    });
+    setActiveLayers(withLayer);
     console.log('[Preview] Layer changed:', dimension, layer);
   };
 
@@ -42,9 +47,7 @@ export function LayerControlsPreview() {
         <LayerControls
           maxDimensions={smallDimensions}
           activeLayers={{ x: 8, y: 8, z: 8 }}
-          onLayerChange={(dim, layer) =>
-            console.log('[Static] Layer change:', dim, layer)
-          }
+          onLayerChange={logStaticLayerChange}
         />
       </Box>
 
@@ -57,9 +60,7 @@ export function LayerControlsPreview() {
         <LayerControls
           maxDimensions={largeDimensions}
           activeLayers={{ x: 32, y: 16, z: 48 }}
-          onLayerChange={(dim, layer) =>
-            console.log('[Static] Layer change:', dim, layer)
-          }
+          onLayerChange={logStaticLayerChange}
         />
       </Box>
 

@@ -261,13 +261,14 @@ export class ShapeUtils {
    */
   private static removeDuplicates(positions: Vector3D[]): Vector3D[] {
     const seen = new Set<string>();
-    return positions.filter((pos) => {
+    const isFirstAtPosition = (pos: Vector3D): boolean => {
       const key = `${pos.x},${pos.y},${pos.z}`;
       if (seen.has(key)) {
         return false;
       }
       seen.add(key);
       return true;
-    });
+    };
+    return positions.filter(isFirstAtPosition);
   }
 }

@@ -6,6 +6,36 @@ import { LayerDimensionControl } from '../../components/LayerDimensionControl';
  * Preview showcase for the LayerDimensionControl component
  * Demonstrates single dimension layer control with buttons and slider
  */
+const logXIncrement = (): void => {
+  console.log('[Static] X increment');
+};
+const logXDecrement = (): void => {
+  console.log('[Static] X decrement');
+};
+const logXChange = (value: number): void => {
+  console.log('[Static X]:', value);
+};
+
+const logYIncrement = (): void => {
+  console.log('[Static] Y increment');
+};
+const logYDecrement = (): void => {
+  console.log('[Static] Y decrement');
+};
+const logYChange = (value: number): void => {
+  console.log('[Static Y]:', value);
+};
+
+const logZIncrement = (): void => {
+  console.log('[Static] Z increment');
+};
+const logZDecrement = (): void => {
+  console.log('[Static] Z decrement');
+};
+const logZChange = (value: number): void => {
+  console.log('[Static Z]:', value);
+};
+
 export function LayerDimensionControlPreview() {
   const [xLayer, setXLayer] = useState(5);
   const [yLayer, setYLayer] = useState(12);
@@ -80,9 +110,9 @@ export function LayerDimensionControlPreview() {
           label="X Layer"
           currentLayer={8}
           maxLayer={15}
-          onIncrement={() => console.log('[Static] X increment')}
-          onDecrement={() => console.log('[Static] X decrement')}
-          onChange={(value) => console.log('[Static X]:', value)}
+          onIncrement={logXIncrement}
+          onDecrement={logXDecrement}
+          onChange={logXChange}
         />
       </Box>
 
@@ -96,9 +126,9 @@ export function LayerDimensionControlPreview() {
           label="Y Layer"
           currentLayer={16}
           maxLayer={31}
-          onIncrement={() => console.log('[Static] Y increment')}
-          onDecrement={() => console.log('[Static] Y decrement')}
-          onChange={(value) => console.log('[Static Y]:', value)}
+          onIncrement={logYIncrement}
+          onDecrement={logYDecrement}
+          onChange={logYChange}
         />
       </Box>
 
@@ -112,9 +142,9 @@ export function LayerDimensionControlPreview() {
           label="Z Layer"
           currentLayer={32}
           maxLayer={63}
-          onIncrement={() => console.log('[Static] Z increment')}
-          onDecrement={() => console.log('[Static] Z decrement')}
-          onChange={(value) => console.log('[Static Z]:', value)}
+          onIncrement={logZIncrement}
+          onDecrement={logZDecrement}
+          onChange={logZChange}
         />
       </Box>
 

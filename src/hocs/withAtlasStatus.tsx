@@ -23,16 +23,18 @@ export function withAtlasStatus<P extends object>(
   return function WithAtlasStatus(props: P) {
     const [, rerender] = React.useReducer(increment, 0);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       textureResolver.on('atlas:ready', rerender);
       textureResolver.on('atlas:error', rerender);
       // The load can settle between the first render and this subscription
       rerender();
-      return () => {
+      const unsubscribe = (): void => {
         textureResolver.off('atlas:ready', rerender);
         textureResolver.off('atlas:error', rerender);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     return <Component {...props} atlasStatus={textureResolver.getAtlasStatus()} />;
   };

@@ -25,6 +25,12 @@ import type {
   BlockTextures,
 } from '../src/types/canonical';
 
+const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+const isJsonFile = (file: string): boolean => file.endsWith('.json');
+const toJsonBaseName = (file: string): string => file.replace('.json', '');
+const isPngFile = (file: string): boolean => file.endsWith('.png');
+const toPngBaseName = (file: string): string => file.replace('.png', '');
+
 interface ParseOptions {
   source: string;
   output: string;
@@ -376,7 +382,7 @@ function generateDisplayName(blockId: string): string {
   const name = blockId.replace('minecraft:', '');
   return name
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(capitalize)
     .join(' ');
 }
 
@@ -577,8 +583,8 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
 
   // Get all blockstate files
   const blockstateFiles = fs.readdirSync(blockstatesDir)
-    .filter(file => file.endsWith('.json'))
-    .map(file => file.replace('.json', ''));
+    .filter(isJsonFile)
+    .map(toJsonBaseName);
 
   console.log(`Found ${blockstateFiles.length} blockstate files`);
 
@@ -639,8 +645,8 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
   console.log(`\nScanning for textures without blockstates...`);
   if (fs.existsSync(texturesDir)) {
     const textureFiles = fs.readdirSync(texturesDir)
-      .filter(file => file.endsWith('.png'))
-      .map(file => file.replace('.png', ''));
+      .filter(isPngFile)
+      .map(toPngBaseName);
 
     let addedCount = 0;
     for (const textureName of textureFiles) {
@@ -665,9 +671,7 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
       const isTransparent = category === 'glass' || category === 'leaves';
 
       canonicalBlocks[blockId] = {
-        displayName: textureName.split('_').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' '),
+        displayName: textureName.split('_').map(capitalize).join(' '),
         category,
         color,
         textures: {
@@ -716,9 +720,10 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
 
 // Run if called directly
 const options = parseArgs();
-parseResourcePack(options).catch(error => {
+const exitWithError = (error: unknown): void => {
   console.error('Fatal error:', error);
   process.exit(1);
-});
+};
+parseResourcePack(options).catch(exitWithError);
 
 export { parseResourcePack };

@@ -66,11 +66,14 @@ class TextureResolver extends EventEmitter {
       const atlasImage = new Image();
       atlasImage.crossOrigin = 'anonymous';
 
-      await new Promise<void>((resolve, reject) => {
-        atlasImage.onload = () => resolve();
-        atlasImage.onerror = () => reject(new Error('Failed to load atlas image'));
+      const loadImage = (resolve: () => void, reject: (error: unknown) => void): void => {
+        const handleLoad = (): void => resolve();
+        const handleError = (): void => reject(new Error('Failed to load atlas image'));
+        atlasImage.onload = handleLoad;
+        atlasImage.onerror = handleError;
         atlasImage.src = '/atlas.png';
-      });
+      };
+      await new Promise<void>(loadImage);
 
       this.atlas = {
         id: 'atlas',

@@ -15,6 +15,7 @@
     "generate:env": "tsx scripts/generateEnvironments.ts",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
+    "lint:callbacks": "tsx scripts/lint/findInlineCallbacks.ts",
     "test": "vitest",
     "test:ui": "vitest --ui"
   },

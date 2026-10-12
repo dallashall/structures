@@ -48,7 +48,8 @@ export function ComponentPreview() {
   };
 
   // Find the active preview component
-  const activePreviewRoute = routes.find((route) => route.path === activeRoute);
+  const isActiveRoute = (route: { path: string }): boolean => route.path === activeRoute;
+  const activePreviewRoute = routes.find(isActiveRoute);
   const ActivePreviewComponent = activePreviewRoute
     ? activePreviewRoute.component
     : WelcomePreview;

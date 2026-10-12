@@ -5,7 +5,7 @@ import { createProjectCommand } from "../../commands/CreateProjectCommand";
 import { projectView } from "../../projections/ProjectView";
 import { blockProjection } from "../../projections/BlockProjection";
 import { blockRegistry } from "../../core/BlockRegistry";
-import type { Vector3D } from "../../types";
+import type { Block, BlockData, Vector3D } from "../../types";
 
 /**
  * Preview3DView Preview
@@ -25,10 +25,10 @@ export function Preview3DViewPreview() {
 
     // Get a few block types
     const blocks = blockRegistry.getAllBlocks();
-    const stoneBlock =
-      blocks.find((b) => b.category === "stone")?.id || blocks[0]?.id;
-    const woodBlock =
-      blocks.find((b) => b.category === "wood")?.id || blocks[1]?.id;
+    const isStone = (block: Block): boolean => block.category === "stone";
+    const isWood = (block: Block): boolean => block.category === "wood";
+    const stoneBlock = blocks.find(isStone)?.id || blocks[0]?.id;
+    const woodBlock = blocks.find(isWood)?.id || blocks[1]?.id;
 
     // Collect all blocks to place
     const blocksToPlace: Array<{ position: Vector3D; blockType: string }> = [];
@@ -77,11 +77,12 @@ export function Preview3DViewPreview() {
     const project = await projectView.getProject();
     if (project) {
       const allBlocks = (await blockProjection.getBlocks()).toArray();
-      const blocksToRemove = allBlocks.map(block => ({
+      const toRemoval = (block: BlockData) => ({
         position: block.position,
         blockType: null, // null = remove
         previousBlockType: block.blockType,
-      }));
+      });
+      const blocksToRemove = allBlocks.map(toRemoval);
       if (blocksToRemove.length > 0) {
         // TODO: Use command pattern instead of modelHistory
         console.log('Preview: would remove', blocksToRemove.length, 'blocks');

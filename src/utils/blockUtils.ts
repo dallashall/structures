@@ -16,5 +16,6 @@ export const findBlockById = (
   blockId: string | null
 ): Block | null => {
   if (!blockId) return null;
-  return blocks.find((b) => b.id === blockId) ?? null;
+  const hasId = (block: Block): boolean => block.id === blockId;
+  return blocks.find(hasId) ?? null;
 };

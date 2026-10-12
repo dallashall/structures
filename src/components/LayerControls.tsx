@@ -79,6 +79,48 @@ export function LayerControls({
     onLayerChange('z', value);
   };
 
+  const renderLayerPopover = () => (
+    <Box sx={{ p: 2 }}>
+      <Stack spacing={1}>
+        {/* X Layer Control */}
+        <LayerDimensionControl
+          label="X"
+          currentLayer={activeLayers.x}
+          maxLayer={maxDimensions.width}
+          onIncrement={handleXIncrement}
+          onDecrement={handleXDecrement}
+          onChange={handleXChange}
+          incrementShortcut={SHORTCUTS.layerXUp}
+          decrementShortcut={SHORTCUTS.layerXDown}
+        />
+
+        {/* Y Layer Control */}
+        <LayerDimensionControl
+          label="Y"
+          currentLayer={activeLayers.y}
+          maxLayer={maxDimensions.height}
+          onIncrement={handleYIncrement}
+          onDecrement={handleYDecrement}
+          onChange={handleYChange}
+          incrementShortcut={SHORTCUTS.layerYUp}
+          decrementShortcut={SHORTCUTS.layerYDown}
+        />
+
+        {/* Z Layer Control */}
+        <LayerDimensionControl
+          label="Z"
+          currentLayer={activeLayers.z}
+          maxLayer={maxDimensions.depth}
+          onIncrement={handleZIncrement}
+          onDecrement={handleZDecrement}
+          onChange={handleZChange}
+          incrementShortcut={SHORTCUTS.layerZUp}
+          decrementShortcut={SHORTCUTS.layerZDown}
+        />
+      </Stack>
+    </Box>
+  );
+
   return (
     <Stack direction="row" spacing={1} alignItems="center">
       {/* Compact Read-Only Display */}
@@ -99,47 +141,7 @@ export function LayerControls({
         <IconButton size="small" aria-label="Layer settings">
           <Settings fontSize="small" />
         </IconButton>
-        {() => (
-          <Box sx={{ p: 2 }}>
-            <Stack spacing={1}>
-              {/* X Layer Control */}
-              <LayerDimensionControl
-                label="X"
-                currentLayer={activeLayers.x}
-                maxLayer={maxDimensions.width}
-                onIncrement={handleXIncrement}
-                onDecrement={handleXDecrement}
-                onChange={handleXChange}
-                incrementShortcut={SHORTCUTS.layerXUp}
-                decrementShortcut={SHORTCUTS.layerXDown}
-              />
-
-              {/* Y Layer Control */}
-              <LayerDimensionControl
-                label="Y"
-                currentLayer={activeLayers.y}
-                maxLayer={maxDimensions.height}
-                onIncrement={handleYIncrement}
-                onDecrement={handleYDecrement}
-                onChange={handleYChange}
-                incrementShortcut={SHORTCUTS.layerYUp}
-                decrementShortcut={SHORTCUTS.layerYDown}
-              />
-
-              {/* Z Layer Control */}
-              <LayerDimensionControl
-                label="Z"
-                currentLayer={activeLayers.z}
-                maxLayer={maxDimensions.depth}
-                onIncrement={handleZIncrement}
-                onDecrement={handleZDecrement}
-                onChange={handleZChange}
-                incrementShortcut={SHORTCUTS.layerZUp}
-                decrementShortcut={SHORTCUTS.layerZDown}
-              />
-            </Stack>
-          </Box>
-        )}
+        {renderLayerPopover}
       </DialogTrigger>
     </Stack>
   );

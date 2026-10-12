@@ -22,7 +22,7 @@ import type { LightingPreset } from '../../types';
  * with the DefaultRenderingPipeline and produce "Cannot read 'scale'" errors.
  */
 export function loadEnvironment(scene: Scene, preset: LightingPreset): Promise<CubeTexture | null> {
-  return new Promise((resolve) => {
+  const loadTexture = (resolve: (texture: CubeTexture | null) => void): void => {
     const handleTextureReady = (): void => { resolve(envTexture); };
 
     const handleTextureError = (message?: string): void => {
@@ -46,7 +46,9 @@ export function loadEnvironment(scene: Scene, preset: LightingPreset): Promise<C
     } else {
       envTexture.onLoadObservable.addOnce(handleTextureReady);
     }
-  });
+  };
+
+  return new Promise(loadTexture);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import type { Theme } from "@mui/material";
 
 import type { LayerState } from "../types";
 
@@ -9,6 +10,11 @@ import { BlockOrientationPreview } from "../components/BlockOrientationPreview";
 interface QuadLayoutProps {
   activeLayers: LayerState;
 }
+
+const primaryInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.primary.light}55`;
+const errorInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.error.light}55`;
+const successInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.success.light}55`;
+const greyInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.grey[500]}55`;
 
 /**
  * QuadLayout - 2x2 grid with 3 2D views + 3D preview
@@ -45,8 +51,7 @@ export function QuadLayout({
             content: '""',
             position: "absolute",
             inset: 0,
-            boxShadow: (theme) =>
-              `inset 0 0 8px ${theme.palette.primary.light}55`,
+            boxShadow: primaryInsetGlow,
             pointerEvents: "none",
             zIndex: 5,
           },
@@ -119,8 +124,7 @@ export function QuadLayout({
             content: '""',
             position: "absolute",
             inset: 0,
-            boxShadow: (theme) =>
-              `inset 0 0 8px ${theme.palette.error.light}55`,
+            boxShadow: errorInsetGlow,
             pointerEvents: "none",
             zIndex: 5,
           },
@@ -193,8 +197,7 @@ export function QuadLayout({
             content: '""',
             position: "absolute",
             inset: 0,
-            boxShadow: (theme) =>
-              `inset 0 0 8px ${theme.palette.success.light}55`,
+            boxShadow: successInsetGlow,
             pointerEvents: "none",
             zIndex: 5,
           },
@@ -267,8 +270,7 @@ export function QuadLayout({
             content: '""',
             position: "absolute",
             inset: 0,
-            boxShadow: (theme) =>
-              `inset 0 0 8px ${theme.palette.grey[500]}55`,
+            boxShadow: greyInsetGlow,
             pointerEvents: "none",
             zIndex: 5,
           },

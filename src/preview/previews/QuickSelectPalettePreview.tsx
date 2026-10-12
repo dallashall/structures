@@ -31,7 +31,8 @@ export function QuickSelectPalettePreview() {
   ]);
 
   const selectedBlock = interactiveSlots[0];
-  const selectedBlockInfo = mockBlocks.find((b) => b.id === selectedBlock);
+  const isSelectedBlock = (block: { id: string }): boolean => block.id === selectedBlock;
+  const selectedBlockInfo = mockBlocks.find(isSelectedBlock);
 
   return (
     <Box>

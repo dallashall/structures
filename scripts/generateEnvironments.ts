@@ -3,7 +3,7 @@
 // Open http://localhost:8095 in a browser. The server exits when every file is written.
 // Run: npm run generate:env
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -111,7 +111,7 @@ bake().catch((e) => log('failed: ' + (e.stack || e)));
 
 mkdirSync(OUT, { recursive: true });
 
-const server = createServer((req, res) => {
+const handleRequest = (req: IncomingMessage, res: ServerResponse): void => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
 
   if (req.method === 'GET' && url.pathname === '/') {
@@ -148,7 +148,9 @@ const server = createServer((req, res) => {
   }
 
   res.writeHead(404).end();
-});
+};
+
+const server = createServer(handleRequest);
 
 const announce = (): void => {
   console.log(`open http://localhost:${PORT} in a browser to bake ${Object.keys(SKY_PRESETS).join(', ')}`);

@@ -26,20 +26,22 @@ export function withScreenState<P extends object>(
   return function WithScreenState(props: P) {
     const [, rerender] = React.useReducer(increment, 0);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       screenRouter.on('screen:shown', rerender);
       screenRouter.on('newprojectdialog:toggled', rerender);
       screenRouter.on('creditsdialog:toggled', rerender);
       screenRouter.on('file-error:shown', rerender);
       screenRouter.on('file-error:dismissed', rerender);
-      return () => {
+      const unsubscribe = (): void => {
         screenRouter.off('screen:shown', rerender);
         screenRouter.off('newprojectdialog:toggled', rerender);
         screenRouter.off('creditsdialog:toggled', rerender);
         screenRouter.off('file-error:shown', rerender);
         screenRouter.off('file-error:dismissed', rerender);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     return (
       <Component

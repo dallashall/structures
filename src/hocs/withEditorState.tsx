@@ -113,16 +113,18 @@ export function withEditorState<P extends object>(
   return function WithEditorState(props: P) {
     const [, rerender] = React.useReducer(increment, 0);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       for (const event of EDITOR_EVENTS) {
         editorState.on(event, rerender);
       }
-      return () => {
+      const unsubscribe = (): void => {
         for (const event of EDITOR_EVENTS) {
           editorState.off(event, rerender);
         }
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     return <Component {...props} {...readEditorState()} />;
   };

@@ -27,7 +27,7 @@ export function withHistoryToast<P extends object>(
   return function WithHistoryToast(props: P) {
     const [toasts, setToasts] = React.useState<HistoryToast[]>(historyAnnouncer.getToasts());
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       const readToasts = (): void => setToasts(historyAnnouncer.getToasts());
       const subscribe = (name: string): void => { historyAnnouncer.on(name, readToasts); };
       const unsubscribe = (name: string): void => { historyAnnouncer.off(name, readToasts); };
@@ -37,7 +37,8 @@ export function withHistoryToast<P extends object>(
       TOAST_NOTIFICATIONS.forEach(subscribe);
       readToasts();
       return unsubscribeAll;
-    }, []);
+    };
+    React.useEffect(subscribe, []);
 
     return <Component {...props} toasts={toasts} onExited={handleExited} />;
   };

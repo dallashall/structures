@@ -367,7 +367,13 @@ const isActive = (user: User) => user.active;
 users.filter(isActive)
 ```
 
-This rule applies to tests as well.
+The rule covers every function passed as an argument, a JSX prop, an object property value, or a handler property (`request.onsuccess = ...`). That includes `new Promise` executors, `React.useEffect` bodies and their cleanups, and MUI `sx` functions.
+
+Allowed:
+- A closure returned by a named handler creator: `const createSlotClickHandler = (index: number) => () => onSelect(index);`
+- Vitest structure callbacks (`describe`, `it`, `test`, `beforeEach`, `afterEach`). Callbacks inside a test body still need names.
+
+`npm run lint:callbacks` lists every violation by file and line.
 
 ### 5. One Component Per File
 

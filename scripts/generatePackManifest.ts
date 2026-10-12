@@ -14,6 +14,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { PackManifest, PackMetadata } from '../src/types/canonical';
 
+const isPng = (file: string): boolean => file.endsWith('.png');
+
 interface GenerateOptions {
   pack: string;
   source: string;
@@ -112,7 +114,7 @@ function scanTextures(texturesDir: string, verbose: boolean): Record<string, str
   }
 
   const files = fs.readdirSync(texturesDir);
-  const textureFiles = files.filter(file => file.endsWith('.png'));
+  const textureFiles = files.filter(isPng);
 
   if (verbose) {
     console.log(`Scanning ${textureFiles.length} texture files...`);
@@ -207,7 +209,7 @@ async function detectTextureResolution(texturesDir: string): Promise<number> {
 
     // If no sample found, try the first PNG file
     const files = fs.readdirSync(texturesDir);
-    const firstPng = files.find(f => f.endsWith('.png'));
+    const firstPng = files.find(isPng);
     if (firstPng) {
       const sharp = (await import('sharp')).default;
       const metadata = await sharp(path.join(texturesDir, firstPng)).metadata();
@@ -311,9 +313,10 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
 
 // Run if called directly
 const options = parseArgs();
-generatePackManifest(options).catch(error => {
+const exitWithError = (error: unknown): void => {
   console.error('Fatal error:', error);
   process.exit(1);
-});
+};
+generatePackManifest(options).catch(exitWithError);
 
 export { generatePackManifest };

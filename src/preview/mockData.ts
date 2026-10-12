@@ -53,36 +53,45 @@ export const mockBlocks: Block[] = [
 /**
  * Mock callback handlers that log to console for testing
  */
+const logBlockSelected = (blockId: string): void => {
+  console.log('[Mock Callback] Block selected:', blockId);
+};
+
+const logViewChanged = (view: ViewType): void => {
+  console.log('[Mock Callback] View changed:', view);
+};
+
+const logLayerChanged = (layer: number): void => {
+  console.log('[Mock Callback] Layer changed:', layer);
+};
+
+const logLayoutModeChanged = (mode: LayoutMode): void => {
+  console.log('[Mock Callback] Layout mode changed:', mode);
+};
+
+const logBackToProjects = (): void => {
+  console.log('[Mock Callback] Back to projects clicked');
+};
+
+const logToggle3D = (): void => {
+  console.log('[Mock Callback] Toggle 3D clicked');
+};
+
+const logExport = (): void => {
+  console.log('[Mock Callback] Export clicked');
+};
+
+const logSettings = (): void => {
+  console.log('[Mock Callback] Settings clicked');
+};
+
 export const mockCallbacks = {
-  onSelectBlock: (blockId: string): void => {
-    console.log('[Mock Callback] Block selected:', blockId);
-  },
-
-  onViewChange: (view: ViewType): void => {
-    console.log('[Mock Callback] View changed:', view);
-  },
-
-  onLayerChange: (layer: number): void => {
-    console.log('[Mock Callback] Layer changed:', layer);
-  },
-
-  onLayoutModeChange: (mode: LayoutMode): void => {
-    console.log('[Mock Callback] Layout mode changed:', mode);
-  },
-
-  onBackToProjects: (): void => {
-    console.log('[Mock Callback] Back to projects clicked');
-  },
-
-  onToggle3D: (): void => {
-    console.log('[Mock Callback] Toggle 3D clicked');
-  },
-
-  onExport: (): void => {
-    console.log('[Mock Callback] Export clicked');
-  },
-
-  onSettings: (): void => {
-    console.log('[Mock Callback] Settings clicked');
-  },
+  onSelectBlock: logBlockSelected,
+  onViewChange: logViewChanged,
+  onLayerChange: logLayerChanged,
+  onLayoutModeChange: logLayoutModeChanged,
+  onBackToProjects: logBackToProjects,
+  onToggle3D: logToggle3D,
+  onExport: logExport,
+  onSettings: logSettings,
 };

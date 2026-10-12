@@ -37,7 +37,7 @@ export function withMaterialBrowserState<P extends object>(
     const [pickableBlocks, setPickableBlocks] = React.useState<Block[]>(blockRegistry.getPickableBlocks());
     const [gridWidth, setGridWidth] = React.useState(0);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       // Opening resets the query and tab without emitting their own events
       const handleToggled = (open: boolean): void => {
         setIsOpen(open);
@@ -50,13 +50,15 @@ export function withMaterialBrowserState<P extends object>(
       editorState.on('materialbrowser:search:entered', setSearchQuery);
       editorState.on('materialbrowser:tab:switched', setSelectedTab);
       blockRegistry.on('blocks:registered', handleBlocksRegistered);
-      return () => {
+      const unsubscribe = (): void => {
         editorState.off('materialbrowser:toggled', handleToggled);
         editorState.off('materialbrowser:search:entered', setSearchQuery);
         editorState.off('materialbrowser:tab:switched', setSelectedTab);
         blockRegistry.off('blocks:registered', handleBlocksRegistered);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     const deferredQuery = React.useDeferredValue(searchQuery);
     const deferredTab = React.useDeferredValue(selectedTab);
@@ -64,7 +66,8 @@ export function withMaterialBrowserState<P extends object>(
     const results = React.useMemo(filterResults, [pickableBlocks, deferredQuery, deferredTab]);
     const isStale = deferredQuery !== searchQuery || deferredTab !== selectedTab;
 
-    const handleGridResize = React.useCallback(({ width }: { width: number }): void => setGridWidth(width), []);
+    const recordGridWidth = ({ width }: { width: number }): void => setGridWidth(width);
+    const handleGridResize = React.useCallback(recordGridWidth, []);
 
     return (
       <Component

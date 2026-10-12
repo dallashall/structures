@@ -2,7 +2,7 @@ import { eventLog } from '../core/EventLog';
 import { editorState } from '../core/EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 import { blockProjection } from '../projections/BlockProjection';
-import type { Dimensions, Vector3D } from '../types';
+import type { BlockData, Dimensions, Vector3D } from '../types';
 
 type Direction = 'x+' | 'x-' | 'y+' | 'y-' | 'z+' | 'z-';
 
@@ -34,7 +34,7 @@ export class ShrinkDimensionsCommand {
     const blocks = await blockProjection.getBlocks();
     const orphanedBlocks: Vector3D[] = [];
 
-    blocks.forEach((block) => {
+    const recordIfOrphaned = (block: BlockData): void => {
       const shiftedPos = {
         x: block.position.x + shrinkResult.shift.x,
         y: block.position.y + shrinkResult.shift.y,
@@ -52,7 +52,8 @@ export class ShrinkDimensionsCommand {
       ) {
         orphanedBlocks.push(block.position);
       }
-    });
+    };
+    blocks.forEach(recordIfOrphaned);
 
     // Reject if blocks would be orphaned
     if (orphanedBlocks.length > 0) {

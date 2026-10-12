@@ -115,10 +115,11 @@ function listAvailablePacks(): void {
   }
 
   const entries = fs.readdirSync(packsDir);
-  const packs = entries.filter(entry => {
+  const hasManifest = (entry: string): boolean => {
     const manifestPath = path.join(packsDir, entry, 'pack-manifest.json');
     return fs.existsSync(manifestPath);
-  });
+  };
+  const packs = entries.filter(hasManifest);
 
   if (packs.length === 0) {
     console.log('No resource packs found with pack-manifest.json');
@@ -759,12 +760,14 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
 }
 
 // Run if called directly
+const exitWithError = (error: unknown): void => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+};
+
 const options = parseArgs();
 if (options) {
-  buildAtlas(options).catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+  buildAtlas(options).catch(exitWithError);
 }
 
 export { buildAtlas };

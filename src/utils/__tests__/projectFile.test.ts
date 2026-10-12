@@ -38,6 +38,8 @@ const counter = (): (() => string) => {
   return nextId;
 };
 
+const parsing = (text: string) => (): ReturnType<typeof parseProjectFile> => parseProjectFile(text);
+
 describe('projectFile', () => {
   it('drops log IDs and project IDs from saved rows', () => {
     const file = roundTrip();
@@ -62,26 +64,26 @@ describe('projectFile', () => {
   });
 
   it('rejects text that is not JSON', () => {
-    expect(() => parseProjectFile('not json')).toThrow(ProjectFileError);
+    expect(parsing('not json')).toThrow(ProjectFileError);
   });
 
   it('rejects JSON from another format', () => {
-    expect(() => parseProjectFile('{"format":"other","version":1,"events":[]}')).toThrow(/not a Structures project/);
+    expect(parsing('{"format":"other","version":1,"events":[]}')).toThrow(/not a Structures project/);
   });
 
   it('rejects a newer file version', () => {
     const file = { ...toProjectFile('Castle', sourceEvents, 200), version: 99 };
-    expect(() => parseProjectFile(JSON.stringify(file))).toThrow(/newer version/);
+    expect(parsing(JSON.stringify(file))).toThrow(/newer version/);
   });
 
   it('rejects a file whose first event does not create the project', () => {
     const file = toProjectFile('Castle', sourceEvents.slice(1), 200);
-    expect(() => parseProjectFile(JSON.stringify(file))).toThrow(/no project creation event/);
+    expect(parsing(JSON.stringify(file))).toThrow(/no project creation event/);
   });
 
   it('rejects a damaged event row', () => {
     const file = { ...toProjectFile('Castle', sourceEvents, 200), events: [{ type: 'metadata:created' }] };
-    expect(() => parseProjectFile(JSON.stringify(file))).toThrow(/damaged event list/);
+    expect(parsing(JSON.stringify(file))).toThrow(/damaged event list/);
   });
 
   it('reads the project name through renames', () => {

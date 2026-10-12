@@ -172,9 +172,9 @@ export class BlockIndex implements BlockIndexReader {
     const existing = indexMap.get(key);
     if (!existing) return;
 
-    const filtered = existing.filter(
-      (b) => !(b.position.x === position.x && b.position.y === position.y && b.position.z === position.z)
-    );
+    const isElsewhere = (block: BlockData): boolean =>
+      !(block.position.x === position.x && block.position.y === position.y && block.position.z === position.z);
+    const filtered = existing.filter(isElsewhere);
 
     if (filtered.length === 0) {
       indexMap.delete(key);

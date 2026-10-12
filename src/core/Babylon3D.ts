@@ -480,10 +480,11 @@ class Babylon3D {
   private queueSceneUpdate(): void {
     if (this.sceneUpdateQueued) return;
     this.sceneUpdateQueued = true;
-    queueMicrotask(() => {
+    const runSceneUpdate = (): void => {
       this.sceneUpdateQueued = false;
       void this.updateScene();
-    });
+    };
+    queueMicrotask(runSceneUpdate);
   }
 
   private async updateScene(): Promise<void> {
@@ -508,9 +509,8 @@ class Babylon3D {
 
     const blockIndex = await blockProjection.getBlocks();
     const blocks = blockIndex.toArray();
-    const blockKeys = new Set(
-      blocks.map((b: BlockData) => positionKey(b.position))
-    );
+    const toBlockKey = (block: BlockData): string => positionKey(block.position);
+    const blockKeys = new Set(blocks.map(toBlockKey));
 
     // A project switch or a size change can move every block, so those updates show at once
     const shownKey = toShownKey(project);

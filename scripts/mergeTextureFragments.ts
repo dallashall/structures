@@ -65,8 +65,9 @@ function ancestors(name: string): string[] {
   return chain;
 }
 
-const titleCase = (name: string): string =>
-  name.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+
+const titleCase = (name: string): string => name.split('_').map(capitalize).join(' ');
 
 /**
  * Faces for a block built from fragments named {base}_{face}. Null when the group has no side face.

@@ -2,6 +2,11 @@ import { EventEmitter } from './EventEmitter';
 import type { Block, BlockStateProperties, BlockVariant } from '../types';
 import { convertBlockStateFromMc } from './DirectionMapping';
 
+const toVariant = (variantName: string): { textureName: string; stateProperties: BlockStateProperties } => ({
+  textureName: variantName,
+  stateProperties: {},
+});
+
 /**
  * BlockRegistry - Catalog of available Minecraft blocks
  *
@@ -76,9 +81,8 @@ class BlockRegistry extends EventEmitter {
    * Get blocks filtered by category
    */
   getBlocksByCategory(category: string): Block[] {
-    return this.getAllBlocks().filter(
-      (block) => block.category.toLowerCase() === category.toLowerCase()
-    );
+    const isInCategory = (block: Block): boolean => block.category.toLowerCase() === category.toLowerCase();
+    return this.getAllBlocks().filter(isInCategory);
   }
 
   /**
@@ -91,9 +95,8 @@ class BlockRegistry extends EventEmitter {
     }
 
     const lowerQuery = query.toLowerCase();
-    return this.getAllBlocks().filter((block) =>
-      block.name.toLowerCase().includes(lowerQuery)
-    );
+    const matchesQuery = (block: Block): boolean => block.name.toLowerCase().includes(lowerQuery);
+    return this.getAllBlocks().filter(matchesQuery);
   }
 
   /**
@@ -124,9 +127,9 @@ class BlockRegistry extends EventEmitter {
     }
 
     // Find matching variant
-    const variant = block.variants.find((v) =>
-      this.matchesState(v.stateProperties, state)
-    );
+    const matchesRequestedState = (variant: BlockVariant): boolean =>
+      this.matchesState(variant.stateProperties, state);
+    const variant = block.variants.find(matchesRequestedState);
 
     return { block, variant };
   }
@@ -190,10 +193,7 @@ class BlockRegistry extends EventEmitter {
           isTransparent: (canonicalBlock as any).isTransparent ?? false,
           hidden: (canonicalBlock as any).hidden ?? false,
           variants: (canonicalBlock as any).variants
-            ? (canonicalBlock as any).variants.map((variantName: string) => ({
-                textureName: variantName,
-                stateProperties: {},
-              }))
+            ? (canonicalBlock as any).variants.map(toVariant)
             : undefined,
         };
 

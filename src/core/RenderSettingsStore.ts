@@ -37,23 +37,28 @@ class RenderSettingsStore {
   }
 
   private async initDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    const openDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
+      const handleError = (): void => reject(request.error);
+      const handleSuccess = (): void => {
         this.db = request.result;
         resolve();
       };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+      const handleUpgradeNeeded = (): void => {
+        const db = request.result;
 
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'projectId' });
         }
       };
-    });
+
+      request.onerror = handleError;
+      request.onsuccess = handleSuccess;
+      request.onupgradeneeded = handleUpgradeNeeded;
+    };
+
+    return new Promise(openDatabase);
   }
 
   private async ensureReady(): Promise<void> {
@@ -66,18 +71,22 @@ class RenderSettingsStore {
   async getSettings(projectId: string): Promise<RenderSettings> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const readSettings = (resolve: (settings: RenderSettings) => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const request = store.get(projectId);
 
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         const entry = request.result as RenderSettingsEntry | undefined;
         resolve(entry ? { ...DEFAULT_RENDER_SETTINGS, ...entry.settings } : { ...DEFAULT_RENDER_SETTINGS });
       };
+      const handleError = (): void => reject(request.error);
 
-      request.onerror = () => reject(request.error);
-    });
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readSettings);
   }
 
   /**
@@ -90,14 +99,16 @@ class RenderSettingsStore {
   private async putSettings(entry: RenderSettingsEntry): Promise<void> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const writeSettings = (resolve: () => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(entry);
       const handleComplete = (): void => resolve();
       const handleError = (): void => reject(tx.error);
       tx.oncomplete = handleComplete;
       tx.onerror = handleError;
-    });
+    };
+
+    return new Promise(writeSettings);
   }
 
 
@@ -107,13 +118,17 @@ class RenderSettingsStore {
   async deleteProject(projectId: string): Promise<void> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const deleteSettings = (resolve: () => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const request = store.delete(projectId);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+      const handleSuccess = (): void => resolve();
+      const handleError = (): void => reject(request.error);
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(deleteSettings);
   }
 }
 

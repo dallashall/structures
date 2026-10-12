@@ -85,6 +85,8 @@ export function TabbedEditorView({
 
   const handleSetBlockState = (state: BlockStateProperties) => editorState.setActiveBlockState(state);
 
+  const handleViewChange = (key: React.Key) => onViewChange(key as ViewType);
+
   return (
     <TabContext value={activeView}>
       {/* Tab Bar */}
@@ -105,7 +107,7 @@ export function TabbedEditorView({
         <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
           <TabbedLayout
             activeView={activeView}
-            onViewChange={(key) => onViewChange(key as ViewType)}
+            onViewChange={handleViewChange}
             activeLayers={activeLayers}
           />
         </Box>

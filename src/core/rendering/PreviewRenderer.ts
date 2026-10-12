@@ -37,9 +37,8 @@ export class PreviewRenderer {
     const draftPreview = draftingService.getResolvedPreview() || [];
     const allPreviewBlocks = [...editorPreview, ...draftPreview];
 
-    const newPreviewKeys = new Set(
-      allPreviewBlocks.map((b) => positionKey(b.position))
-    );
+    const toPreviewKey = (block: (typeof allPreviewBlocks)[number]): string => positionKey(block.position);
+    const newPreviewKeys = new Set(allPreviewBlocks.map(toPreviewKey));
 
     // Remove meshes no longer in preview
     for (const key of this.previewMeshes.keys()) {

@@ -125,44 +125,59 @@ import { CirclePaintTool } from "./CirclePaintTool";
 import { ArchPaintTool } from "./ArchPaintTool";
 import { CurvePaintTool } from "./CurvePaintTool";
 
+type ToolFactory = ToolRegistration["create"];
+
+const createPointTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new PointPaintTool(canvas, viewState, requestRender);
+const createFillTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new FillPaintTool(canvas, viewState, requestRender);
+const createOutlineTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new OutlinePaintTool(canvas, viewState, requestRender);
+const createCircleTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new CirclePaintTool(canvas, viewState, requestRender);
+const createArchTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new ArchPaintTool(canvas, viewState, requestRender);
+const createCurveTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new CurvePaintTool(canvas, viewState, requestRender);
+
 toolRegistry.register({
   name: "point",
   hotkey: "b",
   label: "Point",
-  create: (canvas, vs, rr) => new PointPaintTool(canvas, vs, rr),
+  create: createPointTool,
 });
 
 toolRegistry.register({
   name: "fill",
   hotkey: "",
   label: "Fill",
-  create: (canvas, vs, rr) => new FillPaintTool(canvas, vs, rr),
+  create: createFillTool,
 });
 
 toolRegistry.register({
   name: "outline",
   hotkey: "r",
   label: "Outline",
-  create: (canvas, vs, rr) => new OutlinePaintTool(canvas, vs, rr),
+  create: createOutlineTool,
 });
 
 toolRegistry.register({
   name: "circle",
   hotkey: "o",
   label: "Circle",
-  create: (canvas, vs, rr) => new CirclePaintTool(canvas, vs, rr),
+  create: createCircleTool,
 });
 
 toolRegistry.register({
   name: "arch",
   hotkey: "g",
   label: "Arch",
-  create: (canvas, vs, rr) => new ArchPaintTool(canvas, vs, rr),
+  create: createArchTool,
 });
 
 toolRegistry.register({
   name: "curve",
   hotkey: "v",
   label: "Curve",
-  create: (canvas, vs, rr) => new CurvePaintTool(canvas, vs, rr),
+  create: createCurveTool,
 });

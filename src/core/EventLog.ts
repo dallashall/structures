@@ -96,15 +96,15 @@ class EventLog extends EventEmitter {
    * Initialize IndexedDB
    */
   private initDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    const openDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to open IndexedDB:', request.error);
         reject(request.error);
       };
 
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         this.db = request.result;
         this.db.onversionchange = this.handleVersionChange;
         console.log('EventLog: IndexedDB initialized');
@@ -112,11 +112,11 @@ class EventLog extends EventEmitter {
       };
 
       // The open waits until every other tab closes its connection. Tabs on this build close on versionchange.
-      request.onblocked = () => {
+      const handleBlocked = (): void => {
         console.warn('EventLog: Database upgrade waits for other tabs of this app to close');
       };
 
-      request.onupgradeneeded = (event) => {
+      const handleUpgradeNeeded = (event: IDBVersionChangeEvent): void => {
         const openRequest = event.target as IDBOpenDBRequest;
         const db = openRequest.result;
         const store = db.objectStoreNames.contains(STORE_NAME)
@@ -137,7 +137,14 @@ class EventLog extends EventEmitter {
 
         console.log(`EventLog: Database schema at version ${DB_VERSION}`);
       };
-    });
+
+      request.onerror = handleError;
+      request.onsuccess = handleSuccess;
+      request.onblocked = handleBlocked;
+      request.onupgradeneeded = handleUpgradeNeeded;
+    };
+
+    return new Promise(openDatabase);
   }
 
   /**
@@ -362,13 +369,13 @@ class EventLog extends EventEmitter {
   async getLatestEventId(): Promise<number> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const readLatestId = (resolve: (eventId: number) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.openCursor(null, 'prev'); // Open cursor in reverse
 
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+      const handleSuccess = (): void => {
+        const cursor = request.result;
         if (cursor) {
           resolve(cursor.value.id);
         } else {
@@ -377,11 +384,16 @@ class EventLog extends EventEmitter {
         }
       };
 
-      request.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to get latest event ID:', request.error);
         reject(request.error);
       };
-    });
+
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readLatestId);
   }
 
   /**
@@ -390,21 +402,26 @@ class EventLog extends EventEmitter {
   async clear(): Promise<void> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const clearStore = (resolve: () => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.clear();
 
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         console.log('EventLog: Cleared all events');
         resolve();
       };
 
-      request.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to clear events:', request.error);
         reject(request.error);
       };
-    });
+
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(clearStore);
   }
 
   /**
@@ -413,21 +430,27 @@ class EventLog extends EventEmitter {
   async deleteProjectEvents(projectId: string): Promise<void> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const deleteRows = (resolve: () => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
       const index = transaction.objectStore(STORE_NAME).index(PROJECT_INDEX);
       const range = toProjectKeyRange(projectId, {});
       const request = index.openCursor(range);
 
-      request.onsuccess = () => {
+      const deleteRow = (): void => {
         const cursor = request.result;
         if (!cursor) return;
         cursor.delete();
         cursor.continue();
       };
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+      const handleComplete = (): void => resolve();
+      const handleError = (): void => reject(transaction.error);
+
+      request.onsuccess = deleteRow;
+      transaction.oncomplete = handleComplete;
+      transaction.onerror = handleError;
+    };
+
+    return new Promise(deleteRows);
   }
 
 
@@ -441,25 +464,31 @@ class EventLog extends EventEmitter {
       this.db = null;
     }
 
-    return new Promise((resolve, reject) => {
+    const removeDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.deleteDatabase(DB_NAME);
 
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         console.log('EventLog: Database deleted');
         // Reinitialize
         this.initPromise = this.initDatabase();
         resolve();
       };
 
-      request.onerror = () => {
+      const handleError = (): void => {
         console.error('Failed to delete database:', request.error);
         reject(request.error);
       };
 
-      request.onblocked = () => {
+      const handleBlocked = (): void => {
         console.warn('Database deletion blocked');
       };
-    });
+
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+      request.onblocked = handleBlocked;
+    };
+
+    return new Promise(removeDatabase);
   }
 }
 

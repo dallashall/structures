@@ -37,7 +37,7 @@ export function withEditHistory<P extends object>(
     const [canUndo, setCanUndo] = React.useState(editHistory.canUndo());
     const [canRedo, setCanRedo] = React.useState(editHistory.canRedo());
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       const readStacks = (): void => {
         setCanUndo(editHistory.canUndo());
         setCanRedo(editHistory.canRedo());
@@ -50,7 +50,8 @@ export function withEditHistory<P extends object>(
       HISTORY_NOTIFICATIONS.forEach(subscribe);
       readStacks();
       return unsubscribeAll;
-    }, []);
+    };
+    React.useEffect(subscribe, []);
 
     return (
       <Component

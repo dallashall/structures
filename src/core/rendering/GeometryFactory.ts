@@ -215,7 +215,7 @@ function uvToVector4(uv: { u0: number; v0: number; u1: number; v1: number }): Ve
  * Top face (4) and bottom face (5) keep full UVs.
  */
 function adjustSideFaceUV(slabType: 'top' | 'bottom') {
-  return (uv: { u0: number; v0: number; u1: number; v1: number }, index: number) => {
+  const adjustUV = (uv: { u0: number; v0: number; u1: number; v1: number }, index: number) => {
     // Indices 4 (top) and 5 (bottom) are full faces — no adjustment
     if (index >= 4) return uv;
 
@@ -228,5 +228,6 @@ function adjustSideFaceUV(slabType: 'top' | 'bottom') {
     // Top slab: show top half of texture (lower V values in UV space)
     return { u0: uv.u0, v0: uv.v0, u1: uv.u1, v1: vMid };
   };
+  return adjustUV;
 }
 

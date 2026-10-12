@@ -41,7 +41,7 @@ export function withProjectListState<P extends object>(
     const [isRenaming, setIsRenaming] = React.useState(false);
     const [renameError, setRenameError] = React.useState<string | null>(null);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       let isMounted = true;
 
       const loadProjects = async (): Promise<void> => {
@@ -61,13 +61,15 @@ export function withProjectListState<P extends object>(
       // Leaving the editor saves a thumbnail, which can land after this list first loads
       thumbnailStore.on('thumbnail:saved', reloadProjects);
 
-      return () => {
+      const unsubscribe = (): void => {
         isMounted = false;
         storage.off('project:renamed', reloadProjects);
         storage.off('project:deleted', reloadProjects);
         thumbnailStore.off('thumbnail:saved', reloadProjects);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     const stopRenaming = (): void => {
       setIsRenaming(false);

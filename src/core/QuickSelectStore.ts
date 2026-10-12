@@ -17,6 +17,13 @@ interface QuickSelectEntry {
   value: string;     // Block ID, index, or mode
 }
 
+interface QuickSelectState {
+  blocks: string[];
+  foregroundIndex: number;
+  backgroundIndex: number;
+  activeMode: 'foreground' | 'background';
+}
+
 const DEFAULT_BLOCKS = [
   'minecraft:cobblestone',
   'minecraft:oak_planks',
@@ -46,24 +53,29 @@ class QuickSelectStore {
   }
 
   private async initDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    const openDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
+      const handleError = (): void => reject(request.error);
+      const handleSuccess = (): void => {
         this.db = request.result;
         resolve();
       };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+      const handleUpgradeNeeded = (): void => {
+        const db = request.result;
 
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
           store.createIndex('projectId', 'projectId', { unique: false });
         }
       };
-    });
+
+      request.onerror = handleError;
+      request.onsuccess = handleSuccess;
+      request.onupgradeneeded = handleUpgradeNeeded;
+    };
+
+    return new Promise(openDatabase);
   }
 
   private async ensureReady(): Promise<void> {
@@ -73,14 +85,16 @@ class QuickSelectStore {
   private async putEntry(entry: QuickSelectEntry): Promise<void> {
     await this.ensureReady();
 
-    return new Promise((resolve, reject) => {
+    const writeEntry = (resolve: () => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(entry);
       const handleComplete = (): void => resolve();
       const handleError = (): void => reject(tx.error);
       tx.oncomplete = handleComplete;
       tx.onerror = handleError;
-    });
+    };
+
+    return new Promise(writeEntry);
   }
 
   /**
@@ -123,22 +137,17 @@ class QuickSelectStore {
    * Get all quick-select state for a project
    * Returns defaults if no entries exist
    */
-  async getState(projectId: string): Promise<{
-    blocks: string[];
-    foregroundIndex: number;
-    backgroundIndex: number;
-    activeMode: 'foreground' | 'background';
-  }> {
+  async getState(projectId: string): Promise<QuickSelectState> {
     await this.ensureReady();
 
     const tx = this.db!.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
     const index = store.index('projectId');
 
-    return new Promise((resolve, reject) => {
+    const readState = (resolve: (state: QuickSelectState) => void, reject: (error: unknown) => void): void => {
       const request = index.getAll(projectId);
 
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         const entries = request.result as QuickSelectEntry[];
 
         // Build state from entries
@@ -162,9 +171,13 @@ class QuickSelectStore {
 
         resolve({ blocks, foregroundIndex, backgroundIndex, activeMode });
       };
+      const handleError = (): void => reject(request.error);
 
-      request.onerror = () => reject(request.error);
-    });
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readState);
   }
 
   /**
@@ -177,11 +190,11 @@ class QuickSelectStore {
     const store = tx.objectStore(STORE_NAME);
     const index = store.index('projectId');
 
-    return new Promise((resolve, reject) => {
+    const deleteEntries = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = index.openCursor(IDBKeyRange.only(projectId));
 
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result;
+      const deleteEntry = (): void => {
+        const cursor = request.result;
         if (cursor) {
           cursor.delete();
           cursor.continue();
@@ -189,9 +202,13 @@ class QuickSelectStore {
           resolve();
         }
       };
+      const handleError = (): void => reject(request.error);
 
-      request.onerror = () => reject(request.error);
-    });
+      request.onsuccess = deleteEntry;
+      request.onerror = handleError;
+    };
+
+    return new Promise(deleteEntries);
   }
 }
 

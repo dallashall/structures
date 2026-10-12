@@ -34,7 +34,7 @@ export function withBlockRegistry<P extends object>(
       blockRegistry.getAllBlocks(),
     );
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       const handleRegistryUpdated = (updatedBlocks: Block[]) => {
         setBlocks(updatedBlocks);
       };
@@ -43,19 +43,19 @@ export function withBlockRegistry<P extends object>(
       blockRegistry.on("blocks:registered", handleRegistryUpdated);
 
       // Cleanup
-      return () => {
+      const unsubscribe = (): void => {
         blockRegistry.off("blocks:registered", handleRegistryUpdated);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     // Stable callback references
-    const getBlock = React.useCallback((blockId: string) => {
-      return blockRegistry.getBlock(blockId);
-    }, []);
+    const readBlock = (blockId: string) => blockRegistry.getBlock(blockId);
+    const getBlock = React.useCallback(readBlock, []);
 
-    const searchBlocks = React.useCallback((query: string) => {
-      return blockRegistry.searchBlocks(query);
-    }, []);
+    const findBlocks = (query: string) => blockRegistry.searchBlocks(query);
+    const searchBlocks = React.useCallback(findBlocks, []);
 
     return (
       <Component

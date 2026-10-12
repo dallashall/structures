@@ -95,22 +95,27 @@ class Storage extends EventEmitter {
   }
 
   private initDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    const openDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
+      const handleError = (): void => reject(request.error);
+      const handleSuccess = (): void => {
         this.db = request.result;
         resolve();
       };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+      const handleUpgradeNeeded = (): void => {
+        const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         }
       };
-    });
+
+      request.onerror = handleError;
+      request.onsuccess = handleSuccess;
+      request.onupgradeneeded = handleUpgradeNeeded;
+    };
+
+    return new Promise(openDatabase);
   }
 
   /**
@@ -175,15 +180,19 @@ class Storage extends EventEmitter {
   async getLastOpenedProjectId(): Promise<string | null> {
     await this.initPromise;
 
-    return new Promise((resolve, reject) => {
+    const readLastOpened = (resolve: (projectId: string | null) => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readonly');
       const request = tx.objectStore(STORE_NAME).get(LAST_OPENED_KEY);
-      request.onsuccess = () => {
+      const handleSuccess = (): void => {
         const entry = request.result as PreferenceEntry | undefined;
         resolve(entry?.value ?? null);
       };
-      request.onerror = () => reject(request.error);
-    });
+      const handleError = (): void => reject(request.error);
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(readLastOpened);
   }
 
   async setLastOpenedProjectId(projectId: string | null): Promise<void> {
@@ -191,12 +200,16 @@ class Storage extends EventEmitter {
 
     const entry: PreferenceEntry = { key: LAST_OPENED_KEY, value: projectId };
 
-    return new Promise((resolve, reject) => {
+    const writeLastOpened = (resolve: () => void, reject: (error: unknown) => void): void => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
       const request = tx.objectStore(STORE_NAME).put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+      const handleSuccess = (): void => resolve();
+      const handleError = (): void => reject(request.error);
+      request.onsuccess = handleSuccess;
+      request.onerror = handleError;
+    };
+
+    return new Promise(writeLastOpened);
   }
 }
 

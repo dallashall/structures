@@ -37,7 +37,7 @@ export function withProjectState<P extends object>(
     const [project, setProject] = React.useState<Project | null>(null);
 
     // Initial load
-    React.useEffect(() => {
+    const loadInitialProject = (): (() => void) => {
       let isMounted = true;
 
       const loadProject = async () => {
@@ -49,13 +49,15 @@ export function withProjectState<P extends object>(
 
       loadProject();
 
-      return () => {
+      const cancelInitialLoad = (): void => {
         isMounted = false;
       };
-    }, []);
+      return cancelInitialLoad;
+    };
+    React.useEffect(loadInitialProject, []);
 
     // Subscribe to updates
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       const handleProjectionCalculated = async () => {
         const proj = await projectView.getProject();
         setProject(proj);
@@ -66,11 +68,13 @@ export function withProjectState<P extends object>(
       metadataProjection.on("metadata:rebuilt", handleProjectionCalculated);
 
       // Cleanup
-      return () => {
+      const unsubscribe = (): void => {
         modelProjection.off("model:rebuilt", handleProjectionCalculated);
         metadataProjection.off("metadata:rebuilt", handleProjectionCalculated);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     return <Component {...props} project={project} />;
   };

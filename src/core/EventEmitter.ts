@@ -39,13 +39,14 @@ export class EventEmitter {
   protected emit(event: string, ...args: any[]): void {
     const handlers = this.events.get(event);
     if (handlers) {
-      handlers.forEach((handler) => {
+      const callHandler = (handler: EventHandler): void => {
         try {
           handler(...args);
         } catch (error) {
           console.error(`Error in event handler for "${event}":`, error);
         }
-      });
+      };
+      handlers.forEach(callHandler);
     }
   }
 

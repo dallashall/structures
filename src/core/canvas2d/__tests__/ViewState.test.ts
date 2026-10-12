@@ -10,9 +10,12 @@ let cachedProject: Project | null = project;
 
 const getCached = (): Project | null => cachedProject;
 
-vi.mock('../../../projections/ProjectView', () => ({
-  projectView: { getCached },
-}));
+// A function declaration, since vi.mock is hoisted above every const in this file
+function mockProjectView() {
+  return { projectView: { getCached } };
+}
+
+vi.mock('../../../projections/ProjectView', mockProjectView);
 
 const { ViewState } = await import('../ViewState');
 

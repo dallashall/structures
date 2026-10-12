@@ -19,14 +19,20 @@ const stoneXs = async (): Promise<number[]> => {
   return (await blockProjection.getBlocks()).toArray().map(toX).sort(byNumber);
 };
 
-const nextNotice = (name: string): Promise<HistoryStepNotice> =>
-  new Promise((resolve) => {
+const nextNotice = (name: string): Promise<HistoryStepNotice> => {
+  const awaitNotice = (resolve: (notice: HistoryStepNotice) => void): void => {
     const receive = (notice: HistoryStepNotice): void => {
       editHistory.off(name, receive);
       resolve(notice);
     };
     editHistory.on(name, receive);
-  });
+  };
+  return new Promise(awaitNotice);
+};
+
+const createUnusedTool = (): never => {
+  throw new Error('unused');
+};
 
 describe('EditHistory', () => {
   beforeEach(async () => {
@@ -124,7 +130,7 @@ describe('EditHistory', () => {
   });
 
   it('names the action each history:step-undone and history:step-redone points at', async () => {
-    toolRegistry.register({ name: 'test-fill', hotkey: '', label: 'Fill', create: () => { throw new Error('unused'); } });
+    toolRegistry.register({ name: 'test-fill', hotkey: '', label: 'Fill', create: createUnusedTool });
     await appendAction({
       kind: 'paint',
       tool: 'test-fill',

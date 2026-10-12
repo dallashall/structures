@@ -23,16 +23,18 @@ export function withSaveState<P extends object>(
   return function WithSaveState(props: P) {
     const [, rerender] = React.useReducer(increment, 0);
 
-    React.useEffect(() => {
+    const subscribe = (): (() => void) => {
       saveTracker.on('save:started', rerender);
       saveTracker.on('save:completed', rerender);
       saveTracker.on('save:failed', rerender);
-      return () => {
+      const unsubscribe = (): void => {
         saveTracker.off('save:started', rerender);
         saveTracker.off('save:completed', rerender);
         saveTracker.off('save:failed', rerender);
       };
-    }, []);
+      return unsubscribe;
+    };
+    React.useEffect(subscribe, []);
 
     return <Component {...props} saveState={saveTracker.getSaveState()} />;
   };
