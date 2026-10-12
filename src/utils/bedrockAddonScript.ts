@@ -131,7 +131,10 @@ const BLEND_IN = 0.12;
 const BLEND_OUT = 0.3;
 const ORBIT_RADIUS_SCALE = 1.6;
 const ORBIT_MIN_RADIUS = 8;
-const ORBIT_LIFT = 4;
+const ORBIT_LIFT_SCALE = 0.35;
+const ORBIT_MIN_LIFT = 2;
+const RISE_START_LIFT = 2;
+const RISE_CLIMB = 0.6;
 const LOOK_UP = 0.45;
 
 function lerp(a, b, t) {
@@ -148,7 +151,7 @@ function smoothstep(edge0, edge1, t) {
 }
 
 function toCameraPose(mode, scene, t) {
-  const { center, radius, top, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, eye, forward } = scene;
   const firstPerson = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -172,16 +175,22 @@ function toCameraPose(mode, scene, t) {
     };
   }
 
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
-  const angle = startAngle + 2 * Math.PI * (1 - t);
+  const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
+  const rise = smoothstep(0, 1, t);
+  const focusY = rising ? lerp(bottom, top, rise) : center.y;
+  const cameraY = rising
+    ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
+    : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
   const orbit = {
     location: {
       x: center.x + Math.cos(angle) * orbitRadius,
-      y: Math.max(top, center.y) + ORBIT_LIFT,
+      y: cameraY,
       z: center.z + Math.sin(angle) * orbitRadius,
     },
-    facing: center,
+    facing: { x: center.x, y: focusY, z: center.z },
   };
   const blend = Math.max(1 - smoothstep(0, BLEND_IN, t), smoothstep(1 - BLEND_OUT, 1, t));
   return {
@@ -191,7 +200,7 @@ function toCameraPose(mode, scene, t) {
 }
 
 function toCameraBounds(cells) {
-  if (cells.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 0, top: 0 };
+  if (cells.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 0, bottom: 0, top: 0 };
   let minX = Infinity;
   let minY = Infinity;
   let minZ = Infinity;
@@ -209,6 +218,7 @@ function toCameraBounds(cells) {
   return {
     center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 },
     radius: Math.hypot(maxX - minX, maxZ - minZ) / 2,
+    bottom: minY,
     top: maxY,
   };
 }
@@ -223,6 +233,7 @@ function runCamera(player, cells, totalTicks) {
   const length = Math.hypot(view.x, view.z) || 1;
   const scene = {
     ...toCameraBounds(cells),
+    rising: SEQUENCE === "rise",
     eye: player.getHeadLocation(),
     forward: { x: view.x / length, y: 0, z: view.z / length },
   };

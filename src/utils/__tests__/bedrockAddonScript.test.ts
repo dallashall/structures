@@ -80,11 +80,13 @@ describe('the script copy of the camera path', () => {
 
     const cells = [{ x: 0, y: 0, z: -8 }, { x: 5, y: 6, z: -2 }];
     expect(copy.toCameraBounds(cells)).toEqual(toCameraBounds(cells));
-    const scene: CameraScene = { ...toCameraBounds(cells), eye: { x: 1.5, y: 65.6, z: 2.5 }, forward: { x: 0.6, y: 0, z: -0.8 } };
     const modes: CameraMode[] = ['none', 'orbit', 'lookAround'];
-    for (const mode of modes) {
-      for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) {
-        expect(copy.toCameraPose(mode, scene, t)).toEqual(toCameraPose(mode, scene, t));
+    for (const rising of [false, true]) {
+      const scene: CameraScene = { ...toCameraBounds(cells), rising, eye: { x: 1.5, y: 65.6, z: 2.5 }, forward: { x: 0.6, y: 0, z: -0.8 } };
+      for (const mode of modes) {
+        for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) {
+          expect(copy.toCameraPose(mode, scene, t)).toEqual(toCameraPose(mode, scene, t));
+        }
       }
     }
   });

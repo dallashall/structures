@@ -21,8 +21,11 @@ export interface CameraScene {
   center: Vec3;
   // Horizontal distance from center to the farthest block
   radius: number;
-  // Y of the build's highest block
+  // Y of the build's lowest and highest block faces
+  bottom: number;
   top: number;
+  // True when the build rises layer by layer, so the orbit can follow the rising layer
+  rising: boolean;
   eye: Vec3;
   // Horizontal unit vector the player faces
   forward: Vec3;
@@ -40,7 +43,13 @@ const BLEND_IN = 0.12;
 const BLEND_OUT = 0.3;
 const ORBIT_RADIUS_SCALE = 1.6;
 const ORBIT_MIN_RADIUS = 8;
-const ORBIT_LIFT = 4;
+// Camera height above the point it looks at, as a share of the orbit radius, with a floor in blocks
+const ORBIT_LIFT_SCALE = 0.35;
+const ORBIT_MIN_LIFT = 2;
+// On a rising build the camera starts this many blocks above the base and climbs this share of the build's
+// height while its aim climbs all of it, so the view tilts up as the layers rise
+const RISE_START_LIFT = 2;
+const RISE_CLIMB = 0.6;
 // How far the look-around view tilts up at its highest, in radians
 const LOOK_UP = 0.45;
 // Camera key frames per second. The game eases linearly between them.
@@ -57,7 +66,7 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
  * The camera at progress t (0–1) along the mode's path
  */
 export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): CameraPose {
-  const { center, radius, top, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, eye, forward } = scene;
   const firstPerson: CameraPose = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -82,17 +91,24 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     };
   }
 
-  // One full revolution that ends where the player stands, then settles into their eyes
+  // One full revolution that eases in and out and ends where the player stands, then settles into their eyes.
+  // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
-  const angle = startAngle + 2 * Math.PI * (1 - t);
+  const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
+  const rise = smoothstep(0, 1, t);
+  const focusY = rising ? lerp(bottom, top, rise) : center.y;
+  const cameraY = rising
+    ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
+    : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
   const orbit: CameraPose = {
     location: {
       x: center.x + Math.cos(angle) * orbitRadius,
-      y: Math.max(top, center.y) + ORBIT_LIFT,
+      y: cameraY,
       z: center.z + Math.sin(angle) * orbitRadius,
     },
-    facing: center,
+    facing: { x: center.x, y: focusY, z: center.z },
   };
   const blend = Math.max(1 - smoothstep(0, BLEND_IN, t), smoothstep(1 - BLEND_OUT, 1, t));
   return {
@@ -102,10 +118,10 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
 }
 
 /**
- * Center, radius, and top of a set of block cells (each the unit cube from its corner)
+ * Center, radius, bottom, and top of a set of block cells (each the unit cube from its corner)
  */
-export function toCameraBounds(cells: Vec3[]): Pick<CameraScene, 'center' | 'radius' | 'top'> {
-  if (cells.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 0, top: 0 };
+export function toCameraBounds(cells: Vec3[]): Pick<CameraScene, 'center' | 'radius' | 'bottom' | 'top'> {
+  if (cells.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 0, bottom: 0, top: 0 };
   let minX = Infinity;
   let minY = Infinity;
   let minZ = Infinity;
@@ -123,6 +139,7 @@ export function toCameraBounds(cells: Vec3[]): Pick<CameraScene, 'center' | 'rad
   return {
     center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 },
     radius: Math.hypot(maxX - minX, maxZ - minZ) / 2,
+    bottom: minY,
     top: maxY,
   };
 }

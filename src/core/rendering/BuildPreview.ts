@@ -79,6 +79,7 @@ export class BuildPreview {
   private glows: Glow[] = [];
   private startMs = 0;
   private durationTicks = 1;
+  private sequence: AnimatedSequence = 'rise';
   private glowEvery = 1;
   private glowCursor = 0;
   private landCursor = 0;
@@ -136,6 +137,7 @@ export class BuildPreview {
     const byKey = (a: PreviewCell, b: PreviewCell): number => a.key - b.key;
     this.cells = cells.sort(byKey);
 
+    this.sequence = sequence;
     this.durationTicks = toDurationTicks(seconds);
     this.glowEvery = toGlowEvery(this.cells.length);
     this.glowCursor = 0;
@@ -217,6 +219,7 @@ export class BuildPreview {
     const forward = directionToOffset(metaBlock.direction);
     this.cameraScene = {
       ...toCameraBounds(this.cells.map(toCorner)),
+      rising: this.sequence === 'rise',
       eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
       forward: { x: forward.x, y: 0, z: forward.y },
     };
