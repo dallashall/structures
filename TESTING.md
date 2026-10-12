@@ -59,7 +59,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] Each project card shows a thumbnail, name, and details
   - [ ] Clicking a card selects it and fills the side panel with name, created date, Open, and Delete
   - [ ] Open shows the project in the editor
-  - [ ] Delete removes the project and its thumbnail with no confirmation step
+  - [ ] Delete removes the project with no confirmation step. Its thumbnail, quick-select slots, and render settings go with it. A new project never inherits them.
 
 - [ ] **New project**
   - [ ] New Project opens the dialog

@@ -12,6 +12,8 @@
 
 import { EventEmitter } from './EventEmitter';
 import { eventLog, type Event } from './EventLog';
+import { quickSelectStore } from './QuickSelectStore';
+import { renderSettingsStore } from './RenderSettingsStore';
 import { thumbnailStore } from './ThumbnailStore';
 import { replayModel } from '../reducers/modelReducer';
 import type { StorageMetadata } from '../types';
@@ -144,15 +146,19 @@ class Storage extends EventEmitter {
   }
 
   /**
-   * Delete all events for a project, which removes it from the list
+   * Remove every record of the project from every store
    */
   async deleteProject(projectId: string): Promise<void> {
     if ((await this.getLastOpenedProjectId()) === projectId) {
       await this.setLastOpenedProjectId(null);
     }
 
-    await eventLog.deleteProjectEvents(projectId);
-    await thumbnailStore.deleteProject(projectId);
+    await Promise.all([
+      eventLog.deleteProjectEvents(projectId),
+      thumbnailStore.deleteProject(projectId),
+      quickSelectStore.deleteProject(projectId),
+      renderSettingsStore.deleteProject(projectId),
+    ]);
 
     this.emit('project:deleted');
   }

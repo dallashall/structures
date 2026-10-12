@@ -124,7 +124,7 @@ Which top-level screen shows (`welcome`, `editor`, or the `#/preview` component 
 
 **File:** `src/core/Storage.ts`
 
-Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events and its thumbnail. Its quick-select slots and render settings stay in their stores. The last opened project ID lives in a separate IndexedDB database. The app writes nothing to localStorage.
+Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. The app writes nothing to localStorage.
 
 **Emits:** `project:deleted`.
 

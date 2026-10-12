@@ -415,30 +415,21 @@ class EventLog extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.openCursor();
+      const index = transaction.objectStore(STORE_NAME).index(PROJECT_INDEX);
+      const range = toProjectKeyRange(projectId, {});
+      const request = index.openCursor(range);
 
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-
-        if (cursor) {
-          const evt = cursor.value as Event;
-          if (evt.projectId === projectId) {
-            cursor.delete();
-          }
-          cursor.continue();
-        } else {
-          console.log(`EventLog: Deleted events for project ${projectId}`);
-          resolve();
-        }
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        cursor.delete();
+        cursor.continue();
       };
-
-      request.onerror = () => {
-        console.error('Failed to delete project events:', request.error);
-        reject(request.error);
-      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   }
+
 
   /**
    * Delete entire database (for testing - resets auto-increment)

@@ -4,9 +4,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../EventLog';
+import { quickSelectStore } from '../QuickSelectStore';
+import { renderSettingsStore } from '../RenderSettingsStore';
 import { storage } from '../Storage';
 import { thumbnailStore } from '../ThumbnailStore';
-import type { StorageMetadata } from '../../types';
+import { DEFAULT_RENDER_SETTINGS, type StorageMetadata } from '../../types';
 
 const toName = (project: StorageMetadata): string => project.name;
 
@@ -87,5 +89,21 @@ describe('Storage', () => {
 
     await storage.deleteProject('a');
     expect((await thumbnailStore.getAll()).has('a')).toBe(false);
+  });
+
+  it('deletes quick-select slots and render settings with the project', async () => {
+    await createProject('a', 'Alpha');
+    await createProject('b', 'Beta');
+    await quickSelectStore.setSlot('a', 0, 'test:a');
+    await quickSelectStore.setSlot('b', 0, 'test:b');
+    await renderSettingsStore.saveSettings('a', { ...DEFAULT_RENDER_SETTINGS, shadowsEnabled: !DEFAULT_RENDER_SETTINGS.shadowsEnabled });
+
+    await storage.deleteProject('a');
+
+    expect(await quickSelectStore.getState('a')).toEqual(await quickSelectStore.getState('never-created'));
+    expect((await quickSelectStore.getState('b')).blocks[0]).toBe('test:b');
+    expect(await renderSettingsStore.getSettings('a')).toEqual(DEFAULT_RENDER_SETTINGS);
+    expect(await eventLog.getEvents({ projectId: 'a' })).toEqual([]);
+    expect(await eventLog.getEvents({ projectId: 'b' })).toHaveLength(2);
   });
 });
