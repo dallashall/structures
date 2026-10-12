@@ -26,6 +26,8 @@ export interface CameraScene {
   top: number;
   // True when the build rises layer by layer, so the orbit can follow the rising layer
   rising: boolean;
+  // Share of the camera path (0–1) at which the last block lands. toCameraTicks sets the path length.
+  landedAt: number;
   eye: Vec3;
   // Horizontal unit vector the player faces
   forward: Vec3;
@@ -38,9 +40,10 @@ export interface CameraPose {
 
 // Distance from the eye to the point the camera looks at in first person
 const LOOK_DISTANCE = 8;
-// Share of the path spent easing out of first person, and back into it
+// Share of the build spent easing out of first person
 const BLEND_IN = 0.12;
-const BLEND_OUT = 0.3;
+// Ticks the orbit spends coming back into the player's eyes after the last block lands
+const ORBIT_RETURN_TICKS = 30;
 const ORBIT_RADIUS_SCALE = 1.6;
 const ORBIT_MIN_RADIUS = 8;
 // Camera height above the point it looks at, as a share of the orbit radius, with a floor in blocks
@@ -63,10 +66,17 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
 };
 
 /**
+ * Length of the camera path in ticks, for a build whose last block lands after buildTicks
+ */
+export function toCameraTicks(mode: CameraMode, buildTicks: number): number {
+  return mode === 'orbit' ? buildTicks + ORBIT_RETURN_TICKS : buildTicks;
+}
+
+/**
  * The camera at progress t (0–1) along the mode's path
  */
 export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): CameraPose {
-  const { center, radius, bottom, top, rising, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, landedAt, eye, forward } = scene;
   const firstPerson: CameraPose = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -91,13 +101,16 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     };
   }
 
-  // One full revolution that eases in and out and ends where the player stands, then settles into their eyes.
+  // One full revolution over the build that eases in and out and stops behind the player.
   // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
+  // Once the last block lands, the camera comes back into the player's eyes.
+  const build = Math.min(1, t / landedAt);
+  const settle = landedAt < 1 ? smoothstep(landedAt, 1, t) : 0;
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * build);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
-  const rise = smoothstep(0, 1, t);
+  const rise = smoothstep(0, 1, build);
   const focusY = rising ? lerp(bottom, top, rise) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
@@ -110,7 +123,7 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     },
     facing: { x: center.x, y: focusY, z: center.z },
   };
-  const blend = Math.max(1 - smoothstep(0, BLEND_IN, t), smoothstep(1 - BLEND_OUT, 1, t));
+  const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
   return {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),

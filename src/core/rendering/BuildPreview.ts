@@ -17,7 +17,7 @@ import type { InstancedMesh, Mesh, Observer, Scene } from '@babylonjs/core';
 import type { MetaBlock } from '../../types';
 import type { AnimatedSequence } from '../../utils/buildSequence';
 import type { CameraMode, CameraScene } from '../../utils/cameraPath';
-import { toCameraBounds, toCameraPose } from '../../utils/cameraPath';
+import { toCameraBounds, toCameraPose, toCameraTicks } from '../../utils/cameraPath';
 import { directionToOffset } from '../DirectionMath';
 import {
   LEAD_TICKS,
@@ -86,6 +86,7 @@ export class BuildPreview {
   private onDone: (() => void) | null = null;
   private camera: PreviewCamera | null = null;
   private cameraScene: CameraScene | null = null;
+  private cameraTicks = 1;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -111,7 +112,7 @@ export class BuildPreview {
 
   /**
    * Hides the build, then plays it in. `blocks` maps "x,y,z" model keys to the block meshes on screen.
-   * Resolves when the last block lands, or right away when play is stopped.
+   * Resolves when the last block lands and the camera is back, or right away when play is stopped.
    */
   play(
     sequence: AnimatedSequence,
@@ -201,7 +202,8 @@ export class BuildPreview {
     this.drawGlows(now);
     this.flyCamera(tick);
 
-    if (this.landCursor >= count && this.glows.length === 0) this.stop();
+    const isCameraDone = !this.camera || tick >= this.cameraTicks;
+    if (this.landCursor >= count && this.glows.length === 0 && isCameraDone) this.stop();
   };
 
   /**
@@ -217,9 +219,12 @@ export class BuildPreview {
     });
     const { x, y, z } = metaBlock.position;
     const forward = directionToOffset(metaBlock.direction);
+    const buildTicks = this.durationTicks + LEAD_TICKS;
+    this.cameraTicks = toCameraTicks(camera.mode, buildTicks);
     this.cameraScene = {
       ...toCameraBounds(this.cells.map(toCorner)),
       rising: this.sequence === 'rise',
+      landedAt: buildTicks / this.cameraTicks,
       eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
       forward: { x: forward.x, y: 0, z: forward.y },
     };
@@ -229,7 +234,7 @@ export class BuildPreview {
 
   private flyCamera(tick: number): void {
     if (!this.camera || !this.cameraScene) return;
-    const t = Math.min(1, tick / (this.durationTicks + LEAD_TICKS));
+    const t = Math.min(1, tick / this.cameraTicks);
     const { location, facing } = toCameraPose(this.camera.mode, this.cameraScene, t);
     this.camera.driver.drive(new Vector3(location.x, location.y, location.z), new Vector3(facing.x, facing.y, facing.z));
   }

@@ -128,7 +128,7 @@ function setBlock(dimension, location, permutation) {
 // CAMERA PATH START: a copy of toCameraPose and toCameraBounds in src/utils/cameraPath.ts
 const LOOK_DISTANCE = 8;
 const BLEND_IN = 0.12;
-const BLEND_OUT = 0.3;
+const ORBIT_RETURN_TICKS = 30;
 const ORBIT_RADIUS_SCALE = 1.6;
 const ORBIT_MIN_RADIUS = 8;
 const ORBIT_LIFT_SCALE = 0.35;
@@ -150,8 +150,12 @@ function smoothstep(edge0, edge1, t) {
   return x * x * (3 - 2 * x);
 }
 
+function toCameraTicks(mode, buildTicks) {
+  return mode === "orbit" ? buildTicks + ORBIT_RETURN_TICKS : buildTicks;
+}
+
 function toCameraPose(mode, scene, t) {
-  const { center, radius, bottom, top, rising, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, landedAt, eye, forward } = scene;
   const firstPerson = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -175,11 +179,13 @@ function toCameraPose(mode, scene, t) {
     };
   }
 
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
+  const build = Math.min(1, t / landedAt);
+  const settle = landedAt < 1 ? smoothstep(landedAt, 1, t) : 0;
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * build);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
-  const rise = smoothstep(0, 1, t);
+  const rise = smoothstep(0, 1, build);
   const focusY = rising ? lerp(bottom, top, rise) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
@@ -192,7 +198,7 @@ function toCameraPose(mode, scene, t) {
     },
     facing: { x: center.x, y: focusY, z: center.z },
   };
-  const blend = Math.max(1 - smoothstep(0, BLEND_IN, t), smoothstep(1 - BLEND_OUT, 1, t));
+  const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
   return {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),
@@ -226,14 +232,16 @@ function toCameraBounds(cells) {
 
 // Flies the camera along the mode's path while the build lands, then hands the view back to the player.
 // Movement and look input stay off for the shot, so the path ends exactly where the player stands.
-/** @param {Player} player @param {Vector3[]} cells @param {number} totalTicks */
-function runCamera(player, cells, totalTicks) {
+/** @param {Player} player @param {Vector3[]} cells @param {number} buildTicks */
+function runCamera(player, cells, buildTicks) {
   if (CAMERA_MODE === "none") return;
+  const totalTicks = toCameraTicks(CAMERA_MODE, buildTicks);
   const view = player.getViewDirection();
   const length = Math.hypot(view.x, view.z) || 1;
   const scene = {
     ...toCameraBounds(cells),
     rising: SEQUENCE === "rise",
+    landedAt: buildTicks / totalTicks,
     eye: player.getHeadLocation(),
     forward: { x: view.x / length, y: 0, z: view.z / length },
   };

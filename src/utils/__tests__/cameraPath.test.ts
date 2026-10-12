@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CameraMode, CameraScene } from '../cameraPath';
-import { toCameraBounds, toCameraPose } from '../cameraPath';
+import { toCameraBounds, toCameraPose, toCameraTicks } from '../cameraPath';
 
 const SCENE: CameraScene = {
   center: { x: 0, y: 4, z: -10 },
@@ -8,6 +8,7 @@ const SCENE: CameraScene = {
   bottom: 0,
   top: 8,
   rising: false,
+  landedAt: 0.8,
   eye: { x: 0, y: 1.62, z: 0 },
   forward: { x: 0, y: 0, z: -1 },
 };
@@ -42,15 +43,32 @@ describe('toCameraPose', () => {
     expect(pose.facing).toEqual(SCENE.center);
   });
 
+  it('stops behind the player when the last block lands, then comes back into their eyes', () => {
+    const landed = toCameraPose('orbit', SCENE, SCENE.landedAt);
+    expect(distance(landed.location, SCENE.center)).toBeCloseTo(9.6, 1);
+    expect(Math.atan2(landed.location.z - SCENE.center.z, landed.location.x - SCENE.center.x)).toBeCloseTo(
+      Math.atan2(SCENE.eye.z - SCENE.center.z, SCENE.eye.x - SCENE.center.x),
+      6,
+    );
+    const returning = toCameraPose('orbit', SCENE, (SCENE.landedAt + 1) / 2);
+    expect(distance(returning.location, SCENE.eye)).toBeLessThan(distance(landed.location, SCENE.eye));
+  });
+
+  it('adds a return to the orbit path only', () => {
+    expect(toCameraTicks('orbit', 136)).toBeGreaterThan(136);
+    expect(toCameraTicks('lookAround', 136)).toBe(136);
+  });
+
   it('orbits slower near its ends than in its middle', () => {
     const turn = (from: number, to: number): number => Math.abs(angleAround(SCENE, to) - angleAround(SCENE, from));
     expect(turn(0.45, 0.5)).toBeGreaterThan(turn(0.15, 0.2) * 1.5);
   });
 
   it('starts low on a rising build and climbs with its layers', () => {
-    const early = toCameraPose('orbit', RISING, 0.15);
-    const middle = toCameraPose('orbit', RISING, 0.5);
-    const late = toCameraPose('orbit', RISING, 0.65);
+    const atBuild = (share: number): number => share * RISING.landedAt;
+    const early = toCameraPose('orbit', RISING, atBuild(0.15));
+    const middle = toCameraPose('orbit', RISING, atBuild(0.5));
+    const late = toCameraPose('orbit', RISING, atBuild(0.65));
     expect(early.facing.y).toBeLessThan(RISING.center.y / 2);
     expect(middle.facing.y).toBeCloseTo(RISING.center.y, 6);
     expect(late.facing.y).toBeGreaterThan(middle.facing.y);
