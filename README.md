@@ -5,117 +5,111 @@ A web-based 2D/3D editor for designing Minecraft structures using a pixel-art st
 ## Quick Start
 
 ```bash
-# Install dependencies (already done)
 npm install
-
-# Start development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Type check
-npm run type-check
 ```
 
-## Resource Packs Setup
+The first `npm run dev` or `npm run build` downloads the block textures (about 7 MB). See [Textures](#textures).
 
-This project uses Minecraft resource packs for block textures. **You must generate the texture atlas before running the app.**
+```bash
+npm run build        # Production build into dist/
+npm run type-check   # Type check only
+npm test             # Unit tests
+```
 
-1. **Download a resource pack** (e.g., [PixelBOX](https://www.curseforge.com/minecraft/texture-packs/pixelbox), [Excalibur](https://www.curseforge.com/minecraft/texture-packs/excalibur))
+## Textures
 
-2. **Place the resource pack** in the `resource-packs/` directory:
-   ```bash
-   mkdir -p resource-packs
-   # Unzip your resource pack here
-   ```
+Block textures come from the [Squareful](https://modrinth.com/resourcepack/xekrsquarepattern) resource pack by XeKr, licensed [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/). The repo holds no copy of the pack.
 
-3. **Generate the texture atlas** (required):
-   ```bash
-   # For Squareful resource pack
-   npm run build:atlas:squareful
+`scripts/setupTextures.ts` runs before `dev` and `build` when `public/atlas.png` or `public/atlas.json` is missing. It:
 
-   # For Excalibur resource pack
-   npm run build:atlas:excaliber
+1. Downloads the exact version pinned in `resource-packs/squareful/pack-source.json` from Modrinth.
+2. Checks the file against the SHA-512 in that pin.
+3. Extracts the block textures into `.cache/packs/squareful/`.
+4. Builds `public/atlas.png` and `public/atlas.json`.
 
-   # Or specify a custom pack
-   npm run build:atlas -- --pack your-pack-name
-   ```
+The app still runs when the download fails or the machine is offline. Blocks show flat colors, and the welcome screen shows a notice. Retry with:
 
-**Note:** Resource packs and generated atlas files are not committed to git. Each developer generates their own atlas from their preferred resource pack.
+```bash
+npm run setup:textures
+```
+
+`setup:textures` always rebuilds. `build:atlas` rebuilds the atlas from the extracted pack without downloading it.
+
+## Deploying
+
+The app is a static site. The `Dockerfile` builds it and serves `dist/` with nginx on port 80.
+
+On Coolify, choose the Dockerfile build pack and expose port 80. The image build sets `TEXTURES_REQUIRED=1`, so it fails when the texture download fails. A deploy never ships without textures.
+
+Projects live in each visitor's browser (IndexedDB) under the site's domain. Moving the site to a different domain leaves existing projects behind. Visitors can carry a project across with Save (toolbar) and Load from File (welcome screen).
+
+## Licensing
+
+The code is MIT licensed. See [LICENSE](./LICENSE).
+
+The textures keep their own CC BY-NC-ND 4.0 license. A public deployment must stay non-commercial and keep the credits dialog, which names the author, the license, and the source. The in-app Credits dialog also lists fonts and libraries.
 
 ## Documentation
 
-- **[PROJECT.md](./PROJECT.md)** - Complete project specification and architecture
-- **[CLAUDE.md](./CLAUDE.md)** - Coding standards and development guidelines
-- **[MACRO_COMPONENTS.md](./MACRO_COMPONENTS.md)** - System architecture and component overview
+- [PROJECT.md](./PROJECT.md) - Project specification and data model
+- [UX_DECISIONS.md](./UX_DECISIONS.md) - Interaction decisions and keyboard shortcuts
+- [MACRO_COMPONENTS.md](./MACRO_COMPONENTS.md) - Singletons, HOCs, and components
+- [CLAUDE.md](./CLAUDE.md) - Coding standards and architectural rules
+- [TESTING.md](./TESTING.md) - Manual test plan
 
 ## Project Structure
 
 ```
 src/
-├── components/     # Dumb rendering components (one per file)
-├── hocs/          # Higher-order components for state management
-├── core/          # Singleton classes (business logic)
+├── commands/      # Commands that validate a request and append events
+├── components/    # Rendering components, one per file
+├── config/        # Static configuration (texture packs, credits)
+├── core/          # Singletons: event log, editor state, tools, 2D and 3D rendering
+├── events/        # Event type definitions
+├── hocs/          # Higher-order components that subscribe to singletons
+├── layouts/       # Toolbar, tabbed layout, quad layout
+├── panels/        # 2D canvas and 3D view panels
+├── preview/       # Component preview pages
+├── projections/   # Read models replayed from the event log
+├── reducers/      # Pure functions that fold events into state
 ├── types/         # TypeScript type definitions
-├── utils/         # Pure utility functions
-├── views/         # Top-level view components
-├── App.tsx        # Root application component
-└── main.tsx       # Application entry point
+├── utils/         # Pure helper functions
+├── views/         # Welcome screen and editor views
+├── App.tsx        # Root component
+└── main.tsx       # Entry point
+scripts/           # Texture download and atlas build
+resource-packs/    # Texture pack pin and manifest
+public/data/       # Block catalog
 ```
 
 ## Technology Stack
 
-- **TypeScript** - Type-safe development
-- **Vite** - Fast build tool and dev server
-- **React** - UI component framework
-- **react-spectrum** - Adobe's design system
-- **HTML Canvas** - 2D pixel editor rendering
-- **BabylonJS** - 3D visualization
+- TypeScript, React 18, Vite 6
+- MUI 7
+- dnd kit (drag and drop) and react-window (windowed lists)
+- HTML Canvas for the 2D views
+- Babylon.js 7 for the 3D view
+- IndexedDB for projects, thumbnails, and preferences
+- Vitest, jsdom, and fake-indexeddb for tests
 
 ## Development Guidelines
 
-### Architectural Principles
-
-1. **Business logic in singleton classes** outside React render cycle
-2. **HOCs for state management** to decouple logic from rendering
-3. **No inline callbacks** - all functions must be named
-4. **One component per file** - strict rule, no exceptions
-5. **350 line limit** for React components
-6. **Minimal React hooks** - only from external libraries, only in HOCs
-
-### Example: Named Callbacks
+1. Business logic lives in singleton classes outside the React render cycle.
+2. HOCs subscribe to singletons and pass state to components as props.
+3. Callbacks are named functions. No inline anonymous callbacks.
+4. Each file holds one component.
+5. Components stay under 350 lines.
+6. React hooks appear only in HOCs.
+7. Event names are specific (`block:placed`, not `project:changed`).
 
 ```typescript
-// ❌ WRONG
+// Wrong
 items.map((item) => item.name)
 
-// ✅ CORRECT
+// Right
 const getName = (item: Item) => item.name;
 items.map(getName)
 ```
 
-See [CLAUDE.md](./CLAUDE.md) for complete coding standards.
-
-## Next Steps
-
-The project is bootstrapped and ready for development. To continue:
-
-1. Implement core singleton classes:
-   - `ProjectManager` - Manage project state and blocks
-   - `BlockRegistry` - Catalog of Minecraft blocks
-   - `EditorStateManager` - UI state management
-   - `StorageManager` - localStorage persistence
-
-2. Build HOC components:
-   - `withProjectState` - Subscribe to project changes
-   - `withEditorState` - Subscribe to editor state changes
-   - `withBlockRegistry` - Provide block catalog data
-
-3. Create UI components and views:
-   - `EditorView` - Main application container
-   - `Canvas2DView` - 2D pixel editor
-   - `Preview3DView` - BabylonJS 3D preview
-   - `MaterialPalette` - Block selection UI
-
-See [MACRO_COMPONENTS.md](./MACRO_COMPONENTS.md) for the complete component architecture.
+See [CLAUDE.md](./CLAUDE.md) for the full coding standards.

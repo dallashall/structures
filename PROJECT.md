@@ -1,198 +1,197 @@
-# Minecraft Magic Blueprint System
+# Structures
 
 ## Project Overview
 
-The Minecraft Magic Blueprint System is a web-based application that allows users to design 3D Minecraft structures using an intuitive 2D pixel-art editor combined with a real-time 3D preview. The system enables creators to build complex structures that can be exported and integrated into Minecraft mods as placeable objects or command blocks.
+Structures is a browser app for designing Minecraft structures. Users paint blocks on 2D orthographic views, one layer at a time, and check the result in a live 3D view. The goal is a structure that a Minecraft mod can place as an object or from a command block.
 
 ## Purpose
 
-This tool bridges the gap between creative vision and Minecraft construction by providing:
-- An accessible, pixel-art style interface familiar to designers
-- Multi-view 2D editing (front, side, back) for precise block placement
-- Layer-based depth editing for complete 3D control
-- Real-time 3D visualization to verify designs
-- Export functionality for integration with Minecraft mods
+The app gives builders:
+- A pixel-art style editor where each cell is one block
+- Six orthographic views (front, back, left, right, top, bottom) for exact placement
+- Layer controls on all three axes for full 3D control
+- A live 3D view to check the design
+- Undo and redo that survive a reload
+- A project file that moves a design between browsers
 
 ## System Architecture
 
-### 2D Editor Functionality
+### Coordinate System
 
-The core editing experience uses HTML Canvas to provide a pixel-art style interface where each pixel represents a Minecraft block.
+The model is Z-up and right-handed. X is width, Y is depth, and Z is height. Babylon.js is Y-up, so the 3D renderer swaps Y and Z. See `src/core/rendering/README.md`.
 
-**Multi-View System:**
-- **Front View**: Edit the X-Y plane (width × height)
-- **Side View**: Edit the Z-Y plane (depth × height)
-- **Back View**: Edit the X-Y plane from opposite perspective
+### 2D Editor
 
-**Depth Layer System:**
-- Each view has multiple depth layers corresponding to the third dimension
-- Users select which layer they're currently editing
-- Only the active layer accepts paint operations
-- Non-active layers are visible but dimmed for context
+Each 2D view is an HTML canvas that draws one slice of the model.
 
-**Editing Operations:**
-- Paint: Click/drag to place selected block type
-- Erase: Remove blocks from grid
-- Fill: Flood-fill connected regions (future enhancement)
-- Eyedropper: Sample existing blocks (future enhancement)
+**Views:**
+- Front and Back look along the depth axis
+- Left and Right look along the width axis
+- Top and Bottom look along the height axis
 
-### 3D Visualizer
+**Layers:**
+- Each axis has an active layer. A view paints into the active layer of its own axis.
+- A view draws the active layer and the two layers on each side of it.
+- The canvas fits the grid to the panel until the user zooms or pans.
 
-The 3D preview uses BabylonJS to render the complete structure in real-time.
+**Tools:**
+- Point (B): paint one cell at a time
+- Fill: flood-fill the connected cells of one block type on the active layer
+- Rectangle (R): draw a rectangle
+- Circle (O): draw a circle
+- Arch (G): draw an arch from clicked points
+- Curve (V): draw a Bezier curve from clicked points
 
-**Current Capabilities:**
-- Real-time rendering of all placed blocks
-- Orbit camera controls (rotation around structure)
-- Pan controls (move view position)
-- Zoom controls (adjust camera distance)
-- Grid overlay for spatial reference
+Shape tools draw an outline or a filled shape. Depth painting repeats a stroke through 1 to 10 layers, either through everything or until it hits a block.
 
-**Future Enhancements:**
-- Layer visibility toggles
-- Viewpoint transparency
-- Lighting and shadow options
-- Animation preview for structure entrance effects
+**Paint behaviors:**
+- Normal: paint anywhere
+- Only Replace: paint only over existing blocks
+- Selective Replace: replace only a chosen block type
+- Erase: remove blocks instead of placing them
 
-### Meta Block and Orientation System
+### 3D View
 
-Every project includes a special "meta block" that defines the structure's origin and placement orientation.
+The 3D view renders the whole structure with Babylon.js.
 
-**Meta Block Properties:**
-- Position: The origin point for the structure (typically near ground level)
-- Direction Arrow: Indicates the "front" facing when placed in-game
-- Placement Restrictions: Two blocks in front of meta block must remain empty (player standing space)
+- Left drag orbits. Right drag, middle drag, or Space and left drag pans.
+- Pinch and the mouse wheel zoom toward the cursor. Trackpad scroll orbits, and Shift with scroll pans.
+- Home frames the structure. Toolbar buttons fit the model and reset the camera.
+- Slice planes show the active X, Y, and Z layers and can be toggled.
+- Render settings cover anti-aliasing, PBR materials, lighting presets (day, night, cloudy), backgrounds, shadows, SSAO, bloom, and tone mapping. Settings persist per project.
+- Blocks grow into place and shrink out when they change.
+- The view captures a thumbnail for the project browser.
 
-**In-Game Behavior:**
-- When a player activates the structure object/command block in Minecraft
-- The structure materializes with the meta block at the activation point
-- The direction arrow aligns with the player's facing direction
-- Animated entrance effects make placement feel dramatic (future feature)
+### Meta Block
 
-### Material System
+Every project has one meta block. It marks the structure's origin and its front direction.
 
-**Block Registry:**
-- Catalog of all available Minecraft block types
-- Organized by categories (stone, wood, decoration, etc.)
-- Each block has:
-  - Unique ID
-  - Display name
-  - Color representation for 2D editor
-  - Texture reference for 3D preview (future)
+- The meta block is the point where the structure appears in game.
+- Its arrow marks the structure's front. In game, the arrow aligns with the player's facing.
+- All other blocks are positioned relative to it.
+- A new project starts with an explanatory dialog, then a placement banner with a Confirm button. Confirming finalizes the meta block.
 
-**Material Palette:**
-- UI component for selecting active block type
-- Search/filter functionality
-- Recently used blocks
-- Favorites system (future enhancement)
+### Materials
+
+**Block registry:**
+- `public/data/canonical-blocks.json` lists every block. Keys are Minecraft IDs such as `minecraft:acacia_door`.
+- Each block has a display name, a category, a fallback color, face textures, default block state, and cube and transparency flags.
+- Textures come from a texture atlas built from the Squareful resource pack. Without the atlas, blocks draw in their fallback color.
+- Slabs and stairs render their real shapes. Other blocks render as cubes.
+
+**Picking a material:**
+- Each project has nine quick-select slots. Keys 1 to 9 pick a slot.
+- The editor holds a foreground and a background material, like Photoshop's two colors. F swaps them.
+- The material browser (E) searches by name and filters by category tabs. Drag a material onto a slot to assign it, or click it to put it in the active slot.
+- Slabs and stairs show block state controls. T rotates facing and Y flips the half.
 
 ## Technology Stack
 
-### Core Technologies
-
-- **TypeScript**: Type-safe development, improved code quality
-- **Vite**: Fast development server, optimized builds
-- **React**: Component-based UI architecture
-
-### UI Libraries
-
-- **react-spectrum**: Adobe's design system for consistent, accessible UI components
-  - Buttons, dialogs, menus, form controls
-  - Built-in accessibility features
-  - Responsive design support
-
-### Rendering Engines
-
-- **HTML Canvas**: 2D pixel editor rendering
-  - Direct pixel manipulation
-  - Efficient for grid-based editing
-  - Event handling for paint operations
-
-- **BabylonJS**: 3D visualization
-  - WebGL-based rendering
-  - Built-in camera controls
-  - Optimized for real-time updates
+- TypeScript, React 18, and Vite 6
+- MUI 7 for UI components
+- dnd kit for material drag and drop
+- react-window for the windowed material grid
+- HTML Canvas for the 2D views
+- Babylon.js 7 for the 3D view
+- IndexedDB for all persistence
+- Vitest with jsdom and fake-indexeddb for tests
+- sharp and fflate, at build time only, to build the texture atlas
 
 ## Data Model
 
-### Project Structure
+### Event Log
+
+All project state lives in one IndexedDB event log (`src/core/EventLog.ts`). Each row is an event:
 
 ```typescript
-{
-  id: string,
-  name: string,
-  dimensions: { width: number, height: number, depth: number },
-  metaBlock: {
-    position: { x: number, y: number, z: number },
-    direction: 'north' | 'south' | 'east' | 'west'
-  },
-  blocks: Map<string, BlockData>, // key: "x,y,z"
-  created: Date,
-  modified: Date
+interface Event {
+  id?: number;        // Auto-increment, assigned by the log
+  type: string;       // e.g. 'model:blockPlaced', 'metadata:renamed'
+  data: unknown;      // Event-specific payload
+  timestamp: number;
+  projectId?: string;
+  actionId?: string;  // Shared by every event one user action wrote
 }
 ```
 
-### Block Data
+Event types:
+- `metadata:created`, `metadata:renamed`
+- `model:initialized`, `model:blockPlaced`, `model:blockRemoved`, `model:blocksPlaced`, `model:blocksRemoved`
+- `model:dimensionExpanded`, `model:dimensionShrunk`
+- `model:metaBlockPlaced`, `model:metaBlockConfirmed`
+- `action:started`, `action:ended`, which bracket one user action
+
+An undo or redo appends an `action:started` marker whose `target` names the action it acts on. Replay skips undone actions. No event stores the state an undo restores.
+
+### Model
+
+Projections replay the log into the model the views read (`src/types/index.ts`):
 
 ```typescript
-{
-  position: { x: number, y: number, z: number },
-  blockType: string // references Block Registry ID
+interface Model {
+  dimensions: Dimensions;  // { width, height, depth }
+  metaBlock: MetaBlock;    // { position, direction, isConfirmed }
+  blocks: BlockIndex;      // Blocks indexed by position and by layer
+}
+
+interface BlockData {
+  position: Vector3D;
+  blockType: string;                 // Block registry ID
+  blockState?: BlockStateProperties; // facing, half, type, shape, and so on
 }
 ```
+
+Directions use axis names such as `x+` and `y-`.
 
 ## Data Persistence
 
-### Storage Strategy
+- Every edit appends to the IndexedDB event log as it happens. The toolbar shows "Unsaved changes", "Saving...", or "Saved".
+- The project list is replayed from the log. A project exists while the log holds its `metadata:created` event.
+- Thumbnails, quick-select slots, render settings, and preferences live in separate IndexedDB databases.
+- The app writes nothing to localStorage.
+- The browser may evict IndexedDB under storage pressure, so the app asks for persistent storage.
 
-**Phase 1: localStorage**
-- Simple key-value storage in browser
-- JSON serialization of project data
-- Sufficient for prototype and single-user scenarios
-- ~5-10MB storage limit (browser dependent)
+### Project Files
 
-**Phase 2: IndexedDB (Future)**
-- Structured database in browser
-- Better performance for large projects
-- No practical size limit
-- Supports indexing and queries
+Save writes the open project to a `.mcblueprint` file. The file is JSON holding the project's events in log order, so undo history survives the round trip.
 
-### Auto-Save
-
-- Project auto-saves every 30 seconds when modified
-- Manual save option in toolbar
-- "Unsaved changes" indicator in UI
+Load from File reads that file into a new project with a new ID. Action IDs get new values, so a file can load beside the project it came from. When the name is taken, the loaded project becomes "Name (from file)" or "Name (from file N)".
 
 ## User Workflow
 
-1. **Create New Project**
-   - Set project name
-   - Define dimensions (width × height × depth)
-   - Place meta block and set direction
+1. **Create a project**
+   - Enter a name
+   - Pick Small (16), Medium (32), Large (64), or custom dimensions
+   - Read the meta block dialog and confirm the meta block
 
-2. **Build Structure**
-   - Select material from palette
-   - Choose view (front/side/back)
-   - Select depth layer
-   - Paint blocks on canvas
+2. **Build the structure**
+   - Pick a material from the quick-select slots or the material browser
+   - Pick a view and the active layers
+   - Pick a tool, a shape fill, depth, and a paint behavior
+   - Paint on the canvas
 
-3. **Preview in 3D**
-   - Switch to 3D view
-   - Rotate, pan, zoom to inspect
-   - Return to 2D for refinements
+3. **Check in 3D**
+   - Open the 3D tab, or use the quad layout
+   - Orbit, pan, and zoom to inspect
 
-4. **Configure & Export**
-   - Set structure metadata
-   - Choose export format
-   - Download for mod integration
+4. **Keep and share**
+   - Edits persist in the browser on their own
+   - Save writes a project file. Load from File on the welcome screen reads one back.
 
 ## Future Enhancements
 
-- Undo/redo system
-- Copy/paste regions
+- Click to place the meta block in placement mode. The meta block stays at the origin until this exists.
+- UI to expand, shrink, and rename a project. The commands exist without controls.
+- A confirmation before deleting a project
+- Shift and Alt modifiers on the shape tools
+- An eyedropper that samples a placed block
+- Copy and paste of regions
 - Symmetry tools (mirror, rotate)
-- Template library
-- Multi-project management
+- A tunnel mode that works like outline but clears the interior
+- A hollow delete that uses the painting shapes to delete in a shape
+- Categories in the material browser taken from the block registry
+- Doors and other multi-part blocks in block state controls
+- Export to Minecraft formats such as NBT structure files
+- A template library
+- An animation timeline for the structure's entrance effect
 - Collaborative editing
-- Animation timeline for entrance effects
-- Texture pack support
-- NBT structure export format

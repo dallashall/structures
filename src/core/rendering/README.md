@@ -1,130 +1,81 @@
 # Rendering Module
 
-Composable rendering components for the Babylon.js 3D viewer.
+The Babylon.js modules behind the 3D view. `Babylon3D` (`src/core/Babylon3D.ts`) is the singleton that owns the engine and scene. It creates these modules in `attach(canvas)` and disposes them in `detach()`.
 
-## Architecture
+## Rules
 
-This module follows Babylon.js best practices:
-- **Small, focused files** - Each visualizer handles a specific rendering concern
-- **Composition over inheritance** - Controllers compose visualizers rather than subclassing
-- **Loose coupling** - Visualizers depend on stable interfaces (Scene, Dimensions)
-- **Dependency injection** - Scene and configuration passed as constructor parameters
+- Each file handles one rendering concern.
+- Babylon3D composes modules. No module subclasses another.
+- Modules take the `Scene` and their configuration as constructor or function arguments.
+- Stateless setup lives in plain functions (`setupShadows`, `applyLightingPreset`). Modules that hold meshes or lights are classes with a `destroy()` or `dispose()` method.
 
-## Components
+## Modules
 
-### SlicePlaneVisualizer
+| File | Kind | Job |
+|---|---|---|
+| `BlockRenderer.ts` | class | Committed blocks as instanced meshes. One hidden base mesh per block type and geometry key. Per-instance color buffers dim blocks outside the active layer. |
+| `PreviewRenderer.ts` | class | Translucent preview meshes from EditorState hover previews and DraftingService drafts. Diffs against the previous frame. Delete mode tints previews red. |
+| `MaterialResolver.ts` | class | Picks a material per block: tinted texture, then atlas texture, then flat color. Caches standard, PBR, ghost, and delete variants. |
+| `GeometryFactory.ts` | functions | Slab and stair meshes with transforms baked into vertices, so they work as instance bases. `getGeometryKey` names each variant. |
+| `GrowAnimator.ts` | class | Scales block instances in and out on a stagger. One `onBeforeRender` observer drives every tween. |
+| `CameraRig.ts` | class | Turntable camera: frame, orbit, pan, zoom, preset views. The only code path that moves the camera. |
+| `CameraGestures.ts` | class | Maps pointer, wheel, and key input on the 3D canvas to CameraRig moves. |
+| `SlicePlaneVisualizer.ts` | class | One translucent plane per axis at the active 2D slice. Listens for `layer:adjusted`. |
+| `SceneSetup.ts` | functions | Hemisphere and directional lights, ground grid, axes. |
+| `LightingPresets.ts` | functions | Day, night, and cloudy presets for lights, clear color, environment intensity, and emissive scale. |
+| `SkyPresets.ts` | data | Sky colors and sun direction per preset. `scripts/generateEnvironments.ts` imports it in Node, so it must stay data-only. |
+| `EnvironmentSetup.ts` | functions | Loads the baked environment texture for a preset (`public/environment/<preset>.env`). PBR metals render black without it. |
+| `BackdropRenderer.ts` | class | Background mode: plain color, skybox, or ground-projected sky. |
+| `ShadowSetup.ts` | functions | Shadow generator on the directional light and a shadow-receiving ground plane. |
+| `EmissiveLighting.ts` | class | Point lights at luminous blocks. |
+| `PBRCategoryMap.ts` | functions | Classifies blocks by name into metallic and roughness presets. |
+| `PostProcessingSetup.ts` | functions | SSAO, bloom, and tone mapping pipelines. |
+| `ThumbnailCapture.ts` | class | Renders the structure from a fixed camera into a small JPEG for the project card. Needs the engine's `preserveDrawingBuffer`. |
+| `babylonUtils.ts` | functions | Coordinate conversion, color parsing, position keys. |
 
-Renders semi-transparent planes showing the current 2D slice locations in 3D space.
+Babylon3D subscribes to projection, DraftingService, EditorState, and TextureResolver notifications. It forwards them to the modules. `SlicePlaneVisualizer` is the one module that subscribes to EditorState itself.
 
-**Features:**
-- Creates pairs of planes on either side of each active slice (X, Y, Z)
-- Color-coded to match 2D view axis colors:
-  - Red (#e74c3c) = X planes (perpendicular to width axis)
-  - Blue (#3498db) = Y planes (perpendicular to depth axis)
-  - Green (#27ae60) = Z planes (perpendicular to height axis)
-- Automatically updates when user changes slice selection
-- Handles coordinate system conversion (our Z-up to Babylon's Y-up)
+## Coordinate system
 
-**Usage:**
+The model is Z-up and right-handed. X and Y are horizontal and Z is vertical. Babylon.js is Y-up and left-handed.
 
-```typescript
-import { SlicePlaneVisualizer } from './rendering/SlicePlaneVisualizer';
+`toBabylonVector` in `babylonUtils.ts` maps model `(x, y, z)` to Babylon `(x, z, y)` with no negation. Every module converts through it.
 
-// Create visualizer
-const visualizer = new SlicePlaneVisualizer(scene, projectDimensions);
+The bounds check in `src/reducers/modelReducer.ts` pairs X with `dimensions.width`, Y with `dimensions.height`, and Z with `dimensions.depth`. So `depth` is the vertical extent. Some rendering comments and `CameraRig.structureCenter` read the names the other way round (Y as depth, Z as height).
 
-// Update when dimensions change
-visualizer.updateDimensions(newDimensions);
+## Texture atlas
 
-// Toggle visibility
-visualizer.setVisible(false);
+The atlas files are `public/atlas.png` and `public/atlas.json`. Git ignores both.
 
-// Cleanup
-visualizer.destroy();
-```
+- `scripts/setupTextures.ts` downloads the Squareful pack version pinned in `resource-packs/squareful/pack-source.json`, checks its SHA-512, and extracts the block textures into `.cache/packs/squareful/`. It then runs `scripts/buildTextureAtlas.ts`. `npm run dev` and `npm run build` run it when the atlas is missing.
+- `scripts/buildTextureAtlas.ts` stitches 16x16 textures into one square atlas and writes UV coordinates per block face.
 
-**Integration:**
+`TextureResolver` (`src/core/TextureResolver.ts`) fetches both files at startup. Its `getAtlasStatus()` returns `loading`, `ready`, or `missing`. When the fetch fails, every view draws blocks in the flat colors from the block catalog.
 
-The `Babylon3DController` automatically creates and manages the slice plane visualizer:
-- Created during scene setup
-- Updated when project dimensions change
-- Destroyed when controller is destroyed
+### Face UVs
 
-## Coordinate System
+`atlas.json` holds two UV tables per block. Both use the face order front, back, right, left, top, bottom, which is the `CreateBox` face order.
 
-**Our system:** Z-up, right-handed
-- X = width (East/West)
-- Y = depth (North/South)
-- Z = height (Up/Down)
+- `blockFaceUV` points at the untransformed textures. Canvas2D and swatches use it.
+- `blockFaceUV3D` points at pre-transformed copies. `CreateBox` gives each face its own default UV orientation, so untransformed textures appear rotated or flipped on some faces.
 
-**Babylon.js:** Y-up, left-handed
-- X = X (preserved)
-- Y = Z (our height)
-- Z = Y (our depth)
+The atlas builder adds three variants of each texture for the 3D table:
 
-All visualizers handle this conversion internally.
+| 3D face | Texture | Variant |
+|---|---|---|
+| 0 front (+Z) | front | `_hflip` |
+| 1 back (-Z) | back | none |
+| 2 right (+X) | left | `_rotated90ccw_vflip` |
+| 3 left (-X) | right | `_rotated90ccw_vflip` |
+| 4 top (+Y) | top | `_rotated90ccw` |
+| 5 bottom (-Y) | bottom | none |
 
-## Texture Atlas & UV Mappings
+Faces 2 and 3 take the opposite side's texture. Base meshes bake these UVs into their geometry, so an atlas change rebuilds the meshes.
 
-The texture atlas contains multiple variants of each texture to correct BabylonJS face UV orientations.
+## Adding a module
 
-**Atlas Structure:**
-- **Normal textures** - Original 16×16 textures from texture pack
-- **`_hflip`** - Horizontal flip (mirror across vertical axis)
-- **`_rotated90ccw`** - 90° counter-clockwise rotation
-- **`_rotated90ccw_vflip`** - 90° CCW rotation + vertical flip
-
-**Separate UV Coordinate Arrays:**
-- **`blockFaceUV`** (2D Canvas) - Uses normal textures, standard face order
-- **`blockFaceUV3D`** (Babylon 3D) - Uses transformed textures, faces 2/3 swapped
-
-**3D Face Mappings (BabylonJS CreateBox order):**
-```
-Face 0 (Front/+Z):  Uses _hflip variant
-Face 1 (Back/-Z):   Uses normal texture
-Face 2 (Right/+X):  SWAPPED to left texture, uses _rotated90ccw_vflip variant
-Face 3 (Left/-X):   SWAPPED to right texture, uses _rotated90ccw_vflip variant
-Face 4 (Top/+Y):    Uses _rotated90ccw variant
-Face 5 (Bottom/-Y): Uses normal texture
-```
-
-**Why Transformations Are Needed:**
-BabylonJS CreateBox applies different default UV orientations to each face. Without correction, textures appear rotated or flipped. The atlas pre-transforms textures so they display correctly on each face.
-
-**2D Rendering:**
-Canvas2D uses `blockFaceUV` with normal textures and no transformations. The 2D face index mapping differs from 3D, so separate UV arrays prevent 2D views from breaking when 3D mappings change.
-
-## Adding New Visualizers
-
-When adding new rendering components:
-
-1. Create a new file in `src/core/rendering/`
-2. Export a class that takes `Scene` and configuration in constructor
-3. Implement a `destroy()` method for cleanup
-4. Subscribe to relevant singleton events (ProjectManager, EditorStateManager)
-5. Unsubscribe in `destroy()`
-6. Integrate via composition in `Babylon3DController`
-
-**Example template:**
-
-```typescript
-export class MyVisualizer {
-  private scene: Scene;
-  private boundHandler = this.handleEvent.bind(this);
-
-  constructor(scene: Scene, config: MyConfig) {
-    this.scene = scene;
-    // Setup visualization
-    someManager.on('event', this.boundHandler);
-  }
-
-  destroy(): void {
-    someManager.off('event', this.boundHandler);
-    // Dispose Babylon resources
-  }
-
-  private handleEvent(): void {
-    // Update visualization
-  }
-}
-```
+1. Create a file in `src/core/rendering/`.
+2. Take the `Scene` and configuration as arguments.
+3. Give a class module a `destroy()` method that disposes its Babylon resources.
+4. Let Babylon3D create it in `attach()`, call it from its notification handlers, and destroy it in `detach()`.
+5. Subscribe to singleton notifications inside the module only when Babylon3D has no reason to see them. Unsubscribe in `destroy()`.

@@ -1,390 +1,182 @@
 # UX Decisions & Interaction Patterns
 
-This document captures the user experience design decisions for the Minecraft Magic Blueprint System.
+This document records the interaction decisions for Structures and how the app carries them out. Ideas not built yet live in [PROJECT.md](./PROJECT.md) under Future Enhancements.
 
 ---
 
 ## 1. Initial App Experience
 
-**Question:** When a user first opens the app, what do they see?
+**Decision:** The app opens on a welcome screen that doubles as the project browser.
 
-**Options:**
-- A welcome screen with "New Project" / "Load Project" options?
-- Directly prompted with a "Create New Project" dialog?
-- An empty editor state with a call-to-action?
-
-**Decision:** Welcome screen with "New Project" / "Load Project" options
-
-**Details:** Traditional app landing page approach. Shows saved projects and provides clear entry points for creating new projects or loading existing ones.
+**Details:**
+- The header shows the logo, the app name, and a one-line description.
+- Actions: New Project, Load from File, and Credits.
+- A notice appears when the build has no texture atlas. It tells the user to run `npm run setup:textures`.
+- The project grid fills the left side. A details panel on the right shows the selected project.
 
 ---
 
 ## 2. Project Creation Flow
 
-**Question:** What information do users provide when creating a new project?
-
-**Considerations:**
-1. Project name (required)
-2. Dimensions (width × height × depth) - are there presets like "Small (16×16×16)", "Medium (32×32×32)", etc.?
-3. Meta block placement - do they:
-   - Specify coordinates during creation?
-   - Place it interactively after creation?
-   - Have it auto-placed at a default position (like center-bottom)?
-4. Meta block direction - set during creation or after?
-
-**Decision:**
-1. Project name is required
-2. Offer preset dimensions (Small/Medium/Large) + custom input. **Important:** Dimensions are dynamic - users can add/remove layers in any direction as they build. Make it clear in the UI that initial dimensions can be changed later.
-3. Meta block must be placed first, before any other blocks. Users place it interactively as their first action after project creation.
-4. No direction configuration needed - meta block always faces the same direction within the system. Users view it from different perspectives (front/back, left/right, top/bottom).
+**Decision:** A dialog asks for a name and dimensions. The meta block comes next.
 
 **Details:**
-- Meta block concept: It's a block in 3D space with an arrow pointing "forward". All other blocks are positioned relative to it.
-- Meta block represents either: (1) an activatable block in the world, or (2) a player holding an item and activating it.
-- The fixed direction simplifies the system - different views are just different perspectives on the same structure.
-- Initial dimension presets could be: Small (16×16×16), Medium (32×32×32), Large (64×64×64), or Custom.
+1. The project name is required.
+2. Dimensions come from presets, Small (16×16×16), Medium (32×32×32), and Large (64×64×64), or from custom width, height, and depth fields.
+3. The meta block has a fixed direction. The six views look at it from different sides, so the user never sets a direction.
+
+**Meta block concept:** a block with an arrow that points forward. All other blocks are positioned relative to it. In game it stands for an activatable block or a player who holds an item and uses it.
 
 ---
 
 ## 3. Main Editor Layout
 
-**Question:** How are the different views arranged?
+**Decision:** The editor supports a tabbed layout and a quad layout. The toolbar's View Mode select switches between them.
 
-**Option A: Tabbed Interface**
-- Tabs switch between Front View / Side View / Back View / 3D Preview
-- One main canvas area
-- Material palette in a sidebar
+**Toolbar (top):** project name, save status, undo and redo, Save, Projects, View Mode, and Credits.
 
-**Option B: Split View**
-- Multiple 2D views visible simultaneously in a grid
-- 3D preview as a separate tab or floating panel
+**Tool options bar (below the toolbar):** shape fill mode for shape tools, depth painting, paint behavior, and layer controls.
 
-**Option C: Primary + Context**
-- One large primary view (the one you're editing)
-- Smaller thumbnail previews of other views
-- 3D preview toggleable as overlay or split
+**Tabbed layout:** one view at a time. Tabs: Front, Back, Left, Right, Top, Bottom, and 3D Preview.
 
-**Decision:** Support BOTH tabbed and quad-layout modes
+**Quad layout:** a 2×2 grid with Front (top left), Left (top right), Top (bottom left), and the 3D view (bottom right). Every 2D panel accepts paint.
 
-**Details:**
-- **Tabbed Mode:** One view at a time (Front / Side / Back / 3D Preview tabs) - focused work
-- **Quad Layout:** Four views simultaneously - 3 2D views + 1 3D preview in a grid
-- **Layout Switching:** View menu dropdown to select layout mode ("Tabbed" / "Quad Layout")
-- **Keyboard Shortcuts:** Architecture should support them, but not defining specific shortcuts yet
-- **Material Palette:** Sidebar/actionbar component, consistent across both layout modes
+**Side panel (right, both layouts):** tool icons, block state controls when the material has states, the quick-select slots, and the foreground and background selector.
 
-**The Three 2D Views (with flippable perspectives):**
-1. **Front/Back View** - X-Y plane (looking along Z axis)
-   - Front: looking from the front
-   - Back: looking from the back
-2. **Left/Right View** - Z-Y plane (looking along X axis)
-   - Left: looking from the left side
-   - Right: looking from the right side
-3. **Top/Bottom View** - X-Z plane (looking along Y axis)
-   - Top: looking from the top down
-   - Bottom: looking from the bottom up
-
-**Quad-Layout Behavior:**
-- All 2D views are paintable (no single "active" view)
-- User defines active layers/levels in all dimensions (X, Y, Z)
-- Each view shows the slice at that layer
-- Each view has a perspective toggle (Front↔Back, Left↔Right, Top↔Bottom)
-- Paint operations apply to the appropriate layer based on which view is clicked
-- Perspective concept: "looking from the [top, bottom, left, right, front, back]"
+**The 2D views:**
+1. Front and Back look along the depth (Y) axis.
+2. Left and Right look along the width (X) axis.
+3. Top and Bottom look along the height (Z) axis.
 
 ---
 
-## 4. Layer/Depth Control
+## 4. Layer Control
 
-**Question:** How do users navigate depth layers in 2D views?
-
-**Options:**
-- Slider/scrubber at the bottom of canvas?
-- Previous/Next layer buttons with current layer indicator?
-- Keyboard shortcuts ([ ] keys)?
-- Visual stack indicator showing all layers?
-
-**Decision:** Multi-level layer control system with central controls, per-panel quick adjustments, and keyboard shortcuts
+**Decision:** A compact layer readout in the tool options bar, a popover with full controls, and global keys.
 
 **Details:**
+- The readout always shows the active X, Y, and Z layers.
+- The settings button opens a popover. Each axis has decrement and increment buttons, a number field, and a slider.
+- The step buttons show their keys in tooltips.
 
-**Central Control/Visualization:**
-- Always displays the selected layers for all three dimensions (X, Y, Z) - constantly visible
-- Full controls (arrows + text input) can be hidden until activated
-- Text input allows typing specific layer numbers for precision
-- Arrows for incrementing/decrementing layers
-- Must handle projects with many layers gracefully
-
-**Per-Panel Quick Controls:**
-- Each 2D panel has +/- buttons for quick depth adjustments
-- UI must be careful/minimal since panels also need zoom controls
-- These are for quick iteration; central control is for precise jumps
-
-**Keyboard Shortcuts (Global):**
-- `z` / `Shift+z`: Adjust Z-layer (front/back depth)
-- `y` / `Shift+y`: Adjust Y-layer (top/bottom height)
-- `x` / `Shift+x`: Adjust X-layer (left/right depth)
-- Work globally - no specific panel needs focus
-- Lowercase = increment, Shift = decrement (or vice versa, TBD)
+**Keys (global, no panel focus needed):**
+- `A` / `D`: X layer down / up
+- `X` / `C`: Y layer down / up
+- `S` / `W`: Z layer down / up
 
 ---
 
 ## 5. 2D Canvas Interaction
 
-**Question:** What's the editing behavior?
+**Decision:** Tools, shape fill, depth, and paint behavior combine. Each is picked on its own.
 
-**Considerations:**
-- Click to place one block at a time?
-- Click and drag to paint continuously?
-- Grid lines always visible, or toggle-able?
-- Zoom levels - fit to screen by default, or 1:1 pixel ratio?
+**Tools (side panel, with keys):**
+- Point (B): paint single cells
+- Fill: flood-fill connected cells of one block type on the active layer
+- Rectangle (R)
+- Circle (O)
+- Arch (G): placed by clicking points
+- Curve (V): a Bezier curve placed by clicking points
 
-**Decision:** Rich painting system with multiple modes, behaviors, and interaction patterns
+**Shape fill:** shape tools draw an outline or a filled shape.
 
-**Details:**
+**Depth painting:** a stroke repeats through 1 to 10 layers. "Through" paints every layer. "Until Hit" stops at the first block.
 
-**Painting Modes:**
-1. **Point Mode:** Click to place single block, Shift+click to delete single block
-2. **Fill Mode:** Click and drag to fill region, Shift+click-drag to bulk delete
-3. **Outline Mode:** Click and drag to draw outline, Shift+click-drag to delete outline
+**Paint behaviors:**
+- Normal: paint anywhere
+- Only Replace: paint only over existing blocks
+- Selective Replace: replace only a chosen block type
+- Erase: remove blocks. The preview turns red.
 
-**Paint Behaviors (especially useful with Fill mode):**
-- **Normal:** Fill everything including empty cells
-- **Only Replace:** Replaces cells that already have blocks, leaves empty cells empty
-- **Selective Replace:** Replaces only specific selected block types
+**Zoom and pan:**
+- The grid fits the panel until the user zooms or pans.
+- The mouse wheel zooms.
+- Space and drag, or middle drag, pans.
 
-**Erasing:**
-- Primary: Modifier key (Shift) + click/drag
-- Secondary: Dedicated eraser tool option
-
-**Future: Depth Painter Mode**
-- Quickly create filled or hollow cubic shapes across depth layers
-- UI/UX not yet defined - to be explored
-
-**Grid:**
-- Toggleable on/off
-- Styleable (color, opacity, etc.)
-- Naturally fades when it would render < 1px on screen
-- Adaptive visibility based on zoom level
-
-**Zoom & Pan:**
-- Default zoom: fit-to-panel
-- Zoom controls: buttons + mousewheel
-- Pan: Spacebar + click + drag
-
-**Visual Feedback:**
-- Crosshair cursor
-- Hover highlight/outline of affected area
-- No block preview - just hover styling shows what will be affected
+**Visual feedback:**
+- A hover preview shows the cells a stroke will touch.
+- The view draws the active layer and the two layers on each side.
+- Layer indicators mark the other axes' active layers.
 
 ---
 
 ## 6. Material Selection
 
-**Question:** Where does the block palette live and how does selection work?
+**Decision:** Nine quick-select slots in the side panel, a foreground and background pair, and a modal material browser.
 
-**Considerations:**
-- Fixed sidebar with scrollable grid of blocks?
-- Collapsible panel?
-- Floating palette?
-- Recently used blocks at the top?
-- Search/filter by name or category?
+**Quick-select slots:**
+- Each project has nine slots. The user fills them by hand.
+- A click or keys 1 to 9 put a slot's block in the active material.
+- A right click assigns the selected block to a slot.
+- A tenth button opens the material browser.
 
-**Decision:** Floating actionbar at bottom with quick-select palette and pop-out menu for full block library
+**Foreground and background:**
+- Two overlapping squares, like Photoshop's two colors or Minecraft's two hands.
+- Click a square to make it active. F swaps them.
 
-**Details:**
+**Material browser (E):**
+- A modal with a search field and category tabs: All, Building, Natural, Decoration.
+- Search matches block names. The grid is windowed, so the full block list stays responsive.
+- Drag a material onto a quick-select slot to assign it. Click a material to put it in the active slot.
+- E closes the browser too.
 
-**Actionbar (Bottom of Screen):**
-- Floating actionbar using React Spectrum's ActionBar pattern
-- Always visible, non-intrusive
-- Contains quick-select palette and button to open full palette menu
-
-**Quick-Select Palette:**
-- 5 slots, always visible on the actionbar
-- User manually assigns blocks to each slot (not auto-populated)
-- Similar to Photoshop color swatches, but for Minecraft blocks
-- Quick access to frequently-used materials without opening full palette
-
-**Full Palette Menu:**
-- Pops out from actionbar (should be a common UI pattern in Spectrum)
-- Organized by block type and sub-type (sectioned/categorized)
-- Uses panels for organization
-- Fuzzy search functionality (like Minecraft inventory, but with clean Spectrum UI)
-- User can browse all available blocks and add them to quick-select
-
-**Selection Feedback:**
-- Match React Spectrum's color picker styling
-- Visual highlight/border on selected block
-- Consistent with Spectrum design patterns
+**Block state:**
+- Slabs show bottom, top, and double. Y flips the half.
+- Stairs show facing and half. T rotates the facing.
 
 ---
 
 ## 7. Meta Block Handling
 
-**Question:** When and how is the meta block placed?
+**Decision:** Guided placement is the first step in a new project.
 
-**Considerations:**
-- Set during initial project creation?
-- Placed in the first editing action?
-- Special tool mode to place/move it?
-- Visual representation: Different color? Icon? Special border?
+**Flow:**
+1. The user creates a project.
+2. A dialog explains what the meta block is.
+3. "Got it" closes the dialog and enters placement mode.
+4. A banner over the canvas reads "Click to place meta block, then confirm" and offers a Confirm button.
+5. Confirm finalizes the meta block.
 
-**Decision:** Guided placement as first action after project creation; cannot be moved once placed
+**Visual representation:** the 2D views draw the meta block with a heavier outline until it is confirmed. The 3D view draws it as a block with an arrow.
 
-**Details:**
-
-**Initial Placement Flow:**
-1. User creates new project (name + dimensions dialog)
-2. Dialog closes, informational modal appears
-3. Modal describes meta block purpose and placement
-4. Modal may include image/gif showing what the meta block represents
-5. User closes modal, enters "place meta block" mode
-6. User can click on any 2D view to place the meta block
-7. Once placed, meta block cannot be moved
-
-**Visual Representation (2D Views):**
-- White block with arrow pointing forward (the meta block's forward direction)
-- Letter denoting which direction the view is looking from:
-  - F (Front), B (Back), L (Left), R (Right), T (Top), Bo (Bottom)
-- The arrow is trickier to represent in Front/Back views (looking along forward axis)
-
-**Visual Representation (3D View):**
-- Same concept as 2D but rendered in 3D
-- White block with directional arrow
-
-**Movement:**
-- Meta block CANNOT be moved after placement
-- Simplifies workflow and prevents accidental origin changes
-
-**Placement Restrictions:**
-- Not implementing placement restrictions (player standing space validation) in initial version
+**Placement restrictions:** the app does not check for player standing space.
 
 ---
 
 ## 8. Project Management
 
-**Question:** How do users manage multiple projects?
+**Decision:** Edits persist in the browser on their own. Files carry a project between browsers.
 
-**Considerations:**
-- File menu with New/Open/Save?
-- Project browser/gallery view?
-- Auto-saved in background, manual save also available?
-- Where does the project list appear?
+**Persistence:**
+- Every edit writes to IndexedDB as it happens. No save dialog appears.
+- The toolbar shows "Unsaved changes", "Saving...", or "Saved".
 
-**Decision:** Auto-save to browser storage + manual export, with traditional File menu and project browser
+**Project files:**
+- Save in the toolbar writes a `.mcblueprint` JSON file. Chromium browsers show a save picker. Other browsers download the file.
+- Load from File on the welcome screen opens a file as a new project, with its undo history.
+- A loaded project whose name is taken becomes "Name (from file)" or "Name (from file N)".
+- A file that fails to load or save shows an error toast.
 
-**Details:**
+**Project browser:**
+- A grid of cards with name and thumbnail
+- A selected project shows its name and created date, with Open and Delete buttons
+- The 3D view captures thumbnails shortly after the structure settles
 
-**Auto-Save:**
-- Auto-save to browser localStorage after changes
-- 3 seconds wait time is sufficient
-- Show indicators for "unsaved" and "saving" states
-- No save confirmation dialogs
+**Delete:** removes the project at once, with no confirmation.
 
-**Manual Save (Export):**
-- "Save" in File menu = Export/Download file to desktop
-- Exported file can be used to transfer between browsers or restore projects
-- File format TBD (likely JSON)
-
-**Loading Projects:**
-- Can open from local browser storage (auto-saved projects)
-- Can open from files (previously exported/saved projects)
-- Accessible at any time via File menu → Open
-- Also accessible from welcome screen
-
-**Project Browser UI:**
-- Grid view of projects
-- Initially shows: name + thumbnail only
-- On selection: show full metadata panel
-- Action button to open selected project
-- Thumbnails auto-generated from 3D view periodically
-
-**Project Metadata (stored):**
-- Name
-- Created date
-- Last modified date
-- Dimensions (of actual blocks placed, not grid dimensions)
-- Block count (number of blocks placed)
-- Thumbnail image
-
-**File Menu Structure:**
-- Traditional menu: New, Open, Save (Export), Save As, Export (other formats)
-- "Save" = export to file
-- Auto-save handles browser storage persistence
-
-**Deleting Projects:**
-- Delete option available in project browser
-- Requires confirmation dialog
-
-**Side Note:**
-- System must support Undo/Redo functionality (important architectural consideration)
+**Undo and redo:**
+- Ctrl+Z or ⌘Z undoes. Ctrl+Shift+Z or ⇧⌘Z redoes.
+- Toolbar buttons do the same.
+- A toast names each undone or redone step.
+- History survives a reload, because it is folded from the event log.
 
 ---
 
-## Summary
+## 9. Keyboard Focus
 
-### Complete User Journey
+**Decision:** Global keys never act while the user types or while a dialog is open.
 
-**1. App Launch**
-- User opens app, sees welcome screen
-- Grid of existing projects (name + thumbnail) or "New Project" button
-
-**2. Create New Project**
-- Click "New Project"
-- Dialog: Enter name + select dimensions (presets or custom)
-- Note: Dimensions can be changed later by adding/removing layers
-
-**3. Place Meta Block**
-- Creation dialog closes
-- Informational modal explains meta block purpose (with image/gif)
-- User closes modal, enters placement mode
-- Click on any 2D view to place white meta block with directional arrow
-- Meta block cannot be moved once placed
-
-**4. Choose Layout Mode**
-- Via View menu dropdown, select:
-  - **Tabbed Mode:** One view at a time (focused work)
-  - **Quad Layout:** All views visible (Front/Back, Left/Right, Top/Bottom, 3D)
-- Each 2D view has perspective toggle (Front↔Back, Left↔Right, Top↔Bottom)
-
-**5. Building the Structure**
-- **Select Material:** Use 5-slot quick-select palette on bottom actionbar, or open full palette menu (organized by type, fuzzy search)
-- **Set Active Layers:** Use central layer controls (X, Y, Z) or keyboard shortcuts (x/shift+x, y/shift+y, z/shift+z)
-- **Paint Blocks:** Choose painting mode (Point, Fill, Outline) and behavior (Normal, Only Replace, Selective Replace)
-  - Click to place / Shift+click to erase
-  - Click-drag for fills/outlines
-- **Adjust View:** Per-panel +/- for layer depth, zoom (fit-to-panel default, buttons/mousewheel), pan (spacebar+drag)
-- **Visual Feedback:** Crosshair cursor, hover highlight of affected area
-
-**6. Auto-Save & Preview**
-- Project auto-saves to browser storage after 3 seconds of inactivity
-- Indicators show "unsaved" / "saving" states
-- Toggle between 2D and 3D views to inspect structure
-- 3D view periodically generates thumbnail for project browser
-
-**7. Undo/Redo**
-- Support for undoing/redoing actions (keyboard shortcuts TBD)
-
-**8. Export Project**
-- File menu → Save (Export)
-- Downloads project file to desktop for transfer/backup
-- No confirmation needed
-
-**9. Load Existing Project**
-- Welcome screen or File menu → Open
-- Grid of projects (name + thumbnail)
-- Select project to see full metadata (created, modified, dimensions, block count)
-- Click action button to open
-- Can also load from previously exported file
-
-**10. Delete Project**
-- Delete option in project browser
-- Confirmation dialog required
-
-### Key Architectural Considerations
-- Dynamic dimensions (can add/remove layers while building)
-- All 2D views paintable in quad-layout mode
-- Global keyboard shortcuts for layer navigation
-- Undo/redo system required
-- Multiple painting modes and behaviors
-- Auto-save + manual export workflow
+**Details:**
+- Keys are ignored in text fields.
+- An open modal owns the keyboard. E still closes the material browser.
+- Ctrl or Cmd with any key other than Z passes through to the browser.

@@ -1,874 +1,447 @@
-# Architecture Patterns and Decisions
+# Architecture Patterns
 
-## Core Architecture: Command/Projection Pattern
+## Core Architecture: Commands and Projections
 
-This application follows **Event Sourcing + CQRS** architecture. All state changes flow through a single direction:
+The app uses Event Sourcing with separate write and read sides (CQRS). Every state change flows one way:
 
 ```
-User Action → Command → Validation → Event → Projection → UI
+User Action → Command → Validation → EventLog row → Projection → Notification → HOC → UI
 ```
 
-### The Universal Flow
+### Write Side (Commands)
 
-#### Write Side (Commands)
+1. The user acts in the UI, or a hotkey fires.
+2. A command runs. It names the user's intent, such as `shrinkDimensionsCommand.execute('x-')`.
+3. The command reads current state from projections and applies business rules.
+4. A valid command appends rows to the EventLog. An invalid command throws.
+5. The EventLog emits `event:appended` for each row after the transaction commits.
 
-Every user action follows this flow:
+Command singletons live in `src/commands/`. `DraftingService.finalize()` and `EditHistory.undo()`/`redo()` are also writers. They append through the same EventLog API.
 
-1. **User interacts** with UI or API
-2. **Command fires** - represents user intent (e.g., "PlaceBlock", "ShrinkDimensions")
-3. **Command handler:**
-   - Queries current state from projections
-   - Applies business rules to validate
-   - If valid: appends event to shared log, emits notification async
-   - If invalid: rejects with error
-4. **Event persisted** to shared event log
+### Read Side (Projections)
 
-#### Read Side (Projections)
+1. Projections listen to `event:appended` and apply rows for the current project.
+2. Each projection then emits a notification (`model:rebuilt`, `metadata:rebuilt`, `blocks:rebuilt`).
+3. HOCs and views read from projections. They never read from commands.
 
-Projections materialize state from events:
-
-1. **Events replayed** to build materialized views
-2. **UI reads** from projections (never from commands)
-3. **Projections update** when new events appended
-
-### Example: ShrinkDimensions Command
+### Example: ShrinkDimensionsCommand
 
 ```typescript
-// Command handler (write side)
-class ShrinkDimensionsCommand {
-  constructor(
-    private eventLog: EventLog,
-    private blockProjection: BlockProjection
-  ) {}
+// src/commands/ShrinkDimensionsCommand.ts (abridged)
+export class ShrinkDimensionsCommand {
+  async execute(direction: Direction): Promise<void> {
+    // 1. Read current state from projections
+    const currentDimensions = await modelProjection.getDimensions();
+    const shrinkResult = this.calculateShrink(currentDimensions, direction);
+    const blocks = await blockProjection.getBlocks();
 
-  execute(direction: 'x+' | 'x-' | ...): Result<void, Error> {
-    // 1. Query current state from projection
-    const blocks = this.blockProjection.getBlocks();
-    const currentDimensions = this.blockProjection.getDimensions();
-
-    // 2. Apply business rules
-    const newDimensions = calculateNewDimensions(currentDimensions, direction);
-    const orphanedBlocks = findOrphanedBlocks(blocks, newDimensions);
-
+    // 2. Business rule: no block may fall outside the new bounds
+    const orphanedBlocks = findOrphans(blocks, shrinkResult);
     if (orphanedBlocks.length > 0) {
-      // 3a. Reject if invalid
-      return Err(new Error(`Cannot shrink: would orphan ${orphanedBlocks.length} blocks`));
+      throw new Error(`Cannot shrink: would orphan ${orphanedBlocks.length} block(s).`);
     }
 
-    // 3b. Append event if valid
-    const event: DimensionShrunkEvent = {
-      type: 'dimension:shrunk',
-      eventId: generateUUID(),
-      timestamp: Date.now(),
-      payload: { direction, newDimensions }
-    };
-
-    this.eventLog.append(event);
-
-    // 4. Emit notification async (after event persisted)
-    this.eventLog.emit('event:appended');
-
-    return Ok(void);
+    // 3. Append one undoable action
+    await eventLog.appendAction(projectId, {
+      kind: 'dimension-shrink',
+      events: [{ type: 'model:dimensionShrunk', data: shrinkResult }],
+    });
   }
 }
 ```
 
-```typescript
-// Projection (read side)
-class BlockProjection {
-  private blocks: BlockIndex = new BlockIndex();
-  private dimensions: Dimensions;
+The command reads two projections and writes one action. It never mutates a projection.
 
-  constructor(private eventLog: EventLog) {
-    // Materialize initial state from events
-    this.rebuild();
-
-    // Update when new events appended
-    eventLog.on('event:appended', () => this.rebuild());
-  }
-
-  private rebuild(): void {
-    const events = this.eventLog.getEvents();
-
-    // Replay only block events to build block index
-    for (const event of events) {
-      switch (event.type) {
-        case 'block:placed':
-          this.blocks.set(event.payload.position, event.payload.blockType);
-          break;
-        case 'block:removed':
-          this.blocks.delete(event.payload.position);
-          break;
-        // Ignore non-block events
-      }
-    }
-  }
-
-  // Read methods (used by UI and commands)
-  getBlocks(): BlockIndex {
-    return this.blocks;
-  }
-}
-```
-
-### Benefits of This Pattern
-
-✅ **Single direction data flow** - Eliminates sync bugs
-✅ **Clear separation** - Commands validate, projections materialize
-✅ **Testability** - Commands and projections are isolated
-✅ **Performance** - Projections cache materialized state
-✅ **Time travel** - Replay events to any point
-✅ **Audit log** - All changes recorded as events
-
-### Key Insight
-
-**Commands** own business logic and handle writes.
-**Projections** own materialized state and handle reads.
-**Never mix them** - no "managers" that do both.
+**Commands** own business rules and writes. **Projections** own derived state and reads. No class does both.
 
 ## Core Principles
 
-### 1. Avoid "Manager" and "Controller" Anti-Patterns
+### 1. No "Manager" or "Controller" Names
 
-**Problem:** These names signal ambiguous purpose or doing too many things.
+These names hide what a class does. Name a class by its behavior or concern:
+- `EditorState` holds UI state
+- `EditHistory` holds the undo and redo stacks
+- `ScreenRouter` decides the visible screen
+- `TextureResolver` loads the texture atlas
+- `Canvas2D` orchestrates one 2D canvas
 
-**Instead:** Name by actual concern/responsibility:
-- ❌ `ProjectManager` → ✅ `Model` or `ModelHistory`
-- ❌ `EditorStateManager` → ✅ `EditorState`
-- ❌ `Canvas2DController` → ✅ `Canvas2D` or tool-specific names
+When the folder scopes the context (`src/core/rendering/`), the class name does not repeat it (`CameraRig`, not `BabylonCameraRig`).
 
-### 2. Clear Separation of Concerns
+### 2. Separate Concerns
 
-The application has distinct concerns that must not be conflated:
+#### Model State (Persisted)
+- **What:** dimensions, blocks (position → block type and block state), and the meta block
+- **Where:** derived from EventLog rows by `modelReducer`
+- **Storage:** IndexedDB database `mc-blueprint-events`
+- **Read through:** `modelProjection`, `blockProjection`, `projectView`
 
-#### **Model State (Persisted)**
-- **What:** The 3D structure - coordinates → material (+ direction in future)
-- **Where:** Derived from event history
-- **Storage:** EventStore (persisted to localStorage)
-- **Access:** `modelHistory.replay()` returns current model state
-- **Immutable:** State is computed, not mutated
+#### Project Metadata (Persisted)
+- **What:** project id, name, created and modified timestamps
+- **Where:** `metadata:*` rows in the same EventLog
+- **Read through:** `metadataProjection`
 
-#### **Preview/Draft State (Ephemeral)**
-- **What:** Blocks being placed during active interaction
-- **Where:** DraftingService (in-memory only)
-- **Shared:** All views (2D/3D) see the same preview
-- **Structure:** Raw data `Array<{ position, material, direction? }>`
-- **Lifecycle:** start → set → finalize/cancel
+#### Preview State (Ephemeral)
+- **What:** blocks shown during an active stroke
+- **Where:** `draftingService` (memory only)
+- **Shared:** the 2D and 3D views read the same preview
+- **Lifecycle:** `start()` → `set()` → `finalize()` or `cancel()`
 
-#### **Editor State (UI)**
-- **What:** Selected material, active layer, current tool/mode
-- **Where:** EditorState singleton
-- **Not:** The model itself, just UI configuration
+#### Editor State (UI)
+- **What:** selected block, active layers, paint mode, paint behavior, depth config, layout, dialogs
+- **Where:** `editorState`, `screenRouter`, `quickSelectStore`, `renderSettingsStore`
+- **Not:** part of the model or its history
 
-#### **Input (Interaction)**
-- **What:** Touch/mouse, keyboard, modifiers
-- **Where:** Per-canvas listeners, global keyboard shortcuts
-- **Pattern:** Browser's event system with bubbling
+#### Input
+- **Pointer:** each canvas tool listens on its own canvas (`ToolBase`)
+- **Keyboard:** `hotkeyDispatcher` handles global shortcuts. It ignores keys while a text field has focus or a modal is open.
 
-#### **Rendering (Visualization)**
-- **What:** Pure visualization combining model + preview
-- **Formula:** `render(modelBlocks + previewBlocks)`
-- **No state:** Just draws what it's given
+#### Rendering
+- **What:** draws model blocks plus preview blocks
+- **Where:** `Canvas2D` (`src/core/canvas2d/`) and `Babylon3D` (`src/core/Babylon3D.ts`)
+- **Timing:** one shared `renderLoop` tick drives every view
 
-## Shared Event Log Architecture
+## The Event Log
 
-### The Single Event Log
+### One Log for Everything
 
-All events append to one shared log:
-
-```typescript
-// Shared event log contains ALL events
-EventLog = [
-  { type: 'project:created', payload: { name, dimensions } },
-  { type: 'block:placed', payload: { position, blockType } },
-  { type: 'block:placed', payload: { position, blockType } },
-  { type: 'dimension:expanded', payload: { direction } },
-  { type: 'metablock:placed', payload: { position, direction } },
-  { type: 'block:removed', payload: { position } },
-  // ...
-]
-```
-
-### Multiple Projections from One Log
-
-Different projections consume different events:
+`eventLog` (`src/core/EventLog.ts`) is the only persisted source of truth. Every project's rows share one IndexedDB object store.
 
 ```typescript
-// BlockProjection - consumes block events
-class BlockProjection {
-  private blocks: BlockIndex = new BlockIndex();
-
-  rebuild(events: Event[]): void {
-    for (const event of events) {
-      switch (event.type) {
-        case 'block:placed':
-          this.blocks.set(event.payload.position, event.payload.blockType);
-          break;
-        case 'block:removed':
-          this.blocks.delete(event.payload.position);
-          break;
-        // Ignores: project:created, dimension:expanded, metablock:placed, etc.
-      }
-    }
-  }
-
-  getBlocks(): BlockIndex {
-    return this.blocks;
-  }
-}
-
-// MetadataProjection - consumes project/dimension/metablock events
-class MetadataProjection {
-  private metadata: ProjectMetadata;
-
-  rebuild(events: Event[]): void {
-    for (const event of events) {
-      switch (event.type) {
-        case 'project:created':
-          this.metadata = {
-            id: event.projectId,
-            name: event.payload.name,
-            dimensions: event.payload.dimensions,
-            created: event.timestamp,
-            modified: event.timestamp
-          };
-          break;
-        case 'project:renamed':
-          this.metadata.name = event.payload.newName;
-          this.metadata.modified = event.timestamp;
-          break;
-        case 'dimension:expanded':
-          this.metadata.dimensions = event.payload.newDimensions;
-          break;
-        case 'metablock:placed':
-          this.metadata.metaBlock = event.payload;
-          break;
-        // Ignores: block:placed, block:removed
-      }
-    }
-  }
-
-  getMetadata(): ProjectMetadata {
-    return this.metadata;
-  }
-}
-
-// ProjectView - combines multiple projections
-class ProjectView {
-  constructor(
-    private blockProjection: BlockProjection,
-    private metadataProjection: MetadataProjection
-  ) {}
-
-  getProject(): Project {
-    return {
-      ...this.metadataProjection.getMetadata(),
-      blocks: this.blockProjection.getBlocks()
-    };
-  }
+interface Event {
+  id?: number;        // Auto-increment, assigned on append
+  type: string;       // e.g. 'model:blocksPlaced', 'metadata:renamed'
+  data: unknown;      // Event-specific payload
+  timestamp: number;
+  projectId?: string;
+  actionId?: string;  // Shared by every row one user action wrote
 }
 ```
 
-### Concerns vs. Data Types
+Indexes:
+- `type`
+- `actionId`: reads every row of one action. Action IDs are unique across all projects.
+- `projectId_id`: a compound `[projectId, id]` key. One project's rows read in ID order without scanning other projects.
 
-**BlockProjection** is concerned with **block history** (placement/removal).
-It doesn't care about dimensions changing or metablock placement.
+### Row Types
 
-**MetadataProjection** is concerned with **project metadata** (name, dimensions, metablock).
-It doesn't care about individual blocks being placed/removed.
+| Type | Written by | Undoable |
+|------|-----------|----------|
+| `metadata:created` | CreateProjectCommand, LoadProjectFileCommand | No |
+| `metadata:renamed` | RenameProjectCommand, LoadProjectFileCommand | No |
+| `model:initialized` | CreateProjectCommand | No |
+| `model:blocksPlaced`, `model:blocksRemoved` | DraftingService.finalize (kind `paint`) | Yes |
+| `model:dimensionExpanded` | ExpandDimensionsCommand (kind `dimension-expand`) | Yes |
+| `model:dimensionShrunk` | ShrinkDimensionsCommand (kind `dimension-shrink`) | Yes |
+| `model:metaBlockPlaced` | SetMetaBlockCommand (kind `metablock-place`) | Yes |
+| `model:metaBlockConfirmed` | ConfirmMetaBlockCommand (kind `metablock-confirm`) | Yes |
+| `action:started`, `action:ended` | every undoable action, plus undo and redo | Markers |
 
-**Dimensions** are metadata (describe the bounds), not model data (the blocks themselves).
-Expanding dimensions doesn't change existing blocks - just changes the valid range.
-Shrinking dimensions might orphan blocks - **ShrinkDimensionsCommand queries BlockProjection to prevent this**.
+`modelReducer` also applies the single-block types `model:blockPlaced` and `model:blockRemoved`. No writer appends them.
 
-### Command Example: ShrinkDimensions
+### Append APIs
 
-```typescript
-class ShrinkDimensionsCommand {
-  execute(direction: Direction): Result<void, Error> {
-    // 1. Query BlockProjection to check for orphans
-    const blocks = this.blockProjection.getBlocks();
-    const currentDimensions = this.metadataProjection.getMetadata().dimensions;
-    const newDimensions = calculateNewDimensions(currentDimensions, direction);
+- `append(type, data, projectId)`: one row outside undo history. Used for metadata and `model:initialized`.
+- `appendAction(projectId, { kind, tool?, target?, events })`: one undoable action. Writes `action:started`, the events, and `action:ended` in one transaction, all with one new `actionId`. The log never holds part of an action.
+- `appendBatch(events)`: complete rows in one transaction. LoadProjectFileCommand uses it to write a whole project from a file.
+- `settled()`: resolves when every pending `appendAction` has committed or failed.
 
-    // 2. Business rule: don't orphan blocks
-    if (wouldOrphanBlocks(blocks, newDimensions)) {
-      return Err(new Error('Cannot shrink: would orphan blocks'));
-    }
+`event:appended` fires once per row, only after its transaction commits.
 
-    // 3. Append event
-    this.eventLog.append({
-      type: 'dimension:shrunk',
-      payload: { direction, newDimensions }
-    });
+### Multiple Tabs
 
-    return Ok(void);
-  }
-}
+Tabs share the database. A tab that opens a newer schema version triggers `versionchange` in older tabs. Those tabs close their connection and reload. Before an undo or redo, `EditHistory` compares the latest row ID with the highest ID it has seen. A higher ID came from another tab, so it replays the stacks first.
+
+## Projections
+
+```
+EventLog ──event:appended──▶ ModelProjection (owns a ModelReplayer)
+                             │   model:rebuilt, model:blocks-rebuilt
+                             ▼
+                             BlockProjection ── blocks:rebuilt
+EventLog ──event:appended──▶ MetadataProjection ── metadata:rebuilt
+ModelProjection + MetadataProjection ──▶ ProjectView (no notifications)
 ```
 
-**Key insight:** Commands query projections for validation, but don't modify them directly.
-Projections rebuild from events.
+- **ModelProjection** holds `{ dimensions, blocks, metaBlock }`. It applies each new `model:*` row in place.
+- **ModelReplayer** keeps one Model current. An undo or redo marker names no blocks, so it cannot apply in place. The replayer instead replays the whole project with `replayModel()` and skips undone actions. Reads wait for a running replay.
+- **BlockProjection** exposes ModelProjection's `BlockIndex` for spatial queries (`getBlocksAtLayer`, `getBlock`). It holds no state of its own, so both projections always agree.
+- **MetadataProjection** holds `{ id, name, created, modified }`.
+- **ProjectView** combines metadata and model into a `Project`.
+
+Each projection offers two kinds of read:
+- `getX()` is async. It calls `ensureFresh()` first, which applies any rows appended since the last read, from any tab.
+- `getCached()` is synchronous. Render loops call it after `ensureFresh()` has run.
+
+Projections apply only rows whose `projectId` matches `editorState.getCurrentProjectId()`. Opening a project resets every projection and replays.
+
+`Storage` (`src/core/Storage.ts`) derives the project list from the same log with the same `replayModel()`. A project exists exactly when the log holds its `metadata:created` row.
+
+### Dimensions and Blocks
+
+Dimensions belong to the model. A dimension change shifts blocks and the meta block by the row's `shift` vector. `model:dimensionShrunk` also drops blocks that land outside the new bounds. ShrinkDimensionsCommand rejects a shrink that would drop any block, so in practice none are dropped.
+
+## Undo and Redo
+
+`editHistory` (`src/core/EditHistory.ts`) folds `action:started` markers into two stacks with `historyReducer`.
+
+- An edit marker pushes its action onto the undo stack and clears the redo stack.
+- `undo()` appends an empty action of kind `undo` whose `target` is the top of the undo stack.
+- `redo()` appends an empty action of kind `redo` whose `target` is the top of the redo stack.
+- A marker that targets anything other than the top of its stack changes nothing. A tab with stale stacks cannot reorder history.
+- No row stores the state an undo restores. Replay skips the rows of undone actions.
+- A new edit after an undo discards the redo stack. The discarded actions stay undone permanently.
+- Metadata rows have no `actionId`, so renames and project creation are not undoable.
+
+The stacks survive a reload because they are folded from the log. Undo and redo run one at a time. A step waits while a stroke is active and waits for pending writes with `eventLog.settled()`.
+
+Notifications: `history:replayed`, `history:step-recorded`, `history:step-undone`, `history:step-redone`. `historyAnnouncer` turns each undo and redo into a toast.
+
+## Project Files
+
+Save and load use the same rows the log holds.
+
+- `saveProjectFileCommand` reads the open project's rows and writes JSON (`.mcblueprint`, format `mc-blueprint`, version 1). Rows drop their `id` and `projectId`.
+- `loadProjectFileCommand` parses and checks the file. It assigns a new project ID and new action IDs (undo and redo targets follow the same map), then writes every row with `appendBatch`. A loaded project never shares an ID with the project it came from.
+- A name already in use gets a `metadata:renamed` row to "Name (from file)" or "Name (from file N)".
+
+The codec lives in `src/utils/projectFile.ts`.
 
 ## Three Distinct Patterns
 
-### Event Sourcing (Model History)
+### Event Sourcing (Persisted Rows)
 
-**Purpose:** State reconstruction from persisted events
+**Purpose:** reconstruct state from persisted rows.
 
 ```typescript
-// Event structure (persisted)
-interface BlockPlacedEvent {
-  type: 'block:placed';
-  eventId: string;
-  timestamp: number;
-  sessionId: string;
-  projectId: string;
-  version: number;
-  payload: {
-    position: Vector3D;
-    blockType: string;
-    previousBlockType?: string;
-  };
-}
+// One paint stroke becomes one action
+await eventLog.appendAction(projectId, {
+  kind: 'paint',
+  tool: 'outline',
+  events: [
+    { type: 'model:blocksRemoved', data: { positions } },
+    { type: 'model:blocksPlaced', data: { blocks } },
+  ],
+});
 
 // State derivation
-const model = modelHistory.replay(projectId);
-// Internally: events.reduce(reducer, initialState)
-
-// Undo/redo
-modelHistory.undo();  // Replay to version - 1
-modelHistory.redo();  // Replay to version + 1
+const model = replayModel(events);  // Pure: skips undone actions
 ```
 
-**Key Files:**
-- `src/core/ModelHistory.ts` (formerly EventStore)
-- `src/events/types.ts`
-- `src/reducers/modelReducer.ts` (formerly projectReducer)
+**Key Files:** `src/core/EventLog.ts`, `src/reducers/modelReducer.ts`, `src/reducers/historyReducer.ts`, `src/projections/`
 
 ### Event-Driven (Notifications)
 
-**Purpose:** Loose coupling via ephemeral notifications
+**Purpose:** loose coupling through ephemeral notifications.
 
 ```typescript
-// After persisting event to history
-modelHistory.write(blocks);  // Persists event
+// The projection applied a row, then notifies
+this.emit('model:rebuilt');
 
-// Emit notification (separate from persisted event)
-modelHistory.emit('model:updated');  // Generic notification
-
-// Views subscribe
-modelHistory.on('model:updated', () => {
-  const model = modelHistory.replay();
-  updateView(model);
-});
+// An HOC re-reads on notification
+modelProjection.on('model:rebuilt', handleRebuilt);
 ```
 
-**Not the same as Event Sourcing events:**
-- Notifications are ephemeral (not persisted)
-- No version, timestamp, or eventId
-- Just signals "something changed"
+Notifications are not persisted rows:
+- No id, timestamp, or actionId
+- Never replayed
+- Named `<entity>:<past-tense-action>`, such as `screen:shown`, `layer:adjusted`, `atlas:ready`
 
 ### Commands (Imperative Requests)
 
-**Purpose:** Request that work be done
+**Purpose:** request work.
 
 ```typescript
-// User action triggers command
-draftingService.finalize();  // Command
-modelHistory.undo();         // Command
-editorState.setMaterial('stone');  // Command
-
-// Commands may:
-// - Validate and reject
-// - Create events (Event Sourcing)
-// - Emit notifications (Event-Driven)
+await renameProjectCommand.execute('Keep');
+await draftingService.finalize(operations);
+void editHistory.undo();
+editorState.setPaintMode('fill');
 ```
 
-## Tool System Architecture
+A command may validate and throw, append rows, and lead to notifications.
 
-### Base Tool Classes
+## Tool System
 
-Tools abstract interaction patterns from application:
+### Base Classes
 
-```typescript
-// Base class for click-drag interactions
-abstract class ClickDragTool {
-  constructor(protected draftingService: DraftingService) {}
+Tools turn pointer input on one canvas into preview blocks and paint actions. All live in `src/core/tools/`.
 
-  // Base class wires up actual event listeners
-  private wireListeners() {
-    canvas.on('mousedown', this.handleStart);
-    canvas.on('mousemove', this.handleMove);
-    canvas.on('mouseup', this.handleEnd);
-  }
+- **ToolBase**: pan (space-drag or middle mouse), wheel zoom, modifier tracking, and coordinate resolution. A pointer event resolves to a `UniversalPosition` with pixel, grid, and model coordinates, so concrete tools never convert coordinates.
+- **ClickDragReleaseTool**: idle → hovering → dragging. Subclasses implement `onHover`, `onDragStart`, `onDrag`, `onDragEnd`, `onDragCancel`.
+- **MultiClickTool**: collects up to `maxPoints` clicks. Subclasses implement `onHoverWithPoints`, `onPointPlaced`, `onComplete`, `onMultiClickCancel`.
 
-  // Subclasses override these NOOPs
-  protected onInteractionStart(ctx: InteractionContext): void {}
-  protected onInteractionMove(ctx: InteractionContext): void {}
-  protected onInteractionEnd(ctx: InteractionContext): void {}
-}
+| Tool | Base | Strategy |
+|------|------|----------|
+| PointPaintTool | ClickDragReleaseTool | PointPaintStrategy |
+| FillPaintTool | ClickDragReleaseTool | FillPaintStrategy |
+| OutlinePaintTool | ClickDragReleaseTool | OutlinePaintStrategy |
+| CirclePaintTool | ClickDragReleaseTool | CirclePaintStrategy |
+| ArchPaintTool | MultiClickTool | ArchPaintStrategy |
+| CurvePaintTool | MultiClickTool | CurvePaintStrategy |
 
-// Concrete tool
-class PaintTool extends ClickDragTool {
-  constructor(
-    draftingService: DraftingService,
-    private strategy: PaintStrategy
-  ) {
-    super(draftingService);
-  }
+`toolRegistry` (`src/core/tools/ToolRegistry.ts`) registers each tool with a name, hotkey, label, and factory at module load. `Canvas2D` creates the active tool from the registry. `hotkeyDispatcher` resolves hotkeys to tool names.
 
-  protected onInteractionStart(ctx: InteractionContext) {
-    this.draftingService.start();
-  }
+### Strategies: What to Paint
 
-  protected onInteractionMove(ctx: InteractionContext) {
-    const blocks = this.strategy.calculate(ctx.position);
-    this.draftingService.set(blocks);
-  }
-
-  protected onInteractionEnd(ctx: InteractionContext) {
-    this.draftingService.finalize();
-  }
-}
-```
-
-**Base Tool Types:**
-- `SingleClickTool` - One click performs action
-- `ClickDragTool` - Click, drag, release
-- `MultiClickTool` - Multiple clicks to define shape
-- `ModifierTool` - Keyboard modifier changes behavior
-
-**Location:** `src/core/tools/base/`
-
-### Strategy Pattern (Composable Functions)
-
-Strategies are **pure functional transformations** that tools compose.
+A `PaintStrategy` (`src/core/painting/strategies/`) computes which positions an interaction covers. It does not know about pointer events or existing blocks.
 
 ```typescript
-// Strategy interface
+interface PaintOperation {
+  position: Vector3D;
+  blockType: string | null;  // null erases
+  blockState?: BlockStateProperties;
+}
+
 interface PaintStrategy {
-  calculate(
-    position: Vector3D,
-    material: string,
-    constraints: Constraints
-  ): Array<{ position: Vector3D; material: string }>;
-}
-
-// Point strategy - single block
-class PointStrategy implements PaintStrategy {
-  calculate(position, material) {
-    return [{ position, material }];
-  }
-}
-
-// Outline strategy - rectangle outline
-class OutlineStrategy implements PaintStrategy {
-  calculate(position, material, constraints) {
-    const { startPos, endPos } = constraints;
-    return calculateRectangleOutline(startPos, endPos, material);
-  }
-}
-
-// Depth strategy - copy blocks N layers in M direction
-class DepthStrategy {
-  apply(
-    blocks: Array<{ position; material }>,
-    layers: number,
-    direction: Direction
-  ): Array<{ position; material }> {
-    // Doesn't care WHAT the blocks are
-    // Just copies them N times in direction
-    return blocks.flatMap(block =>
-      Array.from({ length: layers }, (_, i) => ({
-        position: offsetInDirection(block.position, direction, i),
-        material: block.material
-      }))
-    );
-  }
+  calculateOperations(
+    startPosition: Vector3D,
+    selectedBlockId: string | null,
+    dimensions: Dimensions,
+    constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number },
+  ): PaintOperation[] | Promise<PaintOperation[]>;
 }
 ```
 
-**Composing Strategies:**
+Arch and Curve strategies also implement `GuideGeometryProvider`. The 2D view draws their guide lines.
 
-```typescript
-// Tool composes multiple strategies
-class TunnelPaintTool extends ClickDragTool {
-  constructor(
-    draftingService: DraftingService,
-    private outlineStrategy: OutlineStrategy,
-    private depthStrategy: DepthStrategy
-  ) {
-    super(draftingService);
-  }
+### Behaviors: Whether to Paint
 
-  protected onInteractionMove(ctx: InteractionContext) {
-    // 1. Calculate outline
-    const outlineBlocks = this.outlineStrategy.calculate(
-      ctx.position,
-      ctx.material,
-      { startPos: this.startPos, endPos: ctx.position }
-    );
+A `PaintBehavior` (`src/core/painting/behaviors/`) filters operations by what already occupies each position:
+- `NormalBehavior`: paint everywhere
+- `OnlyReplaceBehavior`: paint only over existing blocks
+- `SelectiveReplaceBehavior`: paint only over specific block types
 
-    // 2. Apply depth
-    const tunnelBlocks = this.depthStrategy.apply(
-      outlineBlocks,
-      ctx.depthLayers,
-      ctx.depthDirection
-    );
+### PaintPipeline
 
-    // 3. Send to drafting service
-    this.draftingService.set(tunnelBlocks);
-  }
-}
-```
+`PaintPipeline.process(operations, viewType, dimensions)` (`src/core/tools/PaintPipeline.ts`) runs every tool's operations through the same stages:
 
-**Key Insight:** Strategies are functional, composable, and don't care about interaction patterns. Tools orchestrate strategies based on user interaction.
+1. **Depth**: repeats each operation through `thickness` layers away from the camera. In `until-collision` mode it stops at the first existing block.
+2. **Behavior**: filters through the behavior from `editorState.getPaintBehavior()`.
+3. **Delete modifier**: in delete mode, keeps only positions that hold a block.
+4. **Block state**: attaches the selected block's default state merged with the user's active state (facing, half, type).
 
-**Location:** `src/core/painting/strategies/`
+The depth stage does not care what the operations are. Any strategy gains depth through the pipeline.
 
 ## DraftingService
 
-Manages ephemeral preview state shared across all views.
+`draftingService` (`src/core/DraftingService.ts`) holds preview blocks shared by every view.
 
 ```typescript
-class DraftingService extends EventEmitter {
-  private previewBlocks: Array<{
-    position: Vector3D;
-    material: string;
-    direction?: Direction;
-  }> = [];
-
-  /**
-   * Start new draft (clear previous)
-   */
-  start(): void {
-    this.previewBlocks = [];
-    this.emit('draft:started');
-  }
-
-  /**
-   * Update draft with new blocks
-   */
-  set(blocks: Array<{ position; material; direction? }>): void {
-    this.previewBlocks = blocks;
-    this.emit('draft:updated');  // Views re-render
-  }
-
-  /**
-   * Finalize draft - persist to history
-   */
-  finalize(): void {
-    if (this.previewBlocks.length === 0) return;
-
-    // Write to model history (creates event, persists)
-    modelHistory.write(this.previewBlocks);
-
-    // Clear preview
-    this.previewBlocks = [];
-    this.emit('draft:finalized');
-  }
-
-  /**
-   * Cancel draft - discard without persisting
-   */
-  cancel(): void {
-    this.previewBlocks = [];
-    this.emit('draft:cancelled');
-  }
-
-  /**
-   * Get current preview blocks
-   */
-  getPreview(): Array<{ position; material; direction? }> {
-    return this.previewBlocks;
-  }
-}
-
-export const draftingService = new DraftingService();
+draftingService.start();                  // draft:started
+draftingService.set(previewBlocks);       // draft:updated
+await draftingService.finalize(ops);      // appends one paint action, then draft:finalized
+draftingService.cancel();                 // draft:cancelled, nothing persisted
 ```
 
-**Key Points:**
-- Preview is ephemeral (not in ModelHistory)
-- Shared across all views (2D and 3D)
-- `finalize()` delegates to ModelHistory for persistence
-- Emits notifications for view updates
-
-**Location:** `src/core/DraftingService.ts`
-
-## ModelHistory (formerly EventStore/ProjectManager)
-
-Manages persisted events and state derivation.
-
-```typescript
-class ModelHistory extends EventEmitter {
-  private journal: ModelEvent[] = [];
-  private snapshots: Map<number, Snapshot> = new Map();
-  private currentVersion: number = 0;
-
-  /**
-   * Write blocks to history (creates event internally)
-   */
-  write(blocks: Array<{ position; material; direction? }>): void {
-    // Create compound event
-    const event: CompoundEvent = {
-      type: 'compound',
-      eventId: generateUUID(),
-      timestamp: Date.now(),
-      sessionId: getSessionId(),
-      projectId: this.currentProjectId,
-      version: this.currentVersion,
-      events: blocks.map(block => ({
-        type: 'block:placed',
-        eventId: generateUUID(),
-        timestamp: Date.now(),
-        sessionId: getSessionId(),
-        projectId: this.currentProjectId,
-        version: this.currentVersion,
-        payload: block
-      }))
-    };
-
-    // Persist event
-    this.journal.push(event);
-    this.currentVersion++;
-    this.persist();
-
-    // Notify (Event-Driven)
-    this.emit('model:updated');
-  }
-
-  /**
-   * Replay events to get current model state
-   */
-  replay(projectId?: string): Model {
-    const events = this.getEvents(projectId);
-    return events.reduce(modelReducer, initialModel);
-  }
-
-  /**
-   * Undo last operation
-   */
-  undo(): void {
-    // Move version pointer back
-    // Re-emit model:updated
-  }
-
-  /**
-   * Redo undone operation
-   */
-  redo(): void {
-    // Move version pointer forward
-    // Re-emit model:updated
-  }
-}
-
-export const modelHistory = new ModelHistory();
-```
-
-**Responsibilities:**
-- Persist events to localStorage
-- Replay events to derive model state
-- Snapshot compaction
-- Undo/redo via version pointers
-- Emit notifications when model changes
-
-**Location:** `src/core/ModelHistory.ts`
+- The preview is never persisted.
+- `finalize(operations)` is the only path from a tool to the log. It writes removals before placements in one `paint` action. Delete mode turns every operation into a removal.
+- Only user intent is persisted (block type, facing, half, type). Derived state, such as stair corner shapes, is computed at read time by `shapeCatalog.resolveBlockState()`.
+- `getResolvedPreview()` overlays the preview on the real blocks (`OverlayBlockIndex`), so a stair preview shows its final corner shape.
+- `isActive()` is true from `start()` until `finalize()` or `cancel()`. Undo waits while a stroke is active.
 
 ## Rendering Flow
 
-### 2D Canvas Rendering
+`renderLoop` (`src/core/RenderLoop.ts`) runs one `requestAnimationFrame` loop for every view:
 
-```typescript
-class Canvas2DRenderer {
-  render() {
-    // 1. Get model state (from history)
-    const model = modelHistory.replay(projectId);
+1. `ensureFresh()` on the projections. It returns at once when no row was appended.
+2. Emit `tick`.
+3. Each registered view renders from cached projection state.
 
-    // 2. Get preview state (ephemeral)
-    const preview = draftingService.getPreview();
+### 2D (`src/core/canvas2d/`)
 
-    // 3. Render model blocks (solid)
-    for (const block of model.blocks) {
-      this.drawBlock(block, { opacity: 1.0 });
-    }
+- `Canvas2D` wires `ViewState` (zoom, pan, coordinates), `Canvas2DRenderer`, the active tool, and the render loop.
+- Model coordinates resolve to grid blocks when a notification arrives, not during the draw. The renderer receives only `GridBlock[]`.
+- Preview blocks draw over model blocks.
+- `canvas2DMounter.refFor(viewType)` is the canvas ref callback. It creates the `Canvas2D` on mount and destroys it on unmount. A ResizeObserver follows the canvas size.
 
-    // 4. Render preview blocks (translucent)
-    for (const block of preview) {
-      this.drawBlock(block, { opacity: 0.7 });
-    }
-  }
-}
+### 3D (`src/core/Babylon3D.ts`)
 
-// Subscribe to updates
-modelHistory.on('model:updated', () => canvas.render());
-draftingService.on('draft:updated', () => canvas.render());
-```
+- `babylon3d.attach(canvas)` creates the engine, scene, and modules. `detach()` tears them down. `attach` is idempotent.
+- Modules in `src/core/rendering/`: `CameraRig`, `MaterialResolver`, `BlockRenderer`, `PreviewRenderer`, `SlicePlaneVisualizer`, and stateless setup functions for lighting, environment, shadows, and post-processing.
+- The model is Z-up and right-handed. BabylonJS is Y-up and left-handed. `toBabylonVector` in `babylonUtils.ts` converts.
 
-### 3D Babylon Rendering
-
-```typescript
-class Babylon3DRenderer {
-  render() {
-    const model = modelHistory.replay(projectId);
-    const preview = draftingService.getPreview();
-
-    // Update model meshes
-    this.updateModelMeshes(model.blocks);
-
-    // Update preview meshes (with transparency)
-    this.updatePreviewMeshes(preview);
-  }
-}
-```
-
-## Complete User Interaction Flow
-
-### Example: Click-Drag Paint
+## Complete Interaction: Click-Drag Paint
 
 ```
-1. User clicks canvas
-   └─> PaintTool.onInteractionStart()
-       └─> draftingService.start()
-           └─> Clears previous preview
-           └─> Emits 'draft:started'
+1. Pointer down on a 2D canvas
+   └─> PointPaintTool.onDragStart(pos)
+       └─> draftingService.start()                → draft:started
 
-2. User drags
-   └─> PaintTool.onInteractionMove(position)
-       └─> strategy.calculate(position) → blocks[]
-       └─> draftingService.set(blocks)
-           └─> Updates preview
-           └─> Emits 'draft:updated'
-           └─> Views render: model + preview
+2. Pointer moves
+   └─> PointPaintTool.onDrag(start, current)
+       ├─> strategy.calculateOperations(...)
+       ├─> PaintPipeline.process(...)
+       └─> draftingService.set(preview)           → draft:updated
+           └─> next tick: views draw model + preview
 
-3. User releases
-   └─> PaintTool.onInteractionEnd()
-       └─> draftingService.finalize()
-           ├─> modelHistory.write(previewBlocks)
-           │   ├─> Creates CompoundEvent
-           │   ├─> Appends to journal
-           │   ├─> Persists to localStorage
-           │   └─> Emits 'model:updated'
-           └─> Clears preview
-           └─> Emits 'draft:finalized'
-           └─> Views render: model (includes finalized blocks)
+3. Pointer up
+   └─> PointPaintTool.onDragEnd(start, end)
+       └─> draftingService.finalize(operations)
+           ├─> eventLog.appendAction(projectId, { kind: 'paint', tool, events })
+           │   └─> commit → event:appended per row
+           │       ├─> ModelProjection applies rows  → model:rebuilt, model:blocks-rebuilt
+           │       └─> EditHistory folds the marker  → history:step-recorded
+           └─> preview cleared                      → draft:finalized
 
-4. User presses ESC
-   └─> PaintTool.onEscape()
-       └─> draftingService.cancel()
-           └─> Clears preview without persisting
-           └─> Emits 'draft:cancelled'
-           └─> Views render: model only
+4. Escape mid-drag
+   └─> PointPaintTool.onDragCancel()
+       └─> draftingService.cancel()               → draft:cancelled
 ```
 
-## File Structure
-
-```
-src/
-├── core/
-│   ├── ModelHistory.ts          (Event Sourcing - persisted events)
-│   ├── DraftingService.ts       (Ephemeral preview state)
-│   ├── EditorState.ts           (UI state - selected material, layer, tool)
-│   ├── EventEmitter.ts          (Base class for pub/sub)
-│   ├── UndoManager.ts           (Undo/redo coordination)
-│   │
-│   ├── tools/
-│   │   ├── base/
-│   │   │   ├── SingleClickTool.ts
-│   │   │   ├── ClickDragTool.ts
-│   │   │   ├── MultiClickTool.ts
-│   │   │   └── ModifierTool.ts
-│   │   └── paint/
-│   │       ├── PaintTool.ts
-│   │       ├── FillTool.ts
-│   │       └── TunnelTool.ts
-│   │
-│   └── painting/
-│       └── strategies/
-│           ├── PointStrategy.ts
-│           ├── FillStrategy.ts
-│           ├── OutlineStrategy.ts
-│           └── DepthStrategy.ts
-│
-├── events/
-│   └── types.ts                 (Event type definitions)
-│
-├── reducers/
-│   └── modelReducer.ts          (Pure reducer for state derivation)
-│
-└── panels/
-    ├── Canvas2D.tsx             (2D view)
-    └── Canvas3D.tsx             (3D view)
-```
-
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
 ### ❌ Conflating Event Sourcing and Event-Driven
 
 ```typescript
-// WRONG - Emitting persisted events as notifications
-eventStore.on('event:appended', (event) => {
-  this.emit(event.type, event);  // ❌ Don't broadcast persisted events
+// WRONG: re-broadcasting persisted rows as notifications
+eventLog.on('event:appended', (event) => {
+  editorState.emit(event.type, event);
 });
 
-// WRONG - Using notifications for state reconstruction
-const state = notifications.reduce(reducer, null);  // ❌ Use ModelHistory
+// WRONG: building state from notifications
+const state = notifications.reduce(reducer, null);
 
-// WRONG - Persisting notification events
-this.emit('block:placed', block);
-modelHistory.appendEvent(notificationEvent);  // ❌ Notifications aren't persisted
+// WRONG: persisting a notification
+await eventLog.append('draft:updated', previewBlocks);
 ```
 
 ### ✅ Correct Separation
 
 ```typescript
-// GOOD - Event Sourcing (persisted)
-const event: BlockPlacedEvent = { /* full structure */ };
-modelHistory.append(event);
-const model = modelHistory.replay();
+// Persist through a writer
+await eventLog.appendAction(projectId, { kind: 'metablock-place', events });
 
-// GOOD - Event-Driven (notifications)
-this.emit('model:updated');  // After persisting
+// Read from a projection
+const model = await modelProjection.getModel();
 
-// GOOD - Preview (ephemeral)
-draftingService.set(previewBlocks);  // Not persisted
+// Notify after the state changed
+this.emit('model:rebuilt');
+
+// Keep previews ephemeral
+draftingService.set(previewBlocks);
 ```
 
-### ❌ Putting Preview in Model History
+### ❌ Mutating Projections from Commands
 
 ```typescript
-// WRONG - Draft events in ModelHistory
-modelHistory.setDraftEvent(previewEvent);  // ❌ Preview isn't historical
+// WRONG: a command edits read-model state
+blockProjection.getCached().set(position, block);
 ```
 
-### ✅ Correct Preview Management
+Commands append rows. Projections apply them.
+
+### ❌ Storing Derived State in Rows
 
 ```typescript
-// GOOD - Preview in DraftingService
-draftingService.set(previewBlocks);  // Ephemeral, shared
+// WRONG: persisting a stair's computed corner shape
+{ type: 'model:blocksPlaced', data: { blocks: [{ ..., blockState: { shape: 'inner_left' } }] } }
 ```
 
-## Decision Log
+Persist user intent only. Derive the rest at read time.
 
-### 1. DraftingService.finalize() delegates to ModelHistory
+## Design Rules
 
-**Decision:** `draftingService.finalize()` calls `modelHistory.write(blocks)`. ModelHistory handles event creation and persistence.
-
-**Rationale:** Clear separation - DraftingService manages ephemeral preview, ModelHistory manages persisted events.
-
-### 2. Tools in src/core/tools/ with subfolders
-
-**Decision:** Tools organized by base type and application:
-- `src/core/tools/base/` - Base classes (ClickDragTool, etc.)
-- `src/core/tools/paint/` - Paint-related tools
-- `src/core/tools/select/` - Selection tools (future)
-
-**Rationale:** Clear organization, easy to find tools by interaction pattern or purpose.
-
-### 3. Strategies are composable within tools
-
-**Decision:** Strategies are pure functions/classes that tools compose. A tool can combine OutlineStrategy + DepthStrategy to paint a tunnel.
-
-**Rationale:** Strategies are functional transformations, tools are interaction patterns. Composition enables powerful combinations without explosion of tool classes.
-
-**Example:** DepthStrategy doesn't care what blocks it's copying - it just applies "copy N layers in M direction" transformation.
+1. **DraftingService is the only tool write path.** Tools build previews and call `finalize()`. They never append to the log.
+2. **One user action is one undoable action.** A stroke, a dimension step, or a meta block change writes one `appendAction` call, however many rows it holds.
+3. **Undo appends, never deletes.** History is a fold over markers. Rows stay immutable.
+4. **Strategies compose through the pipeline.** A strategy computes positions. Depth, behavior, delete mode, and block state apply to every strategy the same way.
+5. **Tools live in `src/core/tools/`, strategies and behaviors in `src/core/painting/`.**
