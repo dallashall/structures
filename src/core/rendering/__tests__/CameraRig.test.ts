@@ -38,6 +38,15 @@ describe('CameraRig', () => {
     expect(rig.getCamera().radius).toBe(32);
   });
 
+  it('centers on a non-cube project, with model z (depth) as Babylon up', () => {
+    rig.frameStructure({ width: 16, height: 48, depth: 8 }, false);
+    expect(rig.getCamera().target.asArray()).toEqual([8, 4, 24]);
+
+    rig.resetCamera();
+    rig.settle();
+    expect(rig.getCamera().target.asArray()).toEqual([8, 4, 24]);
+  });
+
   it('pans so the pivot follows the pointer', () => {
     const before = toScreen(rig.getCamera().target.clone());
     const pivot = rig.getCamera().target.clone();

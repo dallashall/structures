@@ -64,8 +64,8 @@ interface CameraGoal {
 const structureCenter = (dimensions: Dimensions): Vector3 =>
   toBabylonVector({
     x: dimensions.width / 2,
-    y: dimensions.depth / 2,
-    z: dimensions.height / 2,
+    y: dimensions.height / 2,
+    z: dimensions.depth / 2,
   });
 
 const maxDimension = (dimensions: Dimensions): number =>
