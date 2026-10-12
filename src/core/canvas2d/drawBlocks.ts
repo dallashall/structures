@@ -5,10 +5,9 @@ import { textureResolver } from "../TextureResolver";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 /**
- * Face index mapping for each orthographic view.
- * Our coordinate system: X=width, Y=depth, Z=height
- * BabylonJS: Y-up, conversion is Our (x,y,z) -> Babylon (x,z,y) [NO NEGATION]
- * Face order: [front(+Z), back(-Z), right(+X), left(-X), top(+Y), bottom(-Y)]
+ * The atlas face each view shows. Face indexes follow Babylon's box order in Babylon axes:
+ * [front(+Z), back(-Z), right(+X), left(-X), top(+Y), bottom(-Y)].
+ * Model (x, y, z) maps to Babylon (x, z, y) with no negation.
  */
 const FACE_INDEX_MAP: Record<ViewType, number> = {
   front: 0,
@@ -19,10 +18,6 @@ const FACE_INDEX_MAP: Record<ViewType, number> = {
   bottom: 5,
 };
 
-/**
- * Draw persistent blocks from pre-resolved GridBlock data.
- * No coordinate conversions — all grid positions are pre-resolved.
- */
 export function drawPersistentBlocks(
   ctx: CanvasRenderingContext2D,
   blocks: GridBlock[],
@@ -42,7 +37,7 @@ export function drawPersistentBlocks(
     );
     if (!block) continue;
 
-    // Apply clipping for non-cube blocks (slabs show half-cell, etc.)
+    // Non-cube shapes clip the cell, so a slab fills half of it
     const blockShape = shapeCatalog.resolve(gridBlock.blockType);
     const clip = blockShape.get2DClip(gridBlock.blockState ?? {}, viewType, px, py, cellSize);
     if (clip) {
@@ -78,8 +73,7 @@ export function drawPersistentBlocks(
 }
 
 /**
- * Render block with texture from atlas or tinted texture.
- * Returns true if successful, false if texture unavailable.
+ * Returns false when neither a tinted texture nor the atlas has this face, so the caller draws a flat color
  */
 function renderBlockTexture(
   ctx: CanvasRenderingContext2D,

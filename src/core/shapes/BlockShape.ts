@@ -1,10 +1,7 @@
 /**
- * BlockShape - Interface for block geometry and state behavior
+ * BlockShape - All shape-specific logic for one kind of block (cube, slab, stair)
  *
- * Each block type (cube, slab, stair, etc.) implements this interface
- * to encapsulate all type-specific logic in one place. Consumers
- * (renderers, pipelines, services) query the shape instead of branching
- * on block type.
+ * Renderers and the paint pipeline ask the shape instead of branching on block type.
  */
 
 import type { Scene, Mesh } from '@babylonjs/core';
@@ -19,15 +16,12 @@ export interface BlockShape {
   readonly shapeId: string;
 
   /**
-   * Geometry variant key for instanced mesh caching.
-   * Blocks with the same key share a base mesh.
-   * Returns '' for default cube geometry.
+   * Blocks with the same key share one instanced base mesh. '' means the default cube.
    */
   getGeometryKey(blockState?: BlockStateProperties): string;
 
   /**
-   * Create 3D base mesh for this geometry variant.
-   * Returns null to signal "use default cube geometry."
+   * Null means the default cube
    */
   createMesh(
     scene: Scene,
@@ -36,14 +30,12 @@ export interface BlockShape {
   ): Mesh | null;
 
   /**
-   * Y-axis rotation in radians for per-instance orientation.
-   * Returns 0 for blocks with no facing direction.
+   * Radians about Babylon's Y (up) axis
    */
   getRotation(blockState?: BlockStateProperties): number;
 
   /**
-   * 2D clip region for orthographic canvas rendering.
-   * Returns a polygon path (array of vertices) or null for full cell.
+   * Polygon in canvas pixels that the 2D views clip the cell to. Null for the full cell.
    */
   get2DClip(
     blockState: BlockStateProperties,
@@ -54,12 +46,7 @@ export interface BlockShape {
   ): ClipPath | null;
 
   /**
-   * Derive the complete block state reactively from spatial context.
-   * Computes shape, connections, or other derived properties by inspecting
-   * the block index at read time. Never persisted — always recomputed.
-   *
-   * For simple blocks this is a passthrough. For stairs it computes
-   * auto-join shape from neighbors.
+   * State that depends on neighbors, such as a stair's auto-join shape. It is computed on every read and never stored.
    */
   deriveState(
     position: Vector3D,
@@ -67,9 +54,5 @@ export interface BlockShape {
     blockIndex: BlockIndexReader,
   ): BlockStateProperties;
 
-  /**
-   * Whether this shape handles the given block ID.
-   * Used by ShapeCatalog to assign shapes to blocks.
-   */
   matchesBlock(blockId: string): boolean;
 }

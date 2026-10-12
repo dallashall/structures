@@ -1,7 +1,3 @@
-/**
- * CameraRig tests - pan and cursor zoom keep the grabbed point under the pointer
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Matrix, NullEngine, Scene, Vector3 } from '@babylonjs/core';
 import { CameraRig } from '../CameraRig';

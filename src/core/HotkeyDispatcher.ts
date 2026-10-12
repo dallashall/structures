@@ -8,24 +8,12 @@ import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
 /**
- * HotkeyDispatcher - Handles global keyboard shortcuts
+ * HotkeyDispatcher - The window-level keydown handler for app shortcuts. Keys live in Shortcuts.ts,
+ * and tool keys come from ToolRegistry. Canvas tools handle Shift, Alt, Space, and Escape themselves.
  *
- * Singleton that manages all application-level keyboard shortcuts.
- * Follows architecture: business logic in singletons, not components.
- *
- * Shortcuts:
- * - 1-9: Select block from quick-select slot and apply to active material slot
- * - F: Toggle foreground/background material slot
- * - T: Rotate facing direction (when stateful block selected)
- * - Y: Flip slab half (when stateful block selected)
- * - W/S: Increment/decrement Z layer (height - up/down)
- * - A/D: Decrement/increment X layer (width - left/right)
- * - X/C: Decrement/increment Y layer (depth - forward/back)
- * - E: Open or close the material browser
- * - Ctrl/Cmd+Z: Undo. Ctrl/Cmd+Shift+Z: Redo.
- *
- * Any other key held with Ctrl or Cmd passes through to the browser.
+ * Keys typed into a field never reach it. Any other key held with Ctrl or Cmd passes through to the browser.
  * While a modal dialog is open, only E (to close the material browser) acts.
+ * Layer keys wrap from the last layer to the first and back.
  */
 class HotkeyDispatcher {
   private static instance: HotkeyDispatcher;
@@ -40,10 +28,6 @@ class HotkeyDispatcher {
     return HotkeyDispatcher.instance;
   }
 
-  /**
-   * Initialize keyboard event listeners
-   * Call once at app startup
-   */
   initialize(): void {
     if (this.isInitialized) {
       console.warn('HotkeyDispatcher already initialized');
@@ -54,17 +38,11 @@ class HotkeyDispatcher {
     this.isInitialized = true;
   }
 
-  /**
-   * Cleanup (for testing/teardown)
-   */
   destroy(): void {
     window.removeEventListener('keydown', this.handleKeyDown);
     this.isInitialized = false;
   }
 
-  /**
-   * Handle keyboard events
-   */
   private handleKeyDown = (event: KeyboardEvent): void => {
     if (isTypingTarget(event.target)) return;
 
@@ -91,7 +69,6 @@ class HotkeyDispatcher {
       return;
     }
 
-    // Tool hotkeys (B, R, C, A, V)
     const toolName = toolRegistry.getByHotkey(event.key.toLowerCase());
     if (toolName) {
       event.preventDefault();
@@ -99,13 +76,11 @@ class HotkeyDispatcher {
       return;
     }
 
-    // Number keys 1-9: Select block from quick-select slot
     if (event.key >= '1' && event.key <= '9') {
       event.preventDefault();
       const slotIndex = parseInt(event.key, 10) - 1;
 
-      // Set this slot index as the active foreground/background
-      // This does NOT modify the slot contents - it just makes this slot active
+      // Points the active material slot at this quick-select slot. The slot's contents stay as they are.
       const activeMaterialSlot = editorState.getActiveMaterialSlot();
       if (activeMaterialSlot === 'foreground') {
         editorState.setForegroundSlotIndex(slotIndex);
@@ -114,13 +89,11 @@ class HotkeyDispatcher {
       }
     }
 
-    // F key: Toggle between foreground and background
     if (matchesShortcut(event, SHORTCUTS.swapMaterialSlot)) {
       event.preventDefault();
       editorState.toggleMaterialSlot();
     }
 
-    // T key: Rotate facing direction (when stateful block selected)
     if (matchesShortcut(event, SHORTCUTS.rotateFacing)) {
       const selectedBlockId = editorState.getSelectedBlock();
       const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
@@ -130,7 +103,6 @@ class HotkeyDispatcher {
       }
     }
 
-    // Y key: Flip slab half (when stateful block selected)
     if (matchesShortcut(event, SHORTCUTS.flipHalf)) {
       const selectedBlockId = editorState.getSelectedBlock();
       const selectedBlock = selectedBlockId ? blockRegistry.getBlock(selectedBlockId) : null;
@@ -140,11 +112,9 @@ class HotkeyDispatcher {
       }
     }
 
-    // Layer navigation shortcuts
     const model = modelProjection.getCached();
     const activeLayers = editorState.getActiveLayers();
 
-    // W/S keys: Z layer (height - up/down)
     if (matchesShortcut(event, SHORTCUTS.layerZUp)) {
       event.preventDefault();
       const nextLayer = (activeLayers.z + 1) % model.dimensions.depth;
@@ -159,7 +129,6 @@ class HotkeyDispatcher {
       editorState.setActiveLayer('z', nextLayer);
     }
 
-    // A/D keys: X layer (width - left/right)
     if (matchesShortcut(event, SHORTCUTS.layerXDown)) {
       event.preventDefault();
       const nextLayer = activeLayers.x === 0
@@ -174,7 +143,6 @@ class HotkeyDispatcher {
       editorState.setActiveLayer('x', nextLayer);
     }
 
-    // X/C keys: Y layer (depth - forward/back)
     if (matchesShortcut(event, SHORTCUTS.layerYDown)) {
       event.preventDefault();
       const nextLayer = activeLayers.y === 0

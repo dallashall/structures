@@ -2,10 +2,6 @@ import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { LayerDimensionControl } from '../../components/LayerDimensionControl';
 
-/**
- * Preview showcase for the LayerDimensionControl component
- * Demonstrates single dimension layer control with buttons and slider
- */
 const logXIncrement = (): void => {
   console.log('[Static] X increment');
 };
@@ -100,7 +96,6 @@ export function LayerDimensionControlPreview() {
         field, and slider. Used within LayerControls popover.
       </Typography>
 
-      {/* X Dimension */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">X Dimension Control</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -116,7 +111,6 @@ export function LayerDimensionControlPreview() {
         />
       </Box>
 
-      {/* Y Dimension */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Y Dimension Control</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -132,7 +126,6 @@ export function LayerDimensionControlPreview() {
         />
       </Box>
 
-      {/* Z Dimension */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Z Dimension Control</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -148,7 +141,6 @@ export function LayerDimensionControlPreview() {
         />
       </Box>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo (32×32×32 Project)</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -200,7 +192,6 @@ export function LayerDimensionControlPreview() {
         </Box>
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
@@ -227,7 +218,6 @@ export function LayerDimensionControlPreview() {
         </Box>
       </Box>
 
-      {/* Feature Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">
@@ -242,7 +232,6 @@ export function LayerDimensionControlPreview() {
         </Typography>
       </Box>
 
-      {/* Usage Context */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Usage Context</Typography>
         <Typography variant="body1">

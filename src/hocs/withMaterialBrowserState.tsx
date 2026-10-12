@@ -21,10 +21,7 @@ export interface WithMaterialBrowserStateProps {
 }
 
 /**
- * withMaterialBrowserState - HOC that provides material browser state
- *
- * Subscribes to EditorState for open/close, search query, and selected tab,
- * and to BlockRegistry for the pickable blocks. Typing never waits on the grid:
+ * HOC for the material browser. Typing never waits on the grid:
  * the grid filters with useDeferredValue copies of the query and tab.
  */
 export function withMaterialBrowserState<P extends object>(

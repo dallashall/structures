@@ -1,8 +1,5 @@
 import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
 
-/**
- * Draw grid lines on the canvas.
- */
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
   gridWidth: number,

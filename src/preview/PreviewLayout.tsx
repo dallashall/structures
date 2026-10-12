@@ -12,12 +12,6 @@ interface PreviewLayoutProps {
   children: React.ReactNode;
 }
 
-/**
- * Layout component for the component preview system
- * Provides sidebar navigation and content area
- *
- * Uses MUI components for consistent theming and design system integration.
- */
 export function PreviewLayout({
   routes,
   activeRoute,
@@ -51,7 +45,6 @@ export function PreviewLayout({
 
   return (
     <Stack direction="row" sx={{ height: "100vh" }}>
-      {/* Sidebar Navigation */}
       <Box
         sx={{
           width: 300,
@@ -89,7 +82,6 @@ export function PreviewLayout({
         </nav>
       </Box>
 
-      {/* Main Content Area */}
       <Box
         sx={{
           flex: 1,

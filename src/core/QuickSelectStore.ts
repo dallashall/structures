@@ -1,8 +1,7 @@
 /**
- * QuickSelectStore - IndexedDB store for quick-select presets
- *
- * Stores one entry per preset slot (9 slots per project)
- * Plus entries for foreground/background indices and active mode
+ * QuickSelectStore - Per-project quick-select slots in IndexedDB, outside the EventLog, so slot changes never
+ * enter undo history. One row per filled slot, plus rows for the foreground index, background index, and active mode.
+ * Writes report to SaveTracker.
  */
 
 import { saveTracker } from './SaveTracker';
@@ -13,8 +12,8 @@ const STORE_NAME = 'presets';
 
 interface QuickSelectEntry {
   id: string;        // `${projectId}:${key}` e.g., "proj123:slot:0" or "proj123:foreground"
-  projectId: string; // For querying all entries per project
-  value: string;     // Block ID, index, or mode
+  projectId: string; // Indexed, so deleteProject and getState read one project's rows
+  value: string;     // Block ID, slot index, or mode
 }
 
 interface QuickSelectState {
@@ -97,46 +96,31 @@ class QuickSelectStore {
     return new Promise(writeEntry);
   }
 
-  /**
-   * Set block for a specific slot (0-8)
-   */
   setSlot(projectId: string, slotIndex: number, blockId: string): Promise<void> {
     const id = `${projectId}:slot:${slotIndex}`;
     const entry: QuickSelectEntry = { id, projectId, value: blockId };
     return saveTracker.track(this.putEntry(entry));
   }
 
-  /**
-   * Set foreground index (0-8)
-   */
   setForeground(projectId: string, index: number): Promise<void> {
     const id = `${projectId}:foreground`;
     const entry: QuickSelectEntry = { id, projectId, value: String(index) };
     return saveTracker.track(this.putEntry(entry));
   }
 
-  /**
-   * Set background index (0-8)
-   */
   setBackground(projectId: string, index: number): Promise<void> {
     const id = `${projectId}:background`;
     const entry: QuickSelectEntry = { id, projectId, value: String(index) };
     return saveTracker.track(this.putEntry(entry));
   }
 
-  /**
-   * Set active mode
-   */
   setMode(projectId: string, mode: 'foreground' | 'background'): Promise<void> {
     const id = `${projectId}:mode`;
     const entry: QuickSelectEntry = { id, projectId, value: mode };
     return saveTracker.track(this.putEntry(entry));
   }
 
-  /**
-   * Get all quick-select state for a project
-   * Returns defaults if no entries exist
-   */
+  // Slots, indexes, and mode a project never set keep their defaults
   async getState(projectId: string): Promise<QuickSelectState> {
     await this.ensureReady();
 
@@ -150,7 +134,6 @@ class QuickSelectStore {
       const handleSuccess = (): void => {
         const entries = request.result as QuickSelectEntry[];
 
-        // Build state from entries
         const blocks = [...DEFAULT_BLOCKS];
         let foregroundIndex = 0;
         let backgroundIndex = 1;
@@ -180,9 +163,6 @@ class QuickSelectStore {
     return new Promise(readState);
   }
 
-  /**
-   * Delete all quick-select entries for a project
-   */
   async deleteProject(projectId: string): Promise<void> {
     await this.ensureReady();
 

@@ -1,10 +1,6 @@
 /**
- * OverlayBlockIndex - Combines base blocks with uncommitted preview blocks
- *
- * Implements BlockIndexReader so it can be passed to deriveState().
- * Preview blocks override base blocks at the same position.
- * Used by DraftingService for accurate preview derivation — the derived
- * state of a preview stair needs to "see" other preview stairs nearby.
+ * OverlayBlockIndex - Preview blocks laid over the committed blocks, preview winning at a shared position.
+ * DraftingService hands it to deriveState, so a preview stair turns corners against other preview stairs.
  */
 
 import type { BlockIndexReader } from './BlockIndex';

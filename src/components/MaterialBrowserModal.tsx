@@ -46,8 +46,6 @@ interface MaterialBrowserModalProps {
 const renderTab = (category: MaterialCategory, index: number) => <Tab key={index} label={category.label} />;
 
 /**
- * MaterialBrowserModal - Searchable, windowed material browser
- *
  * Drag a material onto a quick-select slot to assign it. Click a material to put it in the active slot.
  */
 function MaterialBrowserModalComponent({

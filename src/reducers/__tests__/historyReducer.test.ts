@@ -1,7 +1,3 @@
-/**
- * historyReducer tests - undo and redo stacks folded from action:started markers
- */
-
 import { describe, it, expect } from 'vitest';
 import { foldHistory } from '../historyReducer';
 import type { ActionStartedData, Event } from '../../core/EventLog';

@@ -7,11 +7,6 @@ interface ProjectCardProps {
   onClick: () => void;
 }
 
-/**
- * ProjectCard - Individual project card in grid
- *
- * Displays a project thumbnail and name in a clickable card format.
- */
 export function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) {
   return (
     <Box
@@ -30,7 +25,6 @@ export function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) 
         },
       }}
     >
-      {/* Thumbnail */}
       <Box
         sx={{
           bgcolor: 'action.hover',
@@ -61,7 +55,6 @@ export function ProjectCard({ project, isSelected, onClick }: ProjectCardProps) 
         )}
       </Box>
 
-      {/* Project Name */}
       <Typography variant="h6" sx={{ mt: 1 }}>
         {project.name}
       </Typography>

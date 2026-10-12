@@ -19,19 +19,6 @@ interface ForegroundBackgroundSelectorProps {
   onClickBackground: () => void;
 }
 
-/**
- * ForegroundBackgroundSelector - Displays overlapping squares for foreground/background materials
- *
- * Similar to:
- * - Photoshop's foreground/background color selector
- * - Minecraft's left/right hand items
- *
- * Features:
- * - Click foreground square → activate foreground
- * - Click background square → activate background
- * - Click swap icon → toggle between foreground/background (like pressing 'F' in Minecraft)
- * - Active square has a highlight border
- */
 export function ForegroundBackgroundSelector({
   foregroundBlockId,
   backgroundBlockId,
@@ -53,7 +40,6 @@ export function ForegroundBackgroundSelector({
         mx: 'auto',
       }}
     >
-      {/* Background square (bottom-right) */}
       <Tooltip title="Background material (click to activate)">
         <Box
           onClick={onClickBackground}
@@ -84,7 +70,6 @@ export function ForegroundBackgroundSelector({
         </Box>
       </Tooltip>
 
-      {/* Foreground square (top-left) */}
       <Tooltip title="Foreground material (click to activate)">
         <Box
           onClick={onClickForeground}
@@ -116,7 +101,6 @@ export function ForegroundBackgroundSelector({
         </Box>
       </Tooltip>
 
-      {/* Swap icon (bottom-left corner) */}
       <ShortcutTooltip title="Swap foreground/background" shortcut={SHORTCUTS.swapMaterialSlot}>
         <Box
           onClick={onToggleSlot}

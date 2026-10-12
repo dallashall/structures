@@ -1,35 +1,18 @@
 import type { Vector3D, Dimensions } from '../../../types';
 
-/**
- * Plane types for 2D drawing in 3D space
- */
 export type Plane = 'xy' | 'xz' | 'yz';
 
 /**
- * ShapeUtils - Mathematical utilities for shape drawing
+ * ShapeUtils - Plane geometry for the arch and curve tools, and the plane helpers every shape uses
  *
- * Provides algorithms for:
- * - Arch calculations (arc segments)
- * - Bezier curve calculations (cubic bezier)
- * - Depth projection for multi-layer painting
+ * All 2D math runs in a plane's (u, v) space:
+ * - xy plane: u=x, v=y (z held constant)
+ * - xz plane: u=x, v=z (y held constant)
+ * - yz plane: u=y, v=z (x held constant)
  *
- * COORDINATE CONVENTION:
- * All 2D math operates in (u, v) space where:
- * - xy plane: u=x, v=y (constrained z)
- * - xz plane: u=x, v=z (constrained y)
- * - yz plane: u=y, v=z (constrained x)
- *
- * Use to2D() to project 3D→2D and from2D() to project 2D→3D.
+ * to2D() projects 3D→2D and from2D() maps a cell back to 3D.
  */
 export class ShapeUtils {
-  /**
-   * Project a 3D point onto a 2D plane coordinate system
-   *
-   * Returns the two relevant components for the given plane:
-   * - xy: { u: x, v: y }
-   * - xz: { u: x, v: z }
-   * - yz: { u: y, v: z }
-   */
   static to2D(point: Vector3D, plane: Plane): { u: number; v: number } {
     switch (plane) {
       case 'xy': return { u: point.x, v: point.y };
@@ -46,8 +29,7 @@ export class ShapeUtils {
   }
 
   /**
-   * Calculate arch outline (pure curved arc)
-   * Angles in degrees: 0° = right, 90° = up, 180° = left
+   * Angles are degrees in (u, v) space: 0° points along +u and 90° along +v
    */
   static calculateArchOutline(
     center: Vector3D,
@@ -61,7 +43,7 @@ export class ShapeUtils {
     const r = Math.round(radius);
     const c = this.to2D(center, plane);
 
-    // Calculate arc length to determine number of steps
+    // One step per cell of arc length
     const angleSpan = Math.abs(endAngle - startAngle);
     const steps = Math.max(Math.round((angleSpan / 360) * (2 * Math.PI * r)), 1);
 
@@ -82,7 +64,7 @@ export class ShapeUtils {
   }
 
   /**
-   * Calculate filled arch (arc sector)
+   * The filled sector between the two angles
    */
   static calculateArchFilled(
     center: Vector3D,
@@ -96,12 +78,10 @@ export class ShapeUtils {
     const r = Math.round(radius);
     const c = this.to2D(center, plane);
 
-    // Fill sector by checking each point within bounding box
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance <= r) {
-          // Check if point is within angle range
           let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
           if (angle < 0) angle += 360;
 
@@ -122,11 +102,8 @@ export class ShapeUtils {
   }
 
   /**
-   * Calculate cubic Bezier curve
-   * Uses De Casteljau's algorithm for smooth interpolation
-   *
-   * Control points are in 2D plane coordinates (u, v) matching the plane.
-   * Start and end are 3D and get projected internally.
+   * Control points are plane (u, v) values in { x, y } fields. Start and end are 3D.
+   * The curve samples segments + 1 points, so a curve longer than that many cells has gaps.
    */
   static calculateBezierCurve(
     start: Vector3D,
@@ -139,14 +116,12 @@ export class ShapeUtils {
   ): Vector3D[] {
     const positions: Vector3D[] = [];
 
-    // Project start/end to 2D plane coordinates to match control points
     const s = this.to2D(start, plane);
     const e = this.to2D(end, plane);
 
     for (let i = 0; i <= segments; i++) {
       const t = i / segments;
 
-      // Cubic bezier formula (all in 2D plane coordinates)
       const u =
         Math.pow(1 - t, 3) * s.u +
         3 * Math.pow(1 - t, 2) * t * cp1.x +
@@ -169,11 +144,7 @@ export class ShapeUtils {
   }
 
   /**
-   * Get the drawing plane from a constrain axis
-   *
-   * This is the authoritative way to determine the plane when the
-   * constrained axis is known (i.e., passed from the view context).
-   * Prefer this over determinePlane() which guesses from position deltas.
+   * Prefer this to determinePlane(), which guesses from position deltas
    */
   static planeFromConstrainAxis(axis: 'x' | 'y' | 'z'): Plane {
     switch (axis) {
@@ -184,33 +155,24 @@ export class ShapeUtils {
   }
 
   /**
-   * Determine plane from start and end positions (heuristic fallback)
-   *
-   * Infers the constrained axis by finding which axis has the least variation.
-   * Use planeFromConstrainAxis() instead when the constrained axis is known.
+   * Fallback when no view supplies the constrained axis: the axis with the least change is taken as constant
    */
   static determinePlane(start: Vector3D, end: Vector3D): Plane {
-    // Check which axis has the least variation (constrained axis)
     const dx = Math.abs(end.x - start.x);
     const dy = Math.abs(end.y - start.y);
     const dz = Math.abs(end.z - start.z);
 
     if (dx <= dy && dx <= dz) {
-      return 'yz'; // X is constrained, draw in YZ plane
+      return 'yz';
     } else if (dy <= dx && dy <= dz) {
-      return 'xz'; // Y is constrained, draw in XZ plane
+      return 'xz';
     } else {
-      return 'xy'; // Z is constrained, draw in XY plane
+      return 'xy';
     }
   }
 
   /**
-   * Apply 2D plane coordinates back to a 3D position
-   *
-   * The (u, v) + (du, dv) values are in the plane's coordinate system:
-   * - xy: u→x, v→y, constrained z from reference
-   * - xz: u→x, v→z, constrained y from reference
-   * - yz: u→y, v→z, constrained x from reference
+   * (u + du, v + dv) in plane space. The constant axis comes from `reference`.
    */
   private static applyToPlane(
     u: number,
@@ -230,9 +192,6 @@ export class ShapeUtils {
     }
   }
 
-  /**
-   * Check if position is within valid dimensions
-   */
   static isInBounds(pos: Vector3D, dimensions: Dimensions): boolean {
     return (
       pos.x >= 0 &&
@@ -245,20 +204,16 @@ export class ShapeUtils {
   }
 
   /**
-   * Check if angle is within range (handles wrap-around)
+   * A range whose start exceeds its end wraps through 0°
    */
   private static isAngleInRange(angle: number, start: number, end: number): boolean {
     if (start <= end) {
       return angle >= start && angle <= end;
     } else {
-      // Wraps around 360
       return angle >= start || angle <= end;
     }
   }
 
-  /**
-   * Remove duplicate positions
-   */
   private static removeDuplicates(positions: Vector3D[]): Vector3D[] {
     const seen = new Set<string>();
     const isFirstAtPosition = (pos: Vector3D): boolean => {

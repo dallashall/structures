@@ -5,41 +5,22 @@ import type { GuideGeometry, ControlPointHandle, GuideLine } from './GuideGeomet
 import type { GuideGeometryProvider } from './GuideGeometryProvider';
 
 /**
- * CurvePaintStrategy - Multi-click Bezier curve painting (4 points)
+ * CurvePaintStrategy - A cubic Bezier from four clicks: start, end, then the two control points
  *
- * Interaction: 4 clicks to define a cubic Bezier curve
- * 1. Click start point
- * 2. Click end point
- * 3. Click control point 1 (curve bends toward it near start)
- * 4. Click control point 2 (curve bends toward it near end)
- *
- * Preview progression:
- * - 0 points: single block at cursor
- * - 1 point: line from start to cursor (preview path)
- * - 2 points: straight line from start to end, cursor previews CP1
- * - 3 points: curve with CP1 placed, cursor previews CP2
- * - 4 points (complete): final cubic Bezier curve
+ * Until all four points exist the cursor stands in for the next one.
+ * While the cursor places CP1, CP2 is CP1 reflected through the base midpoint, which previews a symmetric S-curve.
  */
 export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider {
   private points: Vector3D[] = [];
 
-  /**
-   * Add a clicked point to the curve definition
-   */
   addPoint(position: Vector3D): void {
     this.points.push(position);
   }
 
-  /**
-   * Reset multi-click state for next curve
-   */
   reset(): void {
     this.points = [];
   }
 
-  /**
-   * Get guide geometry for rendering control point handles and guide lines
-   */
   getGuideGeometry(cursorPosition: Vector3D): GuideGeometry | null {
     const pointCount = this.points.length;
     if (pointCount === 0) return null;
@@ -63,7 +44,6 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
       if (pointCount === 2) {
         handles.push({ position: cursorPosition, label: 'CP1', style: 'cursor' });
         lines.push({ from: start, to: cursorPosition, style: 'control' });
-        // Show mirrored CP2 as tangent hint
         const mirroredCp2 = this.mirrorControlPoint(cursorPosition, start, end);
         handles.push({ position: mirroredCp2, label: 'CP2 (auto)', style: 'cursor' });
         lines.push({ from: end, to: mirroredCp2, style: 'tangent' });
@@ -98,7 +78,6 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
   ): PaintOperation[] {
     const pointCount = this.points.length;
 
-    // 0 points: single block at cursor
     if (pointCount === 0) {
       if (!this.isValidPosition(cursorPosition, dimensions)) {
         return [];
@@ -108,19 +87,16 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
 
     const start = this.points[0];
 
-    // Resolve the plane from view context (authoritative) or fallback to heuristic
     const plane = constrainAxis
       ? ShapeUtils.planeFromConstrainAxis(constrainAxis.axis)
       : ShapeUtils.determinePlane(start, cursorPosition);
 
-    // 1 point: line from start to cursor
     if (pointCount === 1) {
       return this.calculateLine(start, cursorPosition, selectedBlockId, dimensions);
     }
 
     const end = this.points[1];
 
-    // 2 points: curve preview with cursor as CP1, default CP2
     if (pointCount === 2) {
       const cp1 = cursorPosition;
       const cp2 = this.mirrorControlPoint(cp1, start, end);
@@ -129,19 +105,14 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
 
     const cp1 = this.points[2];
 
-    // 3 points: curve with CP1 placed, cursor as CP2
     if (pointCount === 3) {
       return this.calculateBezier(start, end, cp1, cursorPosition, plane, selectedBlockId, dimensions);
     }
 
-    // 4 points (complete): final curve
     const cp2 = this.points[3];
     return this.calculateBezier(start, end, cp1, cp2, plane, selectedBlockId, dimensions);
   }
 
-  /**
-   * Calculate a line between two points
-   */
   private calculateLine(
     start: Vector3D,
     end: Vector3D,
@@ -171,9 +142,6 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
     return this.deduplicateOperations(operations);
   }
 
-  /**
-   * Calculate cubic Bezier curve positions
-   */
   private calculateBezier(
     start: Vector3D,
     end: Vector3D,
@@ -183,7 +151,6 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
     blockType: string | null,
     dimensions: Dimensions
   ): PaintOperation[] {
-    // Convert 3D control points to 2D for ShapeUtils
     const cp1_2d = this.to2DControlPoint(cp1, plane);
     const cp2_2d = this.to2DControlPoint(cp2, plane);
 
@@ -201,18 +168,13 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
   }
 
   /**
-   * Convert a 3D position to a 2D control point for the Bezier calculation
-   * ShapeUtils.calculateBezierCurve expects { x, y } control points in plane coords
+   * ShapeUtils.calculateBezierCurve takes control points as { x, y } holding plane (u, v) values
    */
   private to2DControlPoint(pos: Vector3D, plane: Plane): { x: number; y: number } {
     const uv = ShapeUtils.to2D(pos, plane);
     return { x: uv.u, y: uv.v };
   }
 
-  /**
-   * Mirror a control point across the midpoint of start-end
-   * Used as default CP2 when only CP1 is specified, creating a symmetric curve
-   */
   private mirrorControlPoint(cp: Vector3D, start: Vector3D, end: Vector3D): Vector3D {
     const midX = (start.x + end.x) / 2;
     const midY = (start.y + end.y) / 2;
@@ -225,9 +187,6 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
     };
   }
 
-  /**
-   * Check if a position is within valid dimensions
-   */
   private isValidPosition(pos: Vector3D, dimensions: Dimensions): boolean {
     return (
       pos.x >= 0 && pos.x < dimensions.width &&
@@ -236,26 +195,17 @@ export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider 
     );
   }
 
-  /**
-   * Remove duplicate positions from operations
-   */
   private deduplicateOperations(operations: PaintOperation[]): PaintOperation[] {
     const seen = new Set<string>();
     return operations.filter(filterDuplicatePositions(seen));
   }
 }
 
-/**
- * Create a position-to-operation mapper
- */
 const toOperation = (blockType: string | null) => (position: Vector3D): PaintOperation => ({
   position,
   blockType,
 });
 
-/**
- * Create a deduplication filter for operations by position
- */
 const filterDuplicatePositions = (seen: Set<string>) => (op: PaintOperation): boolean => {
   const key = `${op.position.x},${op.position.y},${op.position.z}`;
   if (seen.has(key)) return false;

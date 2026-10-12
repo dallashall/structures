@@ -1,18 +1,14 @@
 /**
- * DraftingService - Manages ephemeral preview state shared across all views
+ * DraftingService - The in-progress stroke every view previews, and the only path by which tools write.
  *
- * Responsibilities:
- * - Hold preview blocks during active drawing interactions
- * - Share preview state across 2D and 3D views
- * - Provide reactively-derived preview state for accurate rendering
- * - Finalize a drawing operation by persisting it to the EventLog (the only tool write path)
- * - Cancel preview without persisting
+ * The preview lives in memory only. finalize() turns it into one paint action in the EventLog.
+ * Derived state (stair shape, connections) is resolved at read time and never stored.
  *
- * Key distinction: Preview state is EPHEMERAL (not persisted to EventLog).
- * Only when finalize() is called does the preview become part of the model history.
- *
- * Derived state (stair shape, connections) is computed reactively at read time
- * through shapeCatalog.resolveBlockState(), never persisted in events.
+ * Events:
+ * - draft:started - a stroke began
+ * - draft:updated - the preview blocks changed
+ * - draft:finalized - the stroke was written (or its write failed)
+ * - draft:cancelled - the stroke was discarded
  */
 
 import { EventEmitter } from './EventEmitter';
@@ -32,9 +28,6 @@ interface PreviewBlock {
   blockState?: BlockStateProperties;
 }
 
-/**
- * DraftingService singleton class
- */
 class DraftingService extends EventEmitter {
   private static instance: DraftingService;
   private previewBlocks: PreviewBlock[] = [];
@@ -52,19 +45,12 @@ class DraftingService extends EventEmitter {
     return DraftingService.instance;
   }
 
-  /**
-   * Start new draft (clear previous preview)
-   */
   start(): void {
     this.active = true;
     this.previewBlocks = [];
     this.emit('draft:started');
   }
 
-  /**
-   * Update preview with new blocks
-   * Views subscribe to 'draft:updated' to re-render
-   */
   set(blocks: PreviewBlock[]): void {
     this.previewBlocks = blocks;
     this.emit('draft:updated');
@@ -112,9 +98,6 @@ class DraftingService extends EventEmitter {
     this.emit('draft:finalized');
   }
 
-  /**
-   * Cancel draft - discard preview without persisting
-   */
   cancel(): void {
     this.active = false;
     this.previewBlocks = [];
@@ -125,19 +108,14 @@ class DraftingService extends EventEmitter {
     return this.active;
   }
 
-  /**
-   * Get raw preview blocks (no derivation).
-   * Used by renderers that handle derivation themselves.
-   */
+  // Without derived state, for renderers that derive it themselves
   getPreview(): PreviewBlock[] {
     return this.previewBlocks;
   }
 
   /**
-   * Get preview blocks with reactively derived state.
-   * Creates an OverlayBlockIndex that combines real blocks + preview blocks,
-   * then resolves each preview block through shapeCatalog.resolveBlockState()
-   * so stairs show accurate corner shapes in the preview.
+   * Resolves each preview block against committed and preview neighbors together,
+   * so a preview stair shows the corner shape it will have once placed.
    */
   getResolvedPreview(): PreviewBlock[] {
     if (this.previewBlocks.length === 0) return [];
@@ -164,7 +142,6 @@ const toPlacedBlock = (op: PlacedOperation): PreviewBlock => ({
   blockState: op.blockState,
 });
 
-/** Convert PreviewBlock → BlockData for OverlayBlockIndex */
 function toBlockData(block: PreviewBlock) {
   return {
     position: block.position,
@@ -173,5 +150,4 @@ function toBlockData(block: PreviewBlock) {
   };
 }
 
-// Export singleton instance
 export const draftingService = DraftingService.getInstance();

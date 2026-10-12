@@ -35,12 +35,6 @@ interface TabbedEditorViewProps {
   onConfirmPlacement: () => void;
 }
 
-/**
- * TabbedEditorView - Tabbed layout mode for the editor
- *
- * Shows a single canvas with tabs to switch between views.
- * Includes layer controls, action bar, and meta block placement UI.
- */
 export function TabbedEditorView({
   activeView,
   activeLayers,
@@ -66,7 +60,6 @@ export function TabbedEditorView({
   onAssignSlot,
   onConfirmPlacement,
 }: TabbedEditorViewProps) {
-  // Handlers for foreground/background selector
   const handleOpenMaterialBrowser = () => {
     editorState.setMaterialBrowserOpen(true);
   };
@@ -89,7 +82,6 @@ export function TabbedEditorView({
 
   return (
     <TabContext value={activeView}>
-      {/* Tab Bar */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>
         <TabList onChange={onTabChange} aria-label="View tabs">
           <Tab label="Front" value="front" />
@@ -102,7 +94,6 @@ export function TabbedEditorView({
         </TabList>
       </Box>
 
-      {/* Canvas Layout */}
       <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
         <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
           <TabbedLayout
@@ -112,12 +103,10 @@ export function TabbedEditorView({
           />
         </Box>
 
-        {/* Meta Block Placement Confirmation UI */}
         {isPlacementMode && (
           <MetaBlockPlacementBanner onConfirm={onConfirmPlacement} />
         )}
 
-        {/* Right Sidebar - Tool Panel + Material Selector */}
         <Paper
           elevation={0}
           sx={{

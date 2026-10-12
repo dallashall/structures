@@ -1,11 +1,8 @@
 /**
- * LightingPresets - Coordinated lighting configurations
+ * LightingPresets - Day, night, and cloudy settings for every light source at once
  *
- * Pure functions and preset data for day/night/cloudy lighting.
- * Adjusts hemisphere light, directional light, scene clear color,
- * environment intensity, emissive material scaling, and point light parameters.
  * Light colors come from SkyPresets, so the lights carry the same key/fill contrast as the baked sky.
- * Lights are found by name from the scene graph (no stored references).
+ * Lights are found by the names SceneSetup gives them ('light', 'dirLight'), with no stored references.
  */
 
 import { Color3, Color4, Scene } from "@babylonjs/core";
@@ -71,10 +68,6 @@ const withLevel = (c: SkyColor, level: number): Color3 => {
 
 const multiply = (a: SkyColor, b: SkyColor): SkyColor => ({ r: a.r * b.r, g: a.g * b.g, b: a.b * b.b });
 
-/**
- * Apply a lighting preset to the scene.
- * Finds lights by their established names ('light', 'dirLight').
- */
 export function applyLightingPreset(
   scene: Scene,
   preset: LightingPreset,
@@ -101,16 +94,12 @@ export function applyLightingPreset(
 }
 
 /**
- * Get the emissive color scale factor for the given preset.
- * Higher at night (emissive blocks glow more visibly in darkness).
+ * Higher at night, so emissive blocks stand out in the dark
  */
 export function getEmissiveScale(preset: LightingPreset): number {
   return PRESETS[preset].emissiveScale;
 }
 
-/**
- * Get the PointLight intensity for luminous blocks in the given preset.
- */
 export function getEmissiveLightIntensity(preset: LightingPreset): number {
   return PRESETS[preset].emissiveLightIntensity;
 }

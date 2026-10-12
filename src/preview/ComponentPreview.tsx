@@ -19,15 +19,9 @@ interface PreviewRoute {
   component: React.ComponentType;
 }
 
-/**
- * Main component preview router
- * Manages navigation between component previews
- */
 export function ComponentPreview() {
   const [activeRoute, setActiveRoute] = useState<string>('welcome');
 
-  // Preview routes registry
-  // New component previews will be registered here as they're implemented
   const routes: PreviewRoute[] = [
     { name: 'Welcome', path: 'welcome', component: WelcomePreview },
     { name: 'Toolbar', path: 'toolbar', component: ToolbarPreview },
@@ -47,7 +41,6 @@ export function ComponentPreview() {
     setActiveRoute(path);
   };
 
-  // Find the active preview component
   const isActiveRoute = (route: { path: string }): boolean => route.path === activeRoute;
   const activePreviewRoute = routes.find(isActiveRoute);
   const ActivePreviewComponent = activePreviewRoute

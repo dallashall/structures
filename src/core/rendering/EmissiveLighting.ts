@@ -1,18 +1,10 @@
 /**
- * EmissiveLighting - PointLight management for luminous blocks
+ * EmissiveLighting - A point light at each luminous block, colored from the block's registry color
  *
- * Creates and manages BabylonJS PointLights at luminous block positions
- * so they illuminate surrounding surfaces. Light color is derived from
- * the block's color in the registry. Intensity is controlled by the
- * active lighting preset.
- *
- * LIGHT RANGE STRATEGY:
- * PointLight.range in BabylonJS controls BOTH mesh-inclusion checks
- * (canAffectMesh) and visual falloff. With instanced meshes, BabylonJS
- * selects lights per-base-mesh, not per-instance. A small range causes
- * lights to be excluded from distant base meshes entirely, even if some
- * instances ARE close. We use a large range (50) so all meshes include
- * all lights, and rely on the GLTF 1/r² falloff for natural attenuation.
+ * Babylon's PointLight.range decides both which meshes a light affects (canAffectMesh) and its falloff.
+ * Babylon picks lights per base mesh, not per instance, so a short range drops a light from a base whose
+ * nearest instances sit right beside it. INCLUSION_RANGE is large so every base includes every light,
+ * and the glTF 1/r² falloff handles attenuation.
  */
 
 import { PointLight, Color3, Scene } from '@babylonjs/core';
@@ -24,8 +16,6 @@ import type { BlockData } from '../../types';
 
 const DEFAULT_LIGHT_COLOR = new Color3(1, 0.9, 0.7);
 
-// Large range ensures all meshes include point lights in their shader.
-// Visual attenuation is handled by the GLTF 1/r² falloff + intensity.
 const INCLUSION_RANGE = 50;
 
 export class EmissiveLighting {
@@ -38,10 +28,6 @@ export class EmissiveLighting {
     this.intensity = intensity;
   }
 
-  /**
-   * Sync point lights with current block state.
-   * Creates lights for new luminous blocks, removes lights for removed blocks.
-   */
   syncLights(allBlocks: BlockData[]): void {
     const luminousKeys = new Set<string>();
 
@@ -61,11 +47,11 @@ export class EmissiveLighting {
       light.diffuse = color;
       light.intensity = this.intensity;
       light.range = INCLUSION_RANGE;
-      light.falloffType = 2; // FALLOFF_GLTF: 1/r² with smooth envelope
+      // Light.FALLOFF_GLTF: 1/r² with a smooth cutoff at range
+      light.falloffType = 2;
       this.lights.set(key, light);
     }
 
-    // Remove lights for blocks that no longer exist
     for (const [key, light] of this.lights.entries()) {
       if (!luminousKeys.has(key)) {
         light.dispose();

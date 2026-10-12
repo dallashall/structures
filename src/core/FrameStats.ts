@@ -55,9 +55,6 @@ class FrameStats extends EventEmitter {
     return FrameStats.instance;
   }
 
-  /**
-   * Record one rendered frame
-   */
   recordFrame({ startMs, renderMs, tickMs, cameraStep, bufferWidth, bufferHeight }: FrameSample): void {
     if (this.lastFrameMs !== null) {
       const interval = startMs - this.lastFrameMs;

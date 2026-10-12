@@ -7,11 +7,7 @@ import { editorState } from "../EditorState";
 import { projectView } from "../../projections/ProjectView";
 
 /**
- * FillPaintTool - Flood fill on click release
- *
- * Hover: shows single-block preview at cursor.
- * Click-release (same cell): performs flood fill from that cell.
- * Drag: no-op (fill only fires on click, not drag).
+ * FillPaintTool - Flood fills when press and release land on the same cell. A drag does nothing.
  */
 export class FillPaintTool extends ClickDragReleaseTool {
   private strategy = new FillPaintStrategy();
@@ -21,22 +17,17 @@ export class FillPaintTool extends ClickDragReleaseTool {
     this.requestRender();
   }
 
-  protected onDragStart(_pos: UniversalPosition): void {
-    // No-op: fill happens on release
-  }
+  protected onDragStart(_pos: UniversalPosition): void {}
 
   protected onDrag(
     _start: UniversalPosition,
     _current: UniversalPosition,
-  ): void {
-    // No-op: fill doesn't drag-paint
-  }
+  ): void {}
 
   protected async onDragEnd(
     start: UniversalPosition,
     end: UniversalPosition,
   ): Promise<void> {
-    // Only fill if released on the same cell (click, not drag)
     if (start.gridX !== end.gridX || start.gridY !== end.gridY) return;
 
     const project = projectView.getCached();
@@ -56,7 +47,6 @@ export class FillPaintTool extends ClickDragReleaseTool {
 
     let baseOps: Awaited<ReturnType<typeof this.strategy.calculateOperations>>;
     try {
-      // FillPaintStrategy is async (uses blockProjection.getBlock)
       baseOps = await this.strategy.calculateOperations(
         model,
         selectedBlock,
@@ -79,7 +69,6 @@ export class FillPaintTool extends ClickDragReleaseTool {
       return;
     }
 
-    // Fill is a single atomic action with no drag preview
     await draftingService.finalize(finalOps);
 
     this.previewData = { blocks: [] };

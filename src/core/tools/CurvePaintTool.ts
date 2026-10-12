@@ -8,15 +8,7 @@ import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
- * CurvePaintTool - Bezier curve painting via 4 clicks
- *
- * 1. Click start point
- * 2. Click end point
- * 3. Click control point 1 (curve bends toward it near start)
- * 4. Click control point 2 (curve bends toward it near end)
- *
- * Guide geometry (control points + guide lines + tangent hints) is
- * displayed during point placement. Preview updates live as cursor moves.
+ * CurvePaintTool - Bezier curve from four clicks (see CurvePaintStrategy). The fourth click commits one undoable action.
  */
 export class CurvePaintTool extends MultiClickTool {
   protected readonly maxPoints = 4;
@@ -49,12 +41,12 @@ export class CurvePaintTool extends MultiClickTool {
       project.dimensions,
     );
 
-    // Update cross-view preview if we have placed points
+    // DraftingService shares the preview with the other views and the 3D view
     if (placed.length > 0) {
       draftingService.set(finalOps.filter(hasBlockType));
     }
 
-    // Update guide geometry for view-local rendering
+    // Guides draw only in the view being clicked
     const guide = this.strategy.getGuideGeometry(model);
     this.previewData = {
       blocks: placed.length === 0 ? [{ position: cursor }] : [],
@@ -66,7 +58,6 @@ export class CurvePaintTool extends MultiClickTool {
   protected onPointPlaced(pos: UniversalPosition, count: number): void {
     this.strategy.addPoint(this.toModel(pos));
 
-    // Start draft service on first placed point
     if (count === 1) {
       draftingService.start();
     }

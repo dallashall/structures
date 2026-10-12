@@ -10,9 +10,6 @@
  * It does nothing when both atlas files exist, unless --force is given.
  * A failure prints a warning and exits 0, so dev and build continue and the app shows flat colors.
  * TEXTURES_REQUIRED=1 turns a failure into exit 1, for deploys that must ship textures.
- *
- * Usage:
- *   npx tsx scripts/setupTextures.ts [--force]
  */
 
 import { spawnSync } from 'child_process';

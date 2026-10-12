@@ -1,7 +1,3 @@
-/**
- * mergeTextureFragments tests - fragments hide, and blocks known only by their faces get one entry
- */
-
 import { describe, it, expect } from 'vitest';
 import { mergeTextureFragments } from '../mergeTextureFragments';
 

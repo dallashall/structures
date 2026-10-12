@@ -16,16 +16,6 @@ interface BlockStateControlsProps {
   onSetBlockState: (state: BlockStateProperties) => void;
 }
 
-/**
- * BlockStateControls - Orientation controls for non-cube blocks
- *
- * Shows controls relevant to the currently selected block type:
- * - Slabs: top/bottom/double toggle
- * - Stairs: facing direction + half
- * - Doors (future): facing + hinge + open
- *
- * Only renders when the selected block has hasBlockState=true.
- */
 export function BlockStateControls({
   activeBlockState,
   hasBlockState,
@@ -33,7 +23,6 @@ export function BlockStateControls({
 }: BlockStateControlsProps) {
   if (!hasBlockState) return null;
 
-  // Determine which controls to show based on current state
   const showSlabControls = activeBlockState.type !== undefined;
   const showHalfControls = activeBlockState.half !== undefined;
   const showFacingControls = activeBlockState.facing !== undefined;
@@ -92,7 +81,6 @@ export function BlockStateControls({
         Orientation
       </Typography>
 
-      {/* Slab type controls */}
       {showSlabControls && (
         <ToggleButtonGroup
           value={activeBlockState.type}
@@ -136,7 +124,6 @@ export function BlockStateControls({
         </ToggleButtonGroup>
       )}
 
-      {/* Half controls (stairs) */}
       {showHalfControls && (
         <ToggleButtonGroup
           value={activeBlockState.half}
@@ -175,7 +162,6 @@ export function BlockStateControls({
         </ToggleButtonGroup>
       )}
 
-      {/* Facing direction controls */}
       {showFacingControls && (
         <ToggleButtonGroup
           value={activeBlockState.facing}

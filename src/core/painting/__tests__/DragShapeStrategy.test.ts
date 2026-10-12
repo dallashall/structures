@@ -1,7 +1,3 @@
-/**
- * Drag shape strategy tests - held modifiers reshape the rectangle and circle tools on any view plane
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { PaintOperation } from '../strategies/PaintStrategy';
 import { editorState } from '../../EditorState';

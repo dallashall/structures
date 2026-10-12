@@ -1,7 +1,3 @@
-/**
- * BlockProjection tests - block index and block state replayed from the event log
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { blockProjection } from '../BlockProjection';
 import { startProject, append, appendToOtherProject } from '../../test/projectFixture';

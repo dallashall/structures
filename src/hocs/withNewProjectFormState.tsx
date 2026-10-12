@@ -4,9 +4,6 @@ import type { NewProjectForm } from '../utils/projectPresets';
 
 import { EMPTY_NEW_PROJECT_FORM } from '../utils/projectPresets';
 
-/**
- * Props injected by withNewProjectFormState HOC
- */
 export interface WithNewProjectFormStateProps {
   newProjectForm: NewProjectForm;
   onNewProjectFormChange: (changes: Partial<NewProjectForm>) => void;

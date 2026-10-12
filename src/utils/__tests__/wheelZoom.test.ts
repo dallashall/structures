@@ -1,7 +1,3 @@
-/**
- * wheelZoom tests - wheel delta to zoom factor, and wheel device classification
- */
-
 import { describe, it, expect } from 'vitest';
 import { classifyWheel, wheelZoomFactor } from '../wheelZoom';
 

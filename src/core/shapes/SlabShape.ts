@@ -1,9 +1,5 @@
 /**
- * SlabShape - Shape behavior for half-height slab blocks
- *
- * Provides 2D clipping (half-cell in side views) and geometry key.
- * Delegates mesh creation to GeometryFactory.createSlabMesh().
- * No auto-join or neighbor updates.
+ * SlabShape - Half-height slabs. A slab's state never depends on its neighbors.
  */
 
 import type { BlockShape, ClipPath, FaceUVData } from './BlockShape';
@@ -12,10 +8,7 @@ import type { BlockStateProperties, ViewType, Vector3D } from '../../types';
 import type { BlockIndexReader } from '../BlockIndex';
 import { createSlabMesh } from '../rendering/GeometryFactory';
 
-/**
- * Views where Z (height) is on the vertical grid axis.
- * In these views, slab top/bottom affects the visible rendering area.
- */
+// Views that show model Z vertically, where a slab's half is visible
 const Z_VERTICAL_VIEWS = new Set<ViewType>(['front', 'back', 'left', 'right']);
 
 class SlabShapeImpl implements BlockShape {
@@ -39,11 +32,6 @@ class SlabShapeImpl implements BlockShape {
     return 0;
   }
 
-  /**
-   * In side views (Z vertical): bottom slab clips to lower half,
-   * top slab clips to upper half. Double slab = no clip.
-   * In top/bottom views: slabs look like full blocks.
-   */
   get2DClip(
     blockState: BlockStateProperties,
     viewType: ViewType,
@@ -60,7 +48,7 @@ class SlabShapeImpl implements BlockShape {
     const bottom = py + cellSize;
 
     if (blockState.type === 'bottom') {
-      // Bottom slab: lower half of cell (higher py since Y increases downward on canvas)
+      // Canvas y grows downward, so the lower half starts at py + half
       return [
         { x: px, y: py + half },
         { x: right, y: py + half },
@@ -68,7 +56,6 @@ class SlabShapeImpl implements BlockShape {
         { x: px, y: bottom },
       ];
     }
-    // Top slab: upper half of cell
     return [
       { x: px, y: py },
       { x: right, y: py },

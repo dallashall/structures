@@ -6,9 +6,6 @@ import { saveTracker } from '../core/SaveTracker';
 
 const increment = (count: number): number => count + 1;
 
-/**
- * Props injected by withSaveState HOC
- */
 export interface WithSaveStateProps {
   saveState: SaveState;
 }

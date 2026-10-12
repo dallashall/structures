@@ -1,8 +1,5 @@
 import { Alert, AlertTitle, Box } from '@mui/material';
 
-/**
- * TexturesMissingAlert - Explains flat block colors when the build has no texture atlas
- */
 export function TexturesMissingAlert() {
   return (
     <Alert severity="info" variant="outlined">

@@ -1,8 +1,7 @@
 /**
- * EnvironmentSetup - Stateless setup functions for IBL environment lighting
+ * EnvironmentSetup - Image-based lighting from the prefiltered sky baked for each preset (scripts/generateEnvironments.ts)
  *
- * Loads the prefiltered sky baked for each lighting preset (scripts/generateEnvironments.ts).
- * Without an environment texture, metallic PBR surfaces appear black.
+ * Without an environment texture, metallic PBR surfaces render black.
  */
 
 import {
@@ -15,11 +14,9 @@ import { environmentUrl } from './SkyPresets';
 import type { LightingPreset } from '../../types';
 
 /**
- * Load the preset's environment texture.
  * Resolves with null when the file fails to load, so a missing file never stalls the caller.
- * Post-processing pipelines must NOT be created until the first load resolves,
- * otherwise BabylonJS's internal RGBD decode post-process will collide
- * with the DefaultRenderingPipeline and produce "Cannot read 'scale'" errors.
+ * Create post-processing only after the first load resolves. Babylon's internal RGBD decode
+ * post-process otherwise collides with DefaultRenderingPipeline and throws "Cannot read 'scale'".
  */
 export function loadEnvironment(scene: Scene, preset: LightingPreset): Promise<CubeTexture | null> {
   const loadTexture = (resolve: (texture: CubeTexture | null) => void): void => {
@@ -61,9 +58,6 @@ export function applyEnvironment(scene: Scene, texture: CubeTexture, intensity: 
   if (previous && previous !== texture) previous.dispose();
 }
 
-/**
- * Update environment intensity without reloading the texture
- */
 export function updateEnvironmentIntensity(scene: Scene, intensity: number): void {
   scene.environmentIntensity = intensity;
 }

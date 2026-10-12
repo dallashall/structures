@@ -1,8 +1,8 @@
 /**
- * PBRCategoryMap - Maps Minecraft block types to PBR material presets
+ * PBRCategoryMap - Metallic and roughness presets for blocks, chosen by substrings of the block name
  *
- * Pure function that classifies blocks by name pattern into
- * material categories with appropriate metallic/roughness values.
+ * Categories are checked in order and the first substring match wins, so a name in two lists
+ * (sea_lantern) takes the earlier one. Substrings also match inside longer names: 'stone' matches redstone_lamp.
  */
 
 import type { PBRPreset } from '../../types';
@@ -76,9 +76,6 @@ const DEFAULT_PRESET: PBRPreset = {
   environmentIntensity: 0.8,
 };
 
-/**
- * Resolve the PBR preset for a given block ID
- */
 export function resolvePBRCategory(blockId: string): PBRPreset {
   const name = blockId.toLowerCase().replace('minecraft:', '');
 
@@ -92,16 +89,12 @@ export function resolvePBRCategory(blockId: string): PBRPreset {
   return DEFAULT_PRESET;
 }
 
-// Patterns that identify self-illuminating blocks
 const LUMINOUS_PATTERNS = [
   'glowstone', 'sea_lantern', 'shroomlight', 'froglight',
   'redstone_lamp', 'jack_o_lantern', 'beacon', 'end_rod',
   'torch', 'campfire', 'magma_block', 'crying_obsidian',
 ];
 
-/**
- * Check if a block is luminous (should have emissive color)
- */
 export function isLuminousBlock(blockName: string): boolean {
   const name = blockName.toLowerCase().replace('minecraft:', '');
   const matchesPattern = (pattern: string) => name.includes(pattern);

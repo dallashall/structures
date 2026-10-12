@@ -9,9 +9,6 @@
  * adds one whose faces use the fragment textures.
  *
  * Hidden entries stay in the catalog, so a project that placed one still renders it.
- *
- * Usage:
- *   tsx scripts/mergeTextureFragments.ts data/canonical-blocks.json public/data/canonical-blocks.json
  */
 
 import * as fs from 'fs';

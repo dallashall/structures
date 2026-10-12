@@ -1,7 +1,3 @@
-/**
- * materialCategories tests - search and category filtering for the material browser
- */
-
 import { describe, it, expect } from 'vitest';
 import { filterMaterials } from '../materialCategories';
 

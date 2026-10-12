@@ -2,10 +2,6 @@ import { Box, Typography } from '@mui/material';
 import { Toolbar } from '../../layouts/Toolbar';
 import { mockCallbacks } from '../mockData';
 
-/**
- * Preview showcase for the Toolbar component
- * Demonstrates toolbar with and without active project
- */
 export function ToolbarPreview() {
   return (
     <Box>
@@ -14,7 +10,6 @@ export function ToolbarPreview() {
         Application header with project name, save status indicator, and view mode selector.
       </Typography>
 
-      {/* No Project Active */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">No Active Project</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -38,7 +33,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* Save States */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Save Status Indicators</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -111,7 +105,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* With Project */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Active Project</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -135,7 +128,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* With Project - Quad Layout */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Active Project - Quad Layout Mode</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -161,7 +153,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* Long Project Name */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Long Project Name</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -185,7 +176,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -209,7 +199,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* Multiple Instances */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Multiple Project Examples</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -267,7 +256,6 @@ export function ToolbarPreview() {
         </Box>
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>

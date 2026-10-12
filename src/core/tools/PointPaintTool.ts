@@ -11,12 +11,9 @@ import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 import type { Vector3D } from "../../types";
 
 /**
- * PointPaintTool - Single-cell painting via click-drag
+ * PointPaintTool - Paints every cell the drag crosses, and the whole stroke commits as one undoable action
  *
- * Hover: shows single-block preview at cursor.
- * Drag: paints cells along the drag path (with duplicate prevention).
- * Shift-press: first paints a straight line from the previous stroke's last cell to the press point.
- * Release: persists all painted cells as a single compound event.
+ * Shift-press first paints a straight line from the previous stroke's last cell to the press point.
  */
 export class PointPaintTool extends ClickDragReleaseTool {
   private strategy = new PointPaintStrategy();

@@ -1,23 +1,14 @@
 import { EventEmitter } from './EventEmitter';
 
 /**
- * RenderLoop - Shared render coordinator for all views
+ * RenderLoop - One requestAnimationFrame loop shared by every view, so the 2D canvases and the 3D view
+ * draw the same state on the same frame. It runs only while at least one view is registered.
  *
- * Architecture:
- * - Single requestAnimationFrame loop at 60fps
- * - All views (Canvas2D, Babylon3D) register and render on same tick
- * - Projections check version before rebuilding (instant if no changes)
+ * Views draw from cached projection state on each tick. Projections stay current through
+ * event:appended, so a tick never waits on IndexedDB.
  *
- * Flow per tick:
- * 1. ensureFresh() on projections (instant if no event log changes)
- * 2. Emit 'tick' event
- * 3. All registered views render synchronously using cached projection state
- *
- * Benefits:
- * - No flickering (consistent frame timing)
- * - All views stay in sync (render together)
- * - No blocking (cached reads when no changes)
- * - Efficient (only rebuild projections when events change)
+ * Events:
+ * - tick - draw now
  */
 class RenderLoop extends EventEmitter {
   private static instance: RenderLoop;
@@ -39,10 +30,6 @@ class RenderLoop extends EventEmitter {
     return RenderLoop.instance;
   }
 
-  /**
-   * Register a view to participate in the render loop
-   * Starts the loop when first view registers
-   */
   register(): void {
     this.registeredViewCount++;
 
@@ -51,10 +38,6 @@ class RenderLoop extends EventEmitter {
     }
   }
 
-  /**
-   * Unregister a view from the render loop
-   * Stops the loop when last view unregisters
-   */
   unregister(): void {
     this.registeredViewCount--;
 
@@ -64,22 +47,16 @@ class RenderLoop extends EventEmitter {
     }
   }
 
-  /**
-   * Start the render loop
-   */
   private start(): void {
     if (this.isRunning) return;
 
     this.isRunning = true;
 
     const tick = () => {
-      // Just emit tick - projections are kept fresh by event listeners
-      // Views read cached state and stack: model → preview → hover
       const startMs = performance.now();
       this.emit('tick');
       this.lastTickMs = performance.now() - startMs;
 
-      // Schedule next frame
       if (this.isRunning) {
         this.animationFrameId = requestAnimationFrame(tick);
       }
@@ -88,9 +65,6 @@ class RenderLoop extends EventEmitter {
     this.animationFrameId = requestAnimationFrame(tick);
   }
 
-  /**
-   * Stop the render loop
-   */
   private stop(): void {
     if (!this.isRunning) return;
 
@@ -108,9 +82,6 @@ class RenderLoop extends EventEmitter {
     return this.lastTickMs;
   }
 
-  /**
-   * Force an immediate tick (for testing or manual refresh)
-   */
   forceTick(): void {
     this.emit('tick');
   }

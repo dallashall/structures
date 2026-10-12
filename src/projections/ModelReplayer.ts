@@ -1,7 +1,7 @@
 /**
  * ModelReplayer - Keeps one Model current with the EventLog for the open project
  *
- * ModelProjection and BlockProjection each own one. Model events apply in place.
+ * ModelProjection owns the only one. Model events apply in place.
  * An undo or redo marker cannot apply in place because it names no blocks,
  * so it triggers a full replay of the project that skips undone actions.
  */
@@ -40,9 +40,6 @@ export class ModelReplayer {
     this.generation++;
   }
 
-  /**
-   * Take one event from event:appended
-   */
   receive(event: Event): ReceiveResult {
     if (event.projectId !== editorState.getCurrentProjectId()) return 'ignored';
     if (event.id! <= this.latestEventId) return 'ignored';

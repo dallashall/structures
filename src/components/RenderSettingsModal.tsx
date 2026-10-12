@@ -1,8 +1,5 @@
 /**
- * RenderSettingsModal - Configuration dialog for 3D render settings
- *
- * Provides controls for PBR, shadows, SSAO, bloom, and tone mapping.
- * Changes apply immediately (live preview). Settings persist per-project.
+ * Each change applies at once and persists for the open project.
  */
 
 import {
@@ -44,7 +41,6 @@ export function RenderSettingsModal({
   onApply,
   onReset,
 }: RenderSettingsModalProps) {
-  // Named handler creator: one toggle handler per boolean setting
   const createToggleHandler = (key: keyof RenderSettings) => () => {
     onApply({ ...settings, [key]: !settings[key] });
   };

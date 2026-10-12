@@ -12,8 +12,7 @@ interface MaterialDragOverlayProps {
 }
 
 /**
- * MaterialDragOverlay - The material that follows the pointer during a drag.
- * Rendered outside the windowed grid, so it survives its tile scrolling out of view.
+ * The material that follows the pointer during a drag. It renders outside the windowed grid, so it survives its tile scrolling out of view.
  */
 export function MaterialDragOverlay({ blocks }: MaterialDragOverlayProps) {
   const blockId = (useDndContext().active?.data.current as { blockId?: string } | undefined)?.blockId ?? null;

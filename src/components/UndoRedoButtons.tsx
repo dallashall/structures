@@ -8,9 +8,6 @@ import type { WithEditHistoryProps } from '../hocs/withEditHistory';
 
 import { ShortcutTooltip } from './ShortcutTooltip';
 
-/**
- * UndoRedoButtons - Toolbar buttons for the open project's edit history
- */
 function UndoRedoButtonsComponent({ canUndo, canRedo, onUndo, onRedo }: WithEditHistoryProps) {
   return (
     <Stack direction="row" spacing={0.5}>

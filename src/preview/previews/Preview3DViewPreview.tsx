@@ -7,49 +7,36 @@ import { blockProjection } from "../../projections/BlockProjection";
 import { blockRegistry } from "../../core/BlockRegistry";
 import type { Block, BlockData, Vector3D } from "../../types";
 
-/**
- * Preview3DView Preview
- *
- * Demonstrates the BabylonJS 3D viewer with a sample structure
- */
 export function Preview3DViewPreview() {
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   const handleInitialize = () => {
-    // Create a sample project
     createProjectCommand.execute("3D Preview Test", {
       width: 10,
       height: 10,
       depth: 10,
     });
 
-    // Get a few block types
     const blocks = blockRegistry.getAllBlocks();
     const isStone = (block: Block): boolean => block.category === "stone";
     const isWood = (block: Block): boolean => block.category === "wood";
     const stoneBlock = blocks.find(isStone)?.id || blocks[0]?.id;
     const woodBlock = blocks.find(isWood)?.id || blocks[1]?.id;
 
-    // Collect all blocks to place
     const blocksToPlace: Array<{ position: Vector3D; blockType: string }> = [];
 
-    // Add some sample blocks to create a simple structure
     if (stoneBlock) {
-      // Create a floor
       for (let x = 2; x < 8; x++) {
         for (let y = 2; y < 8; y++) {
           blocksToPlace.push({ position: { x, y, z: 0 }, blockType: stoneBlock });
         }
       }
 
-      // Create walls
       for (let z = 1; z < 5; z++) {
-        // Front and back walls
         for (let x = 2; x < 8; x++) {
           blocksToPlace.push({ position: { x, y: 2, z }, blockType: stoneBlock });
           blocksToPlace.push({ position: { x, y: 7, z }, blockType: stoneBlock });
         }
-        // Left and right walls
         for (let y = 2; y < 8; y++) {
           blocksToPlace.push({ position: { x: 2, y, z }, blockType: stoneBlock });
           blocksToPlace.push({ position: { x: 7, y, z }, blockType: stoneBlock });
@@ -58,15 +45,13 @@ export function Preview3DViewPreview() {
     }
 
     if (woodBlock) {
-      // Add a wooden door frame
       blocksToPlace.push({ position: { x: 5, y: 2, z: 1 }, blockType: woodBlock });
       blocksToPlace.push({ position: { x: 5, y: 2, z: 2 }, blockType: woodBlock });
       blocksToPlace.push({ position: { x: 5, y: 2, z: 3 }, blockType: woodBlock });
     }
 
-    // Write all blocks at once
     if (blocksToPlace.length > 0) {
-      // TODO: Use command pattern instead of modelHistory
+      // Writing blocks goes through DraftingService, which the gallery does not drive, so it only logs
       console.log('Preview: would place', blocksToPlace.length, 'blocks');
     }
 
@@ -79,12 +64,11 @@ export function Preview3DViewPreview() {
       const allBlocks = (await blockProjection.getBlocks()).toArray();
       const toRemoval = (block: BlockData) => ({
         position: block.position,
-        blockType: null, // null = remove
+        blockType: null,
         previousBlockType: block.blockType,
       });
       const blocksToRemove = allBlocks.map(toRemoval);
       if (blocksToRemove.length > 0) {
-        // TODO: Use command pattern instead of modelHistory
         console.log('Preview: would remove', blocksToRemove.length, 'blocks');
       }
     }

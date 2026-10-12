@@ -8,9 +8,6 @@ interface SettingsSectionProps {
   children: React.ReactNode;
 }
 
-/**
- * SettingsSection - Collapsible group of SettingRows in a settings dialog
- */
 export function SettingsSection({ title, defaultExpanded = false, children }: SettingsSectionProps) {
   return (
     <Accordion defaultExpanded={defaultExpanded} disableGutters>

@@ -4,7 +4,7 @@
  * A toast lives in two phases. It shows until VISIBLE_MS passes or newer toasts push it past
  * MAX_VISIBLE. It then leaves, and stays in the list until remove() reports its exit animation done.
  *
- * Notifications:
+ * Events:
  * - toast:shown - a new toast joined the end of the list
  * - toast:expired - one or more toasts started leaving
  * - toast:removed - a toast finished leaving and left the list

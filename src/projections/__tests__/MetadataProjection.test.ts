@@ -1,7 +1,3 @@
-/**
- * MetadataProjection tests - project id, name, and timestamps replayed from the event log
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../../core/EventLog';
 import { metadataProjection } from '../MetadataProjection';

@@ -1,7 +1,3 @@
-/**
- * Core type definitions for the Structures editor
- */
-
 import type { BlockIndex } from "../core/BlockIndex";
 
 export interface Vector3D {
@@ -16,17 +12,14 @@ export interface Dimensions {
   depth: number;
 }
 
-// Axis-based direction types — universal coordinate system
+// Directions name the app's own axes (Z up), not Minecraft compass names
 export type AxisDirection = `${'x' | 'y' | 'z'}${'+' | '-'}`;
 export type HorizontalDirection = `${'x' | 'y'}${'+' | '-'}`;
 
-// Layout modes for editor
 export type LayoutMode = "tabbed" | "quad";
 
-// Orthographic view types with perspectives (front/back, left/right, top/bottom)
 export type ViewType = "front" | "back" | "left" | "right" | "top" | "bottom";
 
-// Painting modes
 export type PaintMode =
   | "point"
   | "fill"
@@ -35,29 +28,25 @@ export type PaintMode =
   | "arch"
   | "curve";
 
-// Painting behaviors (modifiers that affect how painting works)
 export type PaintBehavior =
   | "normal"
   | "only-replace"
   | "selective-replace"
   | "delete";
 
-// Shape fill modes (separate from paint behavior)
 export type ShapeFillMode = "outline" | "filled";
 
-// Lighting presets for 3D renderer
 export type LightingPreset = "day" | "night" | "cloudy";
 
 // color: flat clearColor. skybox: environment texture. ground: environment texture projected onto a floor.
 export type BackgroundMode = "color" | "skybox" | "ground";
 
-// Depth painting modes
+// until-collision stops a stroke's depth at the first existing block
 export type DepthPaintMode = "through" | "until-collision";
 
-// Depth configuration for painting through multiple layers
 export interface DepthConfig {
   enabled: boolean;
-  thickness: number; // 1-10 layers
+  thickness: number; // 1-10 layers along the view's depth axis
   mode: DepthPaintMode;
 }
 
@@ -67,64 +56,48 @@ export interface HeldModifiers {
   alt: boolean;
 }
 
-// Tool types (simplified for initial implementation)
 export type ToolType = "paint" | "erase";
 
-// Layer state for all three dimensions
+// The layer each 2D view draws on. Left/Right fix X, Front/Back fix Y, Top/Bottom fix Z.
 export interface LayerState {
-  x: number; // Active X layer (for Left/Right view)
-  y: number; // Active Y layer (for Top/Bottom view)
-  z: number; // Active Z layer (for Front/Back view)
+  x: number;
+  y: number;
+  z: number;
 }
 
-// ============ BLOCKSTATE TYPES ============
-
-/**
- * Blockstate properties - Minecraft-compatible state properties
- */
+// Minecraft blockstate properties, with directions in the app's axes
 export interface BlockStateProperties {
-  // Directional properties (uses universal axis-based coordinate system)
   facing?: AxisDirection;
   axis?: "x" | "y" | "z";
 
-  // Shape properties
   half?: "upper" | "lower" | "top" | "bottom";
-  // Stair shape with absolute coordinates (no rotation)
-  // straight_{facing} or {type}_{facing}_{cornerSide}
-  // Examples: "straight_x+", "outer_y+_x-", "inner_y-_x+"
+  // Stair shape in absolute axes: straight_{facing} or {inner|outer}_{facing}_{cornerSide},
+  // such as "straight_x+", "outer_y+_x-", "inner_y-_x+"
   shape?: string;
 
-  // Connection properties (fences, walls, glass panes)
+  // Fences, walls, and glass panes
   connections?: Partial<Record<AxisDirection, boolean>>;
 
-  // State properties
   waterlogged?: boolean;
   lit?: boolean;
   powered?: boolean;
   open?: boolean;
 
-  // Numeric properties
   age?: number; // crops: 0-7
   level?: number; // water: 0-15
   rotation?: number; // 0-15
 
-  // Material variant (for blocks with multiple textures)
   variant?: string; // 'oak', 'spruce', 'birch', etc.
 
   // Slab type (distinct from half — slabs use 'type', stairs/doors use 'half')
   type?: 'top' | 'bottom' | 'double';
 
-  // Door hinge side
   hinge?: 'left' | 'right';
 }
 
-// ============ TEXTURE TYPES ============
-
-/**
- * Texture face mapping for multi-face blocks
- */
+// Face names follow Minecraft, so the axis notes use Minecraft's Y-up axes
 export interface TextureFaceMap {
-  all?: string; // Single texture for all faces
+  all?: string;
   top?: string; // Y+ face
   bottom?: string; // Y- face
   side?: string; // X+, X-, Z+, Z- faces
@@ -132,37 +105,29 @@ export interface TextureFaceMap {
   south?: string; // Z+ face
   east?: string; // X+ face
   west?: string; // X- face
-  front?: string; // Directional front
-  back?: string; // Directional back
+  front?: string; // Follows the block's facing
+  back?: string;
 }
 
-/**
- * Block variant - different visual appearances of same block
- */
 export interface BlockVariant {
-  id: string; // Variant ID (e.g., 'oak_stairs_facing_north')
-  name: string; // Display name
-  stateProperties: BlockStateProperties; // Required properties for this variant
-  textures: TextureFaceMap; // Texture mapping for each face
+  id: string; // e.g. 'oak_stairs_facing_north'
+  name: string;
+  stateProperties: BlockStateProperties; // The state this variant renders
+  textures: TextureFaceMap;
 }
 
-/**
- * Loaded texture data
- */
 export interface LoadedTexture {
-  id: string; // Texture ID
-  path: string; // File path
-  image: HTMLImageElement; // Loaded image for Canvas2D
-  babylonTexture?: any; // BabylonJS Texture instance for 3D
+  id: string;
+  path: string;
+  image: HTMLImageElement;
+  babylonTexture?: any;
   width: number;
   height: number;
   loaded: boolean;
   error?: string;
 }
 
-/**
- * Texture atlas metadata (generated by build script)
- */
+// Written by scripts/buildTextureAtlas.ts into public/atlas.json
 export interface AtlasMetadata {
   atlasSize: number;
   textureSize: number;
@@ -184,45 +149,39 @@ export interface AtlasMetadata {
   >;
 }
 
-// ============ ENHANCED BLOCK TYPE ============
-
 export interface Block {
-  id: string; // Minecraft-compatible internal ID
-  name: string; // Display name
-  category: string; // Category for palette organization
-  color: string; // Fallback hex color
+  id: string; // Namespaced Minecraft ID, such as 'minecraft:stone'
+  name: string;
+  category: string;
+  color: string; // Hex fill drawn when no texture renders
 
-  // Minecraft identifiers for import/export
-  javaId?: string; // Java Edition identifier
-  bedrockId?: string; // Bedrock Edition identifier
+  javaId?: string;
+  bedrockId?: string;
 
-  // Texture mapping
-  textures?: TextureFaceMap; // Texture file references
+  textures?: TextureFaceMap;
 
-  // Blockstate support
-  hasBlockState: boolean; // Whether this block has variants
-  variants?: BlockVariant[]; // Available variants
-  defaultState?: BlockStateProperties; // Default state
+  hasBlockState: boolean;
+  variants?: BlockVariant[];
+  defaultState?: BlockStateProperties;
 
-  // Block properties
-  isCube: boolean; // Whether block is a simple cube
-  isTransparent: boolean; // For rendering transparency (glass)
+  isCube: boolean;
+  isTransparent: boolean;
   hidden?: boolean; // A face or state texture of another block. Renders where placed, never listed for picking.
 }
 
 export interface BlockData {
   position: Vector3D;
-  blockType: string; // References Block.id
-  blockState?: BlockStateProperties; // Optional blockstate
+  blockType: string; // A Block.id
+  blockState?: BlockStateProperties;
 }
 
 export interface MetaBlock {
   position: Vector3D;
   direction: HorizontalDirection;
-  isConfirmed: boolean; // Whether the user has finalized this position
+  isConfirmed: boolean;
 }
 
-// Project (combines Model + Metadata for UI components)
+// The model joined with its metadata, as the editor UI reads it
 export interface Project {
   id: string;
   name: string;
@@ -233,7 +192,7 @@ export interface Project {
   blocks: BlockIndex;
 }
 
-// Storage metadata (for project browser)
+// One project-browser card, derived from the event log
 export interface StorageMetadata {
   id: string;
   name: string;
@@ -241,66 +200,47 @@ export interface StorageMetadata {
   modified: Date;
   dimensions: Dimensions;
   blockCount: number;
-  thumbnail: string; // Base64 data URL
+  thumbnail: string; // JPEG data URL, or empty before the first capture
 }
 
-// ============ RENDER SETTINGS ============
-
-/**
- * PBR material category preset
- */
 export interface PBRPreset {
   metallic: number;
   roughness: number;
   environmentIntensity: number;
 }
 
-/**
- * Per-project rendering settings (persisted to IndexedDB)
- */
+// Stored per project in RenderSettingsStore
 export interface RenderSettings {
-  // Anti-aliasing
   fxaaEnabled: boolean;
   msaaSamples: number;
 
-  // PBR
   pbrEnabled: boolean;
 
-  // Environment
   environmentIntensity: number;
 
-
-  // Shadows
   shadowsEnabled: boolean;
   shadowMapSize: number;
   shadowDarkness: number;
 
-  // SSAO
   ssaoEnabled: boolean;
   ssaoRadius: number;
   ssaoIntensity: number;
   ssaoSamples: number;
 
-  // Bloom
   bloomEnabled: boolean;
   bloomIntensity: number;
   bloomThreshold: number;
 
-  // Tone mapping
   toneMapping: boolean;
   contrast: number;
   exposure: number;
 
-  // Layer highlight
   layerHighlightEnabled: boolean;
 
-  // Lighting preset
   lightingPreset: LightingPreset;
 
-  // Background
   backgroundMode: BackgroundMode;
 
-  // Diagnostics
   showFrameStats: boolean;
 }
 
@@ -328,5 +268,4 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   showFrameStats: false,
 };
 
-// Utility type for event handlers
 export type EventHandler<T = any> = (...args: T[]) => void;

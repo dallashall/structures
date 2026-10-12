@@ -15,18 +15,10 @@ import { toolRegistry } from "../tools/ToolRegistry";
 import type { ToolBase } from "../tools/ToolBase";
 
 /**
- * Canvas2D - Orchestrator for a 2D canvas panel
+ * Canvas2D - Orchestrator for one 2D canvas panel
  *
- * Wires together:
- * - ViewState (zoom, pan, coordinate math)
- * - Canvas2DRenderer (pure rendering)
- * - ToolBase subclass (interaction + preview)
- * - RenderLoop (shared tick)
- * - Singleton events (external state changes → re-resolve → re-render)
- *
- * **Coordinate resolution**: This class is the single point where model→grid
- * conversion happens for rendering. Data is resolved at change time (event
- * handlers), not at render time. The renderer receives only GridBlock[] data.
+ * This class is the single point where model→grid conversion happens for rendering.
+ * Data is resolved when it changes (event handlers), not each frame. The renderer receives only GridBlock[] data.
  */
 export class Canvas2D {
   private viewState: ViewState;
@@ -35,14 +27,9 @@ export class Canvas2D {
   private resizeObserver: ResizeObserver;
   private needsRender = true;
 
-  // Pre-resolved grid data — converted once at data-change time
   private resolvedPersistentBlocks: GridBlock[] = [];
   private resolvedDraftBlocks: GridBlock[] = [];
   private resolvedEditorPreview: GridBlock[] = [];
-
-  // ============================================================================
-  // Bound handlers
-  // ============================================================================
 
   private handleRender = (): void => {
     if (!this.needsRender) return;
@@ -79,10 +66,6 @@ export class Canvas2D {
     this.setTool(mode);
   };
 
-  // ============================================================================
-  // Resolution handlers — convert model→grid at data-change time
-  // ============================================================================
-
   private resolvePersistentBlocks = (): void => {
     const project = projectView.getCached();
     if (!project) {
@@ -110,7 +93,7 @@ export class Canvas2D {
     for (let layer = minLayer; layer <= maxLayer; layer++) {
       const blocksAtLayer = blockIndex.getBlocksAtLayer(depthAxis, layer);
       for (const blockData of blocksAtLayer) {
-        // Resolve derived state (stair shape, connections) reactively
+        // Stair shape and connections derive from neighbors, so they resolve here rather than in the stored row
         const resolved = shapeCatalog.resolveBlockState(blockData.position, blockIndex);
         blocks.push(resolved ?? blockData);
       }
@@ -159,10 +142,6 @@ export class Canvas2D {
     this.needsRender = true;
   };
 
-  // ============================================================================
-  // Constructor
-  // ============================================================================
-
   constructor(
     private canvas: HTMLCanvasElement,
     viewType: ViewType,
@@ -182,10 +161,6 @@ export class Canvas2D {
     this.setTool(editorState.getPaintMode());
   }
 
-  // ============================================================================
-  // Public API
-  // ============================================================================
-
   resize(width: number, height: number): void {
     this.canvas.width = width;
     this.canvas.height = height;
@@ -200,10 +175,6 @@ export class Canvas2D {
     this.unsubscribeFromEvents();
   }
 
-  // ============================================================================
-  // Tool management
-  // ============================================================================
-
   private setTool(name: string): void {
     this.activeTool?.deactivate();
     this.activeTool = toolRegistry.createTool(
@@ -216,32 +187,23 @@ export class Canvas2D {
     this.needsRender = true;
   }
 
-  // ============================================================================
-  // Event subscriptions
-  // ============================================================================
-
   private subscribeToEvents(): void {
     renderLoop.register();
     renderLoop.on("tick", this.handleRender);
 
-    // Persistent block resolution
     blockProjection.on("blocks:rebuilt", this.resolvePersistentBlocks);
     modelProjection.on("model:rebuilt", this.handleModelRebuilt);
     editorState.on("layer:adjusted", this.resolvePersistentBlocks);
 
-    // Draft block resolution
     draftingService.on("draft:updated", this.resolveDraftBlocks);
     draftingService.on("draft:finalized", this.resolveDraftBlocks);
     draftingService.on("draft:cancelled", this.resolveDraftBlocks);
 
-    // Editor preview resolution
     editorState.on("preview:rendered", this.resolveEditorPreview);
 
-    // Render-only events (no data resolution needed)
     editorState.on("block:selected", this.handleRequestRender);
     editorState.on("paintbehavior:selected", this.handleRequestRender);
 
-    // Tool switching
     editorState.on("paintmode:selected", this.handleToolChange);
   }
 

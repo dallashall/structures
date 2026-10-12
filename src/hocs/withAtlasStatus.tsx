@@ -6,9 +6,6 @@ import { textureResolver } from '../core/TextureResolver';
 
 const increment = (count: number): number => count + 1;
 
-/**
- * Props injected by withAtlasStatus HOC
- */
 export interface WithAtlasStatusProps {
   atlasStatus: AtlasStatus;
 }

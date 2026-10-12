@@ -1,22 +1,10 @@
-/**
- * Rendering utilities for Canvas2D
- *
- * Pure functions for rendering calculations and configuration.
- * No dependencies on viewport or project state.
- */
-
-/**
- * Axis color constants
- */
+// The same axis colors appear in Preview3DView and SlicePlaneVisualizer
 const AXIS_COLORS = {
-  X: '#e74c3c', // Red
-  Y: '#3498db', // Blue
-  Z: '#27ae60', // Green
+  X: '#e74c3c',
+  Y: '#3498db',
+  Z: '#27ae60',
 } as const;
 
-/**
- * Get color for a given axis
- */
 export function getColorForAxis(axis: string): string {
   switch (axis) {
     case 'X':
@@ -31,13 +19,7 @@ export function getColorForAxis(axis: string): string {
 }
 
 /**
- * Calculate opacity based on distance from active layer
- *
- * Used for rendering blocks at different depths:
- * - Distance 0 (active layer): 100% opaque
- * - Distance 1: 30% opaque
- * - Distance 2: 10% opaque
- * - Distance 3+: invisible (0% opaque)
+ * Blocks one or two layers behind the active layer show faintly for context. Farther ones are hidden.
  */
 export function getOpacityForDistance(distance: number): number {
   if (distance === 0) return 1.0;
@@ -46,9 +28,6 @@ export function getOpacityForDistance(distance: number): number {
   return 0.0;
 }
 
-/**
- * Get layer value for a given axis
- */
 export function getLayerForAxis(
   axis: string,
   activeLayers: { x: number; y: number; z: number }

@@ -1,7 +1,3 @@
-/**
- * EventLog tests - IndexedDB event storage and queries
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog, type Event } from '../EventLog';
 

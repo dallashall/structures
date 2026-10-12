@@ -3,9 +3,6 @@ import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
 import type { ViewState } from "./ViewState";
 import { getColorForAxis, getLayerForAxis } from "./renderingUtils";
 
-/**
- * Draw coordinate axes legend (bottom-left corner).
- */
 export function drawCoordinateAxes(
   ctx: CanvasRenderingContext2D,
   viewState: ViewState,
@@ -24,7 +21,6 @@ export function drawCoordinateAxes(
   ctx.lineWidth = 2;
   ctx.font = "bold 14px sans-serif";
 
-  // Horizontal axis
   const hColor = getColorForAxis(axes.horizontal);
   ctx.strokeStyle = hColor;
   ctx.fillStyle = hColor;
@@ -48,7 +44,6 @@ export function drawCoordinateAxes(
 
   ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
 
-  // Vertical axis
   const vColor = getColorForAxis(axes.vertical);
   ctx.strokeStyle = vColor;
   ctx.fillStyle = vColor;
@@ -72,7 +67,6 @@ export function drawCoordinateAxes(
 
   ctx.fillText(axes.vertical, originX - 5, originY - arrowLength - 8);
 
-  // Depth indicator
   const depthX = originX + arrowLength + 60;
   const depthY = originY;
   const dColor = getColorForAxis(axes.depth);
@@ -89,9 +83,6 @@ export function drawCoordinateAxes(
   ctx.restore();
 }
 
-/**
- * Draw active layer indicators (lines and labels at edges of grid).
- */
 export function drawLayerIndicators(
   ctx: CanvasRenderingContext2D,
   viewState: ViewState,
@@ -105,7 +96,7 @@ export function drawLayerIndicators(
 
   ctx.save();
 
-  // Horizontal layer indicator
+  // A horizontal line marks the active layer of the view's vertical axis
   if (axes.vertical !== axes.depth) {
     const axisName = axes.vertical;
     const layerValue = getLayerForAxis(axisName, activeLayers);
@@ -149,7 +140,7 @@ export function drawLayerIndicators(
     }
   }
 
-  // Vertical layer indicator
+  // A vertical line marks the active layer of the view's horizontal axis
   if (axes.horizontal !== axes.depth) {
     const axisName = axes.horizontal;
     const layerValue = getLayerForAxis(axisName, activeLayers);
@@ -195,9 +186,6 @@ export function drawLayerIndicators(
   ctx.restore();
 }
 
-/**
- * Draw meta block (spawn point).
- */
 export function drawMetaBlock(
   ctx: CanvasRenderingContext2D,
   metaBlock: { position: Vector3D; isConfirmed: boolean } | null,
@@ -216,7 +204,7 @@ export function drawMetaBlock(
     activeLayers,
   );
 
-  // Reuse same opacity curve as blocks
+  // Same fade as getOpacityForDistance in renderingUtils
   let opacity: number;
   if (distance === 0) opacity = 1.0;
   else if (distance === 1) opacity = 0.3;
@@ -251,7 +239,6 @@ export function drawMetaBlock(
   ctx.lineWidth = strokeWidth;
   ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
-  // Draw center dot
   ctx.strokeStyle = colors.metaBlockArrow;
   ctx.fillStyle = colors.metaBlockArrow;
   ctx.lineWidth = 2;

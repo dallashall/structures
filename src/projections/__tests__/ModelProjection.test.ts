@@ -1,7 +1,3 @@
-/**
- * ModelProjection tests - model state replayed from the event log
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { modelProjection } from '../ModelProjection';
 import { startProject, append, appendToOtherProject } from '../../test/projectFixture';

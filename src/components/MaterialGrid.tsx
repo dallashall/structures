@@ -22,9 +22,7 @@ interface MaterialGridProps {
 }
 
 /**
- * MaterialGrid - Windowed grid of material tiles. Only the visible rows mount.
- *
- * Memoized, so a keystroke that changes only the search field skips this render.
+ * Only the visible rows mount. Memoized, so a keystroke that changes only the search field skips this render.
  */
 function MaterialGridComponent({ blocks, width, isStale, onResize, onPick }: MaterialGridProps) {
   const columnCount = Math.max(1, Math.floor(width / MIN_COLUMN_WIDTH));

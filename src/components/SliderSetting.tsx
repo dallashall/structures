@@ -12,9 +12,6 @@ interface SliderSettingProps {
   disabled?: boolean;
 }
 
-/**
- * SliderSetting - Labeled numeric slider row in a settings dialog
- */
 export function SliderSetting({ label, value, onChange, min, max, step, disabled }: SliderSettingProps) {
   return (
     <SettingRow label={label}>

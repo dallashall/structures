@@ -1,7 +1,3 @@
-/**
- * DragShape tests - the box a drag covers under Shift and Alt, and the cells each shape paints in it
- */
-
 import { describe, it, expect } from 'vitest';
 import type { CellBox, PlanePoint } from '../strategies/DragShape';
 import { toDragBox, rectangleCells, ellipseCells, lineCells } from '../strategies/DragShape';

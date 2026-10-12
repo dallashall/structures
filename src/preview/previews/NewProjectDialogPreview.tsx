@@ -3,10 +3,6 @@ import { Box, Typography, Button } from '@mui/material';
 import { NewProjectDialog } from '../../components/NewProjectDialog';
 import type { Dimensions } from '../../types';
 
-/**
- * Preview showcase for the NewProjectDialog component
- * Demonstrates project creation dialog with presets and custom dimensions
- */
 export function NewProjectDialogPreview() {
   const [isOpen, setIsOpen] = useState(false);
   const [lastCreated, setLastCreated] = useState<{ name: string; dimensions: Dimensions } | null>(null);
@@ -33,7 +29,6 @@ export function NewProjectDialogPreview() {
         presets (Small, Medium, Large) and custom sizes.
       </Typography>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -63,7 +58,6 @@ export function NewProjectDialogPreview() {
         />
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
@@ -96,7 +90,6 @@ interface Dimensions {
         </Box>
       </Box>
 
-      {/* Feature Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">

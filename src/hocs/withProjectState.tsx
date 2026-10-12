@@ -4,31 +4,13 @@ import { modelProjection } from "../projections/ModelProjection";
 import { metadataProjection } from "../projections/MetadataProjection";
 import type { Project } from "../types";
 
-/**
- * Props injected by withProjectState HOC
- */
 export interface WithProjectStateProps {
   project: Project | null;
 }
 
 /**
- * Higher-Order Component that subscribes to projections and provides
- * current project state to wrapped component.
- *
- * Linear flow architecture:
- * - Subscribes to rebuild events from both projections
- * - Queries state via ProjectView.getProject()
- * - No cascading events, just signal → query
- *
- * Subscribes to:
- * - model:rebuilt (ModelProjection) - Model state changed (dimensions, blocks, metaBlock)
- * - metadata:rebuilt (MetadataProjection) - Metadata changed (id, name, timestamps)
- *
- * Injects props:
- * - project: Project | null - The complete project state
- *
- * @example
- * const EnhancedComponent = withProjectState(MyComponent);
+ * HOC that passes the open project. A rebuild event from either projection is only a signal:
+ * the HOC then reads the joined project from ProjectView, so it never merges event payloads itself.
  */
 export function withProjectState<P extends object>(
   Component: React.ComponentType<P & WithProjectStateProps>,
@@ -36,7 +18,6 @@ export function withProjectState<P extends object>(
   return function WithProjectState(props: P) {
     const [project, setProject] = React.useState<Project | null>(null);
 
-    // Initial load
     const loadInitialProject = (): (() => void) => {
       let isMounted = true;
 
@@ -56,18 +37,15 @@ export function withProjectState<P extends object>(
     };
     React.useEffect(loadInitialProject, []);
 
-    // Subscribe to updates
     const subscribe = (): (() => void) => {
       const handleProjectionCalculated = async () => {
         const proj = await projectView.getProject();
         setProject(proj);
       };
 
-      // Subscribe to both projections
       modelProjection.on("model:rebuilt", handleProjectionCalculated);
       metadataProjection.on("metadata:rebuilt", handleProjectionCalculated);
 
-      // Cleanup
       const unsubscribe = (): void => {
         modelProjection.off("model:rebuilt", handleProjectionCalculated);
         metadataProjection.off("metadata:rebuilt", handleProjectionCalculated);

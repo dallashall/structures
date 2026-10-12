@@ -10,9 +10,6 @@ import { drawPersistentBlocks } from "./drawBlocks";
 import { drawCoordinateAxes, drawLayerIndicators, drawMetaBlock } from "./drawOverlays";
 import { drawSharedPreview, drawToolPreview } from "./drawPreview";
 
-/**
- * Canvas2DColorConfig - Color configuration for dark/light mode support
- */
 export interface Canvas2DColorConfig {
   grid: string;
   axisX: string;
@@ -27,9 +24,6 @@ export interface Canvas2DColorConfig {
   textSecondary: string;
 }
 
-/**
- * Default dark mode colors
- */
 const DARK_MODE_COLORS: Canvas2DColorConfig = {
   grid: "#444444",
   axisX: "#e74c3c",
@@ -45,20 +39,10 @@ const DARK_MODE_COLORS: Canvas2DColorConfig = {
 };
 
 /**
- * Canvas2DRenderer - Compositor for 2D canvas rendering
+ * Canvas2DRenderer - Draws one frame of a 2D view
  *
- * Orchestrates drawing phases by calling focused drawing functions.
- * Receives only pre-resolved GridBlock[] data — zero coordinate conversions.
- *
- * Drawing order:
- * 1. Grid lines
- * 2. Persistent blocks (pre-resolved)
- * 3. Meta block
- * 4. Coordinate axes legend
- * 5. Layer indicators
- * 6. Guide geometry (tool control points/lines)
- * 7. Shared preview (draft + editor, pre-resolved)
- * 8. Tool preview (hover highlight, uses UniversalPosition)
+ * Block data arrives already resolved to grid cells (see Canvas2D), so this class converts no coordinates.
+ * The draw order is the stacking order: later phases paint over earlier ones.
  */
 export class Canvas2DRenderer {
   private colors: Canvas2DColorConfig = DARK_MODE_COLORS;
@@ -73,12 +57,6 @@ export class Canvas2DRenderer {
     }
   }
 
-  /**
-   * Main render method — composes all drawing phases.
-   *
-   * All block data arrives pre-resolved to grid coordinates.
-   * The renderer does zero model→grid conversions.
-   */
   render(
     viewState: ViewState,
     previewData: PreviewData | null,
@@ -97,16 +75,13 @@ export class Canvas2DRenderer {
     const pan = viewState.getPan();
     const viewType = viewState.getViewType();
 
-    // Clear
     this.ctx.clearRect(0, 0, width, height);
 
-    // 1. Grid
     drawGrid(this.ctx, gridWidth, gridHeight, cellSize, pan, this.colors);
 
-    // 2. Persistent blocks
     drawPersistentBlocks(this.ctx, persistentBlocks, cellSize, pan, viewType);
 
-    // 3. Meta block (single block, left as direct render — negligible cost)
+    // The meta block is one cell, so it converts its own position instead of arriving pre-resolved
     drawMetaBlock(
       this.ctx,
       project.metaBlock ?? null,
@@ -118,13 +93,10 @@ export class Canvas2DRenderer {
       this.colors,
     );
 
-    // 4. Coordinate axes
     drawCoordinateAxes(this.ctx, viewState, height, this.colors);
 
-    // 5. Layer indicators
     drawLayerIndicators(this.ctx, viewState, dimensions, activeLayers);
 
-    // 6. Guide geometry
     if (previewData?.guide) {
       GuideGeometryRenderer.draw(
         this.ctx,
@@ -136,7 +108,6 @@ export class Canvas2DRenderer {
       );
     }
 
-    // 7. Shared preview (draft + editor)
     const deleteMode = editorState.getDeleteMode();
     drawSharedPreview(
       this.ctx,
@@ -148,7 +119,6 @@ export class Canvas2DRenderer {
       viewType,
     );
 
-    // 8. Tool preview (hover)
     const selectedBlock = editorState.getSelectedBlock();
     drawToolPreview(
       this.ctx,

@@ -1,25 +1,15 @@
 import type { Vector3D, Dimensions, ViewType, LayerState } from '../../types';
 
 /**
- * CoordinateConverter - Shared coordinate transformation utilities
+ * CoordinateConverter - Grid cell ↔ model position for each 2D view
  *
- * Handles conversion between 2D grid coordinates and 3D world positions.
- * Extracted from Canvas2D to avoid duplication and enable reuse.
- *
- * Coordinate System:
- * - Our system: Z-up, right-handed (X=width, Y=height, Z=depth)
- * - Grid system varies by view type (what you see on 2D canvas)
+ * The model is Z-up and right-handed: x spans dimensions.width, y spans dimensions.height, z spans dimensions.depth.
+ * Grid rows count down from the top, so the axis a view shows vertically is inverted.
+ * Back, right, and bottom share the front, left, and top mappings: they are not mirrored.
  */
 export class CoordinateConverter {
   /**
-   * Convert 2D grid coordinates to 3D world position
-   *
-   * @param gridX - Horizontal grid coordinate
-   * @param gridY - Vertical grid coordinate
-   * @param viewType - Current view (front, back, left, right, top, bottom)
-   * @param activeLayers - Current active layers for hidden dimension
-   * @param dimensions - Project dimensions
-   * @returns 3D world position
+   * The view's depth axis takes its value from activeLayers
    */
   static gridToPosition(
     gridX: number,
@@ -28,11 +18,10 @@ export class CoordinateConverter {
     activeLayers: LayerState,
     dimensions: Dimensions
   ): Vector3D {
-    // Z-up coordinate system: X=East/West (width), Y=North/South (height), Z=Up/Down (depth)
     switch (viewType) {
       case 'front':
       case 'back':
-        // Looking North/South: gridX=X (width), gridY=Z (depth, inverted)
+        // gridX = x, gridY = z inverted
         return {
           x: gridX,
           y: activeLayers.y,
@@ -40,7 +29,7 @@ export class CoordinateConverter {
         };
       case 'left':
       case 'right':
-        // Looking East/West: gridX=Y (height), gridY=Z (depth, inverted)
+        // gridX = y, gridY = z inverted
         return {
           x: activeLayers.x,
           y: gridX,
@@ -48,7 +37,7 @@ export class CoordinateConverter {
         };
       case 'top':
       case 'bottom':
-        // Looking Down/Up: gridX=X (width), gridY=Y (height, inverted)
+        // gridX = x, gridY = y inverted
         return {
           x: gridX,
           y: dimensions.height - 1 - gridY,
@@ -59,14 +48,6 @@ export class CoordinateConverter {
     }
   }
 
-  /**
-   * Convert 3D world position to 2D grid coordinates
-   *
-   * @param position - 3D world position
-   * @param viewType - Current view
-   * @param dimensions - Project dimensions
-   * @returns Grid coordinates or null if position not visible in this view
-   */
   static positionToGrid(
     position: Vector3D,
     viewType: ViewType,

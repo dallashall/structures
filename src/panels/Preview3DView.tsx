@@ -24,7 +24,6 @@ import { withEditorState } from "../hocs/withEditorState";
 import type { WithEditorStateProps } from "../hocs/withEditorState";
 import type { RenderSettings } from "../types";
 
-// Axis colors that work in dark/light mode
 const AXIS_COLORS = {
   x: { main: "#e74c3c", hover: "#c0392b", bg: "rgba(231, 76, 60, 0.1)" },
   y: { main: "#3498db", hover: "#2980b9", bg: "rgba(52, 152, 219, 0.1)" },
@@ -34,11 +33,7 @@ const AXIS_COLORS = {
 type Preview3DViewProps = WithEditorStateProps;
 
 /**
- * Preview3DView - Dumb rendering component for the 3D preview panel.
- *
- * All BabylonJS logic lives in the babylon3d singleton.
- * Editor state comes via withEditorState HOC props.
- * This component only renders UI and delegates actions.
+ * All Babylon.js work lives in the babylon3d singleton. This component only renders controls and forwards actions.
  */
 function Preview3DViewInner({
   sliceGuideVisibility,
@@ -47,12 +42,10 @@ function Preview3DViewInner({
 }: Preview3DViewProps) {
   const theme = useTheme();
 
-  // Slice guide toggles
   const handleToggleX = (): void => { editorState.toggleSliceGuide('x'); };
   const handleToggleY = (): void => { editorState.toggleSliceGuide('y'); };
   const handleToggleZ = (): void => { editorState.toggleSliceGuide('z'); };
 
-  // Camera controls
   const handleCameraFront = (): void => { babylon3d.setCameraView('front'); };
   const handleCameraBack = (): void => { babylon3d.setCameraView('back'); };
   const handleCameraLeft = (): void => { babylon3d.setCameraView('left'); };
@@ -64,7 +57,6 @@ function Preview3DViewInner({
   const handleFitModel = (): void => { babylon3d.fitToModel(); };
   const handleResetCamera = (): void => { babylon3d.resetCamera(); };
 
-  // Render settings modal
   const handleOpenSettings = (): void => { editorState.setRenderSettingsModalOpen(true); };
   const handleCloseSettings = (): void => { editorState.setRenderSettingsModalOpen(false); };
   const handleApplySettings = (settings: RenderSettings): void => { editorState.setRenderSettings(settings); };
@@ -86,7 +78,6 @@ function Preview3DViewInner({
         sx={{ display: "block", width: "100%", height: "100%" }}
       />
 
-      {/* Slice Guides Toggle Buttons + Settings */}
       <Box
         sx={{
           position: "absolute",
@@ -207,7 +198,6 @@ function Preview3DViewInner({
         </Stack>
       </Box>
 
-      {/* Camera and Zoom Controls - Consolidated Horizontal Bar */}
       <Box
         sx={{
           position: "absolute",
@@ -220,7 +210,6 @@ function Preview3DViewInner({
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center">
-          {/* Camera View Section */}
           <Stack direction="row" spacing={0.5} alignItems="center">
             <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
               Camera:
@@ -245,7 +234,6 @@ function Preview3DViewInner({
             </Button>
           </Stack>
 
-          {/* Zoom Section */}
           <Stack direction="row" spacing={0.5} alignItems="center">
             <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
               Zoom:
@@ -278,7 +266,6 @@ function Preview3DViewInner({
 
       {renderSettings.showFrameStats && <FrameStatsOverlay />}
 
-      {/* Render Settings Modal */}
       <RenderSettingsModal
         isOpen={renderSettingsModalOpen}
         settings={renderSettings}

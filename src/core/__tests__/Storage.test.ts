@@ -1,6 +1,4 @@
-/**
- * Storage tests - verify the project list is derived from the EventLog
- */
+// Storage keeps no project records of its own. Every listing is replayed from the EventLog.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../EventLog';

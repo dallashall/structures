@@ -12,9 +12,6 @@ interface QuickSelectDropSlotProps {
   isAccepting: boolean;
 }
 
-/**
- * QuickSelectDropSlot - One quick-select slot in the material browser. A material dropped on it fills it.
- */
 export function QuickSelectDropSlot({ block, index, isAccepting }: QuickSelectDropSlotProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `slot-${index}`,

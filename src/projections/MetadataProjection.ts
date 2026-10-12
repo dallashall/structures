@@ -1,11 +1,9 @@
 /**
- * MetadataProjection - Materializes project metadata from event log
+ * MetadataProjection - The open project's name and timestamps, folded from its metadata:* rows.
+ * It applies new rows as they commit, and reads only rows past its snapshot.
  *
- * Maintains snapshot of:
- * - id, name
- * - created, modified timestamps
- *
- * Rebuilds incrementally from snapshot when new metadata:* events arrive.
+ * Events:
+ * - metadata:rebuilt - the snapshot took in new rows
  */
 
 import { EventEmitter } from '../core/EventEmitter';
@@ -27,9 +25,6 @@ interface MetadataSnapshot {
   modified: Date;
 }
 
-/**
- * MetadataProjection singleton
- */
 class MetadataProjection extends EventEmitter {
   private static instance: MetadataProjection;
 
@@ -38,11 +33,7 @@ class MetadataProjection extends EventEmitter {
   private readThroughId = 0;
   private constructor() {
     super();
-
-    // Listen to event log
     eventLog.on('event:appended', this.handleEvent.bind(this));
-
-    // Initial rebuild from event log
     this.rebuild();
   }
 
@@ -53,31 +44,20 @@ class MetadataProjection extends EventEmitter {
     return MetadataProjection.instance;
   }
 
-  /**
-   * Handle new event from log
-   */
   private handleEvent(event: Event): void {
-    // Only process metadata events
     if (!event.type.startsWith('metadata:')) {
       return;
     }
 
-    // Only process events for current project
     const currentProjectId = editorState.getCurrentProjectId();
     if (event.projectId !== currentProjectId) {
       return;
     }
 
-    // Apply event to snapshot
     this.applyEvent(event);
-
-    // Notify listeners
     this.emit('metadata:rebuilt');
   }
 
-  /**
-   * Apply single event to snapshot
-   */
   private applyEvent(event: Event): void {
     switch (event.type) {
       case 'metadata:created': {
@@ -104,9 +84,6 @@ class MetadataProjection extends EventEmitter {
     }
   }
 
-  /**
-   * Rebuild from event log (from snapshot forward)
-   */
   private async rebuild(): Promise<void> {
     const projectId = editorState.getCurrentProjectId();
     if (!projectId) return;
@@ -127,10 +104,7 @@ class MetadataProjection extends EventEmitter {
   }
 
   /**
-   * Ensure projection is fresh by applying any new events
-   * This guarantees reads always return latest state
-   *
-   * OPTIMIZED: Returns instantly (O(1)) if no new events since last check
+   * Applies any rows committed since the last read. Returns without a query when the log has no new rows.
    */
   async ensureFresh(): Promise<void> {
     const latestEventId = await eventLog.getLatestEventId();
@@ -154,10 +128,7 @@ class MetadataProjection extends EventEmitter {
     this.readThroughId = Math.max(this.readThroughId, latestEventId);
   }
 
-  /**
-   * Get cached metadata (synchronous, no freshness check)
-   * Use this in render loops where ensureFresh() was already called
-   */
+  // No freshness check, for render paths that already awaited ensureFresh()
   getCached(): Metadata | null {
     if (!this.snapshot) return null;
 
@@ -169,9 +140,6 @@ class MetadataProjection extends EventEmitter {
     };
   }
 
-  /**
-   * Get current metadata (always fresh)
-   */
   async getMetadata(): Promise<Metadata | null> {
     await this.ensureFresh();
 
@@ -185,25 +153,16 @@ class MetadataProjection extends EventEmitter {
     };
   }
 
-  /**
-   * Get project ID (always fresh)
-   */
   async getId(): Promise<string | null> {
     await this.ensureFresh();
     return this.snapshot?.id || null;
   }
 
-  /**
-   * Get project name (always fresh)
-   */
   async getName(): Promise<string | null> {
     await this.ensureFresh();
     return this.snapshot?.name || null;
   }
 
-  /**
-   * Reset projection (clear snapshot for new project)
-   */
   reset(): void {
     this.snapshot = null;
     this.readThroughId = 0;

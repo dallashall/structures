@@ -1,7 +1,3 @@
-/**
- * RenameProjectCommand tests - renames any stored project and refuses names already held
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../../core/EventLog';
 import { storage } from '../../core/Storage';

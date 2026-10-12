@@ -2,34 +2,17 @@ import type { PaintOperation } from '../strategies/PaintStrategy';
 import type { Vector3D } from '../../../types';
 
 /**
- * PaintBehavior - Interface for filtering paint operations
+ * PaintBehavior - Decides which of a strategy's operations run, given the blocks already placed
  *
- * Behaviors define WHEN to allow painting based on existing block state.
- * Examples: normal (always allow), only-replace (only over blocks), selective-replace (specific types)
- *
- * Behaviors filter the operations calculated by PaintStrategy, deciding which
- * operations should actually be executed based on project state.
+ * A strategy decides where a stroke lands. A behavior decides whether each cell may change.
+ * getBlock returns null for an empty cell.
  */
 export interface PaintBehavior {
-  /**
-   * Filter paint operations based on behavior rules
-   *
-   * @param operations - Proposed operations from strategy
-   * @param getBlock - Function to query existing block at position (async)
-   * @returns Promise of filtered operations that should be executed
-   */
   filter(
     operations: PaintOperation[],
     getBlock: (position: Vector3D) => Promise<string | null>
   ): Promise<PaintOperation[]>;
 
-  /**
-   * Filter paint operations based on behavior rules (synchronous)
-   *
-   * @param operations - Proposed operations from strategy
-   * @param getBlock - Function to query existing block at position (synchronous)
-   * @returns Filtered operations that should be executed
-   */
   filterSync(
     operations: PaintOperation[],
     getBlock: (position: Vector3D) => string | null

@@ -1,8 +1,7 @@
 /**
- * RenderSettingsStore - IndexedDB store for per-project render settings
- *
- * Stores one RenderSettings blob per project. Follows
- * the QuickSelectStore singleton + IndexedDB pattern.
+ * RenderSettingsStore - One RenderSettings record per project in IndexedDB, outside the EventLog,
+ * so settings changes never enter undo history. A stored record merges over DEFAULT_RENDER_SETTINGS on read,
+ * so settings added later get their defaults. Writes report to SaveTracker.
  */
 
 import { DEFAULT_RENDER_SETTINGS } from '../types';
@@ -65,9 +64,6 @@ class RenderSettingsStore {
     await this.initPromise;
   }
 
-  /**
-   * Get render settings for a project (returns defaults if none stored)
-   */
   async getSettings(projectId: string): Promise<RenderSettings> {
     await this.ensureReady();
 
@@ -89,9 +85,6 @@ class RenderSettingsStore {
     return new Promise(readSettings);
   }
 
-  /**
-   * Save render settings for a project
-   */
   saveSettings(projectId: string, settings: RenderSettings): Promise<void> {
     return saveTracker.track(this.putSettings({ projectId, settings }));
   }
@@ -112,9 +105,6 @@ class RenderSettingsStore {
   }
 
 
-  /**
-   * Delete render settings for a project
-   */
   async deleteProject(projectId: string): Promise<void> {
     await this.ensureReady();
 

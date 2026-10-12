@@ -31,17 +31,6 @@ interface NewProjectDialogOwnProps {
   onCreate: (name: string, dimensions: Dimensions) => void;
 }
 
-/**
- * NewProjectDialog - Dialog for creating new projects
- *
- * Features:
- * - Project name input (required)
- * - Dimension presets: Small (16×16×16), Medium (32×32×32), Large (64×64×64), Custom
- * - Custom dimension inputs (visible when "Custom" selected)
- * - Help text explaining dimensions can be changed later
- *
- * withNewProjectFormState holds the form while the user types.
- */
 function NewProjectDialogComponent({
   isOpen,
   onClose,

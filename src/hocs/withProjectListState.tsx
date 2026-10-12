@@ -6,9 +6,6 @@ import { storage } from '../core/Storage';
 import { thumbnailStore } from '../core/ThumbnailStore';
 import { renameProjectCommand, RenameProjectError } from '../commands/RenameProjectCommand';
 
-/**
- * Props injected by withProjectListState HOC
- */
 export interface WithProjectListStateProps {
   projects: StorageMetadata[];
   isLoadingProjects: boolean;

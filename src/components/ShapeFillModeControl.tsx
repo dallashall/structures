@@ -12,12 +12,6 @@ interface ShapeFillModeControlProps {
   orientation?: "horizontal" | "vertical";
 }
 
-/**
- * ShapeFillModeControl - Toggle between outline and filled shape modes
- *
- * Used for shape tools (rectangle, circle, arch, curve) to control
- * whether shapes are drawn as outlines or filled solids.
- */
 export function ShapeFillModeControl({
   shapeFillMode,
   onShapeFillModeChange,

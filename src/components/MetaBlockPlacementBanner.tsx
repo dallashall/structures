@@ -5,12 +5,6 @@ interface MetaBlockPlacementBannerProps {
   onConfirm: () => void;
 }
 
-/**
- * MetaBlockPlacementBanner - Floating banner shown during meta block placement
- *
- * Displays instructions and confirmation button for meta block placement mode.
- * Positioned absolutely at the bottom center of the canvas area.
- */
 export function MetaBlockPlacementBanner({ onConfirm }: MetaBlockPlacementBannerProps) {
   return (
     <Box

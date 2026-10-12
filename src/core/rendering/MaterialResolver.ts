@@ -1,9 +1,8 @@
 /**
- * MaterialResolver - Resolves which BabylonJS material to apply for a given block
+ * MaterialResolver - The material for each block type, cached
  *
- * Handles the 3-tier fallback: tinted texture -> atlas -> color.
- * Supports both StandardMaterial and PBR material paths.
- * Caches materials per block type and ghost/delete variants.
+ * Source order: tinted texture (glass, grass, leaves), then the atlas, then the block's flat color.
+ * A render setting picks StandardMaterial or PBR. Ghost previews always use StandardMaterial.
  */
 
 import {
@@ -36,23 +35,17 @@ export class MaterialResolver {
   private pbrEnabled = false;
   private emissiveScale = 0.3;
 
-  // Cached materials (one per block type)
   private materials = new Map<string, Material>();
 
-  // Cached ghost materials (semi-transparent, unlit versions for preview, always StandardMaterial)
   private ghostMaterials = new Map<string, StandardMaterial>();
 
   constructor(scene: Scene) {
     this.scene = scene;
   }
 
-  /**
-   * Enable or disable PBR materials. Clears cache when toggled.
-   */
   setPBREnabled(enabled: boolean): void {
     if (this.pbrEnabled !== enabled) {
       this.pbrEnabled = enabled;
-      // Cache must be cleared since material types change
       for (const material of this.materials.values()) {
         material.dispose();
       }
@@ -61,8 +54,7 @@ export class MaterialResolver {
   }
 
   /**
-   * Set the emissive scale applied to luminous block materials.
-   * Call when lighting preset changes. Clears cache to force rebuild.
+   * Rebuilds every cached material when the scale changes
    */
   setEmissiveScale(scale: number): void {
     if (this.emissiveScale !== scale) {
@@ -74,9 +66,6 @@ export class MaterialResolver {
     }
   }
 
-  /**
-   * Resolve the material for a block type (using atlas texture, tinted texture, or color fallback)
-   */
   resolve(blockId: string): Material {
     const block = blockRegistry.getBlock(blockId);
     if (!block) {
@@ -89,7 +78,6 @@ export class MaterialResolver {
     const blockIdLower = blockId.toLowerCase();
     const blockName = blockIdLower.replace('minecraft:', '');
 
-    // Check cache first
     if (this.materials.has(blockId)) {
       return this.materials.get(blockId)!;
     }
@@ -98,18 +86,14 @@ export class MaterialResolver {
       ? this.createPBRBlockMaterial(blockId, block, blockName)
       : this.createStandardBlockMaterial(blockId, block, blockName);
 
-    // Allow more simultaneous lights (default 4 only leaves 2 slots after
-    // hemispheric + directional; 8 leaves 6 for nearby emissive point lights)
+    // Babylon's default of 4 leaves 2 slots after the hemispheric and directional lights.
+    // The rest go to nearby emissive point lights.
     material.maxSimultaneousLights = 32;
 
     this.materials.set(blockId, material);
     return material;
   }
 
-  /**
-   * Resolve ghost material (semi-transparent version for preview)
-   * Ghost materials always use StandardMaterial regardless of PBR setting.
-   */
   resolveGhost(color: string): StandardMaterial {
     if (this.ghostMaterials.has(color)) {
       return this.ghostMaterials.get(color)!;
@@ -124,9 +108,6 @@ export class MaterialResolver {
     return material;
   }
 
-  /**
-   * Resolve delete ghost material (semi-transparent with red tint)
-   */
   resolveDeleteGhost(color: string): StandardMaterial {
     const deleteKey = `delete_${color}`;
 
@@ -137,7 +118,6 @@ export class MaterialResolver {
     const material = new StandardMaterial(`ghost_delete_${color}`, this.scene);
     const baseColor = hexToColor3(color);
 
-    // Mix original color with red (60% original, 40% red)
     applyUnlitColor(material, new Color3(
       baseColor.r * 0.6 + 1.0 * 0.4,
       baseColor.g * 0.6,
@@ -151,7 +131,7 @@ export class MaterialResolver {
   }
 
   /**
-   * Clear all cached materials (call on atlas reload or PBR toggle)
+   * Call when the atlas reloads
    */
   clearAllCaches(): void {
     for (const material of this.materials.values()) {
@@ -165,10 +145,7 @@ export class MaterialResolver {
     this.ghostMaterials.clear();
   }
 
-  // ---- Standard Material Path ----
-
   private createStandardBlockMaterial(blockId: string, block: any, blockName: string): StandardMaterial {
-    // Try tinted texture first (for glass, grass, leaves)
     const tintedTexture = textureResolver.getTintedTexture(blockId, 0);
     let material: StandardMaterial;
 
@@ -265,20 +242,15 @@ export class MaterialResolver {
     return material;
   }
 
-  // ---- PBR Material Path ----
-
   private createPBRBlockMaterial(blockId: string, block: any, blockName: string): PBRMaterial {
-    // Try tinted texture first (for glass, grass, leaves)
     const tintedTexture = textureResolver.getTintedTexture(blockId, 0);
     if (tintedTexture) {
       return this.createPBRTintedMaterial(blockId, blockName, block, tintedTexture);
     }
 
-    // Try atlas
     const atlasMaterial = this.createPBRAtlasMaterial(blockId, block, blockName);
     if (atlasMaterial) return atlasMaterial;
 
-    // Fallback to color
     return this.createPBRColorMaterial(blockId, block.color);
   }
 

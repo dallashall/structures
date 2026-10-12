@@ -3,16 +3,11 @@ import { Box, Typography } from '@mui/material';
 import { QuickSelectPalette } from '../../components/QuickSelectPalette';
 import { mockBlocks } from '../mockData';
 
-/**
- * Preview showcase for the QuickSelectPalette component
- * Demonstrates 9-slot quick-select palette for rapid material switching
- */
 export function QuickSelectPalettePreview() {
   const handleSelectSlot = (index: number) => {
     console.log('[Preview] Slot selected:', index);
   };
 
-  // Example slot configurations
   const emptySlots: (string | null)[] = [null, null, null, null, null];
   const partialSlots: (string | null)[] = ['stone', 'oak_planks', null, null, null];
   const fullSlots: (string | null)[] = [
@@ -42,7 +37,6 @@ export function QuickSelectPalettePreview() {
         Displays blocks as color swatches with selection state.
       </Typography>
 
-      {/* Empty State */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Empty State</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -55,7 +49,6 @@ export function QuickSelectPalettePreview() {
         />
       </Box>
 
-      {/* Partial State */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Partially Filled</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -68,7 +61,6 @@ export function QuickSelectPalettePreview() {
         />
       </Box>
 
-      {/* Full State */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">All Slots Filled</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -81,7 +73,6 @@ export function QuickSelectPalettePreview() {
         />
       </Box>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -105,7 +96,6 @@ export function QuickSelectPalettePreview() {
         )}
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
@@ -136,7 +126,6 @@ export function QuickSelectPalettePreview() {
         </Box>
       </Box>
 
-      {/* Feature Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">

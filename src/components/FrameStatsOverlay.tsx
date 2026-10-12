@@ -6,7 +6,7 @@ import type { WithFrameStatsProps } from '../hocs/withFrameStats';
 const ms = (value: number): string => value.toFixed(1);
 
 /**
- * FrameStatsOverlay - Frame timing and camera smoothness for the 3D view, over the last 120 frames
+ * Frame timing and camera smoothness for the 3D view, over the last 120 frames.
  *
  * frame: interval between frames (p50 / p95 / worst). render: CPU time in scene.render().
  * tick: CPU time of the whole frame loop, every 2D view included. 3D buffer: drawing size in device pixels.

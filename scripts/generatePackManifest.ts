@@ -1,13 +1,8 @@
 #!/usr/bin/env npx tsx
 
 /**
- * Pack Manifest Generator
- *
- * Auto-generates pack manifest from Minecraft resource pack structure.
- * Scans textures directory and builds texture mappings for atlas generation.
- *
- * Usage:
- *   npx tsx scripts/generatePackManifest.ts --pack squareful --source "Squareful方纹v26.0.6/"
+ * Writes resource-packs/<pack>/pack-manifest.json, which maps logical texture names to files in an
+ * unpacked resource pack. scripts/buildTextureAtlas.ts reads it.
  */
 
 import * as fs from 'fs';
@@ -23,9 +18,6 @@ interface GenerateOptions {
   verbose?: boolean;
 }
 
-/**
- * Parse command line arguments
- */
 function parseArgs(): GenerateOptions {
   const args = process.argv.slice(2);
   const options: Partial<GenerateOptions> = {};
@@ -78,9 +70,6 @@ Options:
   return options as GenerateOptions;
 }
 
-/**
- * Read and parse pack.mcmeta
- */
 function parsePackMetadata(packDir: string): PackMetadata | null {
   const metadataPath = path.join(packDir, 'pack.mcmeta');
 
@@ -90,7 +79,7 @@ function parsePackMetadata(packDir: string): PackMetadata | null {
   }
 
   try {
-    // Read file and strip BOM if present
+    // Some packs save pack.mcmeta with a UTF-8 BOM, which JSON.parse rejects
     let content = fs.readFileSync(metadataPath, 'utf-8');
     if (content.charCodeAt(0) === 0xFEFF) {
       content = content.slice(1);
@@ -102,9 +91,6 @@ function parsePackMetadata(packDir: string): PackMetadata | null {
   }
 }
 
-/**
- * Scan textures directory and build texture mappings
- */
 function scanTextures(texturesDir: string, verbose: boolean): Record<string, string> {
   const textureMappings: Record<string, string> = {};
 
@@ -121,7 +107,6 @@ function scanTextures(texturesDir: string, verbose: boolean): Record<string, str
   }
 
   for (const file of textureFiles) {
-    // Remove .png extension to get logical name
     const logicalName = file.replace('.png', '');
     textureMappings[logicalName] = file;
   }
@@ -130,28 +115,24 @@ function scanTextures(texturesDir: string, verbose: boolean): Record<string, str
 }
 
 /**
- * Detect texture variants (e.g., oak_planks, oak_planks2, oak_planks3)
+ * Groups numbered textures with their base: oak_planks, oak_planks2, oak_planks3.
+ * A numbered name without an unnumbered base is not a variant.
  */
 function detectVariants(textureMappings: Record<string, string>): Record<string, string[]> {
   const variants: Record<string, string[]> = {};
   const processed = new Set<string>();
 
   for (const logicalName of Object.keys(textureMappings)) {
-    // Skip if already processed
     if (processed.has(logicalName)) {
       continue;
     }
 
-    // Check if this is a base name (no number suffix)
     const match = logicalName.match(/^(.+?)(\d+)$/);
 
     if (match) {
-      // This is a numbered variant (e.g., oak_planks2)
       const baseName = match[1];
 
-      // Check if base exists
       if (textureMappings[baseName]) {
-        // Find all variants
         const variantList: string[] = [baseName];
         let i = 2;
         while (textureMappings[`${baseName}${i}`]) {
@@ -171,14 +152,10 @@ function detectVariants(textureMappings: Record<string, string>): Record<string,
   return variants;
 }
 
-/**
- * Extract pack name from directory
- */
 function extractPackName(packDir: string): string {
   const dirName = path.basename(packDir);
 
-  // Try to extract name from common patterns
-  // Example: "Squareful方纹v26.0.6" -> "Squareful"
+  // The leading Latin name: "Squareful方纹v26.0.6" -> "Squareful"
   const match = dirName.match(/^([A-Za-z][A-Za-z0-9\s]*)/);
   if (match) {
     return match[1].trim();
@@ -187,18 +164,13 @@ function extractPackName(packDir: string): string {
   return dirName;
 }
 
-/**
- * Determine texture resolution by reading a sample texture
- */
 async function detectTextureResolution(texturesDir: string): Promise<number> {
   try {
-    // Try to find a common texture file
     const sampleFiles = ['stone.png', 'dirt.png', 'oak_planks.png', 'cobblestone.png'];
 
     for (const sampleFile of sampleFiles) {
       const samplePath = path.join(texturesDir, sampleFile);
       if (fs.existsSync(samplePath)) {
-        // Use sharp to read image dimensions
         const sharp = (await import('sharp')).default;
         const metadata = await sharp(samplePath).metadata();
         if (metadata.width) {
@@ -207,7 +179,6 @@ async function detectTextureResolution(texturesDir: string): Promise<number> {
       }
     }
 
-    // If no sample found, try the first PNG file
     const files = fs.readdirSync(texturesDir);
     const firstPng = files.find(isPng);
     if (firstPng) {
@@ -221,13 +192,9 @@ async function detectTextureResolution(texturesDir: string): Promise<number> {
     console.warn('Could not detect texture resolution:', error);
   }
 
-  // Default to 16x16
   return 16;
 }
 
-/**
- * Main generation function
- */
 async function generatePackManifest(options: GenerateOptions): Promise<void> {
   console.log(`Generating pack manifest for: ${options.pack}`);
 
@@ -238,7 +205,6 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Parse pack metadata
   const metadata = parsePackMetadata(packDir);
   let packFormat = 0;
   let supportedFormats: [number, number] | undefined;
@@ -251,22 +217,18 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
     console.log(`Pack format: ${packFormat}`);
   }
 
-  // Extract pack info
   const packName = extractPackName(packDir);
   const version = packDir.match(/v?(\d+\.\d+\.?\d*)/)?.[1] || '1.0.0';
 
-  // Locate directories
   const assetsDir = path.join(packDir, 'assets', 'minecraft');
   const texturesDir = path.join(assetsDir, 'textures', 'block');
   const textureBasePath = path.relative(packDir, texturesDir);
 
   console.log(`Textures directory: ${texturesDir}`);
 
-  // Scan textures
   const textureMappings = scanTextures(texturesDir, options.verbose || false);
   console.log(`Found ${Object.keys(textureMappings).length} textures`);
 
-  // Detect variants
   const variants = detectVariants(textureMappings);
   console.log(`Found ${Object.keys(variants).length} variant groups`);
 
@@ -276,14 +238,11 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
     }
   }
 
-  // Detect texture resolution
   const resolution = await detectTextureResolution(texturesDir);
   console.log(`Texture resolution: ${resolution}x${resolution}`);
 
-  // Choose fallback texture
   const fallbackTexture = textureMappings['stone'] || textureMappings['cobblestone'] || 'missing.png';
 
-  // Build manifest
   const manifest: PackManifest = {
     packId: options.pack,
     packName,
@@ -299,7 +258,6 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
     supportedFormats,
   };
 
-  // Write output
   const outputPath = path.resolve(options.output);
   const outputDir = path.dirname(outputPath);
 
@@ -311,7 +269,6 @@ async function generatePackManifest(options: GenerateOptions): Promise<void> {
   console.log(`\nPack manifest written to: ${outputPath}`);
 }
 
-// Run if called directly
 const options = parseArgs();
 const exitWithError = (error: unknown): void => {
   console.error('Fatal error:', error);

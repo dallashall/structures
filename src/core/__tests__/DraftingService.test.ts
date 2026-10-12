@@ -1,6 +1,4 @@
-/**
- * DraftingService tests - finalize is the single path from a drawing operation to the event log
- */
+// finalize is the only path from a drawing operation to the event log
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { draftingService } from '../DraftingService';

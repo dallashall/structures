@@ -1,24 +1,11 @@
 /**
- * Babylon3D - Singleton orchestrator for 3D rendering
+ * Babylon3D - Owns the 3D view's engine and scene, and wires the rendering modules in
+ * src/core/rendering to the projections, DraftingService, and EditorState.
  *
- * Coordinates composable BabylonJS modules:
- * - CameraRig: Camera positioning and preset views
- * - MaterialResolver: Block material resolution and caching
- * - BlockRenderer: Committed block mesh lifecycle
- * - PreviewRenderer: Ghost/preview mesh lifecycle
- * - SlicePlaneVisualizer: Active layer slice planes
- * - SceneSetup: Stateless lighting, grid, and axes setup
- * - EnvironmentSetup: IBL environment texture for PBR
- * - ShadowSetup: Shadow generator and ground plane
- * - PostProcessingSetup: SSAO, bloom, and tone mapping
+ * attach(canvas) builds everything and detach() tears it all down, so the scene lives only while
+ * the view is mounted. Rendering starts only after the environment texture and post-processing exist.
  *
- * Lifecycle:
- *   attach(canvas) — idempotent, creates engine/scene/modules
- *   detach()       — tears down engine/scene/modules
- *
- * COORDINATE SYSTEM:
- * Our system: Z-up, right-handed (X=width, Y=depth, Z=height)
- * BabylonJS: Y-up, left-handed (see toBabylonVector in babylonUtils)
+ * The model is Z-up and right-handed. Babylon is Y-up and left-handed. toBabylonVector converts.
  */
 
 import {
@@ -69,12 +56,10 @@ const toShownKey = ({ id, dimensions: { width, height, depth } }: Project): stri
 class Babylon3D {
   private static instance: Babylon3D;
 
-  // Canvas and engine (null when detached)
   private canvas: HTMLCanvasElement | null = null;
   private engine: Engine | null = null;
   private scene: Scene | null = null;
 
-  // Composable modules (null when detached)
   private cameraRig: CameraRig | null = null;
   private cameraGestures: CameraGestures | null = null;
   private materialResolver: MaterialResolver | null = null;
@@ -83,13 +68,11 @@ class Babylon3D {
   private backdropRenderer: BackdropRenderer | null = null;
   private slicePlaneVisualizer: SlicePlaneVisualizer | null = null;
 
-  // Rendering enhancement systems
   private shadowSystem: ShadowSystem | null = null;
   private emissiveLighting: EmissiveLighting | null = null;
   private postProcessing: PostProcessingPipelines | null = null;
   private renderSettings: RenderSettings | null = null;
 
-  // State
   private paused = false;
   private enhancementsReady = false;
   private sceneUpdateQueued = false;
@@ -106,10 +89,8 @@ class Babylon3D {
   // Meshes to drop from the shadow render list in one pass. flushShadowCasters empties it.
   private removedShadowCasters = new Set<AbstractMesh>();
 
-  // Resize observer (watches canvas size changes directly)
   private resizeObserver: ResizeObserver | null = null;
 
-  // Bound event handlers (for cleanup)
   private boundHandlers = {
     queueSceneUpdate: this.queueSceneUpdate.bind(this),
     animationSettled: this.handleAnimationSettled.bind(this),
@@ -132,11 +113,9 @@ class Babylon3D {
     return Babylon3D.instance;
   }
 
-  // -- Lifecycle --
 
   /**
-   * Attach to a canvas element. Idempotent — calling with the same canvas
-   * is a no-op. Calling with a different canvas detaches from the previous one.
+   * A second call with the same canvas does nothing. A different canvas detaches the previous one first.
    */
   attach(canvas: HTMLCanvasElement): void {
     if (this.canvas === canvas) return;
@@ -144,9 +123,8 @@ class Babylon3D {
 
     this.canvas = canvas;
 
-    // Create BabylonJS engine and scene
-    // adaptToDeviceRatio (4th param) scales the canvas buffer to match
-    // physical pixels on HiDPI/Retina displays, preventing blur
+    // The fourth argument (adaptToDeviceRatio) sizes the buffer in physical pixels, so HiDPI screens stay sharp.
+    // preserveDrawingBuffer lets ThumbnailCapture read the canvas after a render.
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
@@ -155,7 +133,6 @@ class Babylon3D {
     this.scene = new Scene(this.engine);
     this.scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
 
-    // Instantiate modules (dependency injection)
     this.cameraRig = new CameraRig(this.scene, canvas);
     this.cameraGestures = new CameraGestures(canvas, this.cameraRig);
     this.materialResolver = new MaterialResolver(this.scene);
@@ -166,34 +143,24 @@ class Babylon3D {
     this.previewRenderer = new PreviewRenderer(this.scene, this.materialResolver);
     this.backdropRenderer = new BackdropRenderer(this.scene);
 
-    // Stateless scene setup
     setupLighting(this.scene);
     setupAxes(this.scene);
     this.setupSlicePlanes();
 
-    // Don't render until enhancements (environment texture, post-processing) are ready
     this.enhancementsReady = false;
     void this.initRenderingEnhancements();
 
-    // Subscribe to singleton events
     this.subscribeToEvents();
 
-    // Observe canvas size (replaces React resize effects)
     this.resizeObserver = new ResizeObserver(this.handleResizeObserved.bind(this));
     this.resizeObserver.observe(canvas);
 
-    // Join the shared render loop
     renderLoop.register();
     renderLoop.on('tick', this.boundHandlers.renderFrame);
 
-    // Initialize with async project data
     void this.initProjectData();
   }
 
-  /**
-   * Detach from the current canvas. Tears down engine, scene, and modules.
-   * Safe to call when already detached (no-op).
-   */
   detach(): void {
     if (!this.canvas) return;
 
@@ -201,18 +168,14 @@ class Babylon3D {
     this.flushThumbnail();
     this.thumbnailCapture = null;
 
-    // Leave render loop
     renderLoop.off('tick', this.boundHandlers.renderFrame);
     renderLoop.unregister();
 
-    // Stop observing resize
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
 
-    // Unsubscribe from singleton events
     this.unsubscribeFromEvents();
 
-    // Destroy rendering enhancements
     if (this.scene) disposePostProcessing(this.postProcessing, this.scene);
     this.postProcessing = null;
     this.emissiveLighting?.dispose();
@@ -221,7 +184,6 @@ class Babylon3D {
     this.shadowSystem = null;
     this.removedShadowCasters.clear();
 
-    // Destroy modules
     this.slicePlaneVisualizer?.destroy();
     this.slicePlaneVisualizer = null;
     this.previewRenderer?.destroy();
@@ -239,7 +201,6 @@ class Babylon3D {
     this.framedKey = null;
     this.shownKey = null;
 
-    // Dispose engine/scene
     this.scene?.dispose();
     this.scene = null;
     this.engine?.dispose();
@@ -252,7 +213,6 @@ class Babylon3D {
     this.sceneUpdateQueued = false;
   }
 
-  // -- Public API --
 
   setCameraView(view: CameraView): void {
     this.cameraRig?.setCameraView(view);
@@ -307,9 +267,6 @@ class Babylon3D {
     }
   };
 
-  /**
-   * Pause or resume the render loop. Idempotent.
-   */
   setVisible(visible: boolean): void {
     if (visible && this.paused) {
       this.paused = false;
@@ -323,7 +280,6 @@ class Babylon3D {
     return this.canvas !== null;
   }
 
-  // -- Private: initialization --
 
   private async initRenderingEnhancements(): Promise<void> {
     if (!this.scene || !this.cameraRig || !this.materialResolver ||
@@ -331,7 +287,7 @@ class Babylon3D {
 
     this.renderSettings = editorState.getRenderSettings();
 
-    // Environment texture (must complete before post-processing setup).
+    // The environment must load before post-processing is built.
     // Settings that arrive during the load only update renderSettings, so load again if the preset moved.
     let loadedPreset: LightingPreset;
     do {
@@ -340,44 +296,36 @@ class Babylon3D {
       if (!this.renderSettings) return;
     } while (this.renderSettings.lightingPreset !== loadedPreset);
 
-    // Guard: detach may have been called while awaiting
+    // detach may have run during the await
     if (!this.scene || !this.cameraRig || !this.materialResolver || !this.blockRenderer) return;
 
-    // The latest settings, including any that arrived while the environment loaded
     const settings = this.renderSettings;
 
     this.backdropRenderer?.setMode(settings.backgroundMode);
 
-    // Lighting preset (adjusts lights, clear color, environment intensity)
     applyLightingPreset(this.scene, settings.lightingPreset);
 
-    // PBR materials with preset-driven emissive scale
     this.materialResolver.setEmissiveScale(getEmissiveScale(settings.lightingPreset));
     this.materialResolver.setPBREnabled(settings.pbrEnabled);
     // Both setters dispose cached materials. updateScene does not wait for the environment,
     // so block meshes may already hold those materials, and a mesh with a disposed material renders white.
     this.blockRenderer.reapplyMaterials();
 
-    // Shadow system with mesh lifecycle callbacks
     this.shadowSystem = setupShadows(this.scene, settings);
     const handleMeshCreated = (mesh: AbstractMesh): void => { registerShadowCaster(this.shadowSystem, mesh); };
     const handleMeshDestroyed = (mesh: AbstractMesh): void => { this.removedShadowCasters.add(mesh); };
     this.blockRenderer.setMeshLifecycleCallbacks(handleMeshCreated, handleMeshDestroyed);
 
-    // Emissive point lights for luminous blocks
     this.emissiveLighting = new EmissiveLighting(
       this.scene,
       getEmissiveLightIntensity(settings.lightingPreset),
     );
 
-    // Layer highlight
     this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
 
-    // Post-processing (needs camera)
     const camera = this.cameraRig.getCamera();
     this.postProcessing = updatePostProcessing(this.postProcessing, this.scene, camera, settings);
 
-    // All enhancements ready — safe to start rendering
     this.enhancementsReady = true;
   }
 
@@ -385,8 +333,6 @@ class Babylon3D {
     if (!this.scene || !this.cameraRig) return;
 
     const project = await projectView.getProject();
-
-    // Guard: detach may have been called while awaiting
     if (!this.scene || !this.cameraRig) return;
 
     if (project) {
@@ -396,7 +342,6 @@ class Babylon3D {
     await this.updateScene();
   }
 
-  // -- Private: event subscription --
 
   private subscribeToEvents(): void {
     blockProjection.on('blocks:rebuilt', this.boundHandlers.queueSceneUpdate);
@@ -432,7 +377,6 @@ class Babylon3D {
     textureResolver.off('atlas:ready', this.boundHandlers.atlasLoaded);
   }
 
-  // -- Private: render loop --
 
   private renderFrame(): void {
     if (this.paused || !this.enhancementsReady || !this.scene) return;
@@ -475,7 +419,6 @@ class Babylon3D {
     );
   }
 
-  // -- Private: event handlers --
 
   private queueSceneUpdate(): void {
     if (this.sceneUpdateQueued) return;
@@ -490,9 +433,9 @@ class Babylon3D {
   private async updateScene(): Promise<void> {
     if (!this.blockRenderer || !this.cameraRig) return;
 
-    // Atlas must be ready before creating any block meshes — otherwise
-    // MaterialResolver falls back to colorless materials that get cached
-    // in BlockRenderer's instanceTypeMap, blocking future updates
+    // A mesh built before the atlas loads caches a colorless material in BlockRenderer's
+    // instanceTypeMap, and later updates reuse that cache instead of the textured material.
+    // Each await below can outlast a detach, hence the repeated guards.
     await textureResolver.waitForAtlas();
     if (!this.blockRenderer || !this.cameraRig) return;
 
@@ -504,7 +447,6 @@ class Babylon3D {
       return;
     }
 
-    // Guard: detach may have been called while awaiting
     if (!this.blockRenderer || !this.cameraRig) return;
 
     const blockIndex = await blockProjection.getBlocks();
@@ -529,7 +471,7 @@ class Babylon3D {
     removedKeys.forEach(removeKey);
     this.scene!.blockfreeActiveMeshesAndRenderingGroups = false;
 
-    // Resolve derived state reactively. Only a new block or a new block type grows in.
+    // Only a new block or a new block type grows in.
     // A derived shape change (a stair turning a corner) swaps at once.
     const resolveBlock = (blockData: BlockData): BlockData =>
       shapeCatalog.resolveBlockState(blockData.position, blockIndex) ?? blockData;
@@ -545,18 +487,15 @@ class Babylon3D {
       this.blockRenderer.createBlockMesh(blockData, grow);
     }
 
-    // Update slice planes
     this.slicePlaneVisualizer?.updateDimensions(project.dimensions);
 
     this.frameIfProjectChanged(project);
 
-    // Sync emissive point lights for luminous blocks
     this.emissiveLighting?.syncLights(blocks);
 
-    // Update previews
     this.previewRenderer?.updatePreviewMeshes();
 
-    // Refresh shadow map (renders once, not every frame)
+    // The shadow map renders once per update, not every frame
     this.refreshShadows();
 
     // A first load also counts, so a project saved before thumbnails existed gets one
@@ -611,7 +550,7 @@ class Babylon3D {
   private handleAtlasLoaded(): void {
     if (!this.materialResolver || !this.blockRenderer) return;
     this.materialResolver.clearAllCaches();
-    // Base meshes have faceUV baked into geometry — must rebuild, not just reapply materials
+    // Base meshes bake faceUV into their geometry, so a new atlas needs new meshes, not new materials
     this.blockRenderer.clearAll();
     this.flushShadowCasters();
     this.queueSceneUpdate();
@@ -635,7 +574,6 @@ class Babylon3D {
     const prev = this.renderSettings;
     this.renderSettings = settings;
 
-    // Lighting preset
     if (!prev || prev.lightingPreset !== settings.lightingPreset) {
       void this.loadPresetEnvironment(settings.lightingPreset);
       applyLightingPreset(this.scene, settings.lightingPreset);
@@ -644,21 +582,17 @@ class Babylon3D {
       this.emissiveLighting?.setIntensity(getEmissiveLightIntensity(settings.lightingPreset));
     }
 
-    // Environment intensity
     updateEnvironmentIntensity(this.scene, settings.environmentIntensity);
 
-    // Background
     if (!prev || prev.backgroundMode !== settings.backgroundMode) {
       this.backdropRenderer?.setMode(settings.backgroundMode);
     }
 
-    // PBR toggle
     if (!prev || prev.pbrEnabled !== settings.pbrEnabled) {
       this.materialResolver.setPBREnabled(settings.pbrEnabled);
       this.blockRenderer.reapplyMaterials();
     }
 
-    // Shadows
     if (!prev ||
         prev.shadowsEnabled !== settings.shadowsEnabled ||
         prev.shadowMapSize !== settings.shadowMapSize) {
@@ -669,7 +603,6 @@ class Babylon3D {
       this.shadowSystem.generator.darkness = settings.shadowDarkness;
     }
 
-    // Layer highlight
     if (!prev || prev.layerHighlightEnabled !== settings.layerHighlightEnabled) {
       this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
       if (settings.layerHighlightEnabled) {
@@ -677,7 +610,6 @@ class Babylon3D {
       }
     }
 
-    // Post-processing
     const camera = this.cameraRig.getCamera();
     this.postProcessing = updatePostProcessing(
       this.postProcessing, this.scene, camera, settings
@@ -689,9 +621,6 @@ class Babylon3D {
     this.removedShadowCasters.clear();
   }
 
-  /**
-   * Drop removed casters, then draw the shadow map once
-   */
   private refreshShadows(): void {
     this.flushShadowCasters();
     refreshShadowMap(this.shadowSystem);
@@ -704,9 +633,6 @@ class Babylon3D {
     }
   }
 
-  /**
-   * Capture a thumbnail once edits pause. The delay outlasts the grow and shrink sequence (SEQUENCE_MS).
-   */
   private scheduleThumbnail(projectId: string): void {
     this.thumbnailProjectId = projectId;
     if (this.thumbnailTimer) clearTimeout(this.thumbnailTimer);

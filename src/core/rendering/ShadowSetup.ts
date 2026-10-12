@@ -1,8 +1,7 @@
 /**
- * ShadowSetup - Stateless setup functions for shadow rendering
+ * ShadowSetup - Shadows from the directional light onto blocks and a near-invisible ground plane
  *
- * Creates shadow generator on the directional light and a
- * near-invisible ground plane to receive shadows.
+ * The shadow map renders once per refreshShadowMap() call, not every frame. Callers refresh after blocks change.
  */
 
 import {
@@ -26,8 +25,7 @@ export interface ShadowSystem {
 }
 
 /**
- * Setup shadow system: generator + shadow-receiving ground plane
- * Returns null if shadows are disabled or directional light not found.
+ * Null when shadows are off or the scene has no 'dirLight'
  */
 export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSystem | null {
   if (!settings.shadowsEnabled) return null;
@@ -45,14 +43,11 @@ export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSyst
   generator.bias = 0.001;
   generator.normalBias = 0.02;
 
-  // Render shadow map once, not every frame.
-  // Call refreshShadowMap() when blocks change.
   const shadowMap = generator.getShadowMap();
   if (shadowMap) {
     shadowMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
   }
 
-  // Near-invisible ground plane to receive shadows
   const groundPlane = MeshBuilder.CreateGround(
     'shadowGround',
     { width: 200, height: 200 },
@@ -72,7 +67,7 @@ export function setupShadows(scene: Scene, settings: RenderSettings): ShadowSyst
 }
 
 /**
- * Register a mesh as a shadow caster. Callers register each mesh once.
+ * Callers register each mesh once.
  *
  * Appends to the render list directly. ShadowGenerator.addShadowCaster scans the whole list
  * for duplicates and walks the scene for child meshes, so registering N blocks costs O(N²).
@@ -85,8 +80,7 @@ export function registerShadowCaster(shadowSystem: ShadowSystem | null, mesh: Ab
 }
 
 /**
- * Unregister a batch of shadow casters in one pass over the render list.
- * ShadowGenerator.removeShadowCaster splices one mesh per scan, which costs O(N²) for N removals.
+ * One pass over the render list. ShadowGenerator.removeShadowCaster splices one mesh per scan, which costs O(N²) for N removals.
  */
 export function unregisterShadowCasters(shadowSystem: ShadowSystem | null, meshes: Set<AbstractMesh>): void {
   const renderList = shadowSystem?.generator.getShadowMap()?.renderList;
@@ -97,10 +91,6 @@ export function unregisterShadowCasters(shadowSystem: ShadowSystem | null, meshe
   renderList.push(...kept);
 }
 
-/**
- * Trigger a one-time shadow map re-render.
- * Call after blocks are added/removed.
- */
 export function refreshShadowMap(shadowSystem: ShadowSystem | null): void {
   if (!shadowSystem) return;
   const shadowMap = shadowSystem.generator.getShadowMap();
@@ -109,9 +99,6 @@ export function refreshShadowMap(shadowSystem: ShadowSystem | null): void {
   }
 }
 
-/**
- * Dispose shadow system
- */
 export function disposeShadows(shadowSystem: ShadowSystem | null): void {
   if (!shadowSystem) return;
   shadowSystem.generator.dispose();

@@ -1,13 +1,9 @@
 /**
- * Storage - Project browser queries and preferences
+ * Storage - Project list queries, project deletion, and the last opened project
  *
- * The project list is derived from the EventLog on every read.
- * It has no record of its own, so it cannot disagree with the events.
- * A project exists exactly when the log holds its metadata:created event.
- *
- * Thumbnails come from ThumbnailStore, since they are derived images, not events.
- * The last opened project ID lives in a separate IndexedDB database.
- * All persistence is IndexedDB: the app writes nothing to localStorage.
+ * The list is replayed from the EventLog on every read and keeps no record of its own,
+ * so it cannot disagree with the events. A project exists exactly when the log holds its metadata:created row.
+ * The last opened project ID lives in its own IndexedDB database. The app writes nothing to localStorage.
  *
  * Events:
  * - project:renamed ({ projectId, newName }) - a metadata:renamed event committed
@@ -67,9 +63,6 @@ const toStorageMetadata = (thumbnails: Map<string, string>) => (replay: ProjectR
 const byCreated = (a: StorageMetadata, b: StorageMetadata): number =>
   a.created.getTime() - b.created.getTime();
 
-/**
- * Storage singleton
- */
 class Storage extends EventEmitter {
   private static instance: Storage;
   private db: IDBDatabase | null = null;
@@ -118,9 +111,6 @@ class Storage extends EventEmitter {
     return new Promise(openDatabase);
   }
 
-  /**
-   * List all projects, replayed from the EventLog in creation order
-   */
   async listProjects(): Promise<StorageMetadata[]> {
     // Events arrive in ID order, so metadata:created precedes a project's other events
     const [events, thumbnails] = await Promise.all([eventLog.getEvents(), thumbnailStore.getAll()]);
@@ -150,18 +140,13 @@ class Storage extends EventEmitter {
     return [...replays.values()].map(toStorageMetadata(thumbnails)).sort(byCreated);
   }
 
-  /**
-   * Get single project metadata
-   */
   async getProject(projectId: string): Promise<StorageMetadata | null> {
     const projects = await this.listProjects();
     const hasId = (project: StorageMetadata) => project.id === projectId;
     return projects.find(hasId) ?? null;
   }
 
-  /**
-   * Remove every record of the project from every store
-   */
+  // Every store keyed by project ID must be listed here, or deleting a project leaves its rows behind
   async deleteProject(projectId: string): Promise<void> {
     if ((await this.getLastOpenedProjectId()) === projectId) {
       await this.setLastOpenedProjectId(null);

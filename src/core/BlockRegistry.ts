@@ -8,13 +8,8 @@ const toVariant = (variantName: string): { textureName: string; stateProperties:
 });
 
 /**
- * BlockRegistry - Catalog of available Minecraft blocks
- *
- * Singleton class that provides:
- * - Block catalog with categories
- * - Block lookup by ID
- * - Category filtering
- * - Fuzzy search functionality
+ * BlockRegistry - The block catalog from public/data/canonical-blocks.json (npm run merge:fragments writes it).
+ * Block states convert from Minecraft's facing names to the app's axis names on load.
  *
  * Events:
  * - blocks:registered - When blocks are loaded into the registry
@@ -29,7 +24,6 @@ class BlockRegistry extends EventEmitter {
 
   private constructor() {
     super();
-    // Async initialization - call initializeBlocks but don't await
     this.initializeBlocks();
   }
 
@@ -40,10 +34,6 @@ class BlockRegistry extends EventEmitter {
     return BlockRegistry.instance;
   }
 
-  /**
-   * Wait for blocks to finish loading
-   * Call this before using block registry in critical paths
-   */
   async waitForLoad(): Promise<void> {
     if (this.isLoaded) {
       return Promise.resolve();
@@ -51,20 +41,13 @@ class BlockRegistry extends EventEmitter {
     if (this.loadingPromise) {
       return this.loadingPromise;
     }
-    // If somehow neither flag is set, start loading
     return this.initializeBlocks();
   }
 
-  /**
-   * Get a block by ID
-   */
   getBlock(blockId: string): Block | null {
     return this.blocks.get(blockId) || null;
   }
 
-  /**
-   * Get all blocks
-   */
   getAllBlocks(): Block[] {
     return Array.from(this.blocks.values());
   }
@@ -77,18 +60,12 @@ class BlockRegistry extends EventEmitter {
     return this.getAllBlocks().filter(isPickable);
   }
 
-  /**
-   * Get blocks filtered by category
-   */
   getBlocksByCategory(category: string): Block[] {
     const isInCategory = (block: Block): boolean => block.category.toLowerCase() === category.toLowerCase();
     return this.getAllBlocks().filter(isInCategory);
   }
 
-  /**
-   * Search blocks by name (fuzzy search)
-   * Returns blocks that contain the query string in their name
-   */
+  // A case-insensitive substring match on the display name. An empty query returns every block.
   searchBlocks(query: string): Block[] {
     if (!query || query.trim().length === 0) {
       return this.getAllBlocks();
@@ -99,21 +76,13 @@ class BlockRegistry extends EventEmitter {
     return this.getAllBlocks().filter(matchesQuery);
   }
 
-  /**
-   * Register a new block or update existing one
-   */
   registerBlock(block: Block): void {
     this.blocks.set(block.id, block);
     this.emit('blocks:registered', this.getAllBlocks());
   }
 
   /**
-   * Get block with variant based on blockstate
-   * Returns the block and matching variant if blockstate properties match
-   *
-   * @param blockId - Block ID
-   * @param state - Optional blockstate properties
-   * @returns Object with block and optional variant
+   * The variant is the first whose properties all appear in `state` with the same values
    */
   getBlockWithState(
     blockId: string,
@@ -126,7 +95,6 @@ class BlockRegistry extends EventEmitter {
       return { block };
     }
 
-    // Find matching variant
     const matchesRequestedState = (variant: BlockVariant): boolean =>
       this.matchesState(variant.stateProperties, state);
     const variant = block.variants.find(matchesRequestedState);
@@ -134,10 +102,6 @@ class BlockRegistry extends EventEmitter {
     return { block, variant };
   }
 
-  /**
-   * Check if blockstate matches variant requirements
-   * All properties in required must match actual
-   */
   private matchesState(
     required: BlockStateProperties,
     actual: BlockStateProperties
@@ -150,10 +114,6 @@ class BlockRegistry extends EventEmitter {
     return true;
   }
 
-
-  /**
-   * Initialize the registry by loading canonical blocks from JSON
-   */
   private async initializeBlocks(): Promise<void> {
     if (this.loadingPromise) {
       return this.loadingPromise;
@@ -167,7 +127,6 @@ class BlockRegistry extends EventEmitter {
     this.emit('blocks:loading');
 
     try {
-      // Load canonical blocks from public data directory
       const response = await fetch('/data/canonical-blocks.json');
       if (!response.ok) {
         throw new Error(`Failed to load canonical blocks: ${response.statusText}`);
@@ -175,15 +134,14 @@ class BlockRegistry extends EventEmitter {
 
       const canonicalBlocks = await response.json();
 
-      // Convert canonical blocks to Block interface
       for (const [canonicalId, canonicalBlock] of Object.entries(canonicalBlocks)) {
         const block: Block = {
-          id: canonicalId,  // Use full canonical ID (minecraft:stone)
+          id: canonicalId,
           name: (canonicalBlock as any).displayName,
           category: (canonicalBlock as any).category,
           color: (canonicalBlock as any).color,
           javaId: canonicalId,
-          bedrockId: canonicalId,  // Can be converted if needed
+          bedrockId: canonicalId,
           textures: (canonicalBlock as any).textures,
           hasBlockState: (canonicalBlock as any).hasBlockState || false,
           defaultState: (canonicalBlock as any).defaultState
@@ -211,5 +169,4 @@ class BlockRegistry extends EventEmitter {
   }
 }
 
-// Export singleton instance
 export const blockRegistry = BlockRegistry.getInstance();

@@ -20,12 +20,6 @@ interface DepthPaintingControlProps {
   compact?: boolean;
 }
 
-/**
- * DepthPaintingControl - Configure depth painting for multi-layer operations
- *
- * Allows enabling/disabling depth painting, adjusting thickness (1-10 layers),
- * and selecting collision mode (through all vs until-collision).
- */
 export function DepthPaintingControl({
   depthConfig,
   onDepthConfigChange,
@@ -53,7 +47,6 @@ export function DepthPaintingControl({
     onDepthConfigChange({ mode: newMode });
   };
 
-  // Compact horizontal layout for toolbar
   if (compact) {
     return (
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -112,7 +105,6 @@ export function DepthPaintingControl({
     );
   }
 
-  // Full vertical layout for side panel
   return (
     <Box>
       <Accordion

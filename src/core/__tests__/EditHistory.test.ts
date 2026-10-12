@@ -1,7 +1,3 @@
-/**
- * EditHistory tests - undo and redo revert whole actions through the projections
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { editHistory, type HistoryStepNotice } from '../EditHistory';
 import { eventLog } from '../EventLog';

@@ -1,8 +1,5 @@
 import type { Vector3D, Dimensions, BlockStateProperties } from '../../../types';
 
-/**
- * PaintOperation - Represents a single paint/erase action
- */
 export interface PaintOperation {
   position: Vector3D;
   blockType: string | null; // null = erase
@@ -10,26 +7,14 @@ export interface PaintOperation {
 }
 
 /**
- * PaintStrategy - Interface for different painting modes
+ * PaintStrategy - Which cells an interaction covers
  *
- * Strategies define WHAT positions to paint based on user interaction.
- * Examples: point (single cell), fill (flood fill), outline (rectangle perimeter)
- *
- * Each strategy calculates which positions should be modified and returns
- * an array of operations. The strategy is agnostic to:
- * - Whether operations are allowed (handled by PaintBehavior)
- * - How operations are executed (handled by PaintPipeline and tools)
+ * A strategy knows nothing of existing blocks or depth. PaintBehavior decides which cells may change,
+ * and PaintPipeline adds depth and hands the result to DraftingService.
  */
 export interface PaintStrategy {
   /**
-   * Calculate which positions should be painted/erased
-   *
-   * @param startPosition - The 3D position where user clicked/started interaction
-   * @param selectedBlockId - Currently selected block type (null = erase mode)
-   * @param dimensions - Project dimensions for bounds checking
-   * @param constrainAxis - Optional axis to constrain operations to (for 2D fills on a plane)
-   *                        Format: { axis: 'x' | 'y' | 'z', value: number }
-   * @returns Array of operations to execute
+   * constrainAxis names the view's depth axis and active layer, which fixes the drawing plane
    */
   calculateOperations(
     startPosition: Vector3D,

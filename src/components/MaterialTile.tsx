@@ -11,8 +11,6 @@ interface MaterialTileProps {
 }
 
 /**
- * MaterialTile - One block in the material browser grid
- *
  * Press and drag onto a quick-select slot to assign it there. A click puts it in the active slot.
  * The drag ends on release, so nothing stays attached to the pointer.
  */

@@ -1,7 +1,3 @@
-/**
- * GrowAnimator tests - stagger timing for one scene update
- */
-
 import { describe, it, expect } from 'vitest';
 import { staggerTiming, MAX_ANIMATED, SEQUENCE_MS, STEP_MS } from '../GrowAnimator';
 

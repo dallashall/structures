@@ -1,8 +1,5 @@
 /**
- * CubeShape - Default shape for standard full-block cubes
- *
- * All methods are passthrough/no-op defaults. Cube geometry is handled
- * by the renderer's fallback path (MeshBuilder.CreateBox).
+ * CubeShape - The fallback shape. BlockRenderer builds cube geometry itself, so this shape adds nothing.
  */
 
 import type { BlockShape, ClipPath, FaceUVData } from './BlockShape';
@@ -22,7 +19,7 @@ class CubeShapeImpl implements BlockShape {
     _blockState: BlockStateProperties,
     _faceUVData?: FaceUVData,
   ): Mesh | null {
-    return null; // Signal: use default cube
+    return null;
   }
 
   getRotation(_blockState?: BlockStateProperties): number {
@@ -36,7 +33,7 @@ class CubeShapeImpl implements BlockShape {
     _py: number,
     _cellSize: number,
   ): ClipPath | null {
-    return null; // Full cell
+    return null;
   }
 
   deriveState(
@@ -48,7 +45,7 @@ class CubeShapeImpl implements BlockShape {
   }
 
   matchesBlock(_blockId: string): boolean {
-    return true; // Fallback — matches everything
+    return true;
   }
 }
 

@@ -16,9 +16,6 @@ import type {
   HeldModifiers,
 } from "../types";
 
-/**
- * Props injected by withEditorState HOC
- */
 export interface WithEditorStateProps {
   layoutMode: LayoutMode;
   activeView: ViewType;
@@ -44,7 +41,6 @@ export interface WithEditorStateProps {
 
 const increment = (count: number): number => count + 1;
 
-/** All EditorState events that should trigger a re-render */
 const EDITOR_EVENTS = [
   "layout:toggled",
   "view:switched",
@@ -71,10 +67,6 @@ const deriveHasBlockState = (blockId: string | null): boolean => {
   return block?.hasBlockState ?? false;
 };
 
-/**
- * Read all editor state directly from the singleton.
- * No local copies — the singleton IS the source of truth.
- */
 const readEditorState = (): WithEditorStateProps => {
   const selectedBlock = editorState.getSelectedBlock();
   return {
@@ -102,10 +94,8 @@ const readEditorState = (): WithEditorStateProps => {
 };
 
 /**
- * HOC that bridges EditorState singleton → React re-renders.
- *
- * Subscribes to all EditorState events. On any event, triggers a re-render.
- * Props are read directly from the singleton — no local state duplication.
+ * HOC that bridges EditorState to React re-renders.
+ * Props are read from the singleton on every render. Events only trigger the re-render.
  */
 export function withEditorState<P extends object>(
   Component: React.ComponentType<P & WithEditorStateProps>,

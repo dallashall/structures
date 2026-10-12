@@ -13,7 +13,6 @@ interface QuickSelectDropBarProps {
 }
 
 /**
- * QuickSelectDropBar - The nine quick-select slots at the foot of the material browser.
  * While a material is dragged the bar lights up, so the drop targets stand out.
  */
 export function QuickSelectDropBar({ slots, blocks }: QuickSelectDropBarProps) {

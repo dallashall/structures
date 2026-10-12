@@ -1,17 +1,13 @@
 import type { ToolBase } from "./ToolBase";
 import type { ViewState } from "../canvas2d/ViewState";
 
-/**
- * A tool registration — everything needed to instantiate and identify a tool.
- */
 interface ToolRegistration {
-  /** Unique identifier (matches PaintMode values for paint tools) */
+  /** Matches the PaintMode value for paint tools */
   name: string;
-  /** Single-character hotkey, or empty string for no hotkey */
+  /** Empty for no hotkey */
   hotkey: string;
-  /** Human-readable label for UI */
   label: string;
-  /** Factory: create a fresh tool instance bound to a canvas + view */
+  /** Each canvas gets its own tool instance */
   create: (
     canvas: HTMLCanvasElement,
     viewState: ViewState,
@@ -20,14 +16,9 @@ interface ToolRegistration {
 }
 
 /**
- * ToolRegistry - Singleton registry for all canvas tools
+ * ToolRegistry - The canvas tools, registered at module load
  *
- * Tools register at module load time. Canvas2D looks up and instantiates tools
- * by name. HotkeyDispatcher resolves hotkeys to tool names.
- *
- * Usage:
- *   toolRegistry.register({ name: 'point', hotkey: 'b', label: 'Point', create: ... });
- *   const tool = toolRegistry.createTool('point', canvas, viewState, requestRender);
+ * Canvas2D creates tools by name. HotkeyDispatcher resolves hotkeys to tool names.
  */
 class ToolRegistry {
   private static instance: ToolRegistry;
@@ -44,10 +35,9 @@ class ToolRegistry {
   }
 
   /**
-   * Register a tool. Overwrites any existing registration with the same name.
+   * Replaces any registration with the same name, hotkey included
    */
   register(reg: ToolRegistration): void {
-    // Remove old hotkey mapping if re-registering
     const existing = this.tools.get(reg.name);
     if (existing && existing.hotkey) {
       this.hotkeyMap.delete(existing.hotkey);
@@ -60,9 +50,6 @@ class ToolRegistry {
     }
   }
 
-  /**
-   * Unregister a tool by name.
-   */
   unregister(name: string): void {
     const reg = this.tools.get(name);
     if (reg) {
@@ -73,30 +60,23 @@ class ToolRegistry {
     }
   }
 
-  /**
-   * Get a registration by name.
-   */
   getRegistration(name: string): ToolRegistration | undefined {
     return this.tools.get(name);
   }
 
-  /**
-   * Get all registered tools.
-   */
   getAll(): ToolRegistration[] {
     return Array.from(this.tools.values());
   }
 
   /**
-   * Look up a tool name by hotkey character (lowercase).
+   * Hotkeys match lowercase
    */
   getByHotkey(key: string): string | undefined {
     return this.hotkeyMap.get(key.toLowerCase());
   }
 
   /**
-   * Create a tool instance by name.
-   * Throws if the tool name is not registered.
+   * Throws when no tool has that name
    */
   createTool(
     name: string,
@@ -113,10 +93,6 @@ class ToolRegistry {
 }
 
 export const toolRegistry = ToolRegistry.getInstance();
-
-// ============================================================================
-// Built-in tool registrations
-// ============================================================================
 
 import { PointPaintTool } from "./PointPaintTool";
 import { FillPaintTool } from "./FillPaintTool";

@@ -5,17 +5,14 @@ import { withDisclosureState } from "../hocs/withDisclosureState";
 import type { WithDisclosureStateProps } from "../hocs/withDisclosureState";
 
 interface DialogTriggerOwnProps {
-  /** Type of overlay */
   type: "modal" | "popover";
-  /** Children: [trigger element, dialog render function] */
+  /** [trigger element, render function that receives close] */
   children: [React.ReactElement, (close: () => void) => React.ReactElement];
 }
 
 /**
- * DialogTrigger - Pattern for triggering dialogs/popovers from a button
- *
- * withDisclosureState holds the open state. The dialog render function receives the close function.
- * Supports both modal dialogs and popover dialogs.
+ * Opens an overlay from a trigger element. withDisclosureState holds the open state.
+ * A modal renders the content as given. A popover wraps it in an MUI Popover anchored to the trigger.
  *
  * Usage:
  * <DialogTrigger type="modal">
@@ -33,16 +30,13 @@ function DialogTriggerComponent({
   const isOpen = anchorEl !== null;
   const [triggerElement, dialogRenderFn] = children;
 
-  // Clone trigger element and add onClick handler
   const trigger = React.cloneElement(triggerElement, {
     onClick: onOpen,
   });
 
-  // Render dialog with close function
   const dialog = dialogRenderFn(onClose);
 
   if (type === "modal") {
-    // For modal dialogs, wrap in MUI Dialog
     return (
       <>
         {trigger}
@@ -50,7 +44,6 @@ function DialogTriggerComponent({
       </>
     );
   } else {
-    // For popovers, wrap in MUI Popover
     return (
       <>
         {trigger}

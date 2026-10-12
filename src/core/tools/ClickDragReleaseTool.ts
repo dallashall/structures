@@ -1,16 +1,9 @@
 import { ToolBase } from "./ToolBase";
 import type { UniversalPosition } from "./ToolBase";
 /**
- * ClickDragReleaseTool - Behavioral base for click-drag-release interactions
+ * ClickDragReleaseTool - Base for tools driven by a left-button press, drag, and release
  *
- * State machine: idle → hovering → dragging → hovering
- *
- * Subclasses implement:
- * - onHover(pos)       — cursor is moving over the canvas (no button held)
- * - onDragStart(pos)   — left button pressed
- * - onDrag(start, cur) — pointer moving with button held
- * - onDragEnd(start, end) — left button released
- * - onDragCancel()     — operation cancelled (Escape or deactivate)
+ * State machine: idle → hovering → dragging → hovering. Escape or deactivation during a drag calls onDragCancel.
  */
 export abstract class ClickDragReleaseTool extends ToolBase {
   private state: "idle" | "hovering" | "dragging" = "idle";
@@ -76,7 +69,6 @@ export abstract class ClickDragReleaseTool extends ToolBase {
     this.onDragEnd(this.downPosition, pos);
   }
 
-  // Subclass hooks
   protected onHover(_pos: UniversalPosition): void {}
   protected onDragStart(_pos: UniversalPosition): void {}
   protected onDrag(

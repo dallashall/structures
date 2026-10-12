@@ -16,7 +16,6 @@ import type { WithAtlasStatusProps } from "./hocs/withAtlasStatus";
 import type { Dimensions } from "./types";
 import { toFileErrorMessage } from "./utils/projectFile";
 
-// Create dark professional theme inspired by Adobe/Blender
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
@@ -43,11 +42,9 @@ const darkTheme = createTheme({
     borderRadius: 4,
   },
   typography: {
-    // Default font for general text
     fontFamily:
       '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 
-    // Headers use Lexend
     h1: {
       fontFamily:
         '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -79,7 +76,6 @@ const darkTheme = createTheme({
       fontWeight: 600,
     },
 
-    // Subtitle uses Lexend
     subtitle1: {
       fontFamily:
         '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -89,7 +85,6 @@ const darkTheme = createTheme({
         '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
-    // Body text uses Chakra Petch (default)
     body1: {
       fontFamily:
         '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -99,7 +94,6 @@ const darkTheme = createTheme({
         '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
-    // Button text uses Chakra Petch
     button: {
       fontFamily:
         '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -107,13 +101,11 @@ const darkTheme = createTheme({
       textTransform: "none",
     },
 
-    // Caption uses Chakra Petch
     caption: {
       fontFamily:
         '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
-    // Overline uses Lexend (for labels)
     overline: {
       fontFamily:
         '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -137,7 +129,6 @@ const darkTheme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          // Input fields use Red Hat Mono for data entry
           "& input": {
             fontFamily: '"Red Hat Mono", "Courier New", monospace',
             fontWeight: 500,
@@ -148,7 +139,6 @@ const darkTheme = createTheme({
     MuiChip: {
       styleOverrides: {
         label: {
-          // Chips use Red Hat Mono for compact data display
           fontFamily: '"Red Hat Mono", "Courier New", monospace',
           fontWeight: 500,
         },
@@ -158,10 +148,7 @@ const darkTheme = createTheme({
 });
 
 /**
- * App - Root application component
- *
- * Renders the screen chosen by ScreenRouter: WelcomeView (project browser),
- * EditorView (main editor), or the component preview gallery (#/preview).
+ * Renders the screen ScreenRouter chose: WelcomeView, EditorView, or the preview gallery (#/preview).
  * Handlers run commands, then tell ScreenRouter where to go.
  */
 function AppComponent({

@@ -1,7 +1,3 @@
-/**
- * throttled tests - leading call, held trailing call, and flush
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { throttled } from '../throttle';
 

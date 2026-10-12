@@ -1,8 +1,5 @@
 /**
- * PreviewRenderer - Renders ghost/translucent preview overlays
- *
- * Creates and diffs preview meshes for hover and paint drafts.
- * Combines previews from EditorState and DraftingService.
+ * PreviewRenderer - Translucent ghost meshes for the EditorState and DraftingService previews
  */
 
 import {
@@ -29,8 +26,7 @@ export class PreviewRenderer {
   }
 
   /**
-   * Sync preview meshes with current preview state
-   * Uses diffing to avoid flashing and improve performance
+   * Diffs against the meshes already shown, so an unchanged ghost is not rebuilt and does not flicker
    */
   updatePreviewMeshes(): void {
     const editorPreview = editorState.getPreviewBlocks() || [];
@@ -40,7 +36,6 @@ export class PreviewRenderer {
     const toPreviewKey = (block: (typeof allPreviewBlocks)[number]): string => positionKey(block.position);
     const newPreviewKeys = new Set(allPreviewBlocks.map(toPreviewKey));
 
-    // Remove meshes no longer in preview
     for (const key of this.previewMeshes.keys()) {
       if (!newPreviewKeys.has(key)) {
         const mesh = this.previewMeshes.get(key)!;
@@ -49,7 +44,6 @@ export class PreviewRenderer {
       }
     }
 
-    // Add new preview meshes
     for (const previewBlock of allPreviewBlocks) {
       if (!previewBlock.blockType) continue;
 
@@ -61,10 +55,6 @@ export class PreviewRenderer {
     }
   }
 
-  /**
-   * Create a ghost/preview mesh (semi-transparent)
-   * Delegates geometry creation to the block's shape.
-   */
   private createPreviewMesh(previewBlock: import('../EditorState').PreviewBlock): void {
     const key = positionKey(previewBlock.position);
 
@@ -88,7 +78,6 @@ export class PreviewRenderer {
 
     mesh.position = toBabylonVector(centerInCell(previewBlock.position));
 
-    // Apply per-instance rotation from shape
     const rotation = blockShape.getRotation(previewBlock.blockState);
     if (rotation !== 0) {
       mesh.rotation.y = rotation;
@@ -102,9 +91,6 @@ export class PreviewRenderer {
     this.previewMeshes.set(key, mesh);
   }
 
-  /**
-   * Clear all preview meshes
-   */
   clearAll(): void {
     for (const mesh of this.previewMeshes.values()) {
       mesh.dispose();

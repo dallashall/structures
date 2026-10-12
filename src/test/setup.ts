@@ -1,7 +1,3 @@
-/**
- * Test setup - runs before each test file
- */
-
 import 'fake-indexeddb/auto';
 
 // BlockRegistry fetches its catalog on import with a relative URL, which Node's fetch cannot resolve.

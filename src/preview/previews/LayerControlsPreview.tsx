@@ -3,10 +3,6 @@ import { Box, Typography } from '@mui/material';
 import { LayerControls } from '../../components/LayerControls';
 import type { Dimensions, LayerState } from '../../types';
 
-/**
- * Preview showcase for the LayerControls component
- * Demonstrates compact layer display with expandable popover controls
- */
 const logStaticLayerChange = (dimension: 'x' | 'y' | 'z', layer: number): void => {
   console.log('[Static] Layer change:', dimension, layer);
 };
@@ -38,7 +34,6 @@ export function LayerControlsPreview() {
         button that opens a popover containing full slider controls.
       </Typography>
 
-      {/* Small Dimensions */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Small Project (16×16×16)</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -51,7 +46,6 @@ export function LayerControlsPreview() {
         />
       </Box>
 
-      {/* Large Dimensions */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Large Project (64×64×64)</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -64,7 +58,6 @@ export function LayerControlsPreview() {
         />
       </Box>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -88,7 +81,6 @@ export function LayerControlsPreview() {
         </Box>
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
@@ -121,7 +113,6 @@ interface LayerState {
         </Box>
       </Box>
 
-      {/* Feature Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">
@@ -136,7 +127,6 @@ interface LayerState {
         </Typography>
       </Box>
 
-      {/* Usage Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Layer Behavior</Typography>
         <Typography variant="body1" component="div">

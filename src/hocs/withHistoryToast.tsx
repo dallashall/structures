@@ -4,9 +4,6 @@ import type { HistoryToast } from '../core/HistoryAnnouncer';
 
 import { historyAnnouncer } from '../core/HistoryAnnouncer';
 
-/**
- * Props injected by withHistoryToast HOC
- */
 export interface WithHistoryToastProps {
   toasts: HistoryToast[];
   onExited: (key: number) => void;

@@ -13,8 +13,6 @@ interface CreditsDialogProps {
 }
 
 /**
- * CreditsDialog - Attribution for the textures, fonts, and libraries the app ships
- *
  * The texture pack license (CC BY-NC-ND) requires credit, a license link, and a note on changes.
  */
 export function CreditsDialog({ isOpen, onClose }: CreditsDialogProps) {

@@ -29,18 +29,6 @@ interface ToolOptionsBarProps {
   onLayerChange: (dimension: 'x' | 'y' | 'z', layer: number) => void;
 }
 
-/**
- * ToolOptionsBar - Horizontal options bar for active tool settings
- *
- * Displays below main toolbar, contains tool-specific options (left to right):
- * 1. Shape fill mode (outline/filled) - only for shape tools
- * 2. Depth painting (thickness slider + through/until-collision mode) - always visible
- * 3. Paint behavior (normal/replace/selective/delete) - always visible
- * 4. Modifier keys - only for tools that read Shift or Alt
- *
- * Hierarchy: Tool → Shape → Depth → Behavior
- * Inspired by Adobe Illustrator's horizontal options bar pattern.
- */
 export function ToolOptionsBar({
   paintMode,
   paintBehavior,
@@ -73,14 +61,12 @@ export function ToolOptionsBar({
         gap: 1,
       }}
     >
-      {/* Left side: Tool modifiers */}
       <Stack
         direction="row"
         spacing={1.5}
         divider={<Divider orientation="vertical" flexItem />}
         sx={{ overflow: "hidden" }}
       >
-        {/* 1. Shape fill mode - only for shape tools */}
         {isShapeMode && (
           <ShapeFillModeControl
             shapeFillMode={shapeFillMode}
@@ -89,14 +75,12 @@ export function ToolOptionsBar({
           />
         )}
 
-        {/* 2. Depth painting (thickness + mode) - always visible */}
         <DepthPaintingControl
           depthConfig={depthConfig}
           onDepthConfigChange={onDepthConfigChange}
           compact
         />
 
-        {/* 3. Paint behavior (includes delete) - always visible */}
         <PaintBehaviorControl
           paintBehavior={paintBehavior}
           onPaintBehaviorChange={onPaintBehaviorChange}
@@ -108,7 +92,6 @@ export function ToolOptionsBar({
         )}
       </Stack>
 
-      {/* Right side: Layer controls (X, Y, Z + gear) */}
       <LayerControls
         maxDimensions={maxDimensions}
         activeLayers={activeLayers}

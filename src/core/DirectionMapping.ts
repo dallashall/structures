@@ -1,17 +1,6 @@
 /**
- * DirectionMapping - Single source of truth for MC ↔ app direction translation
- *
- * This is the ONLY file in app code that knows about Minecraft's
- * "north"/"south"/"east"/"west" cardinal directions. All other code
- * uses the app's universal axis-based coordinate system: x+/x-/y+/y-/z+/z-.
- *
- * Coordinate mapping (app axis → Minecraft):
- *   y- = north = -Y direction
- *   y+ = south = +Y direction
- *   x+ = east  = +X direction
- *   x- = west  = -X direction
- *   z+ = up    = +Z direction
- *   z- = down  = -Z direction
+ * DirectionMapping - The only app code that knows Minecraft's cardinal names. Everything else uses
+ * axis directions (x+, x-, y+, y-, z+, z-): north is y-, south y+, east x+, west x-, up z+, down z-.
  */
 
 import type { BlockStateProperties, AxisDirection } from '../types';
@@ -25,10 +14,7 @@ const MC_TO_APP: Record<string, AxisDirection> = {
   down: 'z-',
 };
 
-/**
- * Legacy app direction names → axis directions.
- * Used to normalize old persisted events that used front/back/left/right.
- */
+// Stored events may still carry front/back/left/right facings and connections
 const LEGACY_TO_AXIS: Record<string, AxisDirection> = {
   front: 'y-',
   back: 'y+',
@@ -42,10 +28,6 @@ function mcFacingToApp(facing: string): AxisDirection {
   return MC_TO_APP[facing] ?? (facing as AxisDirection);
 }
 
-/**
- * Convert a Minecraft block state to app block state.
- * Translates facing and connection properties from MC directions to axis directions.
- */
 export function convertBlockStateFromMc(
   mcState: Record<string, unknown>,
 ): BlockStateProperties {
@@ -56,7 +38,6 @@ export function convertBlockStateFromMc(
       case 'facing':
         appState.facing = mcFacingToApp(value as string);
         break;
-      // MC connection properties → axis-based connections record
       case 'north':
       case 'south':
       case 'east':
@@ -67,13 +48,12 @@ export function convertBlockStateFromMc(
           if (!appState.connections) appState.connections = {};
           appState.connections[MC_TO_APP[key]] = value;
         } else {
-          // Pass through non-boolean values (e.g., wall height strings)
+          // Wall sides carry height strings, not booleans
           (appState as Record<string, unknown>)[key] = value;
         }
         break;
       }
       default:
-        // Pass through all other properties unchanged
         (appState as Record<string, unknown>)[key] = value;
         break;
     }
@@ -82,11 +62,7 @@ export function convertBlockStateFromMc(
   return appState;
 }
 
-/**
- * Normalize legacy direction values in block state.
- * Converts old app direction strings (front/back/left/right) to axis directions.
- * Used when replaying persisted events that predate the axis-based system.
- */
+// Replay runs every stored block state through this, so front/back/left/right values read as axes
 export function normalizeLegacyDirections(
   state: BlockStateProperties,
 ): BlockStateProperties {
@@ -94,12 +70,10 @@ export function normalizeLegacyDirections(
 
   const result = { ...state };
 
-  // Normalize facing
   if (result.facing && LEGACY_TO_AXIS[result.facing as string]) {
     result.facing = LEGACY_TO_AXIS[result.facing as string];
   }
 
-  // Normalize legacy connection booleans to connections record
   const legacyConnectionKeys = ['front', 'back', 'left', 'right', 'up', 'down'] as const;
   let hasLegacyConnections = false;
   for (const key of legacyConnectionKeys) {

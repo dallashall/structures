@@ -1,7 +1,3 @@
-/**
- * frameStats tests - frame timing and camera jitter summaries
- */
-
 import { describe, it, expect } from 'vitest';
 import { summarizeFrames } from '../frameStats';
 

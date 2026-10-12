@@ -8,11 +8,7 @@ import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
- * OutlinePaintTool - Rectangle outline/filled via click-drag
- *
- * Hover: shows single-block preview at cursor.
- * Drag: shows rectangle preview from start to current (replaces on each move).
- * Release: persists the rectangle as a single compound event.
+ * OutlinePaintTool - The rectangle tool. Drag previews the rectangle. Release commits one undoable action.
  */
 export class OutlinePaintTool extends ClickDragReleaseTool {
   private strategy = new OutlinePaintStrategy();

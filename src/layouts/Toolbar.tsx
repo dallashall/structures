@@ -26,26 +26,11 @@ interface ToolbarProps {
   // Absent in previews, which hide the Save and Credits buttons
   onSaveToFile?: () => void;
   onShowCredits?: () => void;
-  // Optional props for preview compatibility (3D feature not yet implemented)
+  // Toolbar ignores these. Only the preview gallery passes them.
   onToggle3D?: () => void;
   is3DMode?: boolean;
 }
 
-/**
- * Toolbar - Application header with primary actions
- *
- * Displays:
- * - Project name (left)
- * - Save status indicator (center, between name and controls)
- * - Undo and redo buttons (after the save status)
- * - Save button, which writes the project to a file (right)
- * - Projects button (right)
- * - View mode selector (right)
- * - Credits button (far right)
- *
- * Uses MUI components for consistent theming and
- * automatic light/dark mode support.
- */
 export function Toolbar({
   projectName,
   layoutMode,
@@ -83,7 +68,6 @@ export function Toolbar({
           sx={{ width: 32, height: 32 }}
         />
 
-        {/* Project Name */}
         <Typography
           variant="h5"
           component="h1"
@@ -95,7 +79,6 @@ export function Toolbar({
           {projectName || 'Structures'}
         </Typography>
 
-        {/* Save Status Indicator - next to title with divider */}
         {projectName && (
           <>
             <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
@@ -105,10 +88,8 @@ export function Toolbar({
           </>
         )}
 
-        {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Right Controls */}
         <Stack
           direction="row"
           spacing={1}

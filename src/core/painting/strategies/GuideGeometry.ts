@@ -1,17 +1,12 @@
 import type { Vector3D } from '../../../types';
 
-/**
- * ControlPointHandle - A placed or prospective control point
- */
 export interface ControlPointHandle {
   position: Vector3D;
-  label: string;                   // e.g., "Base Start", "Apex", "CP1"
-  style: 'placed' | 'cursor';     // placed = committed click, cursor = follows mouse
+  label: string;
+  // placed = a committed click. cursor = the point that follows the pointer.
+  style: 'placed' | 'cursor';
 }
 
-/**
- * GuideLine - A line segment connecting control points
- */
 export interface GuideLine {
   from: Vector3D;
   to: Vector3D;
@@ -22,10 +17,7 @@ export interface GuideLine {
 }
 
 /**
- * GuideGeometry - Complete set of visual guides for a multi-click strategy
- *
- * Returned by strategies that implement GuideGeometryProvider.
- * All positions are in 3D world space; the renderer converts to pixel space.
+ * Positions are model coordinates. GuideGeometryRenderer converts them to pixels.
  */
 export interface GuideGeometry {
   handles: ControlPointHandle[];

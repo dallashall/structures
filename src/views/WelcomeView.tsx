@@ -20,20 +20,6 @@ interface WelcomeViewOwnProps {
 
 type WelcomeViewProps = WelcomeViewOwnProps & WithProjectListStateProps;
 
-/**
- * WelcomeView - Initial landing screen with project browser
- *
- * Features:
- * - Grid of project cards with thumbnails
- * - "New Project" button (prominent)
- * - "Load from File" button
- * - "Credits" button
- * - Notice when the build has no texture atlas
- * - Select project to show metadata panel
- * - Open, rename, and delete actions for selected project
- *
- * Project list, selection, and rename state come from withProjectListState.
- */
 function WelcomeViewComponent({
   onNewProject,
   onOpenProject,
@@ -55,7 +41,6 @@ function WelcomeViewComponent({
     project.id === selectedProjectId;
   const selectedProject = projects.find(isSelectedProject);
 
-  // Named handler creator for project click
   const createProjectClickHandler = (projectId: string) => () => {
     onSelectProject(projectId);
   };
@@ -69,7 +54,6 @@ function WelcomeViewComponent({
     />
   );
 
-  // Named handlers for selected project actions
   const handleOpenSelected = () => {
     if (selectedProject) {
       onOpenProject(selectedProject.id);
@@ -91,7 +75,6 @@ function WelcomeViewComponent({
   return (
     <Box sx={{ p: 4, height: "100%", overflow: "hidden" }}>
       <Stack spacing={3} sx={{ height: "100%" }}>
-        {/* Header */}
         <Stack direction="row" spacing={2} alignItems="center">
           <Box
             component="img"
@@ -113,7 +96,6 @@ function WelcomeViewComponent({
 
         {areTexturesMissing && <TexturesMissingAlert />}
 
-        {/* Action Buttons */}
         <Stack direction="row" spacing={2}>
           <Button
             variant="contained"
@@ -139,9 +121,7 @@ function WelcomeViewComponent({
           </Button>
         </Stack>
 
-        {/* Content Area */}
         <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: "hidden" }}>
-          {/* Project Grid */}
           <Box sx={{ flex: 2, overflow: "auto" }}>
             {isLoadingProjects ? (
               <Typography variant="body1">Loading projects...</Typography>
@@ -173,7 +153,6 @@ function WelcomeViewComponent({
             )}
           </Box>
 
-          {/* Metadata Panel */}
           <Box sx={{ flex: 1 }}>
             {selectedProject ? (
               <ProjectDetails

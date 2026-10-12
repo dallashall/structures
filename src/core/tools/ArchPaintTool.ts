@@ -8,14 +8,7 @@ import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
 
 /**
- * ArchPaintTool - Arch painting via 3 clicks
- *
- * 1. Click base start (left foot)
- * 2. Click base end (right foot)
- * 3. Click apex (defines height/curvature)
- *
- * Guide geometry (control points + guide lines) is displayed during
- * point placement. Preview updates live as the cursor moves.
+ * ArchPaintTool - Arch from three clicks (see ArchPaintStrategy). The third click commits one undoable action.
  */
 export class ArchPaintTool extends MultiClickTool {
   protected readonly maxPoints = 3;
@@ -48,12 +41,12 @@ export class ArchPaintTool extends MultiClickTool {
       project.dimensions,
     );
 
-    // Update cross-view preview if we have placed points
+    // DraftingService shares the preview with the other views and the 3D view
     if (placed.length > 0) {
       draftingService.set(finalOps.filter(hasBlockType));
     }
 
-    // Update guide geometry for view-local rendering
+    // Guides draw only in the view being clicked
     const guide = this.strategy.getGuideGeometry(model);
     this.previewData = {
       blocks: placed.length === 0 ? [{ position: cursor }] : [],
@@ -65,7 +58,6 @@ export class ArchPaintTool extends MultiClickTool {
   protected onPointPlaced(pos: UniversalPosition, count: number): void {
     this.strategy.addPoint(this.toModel(pos));
 
-    // Start draft service on first placed point
     if (count === 1) {
       draftingService.start();
     }

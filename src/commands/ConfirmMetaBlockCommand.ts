@@ -3,9 +3,10 @@ import { editorState } from '../core/EditorState';
 import { modelProjection } from '../projections/ModelProjection';
 
 /**
- * ConfirmMetaBlockCommand - Finalize meta block placement
+ * ConfirmMetaBlockCommand - Locks the meta block in place and leaves placement mode
  *
- * Appends one metablock-confirm action holding model:metaBlockConfirmed
+ * Appends to: EventLog (one metablock-confirm action holding model:metaBlockConfirmed)
+ * Placement mode ends only after the row commits.
  */
 class ConfirmMetaBlockCommand {
   private static instance: ConfirmMetaBlockCommand;
@@ -35,7 +36,6 @@ class ConfirmMetaBlockCommand {
       return;
     }
 
-    // Append to EventLog
     const projectId = editorState.getCurrentProjectId();
     console.log('ConfirmMetaBlockCommand: Current project ID:', projectId);
 
@@ -50,8 +50,6 @@ class ConfirmMetaBlockCommand {
       events: [{ type: 'model:metaBlockConfirmed', data: {} }],
     });
 
-    // Exit placement mode after confirming
-    // This is safe because the event has been persisted to the log
     editorState.setPlacementMode(false);
 
     console.log(`Meta block confirmed at (${metaBlock.position.x}, ${metaBlock.position.y}, ${metaBlock.position.z})`);

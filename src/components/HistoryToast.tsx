@@ -7,9 +7,6 @@ import type { WithHistoryToastProps } from '../hocs/withHistoryToast';
 
 import { HistoryToastItem } from './HistoryToastItem';
 
-/**
- * HistoryToast - Stack of toasts that name each undone or redone step, newest at the bottom
- */
 function HistoryToastComponent({ toasts, onExited }: WithHistoryToastProps) {
   const renderToast = (toast: HistoryToastData) => (
     <HistoryToastItem key={toast.key} toast={toast} onExited={onExited} />

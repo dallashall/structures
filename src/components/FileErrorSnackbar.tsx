@@ -7,9 +7,6 @@ interface FileErrorSnackbarProps {
 
 const AUTO_HIDE_MS = 8000;
 
-/**
- * FileErrorSnackbar - Bottom notice for a failed project file save or load
- */
 export function FileErrorSnackbar({ message, onClose }: FileErrorSnackbarProps) {
   return (
     <Snackbar

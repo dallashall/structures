@@ -16,28 +16,20 @@ const isShiftCode = (code: string): boolean => code === "ShiftLeft" || code === 
 const isAltCode = (code: string): boolean => code === "AltLeft" || code === "AltRight";
 
 /**
- * Position resolved from a pointer event — carries all coordinate forms
- * so concrete tools never need to do coordinate conversion.
+ * A pointer position in every coordinate space, so concrete tools never convert coordinates
  */
 export interface UniversalPosition {
-  /** Canvas-local pixel X (from e.offsetX) */
   pixelX: number;
-  /** Canvas-local pixel Y (from e.offsetY) */
   pixelY: number;
-  /** Grid column in the 2D view */
   gridX: number;
-  /** Grid row in the 2D view */
   gridY: number;
-  /** 3D model X coordinate */
   modelX: number;
-  /** 3D model Y coordinate */
   modelY: number;
-  /** 3D model Z coordinate */
   modelZ: number;
 }
 
 /**
- * Preview data produced by a tool — read by the renderer each tick.
+ * View-local preview. Canvas2DRenderer reads it each frame. Previews other views must see go through DraftingService.
  */
 export interface PreviewData {
   blocks: { position: UniversalPosition }[];
@@ -45,14 +37,11 @@ export interface PreviewData {
 }
 
 /**
- * ToolBase - Abstract base for all canvas tools
+ * ToolBase - Base for every canvas tool
  *
- * Handles:
- * - Pan (space+drag / middle mouse) and zoom (wheel) as global concerns
- * - DOM listener add/remove abstractions for behavioral subclasses
- * - Modifier key tracking
- * - Coordinate resolution (offsetX/Y → grid → model, zero getBoundingClientRect)
- * - Preview data property for the renderer
+ * Pan (Space+drag or middle button) and wheel zoom are handled here for every tool.
+ * Subclasses call the listen and unlisten helpers from onActivate and onDeactivate.
+ * Positions come from offsetX/offsetY, which avoids a getBoundingClientRect layout read per event.
  */
 export abstract class ToolBase {
   protected modifiers: ModifierKeys = {
@@ -63,7 +52,6 @@ export abstract class ToolBase {
 
   public previewData: PreviewData = { blocks: [] };
 
-  // Pan state
   private panning = false;
   private lastPanX = 0;
   private lastPanY = 0;
@@ -76,10 +64,6 @@ export abstract class ToolBase {
     protected viewState: ViewState,
     protected requestRender: () => void,
   ) {}
-
-  // ============================================================================
-  // Lifecycle — subclasses call listen*/unlisten* in these
-  // ============================================================================
 
   activate(): void {
     this.canvas.addEventListener("wheel", this._onWheel, { passive: false });
@@ -111,10 +95,6 @@ export abstract class ToolBase {
     }
     this.onCancel();
   }
-
-  // ============================================================================
-  // DOM listener abstractions
-  // ============================================================================
 
   private pointerDownBound = false;
   private pointerMoveBound = false;
@@ -159,27 +139,17 @@ export abstract class ToolBase {
     this.canvas.removeEventListener("pointerup", this._onPointerUp);
   }
 
-  // ============================================================================
-  // Cursor
-  // ============================================================================
-
-  /** Override the displayed cursor without changing the tool's desired cursor */
+  /** Changes the shown cursor and keeps the tool's own cursor for restoreCursor */
   private setOverrideCursor(style: string): void {
     this.canvas.style.cursor = style;
   }
 
-  /** Restore the displayed cursor to whatever the tool set */
   private restoreCursor(): void {
     this.canvas.style.cursor = this.toolCursor;
   }
 
-  // ============================================================================
-  // Internal handlers — pan/zoom interception, then delegation
-  // ============================================================================
-
   private _onPointerDown = (e: PointerEvent): void => {
     this.syncDrawingModifiers(e.shiftKey, e.altKey);
-    // Pan: space+left or middle button
     if ((e.button === 0 && this.modifiers.space) || e.button === 1) {
       this.panning = true;
       this.lastPanX = e.offsetX;
@@ -311,10 +281,6 @@ export abstract class ToolBase {
     this.onModifiersChanged();
   }
 
-  // ============================================================================
-  // Coordinate resolution — zero getBoundingClientRect()
-  // ============================================================================
-
   protected resolvePosition(e: PointerEvent | WheelEvent): UniversalPosition | null {
     const grid = this.viewState.pixelToGrid(e.offsetX, e.offsetY);
     if (!grid) return null;
@@ -331,16 +297,9 @@ export abstract class ToolBase {
     };
   }
 
-  /**
-   * Extract a Vector3D from a UniversalPosition (convenience)
-   */
   protected toModel(pos: UniversalPosition): Vector3D {
     return { x: pos.modelX, y: pos.modelY, z: pos.modelZ };
   }
-
-  // ============================================================================
-  // Subclass hooks (no-ops)
-  // ============================================================================
 
   protected onActivate(): void {}
   protected onDeactivate(): void {}

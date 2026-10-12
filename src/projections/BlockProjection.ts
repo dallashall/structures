@@ -1,14 +1,9 @@
 /**
- * BlockProjection - Optimized block index for rendering
+ * BlockProjection - Block reads for renderers. It holds no state of its own: it reads the blocks of
+ * ModelProjection's model, so both always agree and an undo replays the project once.
  *
- * Exposes the BlockIndex (optimized for spatial queries).
- *
- * Reads the blocks of ModelProjection's model, so both always hold the same state
- * and an undo replays the project once.
- *
- * This projection is optimized for rendering queries:
- * - getBlocksAtLayer(axis, layer) - fast spatial queries
- * - getBlock(position) - fast position lookups
+ * Events:
+ * - blocks:rebuilt - forwarded from ModelProjection's model:blocks-rebuilt
  */
 
 import { EventEmitter } from '../core/EventEmitter';
@@ -16,9 +11,6 @@ import { modelProjection } from './ModelProjection';
 import type { BlockIndex } from '../core/BlockIndex';
 import type { Vector3D, BlockData } from '../types';
 
-/**
- * BlockProjection singleton
- */
 class BlockProjection extends EventEmitter {
   private static instance: BlockProjection;
 
@@ -38,48 +30,30 @@ class BlockProjection extends EventEmitter {
     this.emit('blocks:rebuilt');
   }
 
-  /**
-   * Apply any events appended since the last read
-   */
   async ensureFresh(): Promise<void> {
     await modelProjection.ensureFresh();
   }
 
-  /**
-   * Get cached blocks (synchronous, no freshness check)
-   * Use this in render loops where ensureFresh() was already called
-   */
+  // No freshness check, for render paths that already awaited ensureFresh()
   getCached(): BlockIndex {
     return modelProjection.getCached().blocks;
   }
 
-  /**
-   * Get current block index (always fresh)
-   */
   async getBlocks(): Promise<BlockIndex> {
     await this.ensureFresh();
     return modelProjection.getCached().blocks;
   }
 
-  /**
-   * Get block at position (always fresh)
-   */
   async getBlock(position: Vector3D): Promise<BlockData | null> {
     await this.ensureFresh();
     return modelProjection.getCached().blocks.get(position);
   }
 
-  /**
-   * Get blocks at layer (always fresh)
-   */
   async getBlocksAtLayer(axis: 'x' | 'y' | 'z', layer: number): Promise<BlockData[]> {
     await this.ensureFresh();
     return modelProjection.getCached().blocks.getBlocksAtLayer(axis, layer);
   }
 
-  /**
-   * Reset projection (clear snapshot for new project)
-   */
   reset(): void {
     modelProjection.reset();
   }

@@ -1,8 +1,5 @@
 import { Box, Typography, List, ListItem } from '@mui/material';
 
-/**
- * Placeholder component shown when no preview is selected
- */
 export function WelcomePreview() {
   return (
     <Box>

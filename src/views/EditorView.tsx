@@ -31,15 +31,6 @@ import { confirmMetaBlockCommand } from "../commands/ConfirmMetaBlockCommand";
 import { saveProjectFileCommand } from "../commands/SaveProjectFileCommand";
 import { toFileErrorMessage } from "../utils/projectFile";
 
-/**
- * EditorView - Main editor orchestrator
- *
- * Minimal wrapper that:
- * - Shows toolbar
- * - Switches between TabbedEditorView and QuadEditorView based on layout mode
- * - Handles meta block placement modal
- * - Provides event handlers to child views
- */
 interface EditorViewProps
   extends
     WithProjectStateProps,
@@ -97,18 +88,15 @@ function EditorViewComponent(props: EditorViewProps) {
     );
   }
 
-  // Derive modal visibility from meta block confirmation status
-  // Hide modal when in placement mode (user clicked "Got it") or when meta block is confirmed
+  // "Got it" enters placement mode, which hides the modal until the meta block is confirmed
   const metaBlock = project?.metaBlock;
   const showMetaBlockModal =
     metaBlock ? !metaBlock.isConfirmed && !isPlacementMode : false;
 
-  // Handle meta block modal close (enter placement mode)
   const handleMetaBlockModalClose = () => {
     editorState.setPlacementMode(true);
   };
 
-  // Handlers
   const handleViewTabChange = (
     _event: React.SyntheticEvent,
     newValue: string,
@@ -117,9 +105,7 @@ function EditorViewComponent(props: EditorViewProps) {
   };
 
   const handleQuickSelectSlot = (index: number) => {
-    // Update the foreground/background slot index based on active material slot
-    // This makes the block at this slot the active foreground/background
-    // WITHOUT modifying what's stored in the slot
+    // Points the active material at this slot. The slot's stored block stays as it is.
     const activeMaterialSlot = editorState.getActiveMaterialSlot();
     if (activeMaterialSlot === 'foreground') {
       editorState.setForegroundSlotIndex(index);
@@ -153,12 +139,9 @@ function EditorViewComponent(props: EditorViewProps) {
     }
   };
 
-  // Keyboard shortcuts handled by HotkeyDispatcher singleton
-
   return (
     <Box sx={{ height: "100%", overflow: "hidden" }}>
       <Stack direction="column" sx={{ height: "100%" }}>
-        {/* Toolbar */}
         <Toolbar
           projectName={project.name}
           layoutMode={layoutMode}
@@ -169,7 +152,6 @@ function EditorViewComponent(props: EditorViewProps) {
           onShowCredits={screenRouter.openCreditsDialog}
         />
 
-        {/* Tool Options Bar */}
         <ToolOptionsBar
           paintMode={paintMode}
           paintBehavior={paintBehavior}
@@ -184,7 +166,6 @@ function EditorViewComponent(props: EditorViewProps) {
           onLayerChange={editorState.setActiveLayer}
         />
 
-        {/* Main Canvas Area - Switch between layout modes */}
         <Box
           sx={{
             flex: 1,
@@ -249,13 +230,11 @@ function EditorViewComponent(props: EditorViewProps) {
         </Box>
       </Stack>
 
-      {/* Meta Block Placement Modal */}
       <MetaBlockPlacementModal
         isOpen={showMetaBlockModal}
         onClose={handleMetaBlockModalClose}
       />
 
-      {/* Material Browser Modal */}
       <MaterialBrowserModal
         blocks={blocks}
         quickSelectSlots={quickSelectSlots}
@@ -271,7 +250,6 @@ function EditorViewComponent(props: EditorViewProps) {
   );
 }
 
-// Export with HOCs - all props are injected by HOCs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const EditorView = withSaveState(
   withBlockRegistry(withEditorState(withProjectState(EditorViewComponent))),

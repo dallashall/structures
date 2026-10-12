@@ -15,11 +15,6 @@ interface LayerControlsProps {
 }
 
 /**
- * LayerControls - Compact layer display with expandable controls
- *
- * Shows current X/Y/Z layer values in a compact read-only display.
- * Click the settings button to open a popover with full controls.
- *
  * Layer keys come from SHORTCUTS and are handled globally by HotkeyDispatcher.
  * The step buttons show them in their tooltips.
  */
@@ -28,7 +23,6 @@ export function LayerControls({
   activeLayers,
   onLayerChange,
 }: LayerControlsProps) {
-  // Named handlers for X layer
   const handleXIncrement = () => {
     if (activeLayers.x < maxDimensions.width - 1) {
       onLayerChange('x', activeLayers.x + 1);
@@ -45,7 +39,6 @@ export function LayerControls({
     onLayerChange('x', value);
   };
 
-  // Named handlers for Y layer
   const handleYIncrement = () => {
     if (activeLayers.y < maxDimensions.height - 1) {
       onLayerChange('y', activeLayers.y + 1);
@@ -62,7 +55,6 @@ export function LayerControls({
     onLayerChange('y', value);
   };
 
-  // Named handlers for Z layer
   const handleZIncrement = () => {
     if (activeLayers.z < maxDimensions.depth - 1) {
       onLayerChange('z', activeLayers.z + 1);
@@ -82,7 +74,6 @@ export function LayerControls({
   const renderLayerPopover = () => (
     <Box sx={{ p: 2 }}>
       <Stack spacing={1}>
-        {/* X Layer Control */}
         <LayerDimensionControl
           label="X"
           currentLayer={activeLayers.x}
@@ -94,7 +85,6 @@ export function LayerControls({
           decrementShortcut={SHORTCUTS.layerXDown}
         />
 
-        {/* Y Layer Control */}
         <LayerDimensionControl
           label="Y"
           currentLayer={activeLayers.y}
@@ -106,7 +96,6 @@ export function LayerControls({
           decrementShortcut={SHORTCUTS.layerYDown}
         />
 
-        {/* Z Layer Control */}
         <LayerDimensionControl
           label="Z"
           currentLayer={activeLayers.z}
@@ -123,7 +112,6 @@ export function LayerControls({
 
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      {/* Compact Read-Only Display */}
       <Stack direction="row" spacing={2} alignItems="center">
         <Typography variant="body2">
           <strong>X:</strong> {activeLayers.x}
@@ -136,7 +124,6 @@ export function LayerControls({
         </Typography>
       </Stack>
 
-      {/* Expand Button */}
       <DialogTrigger type="popover">
         <IconButton size="small" aria-label="Layer settings">
           <Settings fontSize="small" />

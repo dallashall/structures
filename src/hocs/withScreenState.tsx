@@ -6,9 +6,6 @@ import { screenRouter } from '../core/ScreenRouter';
 
 const increment = (count: number): number => count + 1;
 
-/**
- * Props injected by withScreenState HOC
- */
 export interface WithScreenStateProps {
   screen: Screen;
   isNewProjectDialogOpen: boolean;

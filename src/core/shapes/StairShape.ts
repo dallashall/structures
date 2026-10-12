@@ -1,9 +1,8 @@
 /**
- * StairShape - Shape behavior for stair blocks
+ * StairShape - Stair geometry, 2D clipping, and the auto-join shape from StairShapeResolver
  *
- * Delegates auto-join algorithm to StairShapeResolver pure functions.
- * Delegates mesh creation to GeometryFactory.createStairMesh().
- * Provides per-instance rotation via DirectionMath.directionToYRotation.
+ * Derived shape strings use absolute directions: `straight_{facing}` or `{inner|outer}_{facing}_{cornerEdge}`
+ * (see StairShapeResolver). The facing is always the second `_` part.
  */
 
 import type { BlockShape, ClipPath, FaceUVData } from "./BlockShape";
@@ -18,14 +17,11 @@ import type { BlockIndexReader } from "../BlockIndex";
 import { createStairMesh } from "../rendering/GeometryFactory";
 import { calculateStairShape } from "../StairShapeResolver";
 
-// --- 2D clip computation ---
-
 const isSideView = (v: ViewType): boolean =>
   v === "front" || v === "back" || v === "left" || v === "right";
 
 type Point = { x: number; y: number };
 
-/** Build a 4-vertex rectangle path (clockwise). */
 const rectPath = (x: number, y: number, w: number, h: number): Point[] => [
   { x, y },
   { x: x + w, y },
@@ -34,8 +30,7 @@ const rectPath = (x: number, y: number, w: number, h: number): Point[] => [
 ];
 
 /**
- * Build a 6-vertex L-shape path for a bottom-half stair.
- * xSide: true for x+ side cutout, false for x- side cutout
+ * L-shape of a bottom-half stair seen from the side. xSide picks which side the step cuts out.
  */
 const bottomLPath = (
   xSide: boolean,
@@ -48,7 +43,6 @@ const bottomLPath = (
   const b = py + cellSize;
 
   if (xSide) {
-    // Step cutout at x+ side
     return [
       { x: px, y: py },
       { x: px + mid, y: py },
@@ -58,7 +52,6 @@ const bottomLPath = (
       { x: px, y: b },
     ];
   }
-  // Step cutout at x- side
   return [
     { x: px + mid, y: py },
     { x: r, y: py },
@@ -69,7 +62,6 @@ const bottomLPath = (
   ];
 };
 
-/** Flip a path vertically within the cell. */
 const flipPathVertically = (
   path: Point[],
   py: number,
@@ -81,8 +73,7 @@ const flipPathVertically = (
 };
 
 /**
- * Compute the 2D clip polygon for a stair block.
- * Returns null when the block should render as a full cell.
+ * Null when the stair fills its cell in this view
  */
 const computeStairClip = (
   facing: HorizontalDirection,
@@ -92,10 +83,9 @@ const computeStairClip = (
   py: number,
   cellSize: number,
 ): Point[] | null => {
-  // Plan views (top/bottom): step is along Z depth axis — invisible from above
+  // From above or below a stair covers its whole cell
   if (!isSideView(viewType)) return null;
 
-  // Determine if step faces toward or away from viewer
   const isTowardViewer =
     (viewType === "front" && facing === "y+") ||
     (viewType === "back" && facing === "y-") ||
@@ -108,10 +98,10 @@ const computeStairClip = (
     (viewType === "left" && facing === "x+") ||
     (viewType === "right" && facing === "x-");
 
-  // Away: full back face visible — no clip
+  // Facing away, the solid back face fills the cell
   if (isAwayFromViewer) return null;
 
-  // Toward: step faces viewer — show solid half only (like slab)
+  // Facing the viewer, the step's profile hides behind the front half, which reads like a slab
   if (isTowardViewer) {
     const halfSize = cellSize / 2;
     if (half === "bottom") {
@@ -120,7 +110,7 @@ const computeStairClip = (
     return rectPath(px, py, cellSize, halfSize);
   }
 
-  // Side view: L-shape with cutout on x+ or x- side
+  // Facing sideways, the profile shows as an L
   const xPlusSide =
     (viewType === "front" && facing === "x+") ||
     (viewType === "back" && facing === "x-") ||
@@ -131,8 +121,6 @@ const computeStairClip = (
   if (half === "top") return flipPathVertically(base, py, cellSize);
   return base;
 };
-
-// No mapping needed - shape strings use absolute coordinates throughout
 
 class StairShapeImpl implements BlockShape {
   readonly shapeId = "stair";
@@ -157,7 +145,6 @@ class StairShapeImpl implements BlockShape {
     const shapeString = blockState?.shape;
     if (!shapeString) return 0;
 
-    // Extract facing from shape string (always second part)
     const parts = shapeString.split('_');
     const facing = parts[1] as HorizontalDirection;
 

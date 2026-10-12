@@ -1,7 +1,3 @@
-/**
- * Save then load - a project read back from its file matches the original and keeps its history
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../../core/EventLog';
 import { editHistory } from '../../core/EditHistory';

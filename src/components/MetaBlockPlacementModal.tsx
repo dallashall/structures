@@ -18,16 +18,6 @@ interface MetaBlockPlacementModalProps {
 }
 
 /**
- * MetaBlockPlacementModal - Informational modal before meta block placement
- *
- * Explains the purpose of the meta block and guides the user to place it
- * as their first action after creating a new project.
- *
- * Features:
- * - Heading and description of meta block purpose
- * - Placeholder for image/illustration (future enhancement)
- * - "Got it" button to close and enter placement mode
- *
  * A native modal dialog, so focus starts on "Got it" and stays inside until it closes.
  */
 export function MetaBlockPlacementModal({
@@ -78,9 +68,6 @@ export function MetaBlockPlacementModal({
               </li>
             </Box>
           </Box>
-
-          {/* Placeholder for image/illustration */}
-          {/* <img src="/meta-block-illustration.png" alt="Meta block example" /> */}
 
           <Typography variant="body1">
             Click on any 2D view to place the meta block and begin building

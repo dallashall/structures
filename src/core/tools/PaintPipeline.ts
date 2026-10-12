@@ -16,20 +16,14 @@ import { blockRegistry } from "../BlockRegistry";
 import { editorState } from "../EditorState";
 
 /**
- * PaintPipeline - Composable steps for transforming paint operations
+ * PaintPipeline - Turns a strategy's cells into the operations a tool hands to DraftingService
  *
- * Extracted from CanvasPainter. Each step is a pure-ish static function
- * that tools compose explicitly:
- *
- *   strategy.calculateOperations()
- *     → PaintPipeline.applyDepth()
- *     → PaintPipeline.applyBehavior()
- *     → PaintPipeline.applyDeleteModifier()
+ * Order: applyDepth → applyBehavior → applyDeleteModifier → attachBlockState. process() runs all four
+ * with the settings in EditorState.
  */
 export class PaintPipeline {
   /**
-   * Get the constrained axis for a view type.
-   * Each 2D view constrains operations to a single plane.
+   * The view's depth axis, held at the active layer
    */
   static getConstrainedAxis(
     viewType: ViewType,
@@ -49,10 +43,8 @@ export class PaintPipeline {
   }
 
   /**
-   * Expand operations along the depth axis based on depth configuration.
-   *
-   * Pre-fetches all blocks in collision range once for O(1) lookups
-   * instead of O(operations * depth) queries.
+   * Repeats each operation through `thickness` layers, moving away from the viewer.
+   * In until-collision mode a placement stops at the first layer that already holds a block.
    */
   static applyDepth(
     operations: PaintOperation[],
@@ -78,7 +70,7 @@ export class PaintPipeline {
     };
     const maxValue = getMaxForAxis(axis);
 
-    // Pre-fetch collision blocks for until-collision mode
+    // One pass collects the occupied cells, so the expansion below checks a Set instead of the projection
     let blockLookup: Set<string> | null = null;
     if (depthConfig.mode === "until-collision") {
       blockLookup = new Set<string>();
@@ -132,9 +124,6 @@ export class PaintPipeline {
     return expanded;
   }
 
-  /**
-   * Filter operations through behavior rules (synchronous).
-   */
   static applyBehavior(
     operations: PaintOperation[],
     behavior: PaintBehavior,
@@ -147,9 +136,8 @@ export class PaintPipeline {
   }
 
   /**
-   * Transform operations if delete mode is enabled.
-   * In delete mode, operations target existing blocks for removal.
-   * The blockType is set to the existing block type (for preview rendering).
+   * In delete mode, keeps only cells that hold a block, and gives each operation that block's type.
+   * The preview draws the block being removed. DraftingService treats delete mode as removal.
    */
   static applyDeleteModifier(
     operations: PaintOperation[],
@@ -173,10 +161,6 @@ export class PaintPipeline {
     return transformed;
   }
 
-  /**
-   * Full pipeline: depth → behavior → delete modifier.
-   * Reads current behavior from EditorState automatically.
-   */
   static process(
     operations: PaintOperation[],
     viewType: ViewType,
@@ -203,10 +187,8 @@ export class PaintPipeline {
   }
 
   /**
-   * Attach the active block state from EditorState to each placement operation.
-   * Merges the block's defaultState with the user's activeBlockState.
-   * Only attaches user intent (facing, half, type) — derived state (shape,
-   * connections) is computed reactively at read time by shapeCatalog.resolveBlockState().
+   * Stores only what the user chose (facing, half, type), merged over the block's defaults.
+   * Derived state such as stair shape and connections is computed on read by shapeCatalog.resolveBlockState().
    */
   static attachBlockState(
     operations: PaintOperation[],
@@ -228,9 +210,6 @@ export class PaintPipeline {
     return operations.map(attachState);
   }
 
-  /**
-   * Create a PaintBehavior instance from the current EditorState setting.
-   */
   static createBehavior(): PaintBehavior {
     switch (editorState.getPaintBehavior()) {
       case "normal":
@@ -245,8 +224,7 @@ export class PaintPipeline {
   }
 
   /**
-   * Get the depth direction (away from camera) based on view type.
-   * Returns +1 for increasing layer numbers, -1 for decreasing.
+   * +1 when layers away from the viewer have higher numbers, -1 when lower
    */
   private static getDepthDirection(viewType: ViewType): number {
     switch (viewType) {

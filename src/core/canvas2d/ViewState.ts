@@ -4,15 +4,10 @@ import { projectView } from "../../projections/ProjectView";
 import { CoordinateConverter } from "../painting/CoordinateConverter";
 
 /**
- * ViewState - Manages viewport state and coordinate conversions for a 2D canvas
+ * ViewState - Zoom, pan, and pixel → grid → model conversion for one 2D view
  *
- * Responsibilities:
- * - Zoom level management
- * - Pan offset management
- * - Coordinate conversions (pixel → grid → model)
- * - Grid dimensions calculation
- *
- * Pure logic with no rendering or DOM interaction.
+ * Model x spans dimensions.width, y spans dimensions.height, and z spans dimensions.depth. Z points up.
+ * Grid rows count down from the top of the canvas, so a vertical model axis flips: row 0 holds its highest layer.
  */
 export class ViewState {
   private zoom = 1.0;
@@ -39,25 +34,16 @@ export class ViewState {
     this.fitToCanvas();
   }
 
-  /**
-   * Update canvas dimensions (on resize)
-   */
   setCanvasSize(width: number, height: number): void {
     this.canvasWidth = width;
     this.canvasHeight = height;
     this.fitIfUnadjusted();
   }
 
-  /**
-   * Re-fit the grid unless the user has zoomed or panned
-   */
   fitIfUnadjusted(): void {
     if (!this.isUserAdjusted) this.fitToCanvas();
   }
 
-  /**
-   * Zoom so the whole grid fits inside the canvas, then center it
-   */
   private fitToCanvas(): void {
     const project = projectView.getCached();
     if (!project) return;
@@ -81,9 +67,6 @@ export class ViewState {
     this.pan.y = (this.canvasHeight - gridHeight * cellSize) / 2;
   }
 
-  /**
-   * Get grid dimensions for current view
-   */
   getGridDimensions(dimensions: Dimensions): {
     gridWidth: number;
     gridHeight: number;
@@ -102,7 +85,7 @@ export class ViewState {
   }
 
   /**
-   * Convert pixel coordinates to grid coordinates
+   * Null when the pixel lies outside the grid
    */
   pixelToGrid(
     pixelX: number,
@@ -127,7 +110,7 @@ export class ViewState {
   }
 
   /**
-   * Convert grid coordinates to 3D model position
+   * The view's depth axis takes the active layer
    */
   gridToModel(gridX: number, gridY: number): Vector3D {
     const activeLayers = editorState.getActiveLayers();
@@ -143,9 +126,6 @@ export class ViewState {
     );
   }
 
-  /**
-   * Convert 3D model position to grid coordinates
-   */
   modelToGrid(
     position: Vector3D,
     dimensions: Dimensions,
@@ -179,46 +159,28 @@ export class ViewState {
     return true;
   }
 
-  /**
-   * Apply pan offset
-   */
   applyPan(deltaX: number, deltaY: number): void {
     this.pan.x += deltaX;
     this.pan.y += deltaY;
     this.isUserAdjusted = true;
   }
 
-  /**
-   * Get current zoom level
-   */
   getZoom(): number {
     return this.zoom;
   }
 
-  /**
-   * Get current pan offset
-   */
   getPan(): { x: number; y: number } {
     return { ...this.pan };
   }
 
-  /**
-   * Get current cell size (base * zoom)
-   */
   getCellSize(): number {
     return this.BASE_CELL_SIZE * this.zoom;
   }
 
-  /**
-   * Get view type
-   */
   getViewType(): ViewType {
     return this.viewType;
   }
 
-  /**
-   * Get axis labels for current view
-   */
   getAxesForView(): { horizontal: string; vertical: string; depth: string } {
     switch (this.viewType) {
       case "front":
@@ -234,8 +196,7 @@ export class ViewState {
   }
 
   /**
-   * Convert layer value to grid position for a given axis
-   * Returns null if the axis is the depth axis (not visible in this view)
+   * The grid row or column where `axis` reaches `layerValue`. Null for the view's depth axis, which has no line.
    */
   getGridPositionForLayer(
     axis: string,
@@ -263,9 +224,6 @@ export class ViewState {
     }
   }
 
-  /**
-   * Calculate distance from a 3D position to the active layer
-   */
   getLayerDistance(
     position: Vector3D,
     activeLayers: LayerState,

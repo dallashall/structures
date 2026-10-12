@@ -1,8 +1,5 @@
 import React from 'react';
 
-/**
- * Props injected by withDisclosureState HOC
- */
 export interface WithDisclosureStateProps {
   // Element the overlay opened from. Null while closed.
   anchorEl: HTMLElement | null;

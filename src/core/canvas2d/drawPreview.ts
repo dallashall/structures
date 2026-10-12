@@ -5,10 +5,7 @@ import { blockRegistry } from "../BlockRegistry";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 /**
- * Draw shared preview blocks from DraftingService and EditorState.
- * Both sources are pre-resolved to GridBlock[] — no coordinate conversion.
- *
- * In delete mode, preview blocks are shown with a red tint to indicate removal.
+ * Draws DraftingService and EditorState previews. In delete mode a red tint marks blocks the stroke removes.
  */
 export function drawSharedPreview(
   ctx: CanvasRenderingContext2D,
@@ -31,7 +28,7 @@ export function drawSharedPreview(
     const px = pan.x + gridBlock.gridX * cellSize;
     const py = pan.y + gridBlock.gridY * cellSize;
 
-    // Apply shape-based clipping for preview blocks (slabs show half-cell, etc.)
+    // Non-cube shapes clip the cell, so a slab fills half of it
     const blockShape = shapeCatalog.resolve(gridBlock.blockType);
     const clip = blockShape.get2DClip(gridBlock.blockState ?? {}, viewType, px, py, cellSize);
     if (clip) {
@@ -68,10 +65,7 @@ export function drawSharedPreview(
 }
 
 /**
- * Draw tool-local preview blocks (hover highlight).
- *
- * Reads from previewData.blocks, which contains UniversalPosition
- * with pre-resolved gridX/gridY coordinates. No conversion needed.
+ * Draws the tool's hover cells. Their UniversalPosition already carries grid coordinates.
  */
 export function drawToolPreview(
   ctx: CanvasRenderingContext2D,

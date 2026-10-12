@@ -2,9 +2,6 @@ import React from 'react';
 
 import { editHistory } from '../core/EditHistory';
 
-/**
- * Props injected by withEditHistory HOC
- */
 export interface WithEditHistoryProps {
   canUndo: boolean;
   canRedo: boolean;

@@ -14,17 +14,6 @@ interface PaintBehaviorControlProps {
   orientation?: "horizontal" | "vertical";
 }
 
-/**
- * PaintBehaviorControl - Paint behavior mode selector
- *
- * Allows selection between:
- * - Normal: Paint anywhere (even in air)
- * - Only-Replace: Paint only over existing blocks
- * - Selective-Replace: Replace only specific block types
- * - Delete: Erase blocks instead of placing
- *
- * Supports both horizontal and vertical orientations for flexible layout.
- */
 export function PaintBehaviorControl({
   paintBehavior,
   onPaintBehaviorChange,

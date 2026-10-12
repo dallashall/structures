@@ -2,10 +2,6 @@ import { useState } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { MetaBlockPlacementModal } from '../../components/MetaBlockPlacementModal';
 
-/**
- * Preview showcase for the MetaBlockPlacementModal component
- * Demonstrates informational modal shown before meta block placement
- */
 export function MetaBlockPlacementModalPreview() {
   const [isOpen, setIsOpen] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -29,7 +25,6 @@ export function MetaBlockPlacementModalPreview() {
         it as their first action after creating a new project.
       </Typography>
 
-      {/* Context */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Context</Typography>
         <Typography variant="body1">
@@ -40,7 +35,6 @@ export function MetaBlockPlacementModalPreview() {
         </Typography>
       </Box>
 
-      {/* Interactive Demo */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h5" component="h2">Interactive Demo</Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
@@ -64,7 +58,6 @@ export function MetaBlockPlacementModalPreview() {
         <MetaBlockPlacementModal isOpen={isOpen} onClose={handleClose} />
       </Box>
 
-      {/* Props Documentation */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Props Interface</Typography>
         <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, border: 1, borderColor: 'grey.300' }}>
@@ -90,7 +83,6 @@ export function MetaBlockPlacementModalPreview() {
         </Box>
       </Box>
 
-      {/* Feature Notes */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Features</Typography>
         <Typography variant="body1" component="div">
@@ -105,7 +97,6 @@ export function MetaBlockPlacementModalPreview() {
         </Typography>
       </Box>
 
-      {/* Meta Block Purpose */}
       <Box sx={{ mt: 6 }}>
         <Typography variant="h6" component="h3">Meta Block Purpose</Typography>
         <Typography variant="body1" component="div">

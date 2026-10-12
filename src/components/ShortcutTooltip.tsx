@@ -12,9 +12,6 @@ interface ShortcutTooltipProps {
   children: ReactElement;
 }
 
-/**
- * ShortcutTooltip - Tooltip that shows an action and its keyboard key in one consistent format
- */
 export function ShortcutTooltip({
   title,
   shortcut,

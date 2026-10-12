@@ -16,15 +16,6 @@ const errorInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.
 const successInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.success.light}55`;
 const greyInsetGlow = (theme: Theme): string => `inset 0 0 8px ${theme.palette.grey[500]}55`;
 
-/**
- * QuadLayout - 2x2 grid with 3 2D views + 3D preview
- *
- * Displays four viewports in a grid:
- * - Front view (top-left)
- * - Left view (top-right)
- * - Top view (bottom-left)
- * - 3D Preview (bottom-right)
- */
 export function QuadLayout({
   activeLayers,
 }: QuadLayoutProps) {
@@ -38,7 +29,6 @@ export function QuadLayout({
         gap: "1px",
       }}
     >
-      {/* Front View */}
       <Box
         sx={{
           bgcolor: "grey.50",
@@ -111,7 +101,6 @@ export function QuadLayout({
         </Box>
       </Box>
 
-      {/* Left View */}
       <Box
         sx={{
           bgcolor: "grey.50",
@@ -184,7 +173,6 @@ export function QuadLayout({
         </Box>
       </Box>
 
-      {/* Top View */}
       <Box
         sx={{
           bgcolor: "grey.50",
@@ -257,7 +245,6 @@ export function QuadLayout({
         </Box>
       </Box>
 
-      {/* 3D Preview */}
       <Box
         sx={{
           bgcolor: "grey.50",

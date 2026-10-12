@@ -11,9 +11,6 @@ interface MaterialGridCellProps {
   onPick: (blockId: string) => void;
 }
 
-/**
- * MaterialGridCell - react-window cell that renders the tile at its row and column, or nothing past the end
- */
 export function MaterialGridCell({
   ariaAttributes,
   columnIndex,

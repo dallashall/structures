@@ -3,12 +3,8 @@ import type { AtlasMetadata, LoadedTexture } from '../types';
 import { blockRegistry } from './BlockRegistry';
 
 /**
- * TextureResolver - Manages texture atlas and block UV mapping
- *
- * Singleton class that provides:
- * - Texture atlas loading (Minecraft-style stitched textures)
- * - Atlas metadata with UV coordinates per block face
- * - Fallback to colors when atlas unavailable
+ * TextureResolver - Loads public/atlas.png and public/atlas.json, which scripts/setupTextures.ts builds.
+ * When either file is missing the status reads 'missing' and every renderer draws flat colors.
  *
  * Events:
  * - atlas:ready - When the atlas image and metadata are both available
@@ -25,12 +21,11 @@ class TextureResolver extends EventEmitter {
   private loadingPromise: Promise<void> | null = null;
   private atlasStatus: AtlasStatus = 'loading';
 
-  // Cache for dynamically generated tinted textures
+  // Keyed by `${blockId}_${faceIndex}`
   private tintedTextureCache = new Map<string, HTMLCanvasElement>();
 
   private constructor() {
     super();
-    // Auto-load atlas on construction
     this.loadAtlas();
   }
 
@@ -41,9 +36,6 @@ class TextureResolver extends EventEmitter {
     return TextureResolver.instance;
   }
 
-  /**
-   * Load the pre-computed texture atlas and metadata
-   */
   private async loadAtlas(): Promise<void> {
     if (this.loadingPromise) {
       return this.loadingPromise;
@@ -55,14 +47,12 @@ class TextureResolver extends EventEmitter {
 
   private async loadAtlasInternal(): Promise<void> {
     try {
-      // Load metadata first
       const metadataResponse = await fetch('/atlas.json');
       if (!metadataResponse.ok) {
         throw new Error(`Failed to load atlas metadata: ${metadataResponse.statusText}`);
       }
       this.atlasMetadata = await metadataResponse.json();
 
-      // Load atlas image
       const atlasImage = new Image();
       atlasImage.crossOrigin = 'anonymous';
 
@@ -98,31 +88,18 @@ class TextureResolver extends EventEmitter {
     return this.atlasStatus;
   }
 
-  /**
-   * Get the loaded atlas image
-   */
   getAtlas(): LoadedTexture | null {
     return this.atlas;
   }
 
-  /**
-   * Get atlas metadata
-   */
   getAtlasMetadata(): AtlasMetadata | null {
     return this.atlasMetadata;
   }
 
-  /**
-   * Check if atlas is loaded
-   */
   isAtlasLoaded(): boolean {
     return this.atlas !== null && this.atlas.loaded;
   }
 
-  /**
-   * Get UV coordinates for a block's faces (for 2D Canvas rendering)
-   * Returns face UV array for BabylonJS faceUV option
-   */
   getBlockFaceUV(blockId: string): Array<{ u0: number; v0: number; u1: number; v1: number }> | null {
     if (!this.atlasMetadata) return null;
     const blockUV = this.atlasMetadata.blockFaceUV[blockId];
@@ -131,8 +108,7 @@ class TextureResolver extends EventEmitter {
   }
 
   /**
-   * Get UV coordinates for a block's faces (for 3D Babylon rendering)
-   * Uses swapped and rotated textures for left/right faces
+   * Babylon's box needs its left and right faces swapped and rotated, so the atlas keeps a separate UV set for 3D
    */
   getBlockFaceUV3D(blockId: string): Array<{ u0: number; v0: number; u1: number; v1: number }> | null {
     if (!this.atlasMetadata) return null;
@@ -142,9 +118,8 @@ class TextureResolver extends EventEmitter {
   }
 
   /**
-   * Get texture coordinates for a specific block face (for Canvas2D)
-   * Returns pixel coordinates in the atlas image
-   * Falls back to tinted base texture for missing glass variants
+   * Pixel rectangle in the atlas image. A block the atlas lacks but that tinting covers
+   * gets the rectangle of its tinted canvas from getTintedTexture instead.
    */
   getBlockFaceCoords(blockId: string, faceIndex: number): {
     x: number;
@@ -156,7 +131,6 @@ class TextureResolver extends EventEmitter {
 
     const blockUV = this.atlasMetadata.blockFaceUV[blockId];
     if (!blockUV) {
-      // Texture not in atlas - try to create tinted variant for glass blocks
       return this.getTintedTextureCoords(blockId, faceIndex);
     }
 
@@ -174,9 +148,8 @@ class TextureResolver extends EventEmitter {
   }
 
   /**
-   * Get or create tinted texture coordinates for blocks missing from atlas
-   * Used for glass variants that share a base texture but need different colors
-   * Also used for grass and leaves that need biome tinting
+   * Stained glass shares the plain glass texture and takes its color from the block registry.
+   * Leaves and grass plants ship grayscale and need the biome tint.
    */
   private getTintedTextureCoords(blockId: string, faceIndex: number): {
     x: number;
@@ -186,7 +159,6 @@ class TextureResolver extends EventEmitter {
   } | null {
     if (!this.atlasMetadata) return null;
 
-    // Check if this block needs tinting (single-texture blocks only)
     const blockIdLower = blockId.toLowerCase();
     const blockName = blockIdLower.replace('minecraft:', '');
 
@@ -200,36 +172,30 @@ class TextureResolver extends EventEmitter {
 
     if (!isGlass && !isLeaves && !isGrass) return null;
 
-    // Determine base texture and tint color
     let baseBlockId: string;
     let tintColor: string;
 
     if (isGlass) {
-      // Glass blocks use base glass texture with custom color
       baseBlockId = 'minecraft:glass';
       const block = blockRegistry.getBlock(blockId);
       if (!block) return null;
       tintColor = block.color;
     } else if (isLeaves) {
-      // Leaves use their own texture with green tint
       baseBlockId = blockId;
       tintColor = '#48B518'; // Minecraft's default foliage green
     } else if (isGrass) {
-      // Grass uses its own texture with green tint
       baseBlockId = blockId;
       tintColor = '#91BD59'; // Minecraft's default grass green
     } else {
       return null;
     }
 
-    // Try to find base texture in atlas
     const baseUV = this.atlasMetadata.blockFaceUV[baseBlockId];
     if (!baseUV) return null;
 
     const faceUV = baseUV.faceUV[faceIndex];
     if (!faceUV) return null;
 
-    // Create or get cached tinted texture
     const cacheKey = `${blockId}_${faceIndex}`;
     let tintedCanvas = this.tintedTextureCache.get(cacheKey);
 
@@ -243,7 +209,7 @@ class TextureResolver extends EventEmitter {
 
     if (!tintedCanvas) return null;
 
-    // Return coordinates for the tinted canvas (full canvas = one texture)
+    // The tinted canvas holds exactly one texture
     return {
       x: 0,
       y: 0,
@@ -253,9 +219,8 @@ class TextureResolver extends EventEmitter {
   }
 
   /**
-   * Create a tinted version of a base texture
-   * Combines base texture with a color tint
-   * Color underneath, grayscale texture on top (Minecraft-style tinting)
+   * Multiplies the grayscale texture by the tint, as Minecraft does, then restores the texture's alpha,
+   * which the multiply fill would otherwise make opaque.
    */
   private createTintedTexture(
     faceUV: { u0: number; v0: number; u1: number; v1: number },
@@ -264,16 +229,14 @@ class TextureResolver extends EventEmitter {
     if (!this.atlas || !this.atlasMetadata) return null;
 
     const size = this.atlasMetadata.atlasSize;
-    const textureSize = 16; // Standard Minecraft texture size
+    const textureSize = 16;
 
-    // Create canvas for tinted texture
     const canvas = document.createElement('canvas');
     canvas.width = textureSize;
     canvas.height = textureSize;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Extract base texture from atlas
     const sourceX = faceUV.u0 * size;
     const sourceY = faceUV.v0 * size;
     const sourceWidth = (faceUV.u1 - faceUV.u0) * size;
@@ -281,7 +244,6 @@ class TextureResolver extends EventEmitter {
 
     ctx.imageSmoothingEnabled = false;
 
-    // Draw the base texture first (preserves alpha channel)
     ctx.drawImage(
       this.atlas.image,
       sourceX,
@@ -294,12 +256,10 @@ class TextureResolver extends EventEmitter {
       textureSize
     );
 
-    // Apply color tint using multiply blend (preserves alpha)
     ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, textureSize, textureSize);
 
-    // Restore alpha from original texture (in case multiply affected it)
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(
       this.atlas.image,
@@ -318,10 +278,7 @@ class TextureResolver extends EventEmitter {
     return canvas;
   }
 
-  /**
-   * Get face index for a view direction
-   * Maps Canvas2D views to BabylonJS face indices
-   */
+  // Canvas2D view to Babylon box face index
   getFaceIndexForView(view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom'): number {
     const faceMap: Record<string, number> = {
       'front': 0,  // +Z (south)
@@ -334,21 +291,12 @@ class TextureResolver extends EventEmitter {
     return faceMap[view] ?? 0;
   }
 
-  /**
-   * Wait for atlas to load (for initialization)
-   */
   async waitForAtlas(): Promise<void> {
     if (this.loadingPromise) {
       await this.loadingPromise;
     }
   }
 
-  /**
-   * Get tinted texture canvas for a block
-   * Returns the cached canvas or creates it if needed
-   * Used by renderers to get the actual image data for tinted textures
-   * Supports grass, leaves, and glass tinting
-   */
   getTintedTexture(blockId: string, faceIndex: number = 0): HTMLCanvasElement | null {
     const cacheKey = `${blockId}_${faceIndex}`;
     const cached = this.tintedTextureCache.get(cacheKey);
@@ -357,15 +305,14 @@ class TextureResolver extends EventEmitter {
       return cached;
     }
 
-    // Check if this block needs tinting (single-texture blocks only)
-    // Exclude multi-face blocks like grass_block, podzol, mycelium
+    // Only single-texture blocks tint. grass_block has its own colored faces, so it is matched out by name.
     const blockIdLower = blockId.toLowerCase();
     const blockName = blockIdLower.replace('minecraft:', '');
 
     const needsTinting =
-      blockName.includes('glass') || // Glass and stained glass variants
-      blockName.includes('leaves') || // All leaf types
-      (blockName === 'grass' || // Grass plant (exact match, not grass_block)
+      blockName.includes('glass') ||
+      blockName.includes('leaves') ||
+      (blockName === 'grass' ||
        blockName === 'tall_grass' ||
        blockName === 'short_grass' ||
        blockName === 'fern' ||
@@ -375,34 +322,28 @@ class TextureResolver extends EventEmitter {
       return null;
     }
 
-    // Determine base texture and tint color
     let baseBlockId = blockId;
     let tintColor: string;
 
     if (blockIdLower.includes('glass')) {
-      // Glass blocks use base glass texture with custom color from block registry
       baseBlockId = 'minecraft:glass';
       const block = blockRegistry.getBlock(blockId);
       if (!block) return null;
       tintColor = block.color;
     } else if (blockIdLower.includes('leaves')) {
-      // Leaves use their own texture with green tint
       tintColor = '#48B518'; // Minecraft's default foliage green
     } else if (blockIdLower.includes('grass')) {
-      // Grass uses its own texture with green tint
       tintColor = '#91BD59'; // Minecraft's default grass green
     } else {
       return null;
     }
 
-    // Get UV coordinates from atlas
     const baseUV = this.atlasMetadata.blockFaceUV[baseBlockId];
     if (!baseUV) return null;
 
     const faceUV = baseUV.faceUV[faceIndex];
     if (!faceUV) return null;
 
-    // Create tinted texture (color underneath, grayscale texture on top)
     const tintedCanvas = this.createTintedTexture(faceUV, tintColor);
     if (tintedCanvas) {
       this.tintedTextureCache.set(cacheKey, tintedCanvas);

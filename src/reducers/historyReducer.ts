@@ -39,9 +39,7 @@ const moveTop = (from: string[], to: string[], target: string | undefined): bool
   return true;
 };
 
-/**
- * Apply one action:started marker in place. Returns the step it took, or null when it changed nothing.
- */
+// Mutates state. Returns null when the marker changed nothing.
 export function applyHistoryMarker(state: HistoryState, event: Event): HistoryStep {
   if (!isActionStart(event) || !event.actionId) return null;
   const { kind, target } = event.data as ActionStartedData;
@@ -63,9 +61,6 @@ export function applyHistoryMarker(state: HistoryState, event: Event): HistorySt
   return { kind: 'edit', actionId: event.actionId };
 }
 
-/**
- * Fold markers in ID order into a fresh history
- */
 export function foldHistory(events: Event[]): HistoryState {
   const state = createEmptyHistory();
   for (const event of events) {

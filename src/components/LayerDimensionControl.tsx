@@ -14,12 +14,6 @@ interface LayerDimensionControlProps {
   decrementShortcut?: string;
 }
 
-/**
- * LayerDimensionControl - Compact single dimension layer control
- *
- * Displays a label, decrement button, number field, increment button, and slider
- * for controlling a single layer dimension (X, Y, or Z).
- */
 export function LayerDimensionControl({
   label,
   currentLayer,

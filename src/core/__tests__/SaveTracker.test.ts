@@ -1,6 +1,4 @@
-/**
- * SaveTracker tests - the save state follows real IndexedDB commits
- */
+// The EventLog and QuickSelectStore cases run against fake-indexeddb, so the state follows real transaction commits.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eventLog } from '../EventLog';

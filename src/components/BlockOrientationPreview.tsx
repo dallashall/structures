@@ -1,12 +1,6 @@
 /**
- * BlockOrientationPreview - Tetris-style block orientation indicator
- *
- * Shows a 2×2 quadrant grid representing the current block's shape
- * as seen from the active 2D panel's perspective. Helps the user
- * understand stair/slab orientation before placing.
- *
- * Data flow: EditorState → withEditorState HOC → props.
- * Only `viewType` comes from the parent layout.
+ * A 2×2 quadrant grid showing the selected stair or slab as the given 2D view will draw it,
+ * so the user sees its orientation before placing.
  */
 
 import React from "react";
@@ -20,23 +14,17 @@ import type {
 import { withEditorState, WithEditorStateProps } from "../hocs/withEditorState";
 import { shapeCatalog } from "../core/shapes/ShapeCatalog";
 
-// --- Types ---
-
 type ScreenDirection = "left" | "right" | "up" | "down" | "toward" | "away";
 type CellFill = "solid" | "step" | "empty";
 type Quadrants = [CellFill, CellFill, CellFill, CellFill]; // [TL, TR, BL, BR]
 
-/** Props passed by the parent layout */
 interface OwnProps {
   viewType: ViewType;
 }
 
-/** Full props: own + HOC-injected */
 type BlockOrientationPreviewProps = OwnProps & WithEditorStateProps;
 
-// --- Screen projection ---
-
-/** Maps world facing direction to screen-relative direction per view. */
+/** World facing to its direction on screen, per view */
 const SCREEN_DIR_TABLE: Record<
   ViewType,
   Record<HorizontalDirection, ScreenDirection>
@@ -53,8 +41,6 @@ const projectFacingToScreen = (
   facing: HorizontalDirection,
   viewType: ViewType,
 ): ScreenDirection => SCREEN_DIR_TABLE[viewType][facing];
-
-// --- Quadrant computation ---
 
 /** Side view: step cutout creates L-shape or profile */
 const STAIR_SIDE: Record<ScreenDirection, Quadrants> = {
@@ -95,7 +81,7 @@ const getStairQuadrants = (
   viewType: ViewType,
 ): Quadrants => {
   if (!isSideView(viewType)) {
-    // Plan views: half is along depth axis (invisible), show dimmer half for step side
+    // A plan view looks along the half's axis, so it can't show top or bottom. It dims the step side instead.
     return STAIR_PLAN[screenDir];
   }
   const base = STAIR_SIDE[screenDir];
@@ -105,7 +91,7 @@ const getStairQuadrants = (
 const getSlabQuadrants = (slabType: string, viewType: ViewType): Quadrants => {
   if (!isSideView(viewType)) return ["solid", "solid", "solid", "solid"];
   if (slabType === "top") return ["solid", "solid", "empty", "empty"];
-  return ["empty", "empty", "solid", "solid"]; // bottom
+  return ["empty", "empty", "solid", "solid"];
 };
 
 const computeQuadrants = (
@@ -122,14 +108,13 @@ const computeQuadrants = (
 
   if (shapeId === "slab") {
     const slabType = (blockState.type as string) ?? "bottom";
-    if (slabType === "double") return null; // Double slab = full cube, hide indicator
+    // A double slab is a full cube, which needs no indicator
+    if (slabType === "double") return null;
     return getSlabQuadrants(slabType, viewType);
   }
 
-  return null; // Cube or unknown — don't render
+  return null;
 };
-
-// --- Cell rendering ---
 
 const CELL_SIZE = 14;
 const GAP = 2;
@@ -155,8 +140,6 @@ const renderCell = (fill: CellFill, index: number) => (
     }}
   />
 );
-
-// --- Component ---
 
 function BlockOrientationPreviewComponent({
   viewType,

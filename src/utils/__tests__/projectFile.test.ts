@@ -1,7 +1,3 @@
-/**
- * Project file codec tests - format checks and ID rewriting on load
- */
-
 import { describe, it, expect } from 'vitest';
 import type { Event } from '../../core/EventLog';
 import {

@@ -1,13 +1,9 @@
 #!/usr/bin/env tsx
 
 /**
- * Resource Pack Parser
- *
- * Parses Minecraft resource pack structure (blockstates, models, textures)
- * and generates canonical-blocks.json with comprehensive block coverage.
- *
- * Usage:
- *   tsx scripts/parseResourcePack.ts --source "Squareful方纹v26.0.6/" --output data/canonical-blocks.json
+ * Builds data/canonical-blocks.json from an unpacked resource pack's blockstates, models, and textures.
+ * Blocks with a blockstate come first. A second pass adds one cube per remaining texture,
+ * and mergeTextureFragments folds face textures from that pass back into their blocks.
  */
 
 import * as fs from 'fs';
@@ -48,9 +44,6 @@ interface ParsedBlock {
   parentModel?: string;
 }
 
-/**
- * Parse command line arguments
- */
 function parseArgs(): ParseOptions {
   const args = process.argv.slice(2);
   const options: ParseOptions = {
@@ -94,9 +87,6 @@ Options:
   return options;
 }
 
-/**
- * Read and parse pack.mcmeta
- */
 function parsePackMetadata(packDir: string): PackMetadata | null {
   const metadataPath = path.join(packDir, 'pack.mcmeta');
 
@@ -114,9 +104,6 @@ function parsePackMetadata(packDir: string): PackMetadata | null {
   }
 }
 
-/**
- * Read blockstate JSON file
- */
 function readBlockstate(blockstatesDir: string, blockName: string): BlockstateDefinition | null {
   const blockstatePath = path.join(blockstatesDir, `${blockName}.json`);
 
@@ -134,24 +121,22 @@ function readBlockstate(blockstatesDir: string, blockName: string): BlockstateDe
 }
 
 /**
- * Read model JSON file with parent resolution
+ * A model with its parent chain's textures merged in, child keys winning. Null for models the pack
+ * leaves to vanilla, which this script cannot read.
  */
 function readModel(
   modelsDir: string,
   modelName: string,
   cache: Map<string, ModelDefinition | null> = new Map()
 ): ModelDefinition | null {
-  // Check cache first
   if (cache.has(modelName)) {
     return cache.get(modelName)!;
   }
 
-  // Handle block/ prefix
   const cleanModelName = modelName.replace(/^(minecraft:)?block\//, '');
   const modelPath = path.join(modelsDir, `${cleanModelName}.json`);
 
   if (!fs.existsSync(modelPath)) {
-    // Model doesn't exist in pack - assume it's a vanilla model
     cache.set(modelName, null);
     return null;
   }
@@ -160,11 +145,9 @@ function readModel(
     const content = fs.readFileSync(modelPath, 'utf-8');
     const model = JSON.parse(content) as ModelDefinition;
 
-    // If model has a parent, resolve and merge
     if (model.parent) {
       const parentModel = readModel(modelsDir, model.parent, cache);
       if (parentModel) {
-        // Merge parent textures with child (child overrides parent)
         model.textures = {
           ...parentModel.textures,
           ...model.textures,
@@ -181,9 +164,6 @@ function readModel(
   }
 }
 
-/**
- * Extract texture references from model
- */
 function extractTexturesFromModel(model: ModelDefinition): BlockTextures {
   const textures: BlockTextures = {};
 
@@ -191,7 +171,6 @@ function extractTexturesFromModel(model: ModelDefinition): BlockTextures {
     return textures;
   }
 
-  // Map common texture keys to face names
   const textureMap: Record<string, keyof BlockTextures> = {
     all: 'all',
     top: 'top',
@@ -209,11 +188,9 @@ function extractTexturesFromModel(model: ModelDefinition): BlockTextures {
   for (const [key, value] of Object.entries(model.textures)) {
     const mappedKey = textureMap[key];
     if (mappedKey && typeof value === 'string') {
-      // Remove minecraft: or block/ prefix
       let cleanValue = value.replace(/^(minecraft:)?block\//, '');
 
-      // Extract just the filename if there are subdirectories
-      // e.g., "planks/oak/oak_planks_0" -> "oak_planks_0"
+      // Atlas names are flat: "planks/oak/oak_planks_0" -> "oak_planks_0"
       const parts = cleanValue.split('/');
       cleanValue = parts[parts.length - 1];
 
@@ -224,15 +201,11 @@ function extractTexturesFromModel(model: ModelDefinition): BlockTextures {
   return textures;
 }
 
-/**
- * Get first variant from blockstate
- */
 function getFirstVariant(blockstate: BlockstateDefinition): BlockstateVariant | null {
   if (!blockstate.variants) {
     return null;
   }
 
-  // Get first variant key
   const variantKeys = Object.keys(blockstate.variants);
   if (variantKeys.length === 0) {
     return null;
@@ -240,7 +213,7 @@ function getFirstVariant(blockstate: BlockstateDefinition): BlockstateVariant | 
 
   const firstVariant = blockstate.variants[variantKeys[0]];
 
-  // Handle array of variants (weighted random)
+  // An array lists weighted random models. The first stands for the block.
   if (Array.isArray(firstVariant)) {
     return firstVariant[0];
   }
@@ -248,9 +221,6 @@ function getFirstVariant(blockstate: BlockstateDefinition): BlockstateVariant | 
   return firstVariant;
 }
 
-/**
- * Extract variant texture names from blockstate
- */
 function extractVariants(blockstate: BlockstateDefinition): string[] {
   const variants: string[] = [];
 
@@ -258,15 +228,13 @@ function extractVariants(blockstate: BlockstateDefinition): string[] {
     return variants;
   }
 
-  // Look for variants with empty string key (weighted random variants)
+  // The "" key holds a stateless block's weighted random models
   const defaultVariants = blockstate.variants[''];
   if (defaultVariants && Array.isArray(defaultVariants)) {
     for (const variant of defaultVariants) {
-      // Extract texture name from model reference
       let modelName = variant.model.replace(/^(minecraft:)?block\//, '');
 
-      // Extract just the filename if there are subdirectories
-      // e.g., "planks/oak/oak_planks_0" -> "oak_planks_0"
+      // Atlas names are flat: "planks/oak/oak_planks_0" -> "oak_planks_0"
       const parts = modelName.split('/');
       modelName = parts[parts.length - 1];
 
@@ -278,28 +246,24 @@ function extractVariants(blockstate: BlockstateDefinition): string[] {
 }
 
 /**
- * Get base block texture for slabs, stairs, walls, etc.
- * e.g., "brick_slab" -> "bricks", "cobblestone_wall" -> "cobblestone"
+ * The full block a slab, stair, wall, or fence borrows its texture from: "brick_slab" -> "bricks".
+ * The three brick families are plural as full blocks and singular in their shapes.
  */
 function getBaseBlockTexture(blockName: string): string {
-  // Remove common suffixes
   const suffixes = ['_slab', '_stairs', '_wall', '_fence', '_fence_gate'];
 
   for (const suffix of suffixes) {
     if (blockName.endsWith(suffix)) {
       let baseName = blockName.replace(suffix, '');
 
-      // Special case: "brick" variants should use "bricks"
       if (baseName === 'brick') {
         return 'bricks';
       }
 
-      // Special case: nether_brick -> nether_bricks
       if (baseName === 'nether_brick') {
         return 'nether_bricks';
       }
 
-      // Special case: stone_brick -> stone_bricks
       if (baseName === 'stone_brick') {
         return 'stone_bricks';
       }
@@ -308,12 +272,11 @@ function getBaseBlockTexture(blockName: string): string {
     }
   }
 
-  // No suffix found, return as-is
   return blockName;
 }
 
 /**
- * Get vanilla Minecraft texture mapping for blocks without custom models
+ * Faces for blocks whose models live only in vanilla Minecraft
  */
 function getVanillaTextureMapping(blockName: string): BlockTextures | null {
   const vanillaMappings: Record<string, BlockTextures> = {
@@ -337,9 +300,6 @@ function getVanillaTextureMapping(blockName: string): BlockTextures | null {
   return vanillaMappings[blockName] || null;
 }
 
-/**
- * Determine block category from name
- */
 function categorizeBlock(blockName: string): string {
   if (blockName.includes('stone') || blockName.includes('granite') ||
       blockName.includes('diorite') || blockName.includes('andesite')) {
@@ -375,9 +335,6 @@ function categorizeBlock(blockName: string): string {
   return 'misc';
 }
 
-/**
- * Generate display name from block ID
- */
 function generateDisplayName(blockId: string): string {
   const name = blockId.replace('minecraft:', '');
   return name
@@ -386,9 +343,6 @@ function generateDisplayName(blockId: string): string {
     .join(' ');
 }
 
-/**
- * Assign fallback color based on category
- */
 function getFallbackColor(category: string, blockName: string): string {
   const categoryColors: Record<string, string> = {
     stone: '#7f7f7f',
@@ -401,7 +355,6 @@ function getFallbackColor(category: string, blockName: string): string {
     misc: '#808080',
   };
 
-  // Specific overrides for common blocks
   if (blockName === 'grass_block') return '#7cbd6b';
   if (blockName === 'dirt') return '#8b6f47';
   if (blockName === 'sand') return '#dcd7a0';
@@ -411,8 +364,7 @@ function getFallbackColor(category: string, blockName: string): string {
 }
 
 /**
- * Detect and add overlay textures to block textures
- * (e.g., grass_block_side_overlay for grass_block sides)
+ * Adds a side or top overlay when the pack has {texture}_overlay.png, as grass_block_side does
  */
 function detectOverlayTextures(
   blockName: string,
@@ -421,7 +373,6 @@ function detectOverlayTextures(
 ): BlockTextures {
   const updatedTextures = { ...textures };
 
-  // Check for side overlay (grass_block uses this)
   if (textures.side) {
     const sideOverlayName = `${textures.side}_overlay`;
     const sideOverlayPath = path.join(texturesDir, `${sideOverlayName}.png`);
@@ -430,7 +381,6 @@ function detectOverlayTextures(
     }
   }
 
-  // Check for top overlay (if needed in future)
   if (textures.top) {
     const topOverlayName = `${textures.top}_overlay`;
     const topOverlayPath = path.join(texturesDir, `${topOverlayName}.png`);
@@ -442,9 +392,6 @@ function detectOverlayTextures(
   return updatedTextures;
 }
 
-/**
- * Parse a single block
- */
 function parseBlock(
   blockName: string,
   blockstatesDir: string,
@@ -458,7 +405,6 @@ function parseBlock(
     console.log(`Parsing block: ${blockId}`);
   }
 
-  // Read blockstate
   const blockstate = readBlockstate(blockstatesDir, blockName);
 
   let textures: BlockTextures = {};
@@ -470,10 +416,8 @@ function parseBlock(
   if (blockstate) {
     hasBlockState = true;
 
-    // Extract variants
     variants = extractVariants(blockstate);
 
-    // Get first variant to extract model/textures
     const firstVariant = getFirstVariant(blockstate);
     if (firstVariant) {
       const model = readModel(modelsDir, firstVariant.model, modelCache);
@@ -483,7 +427,6 @@ function parseBlock(
       }
     }
 
-    // Extract default state from variant keys
     if (blockstate.variants) {
       const variantKeys = Object.keys(blockstate.variants);
       for (const key of variantKeys) {
@@ -503,7 +446,6 @@ function parseBlock(
     }
   }
 
-  // If no textures found, try direct model lookup
   if (Object.keys(textures).length === 0) {
     const model = readModel(modelsDir, blockName, modelCache);
     if (model) {
@@ -512,13 +454,11 @@ function parseBlock(
     }
   }
 
-  // If still no textures, check vanilla texture mappings for common blocks
   if (Object.keys(textures).length === 0) {
     const vanillaTextures = getVanillaTextureMapping(blockName);
     if (vanillaTextures) {
       textures = vanillaTextures;
     } else {
-      // Check if this is a slab/stair/wall variant
       const baseTexture = getBaseBlockTexture(blockName);
       textures = { all: baseTexture };
     }
@@ -539,17 +479,11 @@ function parseBlock(
   };
 }
 
-/**
- * Check if texture file exists
- */
 function textureExists(texturesDir: string, textureName: string): boolean {
   const texturePath = path.join(texturesDir, `${textureName}.png`);
   return fs.existsSync(texturePath);
 }
 
-/**
- * Main parsing function
- */
 async function parseResourcePack(options: ParseOptions): Promise<void> {
   console.log(`Parsing resource pack: ${options.source}`);
 
@@ -560,13 +494,11 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Parse pack metadata
   const metadata = parsePackMetadata(packDir);
   if (metadata) {
     console.log(`Pack format: ${metadata.pack.pack_format}`);
   }
 
-  // Locate directories
   const assetsDir = path.join(packDir, 'assets', 'minecraft');
   const blockstatesDir = path.join(assetsDir, 'blockstates');
   const modelsDir = path.join(assetsDir, 'models', 'block');
@@ -581,14 +513,12 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
   console.log(`Models directory: ${modelsDir}`);
   console.log(`Textures directory: ${texturesDir}`);
 
-  // Get all blockstate files
   const blockstateFiles = fs.readdirSync(blockstatesDir)
     .filter(isJsonFile)
     .map(toJsonBaseName);
 
   console.log(`Found ${blockstateFiles.length} blockstate files`);
 
-  // Parse all blocks
   const canonicalBlocks: CanonicalBlocks = {};
   const modelCache = new Map<string, ModelDefinition | null>();
   let successCount = 0;
@@ -609,7 +539,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
         const color = getFallbackColor(category, blockName);
         const isTransparent = category === 'glass' || category === 'leaves';
 
-        // Detect overlay textures (e.g., grass_block_side_overlay)
         const texturesWithOverlays = detectOverlayTextures(
           blockName,
           parsedBlock.textures,
@@ -624,7 +553,7 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
           hasBlockState: parsedBlock.hasBlockState,
           defaultState: parsedBlock.defaultState,
           variants: parsedBlock.variants.length > 0 ? parsedBlock.variants : undefined,
-          isCube: true, // Assume cube for now
+          isCube: true,
           isTransparent,
           parentModel: parsedBlock.parentModel,
         };
@@ -641,7 +570,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
   console.log(`  Success: ${successCount} blocks`);
   console.log(`  Errors: ${errorCount} blocks`);
 
-  // Second pass: Create blocks from textures without blockstates
   console.log(`\nScanning for textures without blockstates...`);
   if (fs.existsSync(texturesDir)) {
     const textureFiles = fs.readdirSync(texturesDir)
@@ -652,12 +580,11 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     for (const textureName of textureFiles) {
       const blockId = `minecraft:${textureName}`;
 
-      // Skip if block already exists
       if (canonicalBlocks[blockId]) {
         continue;
       }
 
-      // Skip pane tops, animation files, and other special textures
+      // Pane tops, overlays, and names ending in x are not blocks
       if (textureName.includes('_pane_top') ||
           textureName.includes('.mcmeta') ||
           textureName.includes('_overlay') ||
@@ -665,7 +592,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
         continue;
       }
 
-      // Create simple cube block from texture
       const category = categorizeBlock(textureName);
       const color = getFallbackColor(category, textureName);
       const isTransparent = category === 'glass' || category === 'leaves';
@@ -688,7 +614,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     console.log(`  Added ${addedCount} blocks from textures without blockstates`);
   }
 
-  // Verify some textures exist
   const sampleBlocks = ['stone', 'oak_planks', 'glass', 'dirt'];
   console.log(`\nVerifying sample textures:`);
   for (const blockName of sampleBlocks) {
@@ -701,7 +626,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     }
   }
 
-  // Write output
   const outputPath = path.resolve(options.output);
   const outputDir = path.dirname(outputPath);
 
@@ -709,7 +633,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // The second pass adds one entry per texture, so face textures like barrel_top become entries too
   const { blocks, hidden, merged } = mergeTextureFragments(canonicalBlocks);
   console.log(`\nTexture fragments: ${hidden.length} hidden, ${merged.length} blocks merged`);
 
@@ -718,7 +641,6 @@ async function parseResourcePack(options: ParseOptions): Promise<void> {
   console.log(`Total blocks: ${Object.keys(blocks).length}`);
 }
 
-// Run if called directly
 const options = parseArgs();
 const exitWithError = (error: unknown): void => {
   console.error('Fatal error:', error);

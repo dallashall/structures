@@ -1,12 +1,10 @@
 /**
- * StairShapeResolver tests - absolute coordinate system
- *
- * Shape string format:
+ * Shapes use absolute directions:
  *   "straight_{facing}"
  *   "{inner|outer}_{facing}_{cornerEdge}"
  *
- * cornerEdge = the neighbor's back (tall side direction),
- * which directly tells us where the extra/remaining quarter goes.
+ * cornerEdge is the neighbor's back (its tall side), which is where an inner corner's
+ * extra quarter or an outer corner's remaining quarter sits.
  */
 
 import { describe, it, expect } from 'vitest';

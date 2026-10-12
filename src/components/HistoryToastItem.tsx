@@ -9,7 +9,7 @@ interface HistoryToastItemProps {
 }
 
 /**
- * HistoryToastItem - One undo or redo toast. Grows in, and collapses out so the stack closes the gap.
+ * Grows in, and collapses out so the stack closes the gap.
  */
 export function HistoryToastItem({ toast, onExited }: HistoryToastItemProps) {
   const handleExited = (): void => onExited(toast.key);

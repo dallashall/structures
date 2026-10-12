@@ -4,13 +4,10 @@ import { projectView } from '../../../projections/ProjectView';
 import { blockProjection } from '../../../projections/BlockProjection';
 
 /**
- * FillPaintStrategy - Flood fill painting
+ * FillPaintStrategy - Flood fill of the connected cells that share the start cell's block type
  *
- * Implements a 2D flood fill algorithm constrained to the current layer/plane.
- * Fills all connected cells of the same block type on a single 2D plane.
- * Bounded by existing blocks and the edges of the plane.
- *
- * Uses stack-based approach (not recursion) to avoid stack overflow on large fills.
+ * With a constrainAxis the fill stays on that layer (4 neighbors). Without one it spreads in 3D (6 neighbors).
+ * An explicit stack replaces recursion, which overflows on large fills.
  */
 export class FillPaintStrategy implements PaintStrategy {
   async calculateOperations(
@@ -19,7 +16,6 @@ export class FillPaintStrategy implements PaintStrategy {
     dimensions: Dimensions,
     constrainAxis?: { axis: 'x' | 'y' | 'z'; value: number }
   ): Promise<PaintOperation[]> {
-    // Validate start position
     if (
       startPosition.x < 0 || startPosition.x >= dimensions.width ||
       startPosition.y < 0 || startPosition.y >= dimensions.height ||
@@ -31,16 +27,13 @@ export class FillPaintStrategy implements PaintStrategy {
     const project = await projectView.getProject();
     if (!project) return [];
 
-    // Get the block type at start position (what we're filling over)
     const startBlock = await blockProjection.getBlock(startPosition);
     const targetBlockType = startBlock ? startBlock.blockType : null;
 
-    // If trying to fill with the same block type, no-op
     if (targetBlockType === selectedBlockId) {
       return [];
     }
 
-    // Flood fill using stack-based approach
     const operations: PaintOperation[] = [];
     const visited = new Set<string>();
     const stack: Vector3D[] = [startPosition];
@@ -51,11 +44,9 @@ export class FillPaintStrategy implements PaintStrategy {
       const current = stack.pop()!;
       const key = getKey(current);
 
-      // Skip if already visited
       if (visited.has(key)) continue;
       visited.add(key);
 
-      // Check if position is valid
       if (
         current.x < 0 || current.x >= dimensions.width ||
         current.y < 0 || current.y >= dimensions.height ||
@@ -64,42 +55,34 @@ export class FillPaintStrategy implements PaintStrategy {
         continue;
       }
 
-      // Check if current block matches target type
       const currentBlock = await blockProjection.getBlock(current);
       const currentBlockType = currentBlock ? currentBlock.blockType : null;
 
       if (currentBlockType !== targetBlockType) {
-        continue; // Different block type, don't fill
+        continue;
       }
 
-      // Add operation
       operations.push({
         position: current,
         blockType: selectedBlockId,
       });
 
-      // Add neighbors to stack based on constrained plane
       if (constrainAxis) {
-        // 2D fill on a constrained plane (4 neighbors only)
         const neighbors = this.get2DNeighbors(current, constrainAxis);
         stack.push(...neighbors);
       } else {
-        // 3D fill - all 6 directions
-        stack.push({ ...current, x: current.x + 1 }); // Right
-        stack.push({ ...current, x: current.x - 1 }); // Left
-        stack.push({ ...current, y: current.y + 1 }); // Forward
-        stack.push({ ...current, y: current.y - 1 }); // Backward
-        stack.push({ ...current, z: current.z + 1 }); // Up
-        stack.push({ ...current, z: current.z - 1 }); // Down
+        stack.push({ ...current, x: current.x + 1 });
+        stack.push({ ...current, x: current.x - 1 });
+        stack.push({ ...current, y: current.y + 1 });
+        stack.push({ ...current, y: current.y - 1 });
+        stack.push({ ...current, z: current.z + 1 });
+        stack.push({ ...current, z: current.z - 1 });
       }
     }
 
     return operations;
   }
 
-  /**
-   * Get 4 neighbors on a 2D plane (constrained to one axis value)
-   */
   private get2DNeighbors(
     pos: Vector3D,
     constrainAxis: { axis: 'x' | 'y' | 'z'; value: number }
@@ -108,25 +91,22 @@ export class FillPaintStrategy implements PaintStrategy {
 
     switch (constrainAxis.axis) {
       case 'x':
-        // X is constant, vary Y and Z (4 neighbors)
-        neighbors.push({ x: constrainAxis.value, y: pos.y + 1, z: pos.z }); // Forward
-        neighbors.push({ x: constrainAxis.value, y: pos.y - 1, z: pos.z }); // Backward
-        neighbors.push({ x: constrainAxis.value, y: pos.y, z: pos.z + 1 }); // Up
-        neighbors.push({ x: constrainAxis.value, y: pos.y, z: pos.z - 1 }); // Down
+        neighbors.push({ x: constrainAxis.value, y: pos.y + 1, z: pos.z });
+        neighbors.push({ x: constrainAxis.value, y: pos.y - 1, z: pos.z });
+        neighbors.push({ x: constrainAxis.value, y: pos.y, z: pos.z + 1 });
+        neighbors.push({ x: constrainAxis.value, y: pos.y, z: pos.z - 1 });
         break;
       case 'y':
-        // Y is constant, vary X and Z (4 neighbors)
-        neighbors.push({ x: pos.x + 1, y: constrainAxis.value, z: pos.z }); // Right
-        neighbors.push({ x: pos.x - 1, y: constrainAxis.value, z: pos.z }); // Left
-        neighbors.push({ x: pos.x, y: constrainAxis.value, z: pos.z + 1 }); // Up
-        neighbors.push({ x: pos.x, y: constrainAxis.value, z: pos.z - 1 }); // Down
+        neighbors.push({ x: pos.x + 1, y: constrainAxis.value, z: pos.z });
+        neighbors.push({ x: pos.x - 1, y: constrainAxis.value, z: pos.z });
+        neighbors.push({ x: pos.x, y: constrainAxis.value, z: pos.z + 1 });
+        neighbors.push({ x: pos.x, y: constrainAxis.value, z: pos.z - 1 });
         break;
       case 'z':
-        // Z is constant, vary X and Y (4 neighbors)
-        neighbors.push({ x: pos.x + 1, y: pos.y, z: constrainAxis.value }); // Right
-        neighbors.push({ x: pos.x - 1, y: pos.y, z: constrainAxis.value }); // Left
-        neighbors.push({ x: pos.x, y: pos.y + 1, z: constrainAxis.value }); // Forward
-        neighbors.push({ x: pos.x, y: pos.y - 1, z: constrainAxis.value }); // Backward
+        neighbors.push({ x: pos.x + 1, y: pos.y, z: constrainAxis.value });
+        neighbors.push({ x: pos.x - 1, y: pos.y, z: constrainAxis.value });
+        neighbors.push({ x: pos.x, y: pos.y + 1, z: constrainAxis.value });
+        neighbors.push({ x: pos.x, y: pos.y - 1, z: constrainAxis.value });
         break;
     }
 

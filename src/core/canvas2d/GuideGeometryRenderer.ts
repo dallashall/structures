@@ -7,18 +7,10 @@ import type { ViewState } from "./ViewState";
 import type { Dimensions } from "../../types";
 
 /**
- * GuideGeometryRenderer - Renders control point handles and guide lines
+ * GuideGeometryRenderer - Draws the arch and curve tools' control handles and guide lines
  *
- * Pure rendering module with static methods. Receives guide geometry in
- * world space, converts to pixel space via ViewState, and draws onto canvas.
- *
- * Visual conventions:
- * - Placed handles: filled gold diamonds with black outline
- * - Cursor handles: hollow light-blue circles
- * - Baseline: solid gold line
- * - Control line: dashed pink line
- * - Tangent line: dotted light-blue line
- * - Labels: white text with black stroke above each handle
+ * Guide geometry arrives in model space and converts to pixels through ViewState here,
+ * unlike blocks, because a guide changes on every pointer move.
  */
 export class GuideGeometryRenderer {
   private static readonly HANDLE_PLACED_COLOR = "#FFD700";
@@ -29,9 +21,6 @@ export class GuideGeometryRenderer {
   private static readonly HANDLE_RADIUS = 5;
   private static readonly LABEL_FONT = "bold 10px sans-serif";
 
-  /**
-   * Draw guide geometry onto the canvas
-   */
   static draw(
     ctx: CanvasRenderingContext2D,
     geometry: GuideGeometry,
@@ -42,12 +31,11 @@ export class GuideGeometryRenderer {
   ): void {
     ctx.save();
 
-    // Draw lines first (beneath handles)
+    // Lines first, so handles draw over them
     for (const line of geometry.lines) {
       this.drawLine(ctx, line, viewState, dimensions, cellSize, pan);
     }
 
-    // Draw handles on top
     for (const handle of geometry.handles) {
       this.drawHandle(ctx, handle, viewState, dimensions, cellSize, pan);
     }
@@ -55,9 +43,6 @@ export class GuideGeometryRenderer {
     ctx.restore();
   }
 
-  /**
-   * Convert a world position to the pixel center of its grid cell
-   */
   private static toPixelCenter(
     position: { x: number; y: number; z: number },
     viewState: ViewState,
@@ -72,9 +57,6 @@ export class GuideGeometryRenderer {
     };
   }
 
-  /**
-   * Draw a single guide line
-   */
   private static drawLine(
     ctx: CanvasRenderingContext2D,
     line: GuideLine,
@@ -118,9 +100,6 @@ export class GuideGeometryRenderer {
     ctx.setLineDash([]);
   }
 
-  /**
-   * Draw a single control point handle
-   */
   private static drawHandle(
     ctx: CanvasRenderingContext2D,
     handle: ControlPointHandle,
@@ -141,7 +120,6 @@ export class GuideGeometryRenderer {
     ctx.globalAlpha = 0.9;
 
     if (handle.style === "placed") {
-      // Filled diamond for placed points
       ctx.fillStyle = this.HANDLE_PLACED_COLOR;
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 1.5;
@@ -154,7 +132,6 @@ export class GuideGeometryRenderer {
       ctx.fill();
       ctx.stroke();
     } else {
-      // Hollow circle for cursor point
       ctx.strokeStyle = this.HANDLE_CURSOR_COLOR;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -162,7 +139,6 @@ export class GuideGeometryRenderer {
       ctx.stroke();
     }
 
-    // Draw label above handle
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 2;

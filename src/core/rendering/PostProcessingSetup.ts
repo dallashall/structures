@@ -1,11 +1,8 @@
 /**
- * PostProcessingSetup - SSAO, bloom, and tone mapping pipelines
+ * PostProcessingSetup - SSAO, bloom, FXAA, and tone mapping on the view camera
  *
- * Creates and manages Babylon.js post-processing pipelines:
- * - SSAO2RenderingPipeline (ambient occlusion, created first)
- * - DefaultRenderingPipeline (bloom + tone mapping, created second)
- *
- * Both are attached to the same camera and can coexist.
+ * SSAO2RenderingPipeline must be created before DefaultRenderingPipeline.
+ * SSAO reads Babylon's prepass renderer, which rebuilds when scene.activeCamera changes (see ThumbnailCapture).
  */
 
 import {
@@ -26,10 +23,6 @@ export interface PostProcessingPipelines {
   defaultPipeline: DefaultRenderingPipeline | null;
 }
 
-/**
- * Create post-processing pipelines based on render settings.
- * SSAO must be created before the default pipeline.
- */
 function setupPostProcessing(
   scene: Scene,
   camera: Camera,
@@ -38,7 +31,6 @@ function setupPostProcessing(
   let ssao: SSAO2RenderingPipeline | null = null;
   let defaultPipeline: DefaultRenderingPipeline | null = null;
 
-  // 1. SSAO first (writes to GBuffer)
   if (settings.ssaoEnabled) {
     ssao = new SSAO2RenderingPipeline(SSAO_PIPELINE, scene, {
       ssaoRatio: 0.5,
@@ -52,7 +44,6 @@ function setupPostProcessing(
     scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline(SSAO_PIPELINE, camera);
   }
 
-  // 2. Default pipeline second (bloom + tone mapping)
   defaultPipeline = new DefaultRenderingPipeline(DEFAULT_PIPELINE, true, scene, [camera]);
 
   defaultPipeline.bloomEnabled = settings.bloomEnabled;
@@ -61,7 +52,6 @@ function setupPostProcessing(
   defaultPipeline.bloomKernel = 32;
   defaultPipeline.bloomScale = 0.5;
 
-  // FXAA (screen-space anti-aliasing on top of hardware MSAA)
   defaultPipeline.fxaaEnabled = settings.fxaaEnabled;
 
   defaultPipeline.imageProcessingEnabled = settings.toneMapping;
@@ -69,10 +59,10 @@ function setupPostProcessing(
     defaultPipeline.imageProcessing.contrast = settings.contrast;
     defaultPipeline.imageProcessing.exposure = settings.exposure;
     defaultPipeline.imageProcessing.toneMappingEnabled = true;
-    defaultPipeline.imageProcessing.toneMappingType = 1; // ACES
+    // ImageProcessingConfiguration.TONEMAPPING_ACES
+    defaultPipeline.imageProcessing.toneMappingType = 1;
   }
 
-  // Hardware MSAA samples (applied at engine level)
   const samples = settings.msaaSamples;
   if (defaultPipeline.samples !== samples) {
     defaultPipeline.samples = samples;
@@ -81,9 +71,6 @@ function setupPostProcessing(
   return { ssao, defaultPipeline };
 }
 
-/**
- * Replace the pipelines with ones built from new settings
- */
 export function updatePostProcessing(
   current: PostProcessingPipelines | null,
   scene: Scene,

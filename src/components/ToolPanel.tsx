@@ -22,12 +22,6 @@ interface ToolPanelProps {
   onPaintModeChange: (mode: PaintMode) => void;
 }
 
-/**
- * ToolPanel - Dense icon-based tool selector
- *
- * Compact 2-column grid of tool icons inspired by Adobe Illustrator and Blender.
- * 100px width, scrollable, with keyboard shortcut hints in tooltips.
- */
 export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
   const handleModeChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -52,7 +46,6 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
         py: 1,
       }}
     >
-      {/* Paint Tools Section */}
       <ToggleButtonGroup
         value={paintMode}
         exclusive

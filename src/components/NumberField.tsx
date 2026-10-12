@@ -2,28 +2,15 @@ import { TextField, IconButton, Stack } from "@mui/material";
 import { KeyboardArrowUp, KeyboardArrowDown } from "@mui/icons-material";
 
 interface NumberFieldProps {
-  /** Label for the field */
   label: string;
-  /** Current value */
   value: number;
-  /** Change handler */
   onChange: (value: number) => void;
-  /** Minimum allowed value */
   minValue?: number;
-  /** Maximum allowed value */
   maxValue?: number;
-  /** Step for increment/decrement */
   step?: number;
-  /** Whether the field is disabled */
   disabled?: boolean;
 }
 
-/**
- * NumberField - Numeric input with increment/decrement buttons
- *
- * Provides a text field for numeric input with up/down buttons
- * for incrementing and decrementing the value.
- */
 export function NumberField({
   label,
   value,

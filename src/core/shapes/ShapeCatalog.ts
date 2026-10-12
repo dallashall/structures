@@ -1,9 +1,5 @@
 /**
- * ShapeCatalog - Maps block IDs to their BlockShape
- *
- * Singleton that resolves which shape handler applies to a given block.
- * Shapes are checked in priority order (most specific first), with
- * CubeShape as the fallback. Results are cached per block ID.
+ * ShapeCatalog - Maps block IDs to their BlockShape, caching the result per ID
  */
 
 import type { BlockShape } from './BlockShape';
@@ -16,11 +12,10 @@ import { stairShape } from './StairShape';
 class ShapeCatalogImpl {
   private static instance: ShapeCatalogImpl;
 
-  /** Shapes in priority order — first match wins */
+  // First match wins. resolve() falls back to CubeShape when none match.
   private readonly shapes: BlockShape[] = [
     stairShape,
     slabShape,
-    // Future: doorShape, fenceShape, etc.
   ];
 
   private readonly cache = new Map<string, BlockShape>();
@@ -35,12 +30,8 @@ class ShapeCatalogImpl {
   }
 
   /**
-   * Central derivation point: resolve the complete block state for a position.
-   * Looks up the block, finds its shape, and computes derived state reactively.
-   * Returns null if no block exists at the position.
-   *
-   * ALL consumers that need derived state (renderers, preview, canvas)
-   * should call this instead of computing state themselves.
+   * The one place derived block state is computed. Renderers and the 2D views call it rather than deriving state themselves.
+   * Null when the position is empty.
    */
   resolveBlockState(position: { x: number; y: number; z: number }, blockIndex: BlockIndexReader): BlockData | null {
     const block = blockIndex.get(position);
@@ -51,10 +42,6 @@ class ShapeCatalogImpl {
     return { ...block, blockState: derived };
   }
 
-  /**
-   * Resolve the shape for a block ID.
-   * Checks registered shapes in priority order, falls back to CubeShape.
-   */
   resolve(blockId: string): BlockShape {
     const cached = this.cache.get(blockId);
     if (cached) return cached;

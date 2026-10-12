@@ -26,30 +26,19 @@ export async function startProject(): Promise<void> {
   await editHistory.replay(PROJECT_ID);
 }
 
-/**
- * Append an event to the current test project
- */
 export function append(type: string, data: unknown): Promise<number> {
   return eventLog.append(type, data, PROJECT_ID);
 }
 
-/**
- * Append an event to a project the projections must ignore
- */
+// Projections must ignore events for any project other than the current one
 export function appendToOtherProject(type: string, data: unknown): Promise<number> {
   return eventLog.append(type, data, OTHER_PROJECT_ID);
 }
 
-/**
- * Append one undoable action to the current test project. Returns its action ID.
- */
 export function appendAction(draft: ActionDraft): Promise<string> {
   return eventLog.appendAction(PROJECT_ID, draft);
 }
 
-/**
- * Append one paint action that places stone at each x on row y=0, z=0
- */
 export function paintStone(...xs: number[]): Promise<string> {
   const toStone = (x: number) => ({ position: { x, y: 0, z: 0 }, blockType: 'stone' });
   return appendAction({

@@ -1,14 +1,8 @@
 /**
- * ModelProjection - Materializes model state from event log
+ * ModelProjection - The open project's dimensions, blocks, and meta block, folded from its model:* rows.
+ * Applies new rows in place. An undo or redo replays the whole project.
  *
- * Maintains snapshot of:
- * - dimensions (width, height, depth)
- * - blocks (BlockIndex)
- * - metaBlock (position, direction, isConfirmed)
- *
- * Applies new model:* events in place. An undo or redo replays the whole project.
- *
- * Notifications:
+ * Events:
  * - model:rebuilt - any model state may differ
  * - model:blocks-rebuilt - blocks may differ. BlockProjection forwards it as blocks:rebuilt.
  */
@@ -32,9 +26,6 @@ const BLOCK_EVENT_TYPES = [
 
 export type { Model };
 
-/**
- * ModelProjection singleton
- */
 class ModelProjection extends EventEmitter {
   private static instance: ModelProjection;
 
@@ -68,57 +59,36 @@ class ModelProjection extends EventEmitter {
     this.emit('model:rebuilt');
   }
 
-  /**
-   * Apply any events appended since the last read
-   */
   async ensureFresh(): Promise<void> {
     await this.replayer.ensureFresh();
   }
 
-  /**
-   * Get current model state (always fresh)
-   */
   async getModel(): Promise<Model> {
     await this.ensureFresh();
 
     return this.toModel();
   }
 
-  /**
-   * Get cached model (synchronous, no freshness check)
-   * Use in render loops where ensureFresh() was already called
-   */
+  // No freshness check, for render paths that already awaited ensureFresh()
   getCached(): Model {
     return this.toModel();
   }
 
-  /**
-   * Get dimensions (always fresh)
-   */
   async getDimensions(): Promise<Dimensions> {
     await this.ensureFresh();
     return this.replayer.getModel().dimensions;
   }
 
-  /**
-   * Get blocks (always fresh)
-   */
   async getBlocks(): Promise<BlockIndex> {
     await this.ensureFresh();
     return this.replayer.getModel().blocks;
   }
 
-  /**
-   * Get meta block (always fresh)
-   */
   async getMetaBlock(): Promise<MetaBlock> {
     await this.ensureFresh();
     return this.replayer.getModel().metaBlock;
   }
 
-  /**
-   * Reset projection (clear snapshot for new project)
-   */
   reset(): void {
     this.replayer.reset();
   }

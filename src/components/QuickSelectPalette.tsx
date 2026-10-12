@@ -11,24 +11,13 @@ import { findBlockById } from "../utils/blockUtils";
 
 interface QuickSelectPaletteProps {
   slots: (string | null)[];
-  blocks: Block[]; // All blocks to look up by ID
-  onSelectSlot: (index: number) => void; // Apply block from slot to active material
-  onAssignSlot?: (index: number) => void; // Assign currently selected block to this slot
-  onOpenBrowser?: () => void; // Open material browser
+  blocks: Block[];
+  onSelectSlot: (index: number) => void; // Makes the slot's block the active material
+  onAssignSlot?: (index: number) => void; // Right-click: stores the selected block in the slot
+  onOpenBrowser?: () => void;
   orientation?: "horizontal" | "vertical";
 }
 
-/**
- * QuickSelectPalette - 9-slot quick-select palette + browser button
- *
- * Features:
- * - 9 slots shown as color swatches or empty squares
- * - 10th item is a button to open the material browser
- * - Click to apply block from slot to active material (same as number keys)
- * - Shift+click or right-click to assign currently selected block to that slot
- * - No selection state - just instant application
- * - Empty slots shown as gray squares
- */
 export function QuickSelectPalette({
   slots,
   blocks,
@@ -40,7 +29,6 @@ export function QuickSelectPalette({
   const isVertical = orientation === "vertical";
 
   const handleSlotClick = (index: number) => {
-    // Apply block from this slot to active material
     onSelectSlot(index);
   };
 
@@ -100,7 +88,6 @@ export function QuickSelectPalette({
       </ButtonBase>
     );
 
-    // Wrap with tooltip showing block name if block exists
     return (
       <ShortcutTooltip
         key={index}
@@ -131,7 +118,6 @@ export function QuickSelectPalette({
     >
       {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(renderSlot)}
 
-      {/* 10th item - Open Material Browser button */}
       {isVertical && onOpenBrowser && (
         <ShortcutTooltip title="Open Material Browser" shortcut={SHORTCUTS.materialBrowser} placement="right">
           <IconButton

@@ -1,17 +1,9 @@
-/**
- * Shared BabylonJS rendering utilities
- *
- * Pure functions for coordinate conversion, color parsing,
- * position key generation, and block type detection.
- * No dependencies on singletons or scene state.
- */
-
 import { Color3, Vector3 } from '@babylonjs/core';
 
 import type { Vector3D } from '../../types';
 
 /**
- * Parse a hex color string (#RRGGBB) into a BabylonJS Color3
+ * Expects #RRGGBB
  */
 export function hexToColor3(hex: string): Color3 {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -21,29 +13,20 @@ export function hexToColor3(hex: string): Color3 {
 }
 
 /**
- * Convert our coordinate system to BabylonJS coordinate system
- *
- * Our system: Z-up, right-handed (X=width, Y=depth, Z=height)
- * BabylonJS: Y-up, left-handed
- *
- * Conversion:
- * - Our X → Babylon X (width)
- * - Our Y → Babylon Z (depth)
- * - Our Z → Babylon Y (height)
+ * Model space is Z-up and right-handed. Babylon is Y-up and left-handed.
+ * Swapping y and z converts between them with no negation: model (x, y, z) → Babylon (x, z, y).
+ * Model x spans dimensions.width, y spans dimensions.height, and z (vertical) spans dimensions.depth.
  */
 export function toBabylonVector(v: Vector3D): Vector3 {
   return new Vector3(v.x, v.z, v.y);
 }
 
-/**
- * Generate a unique string key for a 3D position
- */
 export function positionKey(position: Vector3D): string {
   return `${position.x},${position.y},${position.z}`;
 }
 
 /**
- * Center a grid-aligned position within its cell by adding 0.5 offset
+ * A block at integer position p occupies p..p+1, so its mesh sits at p + 0.5
  */
 export function centerInCell(position: Vector3D): Vector3D {
   return {

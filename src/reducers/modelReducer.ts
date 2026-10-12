@@ -1,9 +1,8 @@
 /**
- * Model reducer - applies model:* events from the EventLog to a Model.
+ * Model reducer - applies model:* rows to a Model.
  *
- * Shared by ModelProjection (current project) and Storage (project list),
- * so both replay the same events to the same dimensions and blocks.
- * Mutates the model in place: BlockIndex is too large to copy per event.
+ * ModelProjection (open project) and Storage (project list) share it, so both show the same dimensions and blocks.
+ * It mutates the model in place, because copying a BlockIndex per event costs too much.
  */
 
 import { BlockIndex } from '../core/BlockIndex';
@@ -60,7 +59,7 @@ const shiftPosition = (position: Vector3D, shift: Vector3D): Vector3D => ({
 const hasShift = (shift: Vector3D): boolean =>
   shift.x !== 0 || shift.y !== 0 || shift.z !== 0;
 
-// Same normalization as BlockProjection, so both projections hold identical block data
+// Stored block states may carry front/back/left/right directions, which read as axes from here on
 const toBlockData = ({ position, blockType, blockState }: PlacedBlock): BlockData => ({
   position,
   blockType,
@@ -87,9 +86,7 @@ const isInside = (position: Vector3D, dimensions: Dimensions): boolean =>
   position.z >= 0 &&
   position.z < dimensions.depth;
 
-/**
- * Returns true when the event type is a model event and was applied.
- */
+// False for any row that is not a model event
 export function applyModelEvent(model: Model, event: Event): boolean {
   switch (event.type) {
     case 'model:initialized': {

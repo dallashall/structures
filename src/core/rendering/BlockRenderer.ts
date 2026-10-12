@@ -1,11 +1,9 @@
 /**
- * BlockRenderer - Renders committed blocks as instanced 3D meshes
+ * BlockRenderer - Committed blocks as Babylon instanced meshes
  *
- * Uses BabylonJS InstancedMesh for performance: one hidden base mesh per
- * block type, all blocks of that type as lightweight instances sharing
- * geometry and material. Layer highlight uses per-instance color buffers
- * (registerInstancedBuffer) to dim non-active-layer blocks without
- * cloning materials.
+ * One hidden base mesh per block type and geometry variant holds the geometry and material.
+ * Every block is an instance of its base. Layer highlight writes a per-instance color buffer,
+ * so it tints blocks without cloning materials.
  */
 
 import {
@@ -28,29 +26,25 @@ import { includeInThumbnail } from './ThumbnailCapture';
 import type { MaterialResolver } from './MaterialResolver';
 import type { Vector3D, BlockData, BlockStateProperties } from '../../types';
 
-// Per-instance vertex colors for layer highlight
-// Each axis maps to an RGB channel: X=red, Y=green, Z=blue
-// Overlapping layers combine additively (e.g., X+Z = red+blue = magenta tint)
+// Layer highlight boosts one color channel per axis to match the 2D axis colors: X red, Y blue, Z green.
+// A block on two active layers gets both boosts, so X+Y tints magenta.
 const COLOR_NORMAL = new Color4(1, 1, 1, 1);
-const AXIS_TINT_BOOST = 0.4; // How much each axis channel is boosted
+const AXIS_TINT_BOOST = 0.4;
 
 export class BlockRenderer {
   private scene: Scene;
   private materialResolver: MaterialResolver;
 
-  // One hidden base mesh per block type (shares geometry + material)
+  // Keyed by `blockType` or `blockType|geometryKey`
   private instanceBases = new Map<string, Mesh>();
 
-  // One instance per block position
   private blockInstances = new Map<string, InstancedMesh>();
 
-  // Position key -> block type (for detecting type changes)
+  // Position key → base key, so a placement over a different type replaces the instance
   private instanceTypeMap = new Map<string, string>();
 
-  // Layer highlight
   private layerHighlightEnabled = false;
 
-  // Mesh lifecycle callbacks (for shadow caster registration)
   private onMeshCreated: ((mesh: AbstractMesh) => void) | null = null;
   private onMeshDestroyed: ((mesh: AbstractMesh) => void) | null = null;
 
@@ -63,8 +57,7 @@ export class BlockRenderer {
   }
 
   /**
-   * Set callbacks invoked when block meshes are created/destroyed.
-   * Used by Babylon3D to register/unregister shadow casters.
+   * Babylon3D registers and unregisters shadow casters through these
    */
   setMeshLifecycleCallbacks(
     onCreated: (mesh: AbstractMesh) => void,
@@ -75,7 +68,7 @@ export class BlockRenderer {
   }
 
   /**
-   * Create an instanced block mesh (or update existing). With a timing, the block grows into place.
+   * With a timing, the block grows into place
    */
   createBlockMesh(blockData: BlockData, grow: StepTiming | null = null): void {
     const key = positionKey(blockData.position);
@@ -84,7 +77,6 @@ export class BlockRenderer {
     const compositeKey = blockData.blockType + (geoKey ? '|' + geoKey : '');
     const existingType = this.instanceTypeMap.get(key);
 
-    // Same block+geometry already at this position — just update highlight
     if (existingType === compositeKey) {
       const existing = this.blockInstances.get(key);
       if (existing) {
@@ -93,7 +85,6 @@ export class BlockRenderer {
       return;
     }
 
-    // Different type at this position — dispose old instance first
     if (existingType !== undefined) {
       this.disposeInstance(key, false);
     }
@@ -105,7 +96,6 @@ export class BlockRenderer {
     includeInThumbnail(instance);
     instance.position = toBabylonVector(centerInCell(blockData.position));
 
-    // Apply per-instance rotation from shape
     const rotation = shape.getRotation(blockData.blockState);
     if (rotation !== 0) {
       instance.rotation.y = rotation;
@@ -122,7 +112,6 @@ export class BlockRenderer {
 
     this.updateInstanceHighlight(instance, blockData.position);
 
-    // Notify shadow system
     this.onMeshCreated?.(instance);
 
     if (grow) {
@@ -131,14 +120,13 @@ export class BlockRenderer {
   }
 
   /**
-   * Remove a block mesh. With a timing, the block shrinks out before it is disposed.
+   * With a timing, the block shrinks out before it is disposed
    */
   removeBlockMesh(position: Vector3D, shrink: StepTiming | null = null): void {
     const key = positionKey(position);
     const instance = this.blockInstances.get(key);
     if (!instance) return;
 
-    // Unregister from shadow system
     this.onMeshDestroyed?.(instance);
 
     // Remove from tracking maps immediately, so a block placed here during the shrink gets its own instance
@@ -159,9 +147,6 @@ export class BlockRenderer {
     }
   }
 
-  /**
-   * Block type of the instance at a position key, or null when the position is empty
-   */
   getBlockType(key: string): string | null {
     return (this.blockInstances.get(key)?.metadata as { blockType?: string } | undefined)?.blockType ?? null;
   }
@@ -176,7 +161,6 @@ export class BlockRenderer {
   setLayerHighlightEnabled(enabled: boolean): void {
     this.layerHighlightEnabled = enabled;
 
-    // When disabling, reset all instances to full brightness
     if (!enabled) {
       for (const instance of this.blockInstances.values()) {
         instance.instancedBuffers.color = COLOR_NORMAL;
@@ -184,11 +168,6 @@ export class BlockRenderer {
     }
   }
 
-  /**
-   * Update highlight for a single instance based on active layers.
-   * Each axis maps to an RGB channel (X=R, Y=G, Z=B). Blocks on
-   * multiple active layers get combined tints (e.g., X+Z = magenta).
-   */
   private updateInstanceHighlight(instance: InstancedMesh, position: Vector3D): void {
     if (!this.layerHighlightEnabled) {
       instance.instancedBuffers.color = COLOR_NORMAL;
@@ -205,7 +184,6 @@ export class BlockRenderer {
       return;
     }
 
-    // Match 2D axis colors: X=red, Y=blue, Z=green
     instance.instancedBuffers.color = new Color4(
       1 + (onX ? AXIS_TINT_BOOST : 0),
       1 + (onZ ? AXIS_TINT_BOOST : 0),
@@ -214,9 +192,6 @@ export class BlockRenderer {
     );
   }
 
-  /**
-   * Update brightness for all blocks
-   */
   updateAllBrightness(blocks: Iterable<BlockData>): void {
     for (const blockData of blocks) {
       const key = positionKey(blockData.position);
@@ -228,11 +203,10 @@ export class BlockRenderer {
   }
 
   /**
-   * Re-apply materials to all base meshes (instances inherit automatically)
+   * Instances share their base's material, so only bases need it
    */
   reapplyMaterials(): void {
     for (const [compositeKey, base] of this.instanceBases.entries()) {
-      // Extract blockType from composite key (blockType or blockType|geoKey)
       const blockType = compositeKey.includes('|')
         ? compositeKey.slice(0, compositeKey.indexOf('|'))
         : compositeKey;
@@ -240,9 +214,6 @@ export class BlockRenderer {
     }
   }
 
-  /**
-   * Clear all instances and base meshes
-   */
   clearAll(): void {
     // Disposing the bases below also disposes instances still shrinking out
     this.animator.clear();
@@ -262,9 +233,6 @@ export class BlockRenderer {
     this.scene.blockfreeActiveMeshesAndRenderingGroups = false;
   }
 
-  /**
-   * Get the block instances map (for external iteration)
-   */
   getBlockMeshes(): Map<string, InstancedMesh> {
     return this.blockInstances;
   }
@@ -273,13 +241,6 @@ export class BlockRenderer {
     this.clearAll();
   }
 
-  // ---- Private helpers ----
-
-  /**
-   * Get or create a hidden base mesh for a block type + geometry variant.
-   * Base meshes hold geometry (faceUV) and material; instances reference them.
-   * The cache key is blockType + geometryKey (e.g., "minecraft:oak_slab:slab_bottom").
-   */
   private getOrCreateBase(blockType: string, blockState?: BlockStateProperties): Mesh | null {
     const blockShape = shapeCatalog.resolve(blockType);
     const geoKey = blockShape.getGeometryKey(blockState);
@@ -301,7 +262,6 @@ export class BlockRenderer {
       base = customMesh;
       base.name = `base_${compositeKey}`;
     } else {
-      // Default: cube geometry
       const boxOptions: Record<string, unknown> = { size: 1 };
       if (faceUVData) {
         const toVector4 = (uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 =>
@@ -311,11 +271,11 @@ export class BlockRenderer {
       base = MeshBuilder.CreateBox(`base_${compositeKey}`, boxOptions, this.scene);
     }
 
-    base.isVisible = false; // Hidden base — instances are visible
+    // Instances still render while their base is hidden
+    base.isVisible = false;
     includeInThumbnail(base);
     base.material = this.materialResolver.resolve(blockType);
 
-    // Register per-instance color buffer for layer highlight
     base.registerInstancedBuffer('color', 4);
     base.instancedBuffers.color = COLOR_NORMAL;
 
@@ -323,9 +283,6 @@ export class BlockRenderer {
     return base;
   }
 
-  /**
-   * Dispose an instance at the given position key (immediate, no animation)
-   */
   private disposeInstance(key: string, notifyShadow: boolean): void {
     const instance = this.blockInstances.get(key);
     if (!instance) return;
@@ -343,9 +300,6 @@ export class BlockRenderer {
     if (blockType) this.cleanupBaseIfEmpty(blockType);
   }
 
-  /**
-   * Dispose base mesh if it has no remaining instances
-   */
   private cleanupBaseIfEmpty(blockType: string): void {
     const base = this.instanceBases.get(blockType);
     if (!base) return;

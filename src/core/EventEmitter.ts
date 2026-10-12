@@ -1,8 +1,6 @@
 import type { EventHandler } from '../types';
 
-/**
- * Simple event emitter for singleton classes to broadcast state changes
- */
+// A throwing handler is logged and skipped, so one broken subscriber never stops the others
 export class EventEmitter {
   private events: Map<string, Set<EventHandler>>;
 
@@ -10,9 +8,6 @@ export class EventEmitter {
     this.events = new Map();
   }
 
-  /**
-   * Subscribe to an event
-   */
   on(event: string, handler: EventHandler): void {
     if (!this.events.has(event)) {
       this.events.set(event, new Set());
@@ -20,9 +15,6 @@ export class EventEmitter {
     this.events.get(event)!.add(handler);
   }
 
-  /**
-   * Unsubscribe from an event
-   */
   off(event: string, handler: EventHandler): void {
     const handlers = this.events.get(event);
     if (handlers) {
@@ -33,9 +25,6 @@ export class EventEmitter {
     }
   }
 
-  /**
-   * Emit an event to all subscribers
-   */
   protected emit(event: string, ...args: any[]): void {
     const handlers = this.events.get(event);
     if (handlers) {

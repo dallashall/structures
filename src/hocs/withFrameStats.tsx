@@ -4,9 +4,6 @@ import type { FrameStatsReport } from '../core/FrameStats';
 
 import { frameStats } from '../core/FrameStats';
 
-/**
- * Props injected by withFrameStats HOC
- */
 export interface WithFrameStatsProps {
   stats: FrameStatsReport | null;
 }

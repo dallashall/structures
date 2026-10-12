@@ -1,14 +1,8 @@
 #!/usr/bin/env npx tsx
 
 /**
- * Texture Atlas Builder (Rewritten)
- *
- * Simplified atlas builder that works with canonical blocks and pack manifests.
- * Generates atlas.png and atlas.json from any resource pack.
- *
- * Usage:
- *   npx tsx scripts/buildTextureAtlas.ts --pack squareful
- *   npx tsx scripts/buildTextureAtlas.ts --list
+ * Builds public/atlas.png and public/atlas.json from data/canonical-blocks.json and a pack manifest.
+ * scripts/setupTextures.ts runs it after downloading the pack. src/core/TextureResolver.ts reads the output.
  */
 
 import sharp from 'sharp';
@@ -21,10 +15,8 @@ import type {
   BlockTextures,
 } from '../src/types/canonical';
 
-// Texture resolution (Minecraft standard)
 const TEXTURE_SIZE = 16;
 
-// Atlas metadata output format
 interface AtlasMetadata {
   atlasSize: number;
   textureSize: number;
@@ -47,9 +39,6 @@ interface BuildOptions {
   verbose?: boolean;
 }
 
-/**
- * Parse command line arguments
- */
 function parseArgs(): BuildOptions | null {
   const args = process.argv.slice(2);
 
@@ -103,9 +92,6 @@ Examples:
   return options as BuildOptions;
 }
 
-/**
- * List available resource packs
- */
 function listAvailablePacks(): void {
   const packsDir = path.join(process.cwd(), 'resource-packs');
 
@@ -138,9 +124,6 @@ function listAvailablePacks(): void {
   }
 }
 
-/**
- * Load canonical blocks from data/canonical-blocks.json
- */
 function loadCanonicalBlocks(): CanonicalBlocks {
   const blocksPath = path.join(process.cwd(), 'data', 'canonical-blocks.json');
 
@@ -158,9 +141,6 @@ function loadCanonicalBlocks(): CanonicalBlocks {
   }
 }
 
-/**
- * Load pack manifest
- */
 function loadPackManifest(packId: string): PackManifest {
   const manifestPath = path.join(process.cwd(), 'resource-packs', packId, 'pack-manifest.json');
 
@@ -178,9 +158,6 @@ function loadPackManifest(packId: string): PackManifest {
   }
 }
 
-/**
- * Resolve texture path from logical name
- */
 function resolveTexturePath(
   logicalName: string,
   packManifest: PackManifest,
@@ -204,17 +181,12 @@ function resolveTexturePath(
   return texturePath;
 }
 
-/**
- * Get texture for a block face
- * Returns composite texture name (base+overlay) if overlay exists
- */
 function getBlockFaceTexture(
   blockTextures: BlockTextures,
   face: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom'
 ): string {
-  // Map face to texture key
   const faceMap: Record<typeof face, keyof BlockTextures> = {
-    front: 'north',  // Front is north in Minecraft coordinates
+    front: 'north',
     back: 'south',
     right: 'east',
     left: 'west',
@@ -224,17 +196,15 @@ function getBlockFaceTexture(
 
   const textureKey = faceMap[face];
 
-  // Try specific face, then side, then all
   let textureName = blockTextures[textureKey] || blockTextures.side || blockTextures.all || 'missing';
 
-  // Check if this face uses an overlay texture
   if (face === 'top' && blockTextures.top && blockTextures.topOverlay) {
     textureName = `${blockTextures.top}+${blockTextures.topOverlay}`;
   } else if (
     (face === 'front' || face === 'back' || face === 'right' || face === 'left') &&
     blockTextures.side &&
     blockTextures.sideOverlay &&
-    !blockTextures[textureKey] // Only use side overlay if specific face not defined
+    !blockTextures[textureKey]
   ) {
     textureName = `${blockTextures.side}+${blockTextures.sideOverlay}`;
   }
@@ -242,9 +212,6 @@ function getBlockFaceTexture(
   return textureName;
 }
 
-/**
- * Collect all unique textures needed for the atlas
- */
 function collectUniqueTextures(
   canonicalBlocks: CanonicalBlocks,
   packManifest: PackManifest
@@ -252,7 +219,6 @@ function collectUniqueTextures(
   const textureSet = new Set<string>();
 
   for (const block of Object.values(canonicalBlocks)) {
-    // Collect all texture names from this block
     const textures = block.textures;
 
     for (const [key, textureName] of Object.entries(textures)) {
@@ -262,18 +228,14 @@ function collectUniqueTextures(
       }
 
       if (textureName && packManifest.textureMappings[textureName]) {
-        // Check if this texture has an overlay
         let finalTextureName = textureName;
 
         if (key === 'side' && textures.sideOverlay && packManifest.textureMappings[textures.sideOverlay]) {
-          // Create composite texture name
           finalTextureName = `${textureName}+${textures.sideOverlay}`;
         } else if (key === 'top' && textures.topOverlay && packManifest.textureMappings[textures.topOverlay]) {
-          // Create composite texture name
           finalTextureName = `${textureName}+${textures.topOverlay}`;
         }
 
-        // Add texture (composite or base)
         textureSet.add(finalTextureName);
 
         // Add transformation variants for 3D rendering
@@ -283,7 +245,6 @@ function collectUniqueTextures(
       }
     }
 
-    // Add variant textures if present
     if (block.variants) {
       for (const variantName of block.variants) {
         if (packManifest.textureMappings[variantName]) {
@@ -299,28 +260,22 @@ function collectUniqueTextures(
   return textureSet;
 }
 
-/**
- * Calculate atlas dimensions (square grid)
- */
 function calculateAtlasDimensions(textureCount: number): number {
   return Math.ceil(Math.sqrt(textureCount));
 }
 
 /**
- * Composite base texture with tinted overlay
- * Used for grass_block sides (dirt + tinted grass overlay)
+ * Base texture with a tinted overlay on top, as on grass_block sides (dirt under tinted grass)
  */
 async function compositeOverlayTexture(
   basePath: string,
   overlayPath: string,
   transform: 'none' | 'hflip' | 'rotate' | 'rotate_vflip' = 'none'
 ): Promise<sharp.Sharp> {
-  const GRASS_TINT = '#91BD59'; // Minecraft's default grass green
+  const GRASS_TINT = '#91BD59'; // Minecraft's default plains grass color
 
-  // Load base texture and apply transformation
   let baseImage = sharp(basePath).ensureAlpha();
 
-  // Apply transformation to base texture
   switch (transform) {
     case 'hflip':
       baseImage = baseImage.flop();
@@ -335,10 +290,9 @@ async function compositeOverlayTexture(
 
   const baseBuffer = await baseImage.toFormat('png').toBuffer();
 
-  // Load overlay texture and apply SAME transformation
+  // The overlay takes the base's transform, or the two layers misalign
   let overlayImage = sharp(overlayPath).ensureAlpha();
 
-  // Apply transformation to overlay texture
   switch (transform) {
     case 'hflip':
       overlayImage = overlayImage.flop();
@@ -353,25 +307,20 @@ async function compositeOverlayTexture(
 
   const overlayRaw = await overlayImage.raw().toBuffer({ resolveWithObject: true });
 
-  // Apply tint to overlay using pixel manipulation
   const overlayPixels = overlayRaw.data;
   const tintedOverlay = Buffer.from(overlayPixels);
 
-  // Parse tint color
   const tintR = parseInt(GRASS_TINT.slice(1, 3), 16);
   const tintG = parseInt(GRASS_TINT.slice(3, 5), 16);
   const tintB = parseInt(GRASS_TINT.slice(5, 7), 16);
 
-  // Apply multiply blend mode to each pixel
   for (let i = 0; i < tintedOverlay.length; i += 4) {
     // Multiply blend: (base * tint) / 255
-    tintedOverlay[i] = Math.floor((tintedOverlay[i] * tintR) / 255);     // R
-    tintedOverlay[i + 1] = Math.floor((tintedOverlay[i + 1] * tintG) / 255); // G
-    tintedOverlay[i + 2] = Math.floor((tintedOverlay[i + 2] * tintB) / 255); // B
-    // Alpha channel (i + 3) unchanged
+    tintedOverlay[i] = Math.floor((tintedOverlay[i] * tintR) / 255);
+    tintedOverlay[i + 1] = Math.floor((tintedOverlay[i + 1] * tintG) / 255);
+    tintedOverlay[i + 2] = Math.floor((tintedOverlay[i + 2] * tintB) / 255);
   }
 
-  // Convert tinted overlay buffer back to PNG
   const tintedOverlayPng = await sharp(tintedOverlay, {
     raw: {
       width: overlayRaw.info.width,
@@ -382,11 +331,10 @@ async function compositeOverlayTexture(
     .png()
     .toBuffer();
 
-  // Composite base + tinted overlay (both already transformed)
   const composited = sharp(baseBuffer).composite([
     {
       input: tintedOverlayPng,
-      blend: 'over', // Alpha blending
+      blend: 'over',
     },
   ]);
 
@@ -394,18 +342,15 @@ async function compositeOverlayTexture(
 }
 
 /**
- * Apply biome tint to a texture
- * Used for grass_block_top, leaves, etc.
+ * Multiply a texture by a biome tint. Only grass_block_top uses it.
  */
 async function applyBiomeTint(
   texturePath: string,
   tintColor: string,
   transform: 'none' | 'hflip' | 'rotate' | 'rotate_vflip' = 'none'
 ): Promise<sharp.Sharp> {
-  // Load texture and apply transformation
   let image = sharp(texturePath).ensureAlpha();
 
-  // Apply transformation first
   switch (transform) {
     case 'hflip':
       image = image.flop();
@@ -420,25 +365,20 @@ async function applyBiomeTint(
 
   const rawData = await image.raw().toBuffer({ resolveWithObject: true });
 
-  // Apply tint using pixel manipulation
   const pixels = rawData.data;
   const tintedPixels = Buffer.from(pixels);
 
-  // Parse tint color
   const tintR = parseInt(tintColor.slice(1, 3), 16);
   const tintG = parseInt(tintColor.slice(3, 5), 16);
   const tintB = parseInt(tintColor.slice(5, 7), 16);
 
-  // Apply multiply blend mode to each pixel
   for (let i = 0; i < tintedPixels.length; i += 4) {
     // Multiply blend: (base * tint) / 255
-    tintedPixels[i] = Math.floor((tintedPixels[i] * tintR) / 255);     // R
-    tintedPixels[i + 1] = Math.floor((tintedPixels[i + 1] * tintG) / 255); // G
-    tintedPixels[i + 2] = Math.floor((tintedPixels[i + 2] * tintB) / 255); // B
-    // Alpha channel (i + 3) unchanged
+    tintedPixels[i] = Math.floor((tintedPixels[i] * tintR) / 255);
+    tintedPixels[i + 1] = Math.floor((tintedPixels[i + 1] * tintG) / 255);
+    tintedPixels[i + 2] = Math.floor((tintedPixels[i + 2] * tintB) / 255);
   }
 
-  // Convert back to sharp image
   const tinted = sharp(tintedPixels, {
     raw: {
       width: rawData.info.width,
@@ -450,9 +390,6 @@ async function applyBiomeTint(
   return tinted;
 }
 
-/**
- * Load and transform texture
- */
 async function loadTexture(
   textureName: string,
   packManifest: PackManifest,
@@ -461,7 +398,6 @@ async function loadTexture(
   let actualTextureName = textureName;
   let transform: 'none' | 'hflip' | 'rotate' | 'rotate_vflip' = 'none';
 
-  // Check for transformation suffix
   if (textureName.endsWith('_rotated90ccw_vflip')) {
     actualTextureName = textureName.replace('_rotated90ccw_vflip', '');
     transform = 'rotate_vflip';
@@ -473,14 +409,11 @@ async function loadTexture(
     transform = 'rotate';
   }
 
-  // Check if this is a composite texture (base+overlay)
   let image: sharp.Sharp;
 
   if (actualTextureName.includes('+')) {
-    // Split composite texture name
     const [baseTextureName, overlayTextureName] = actualTextureName.split('+');
 
-    // Load base and overlay textures
     const basePath = resolveTexturePath(baseTextureName, packManifest, packSourceDir);
     const overlayPath = resolveTexturePath(overlayTextureName, packManifest, packSourceDir);
 
@@ -488,14 +421,11 @@ async function loadTexture(
       return createMissingTexture();
     }
 
-    // Composite base + tinted overlay (with transformation applied to both)
     image = await compositeOverlayTexture(basePath, overlayPath, transform);
   } else {
-    // Resolve texture path
     const texturePath = resolveTexturePath(actualTextureName, packManifest, packSourceDir);
 
     if (!texturePath) {
-      // Use fallback texture
       const fallbackPath = resolveTexturePath(
         packManifest.fallbacks.missing.replace('.png', ''),
         packManifest,
@@ -506,22 +436,18 @@ async function loadTexture(
         return fs.readFileSync(fallbackPath);
       }
 
-      // Create magenta checkerboard as last resort
       return createMissingTexture();
     }
 
-    // Check if this texture needs biome tinting (grass_block_top)
     if (actualTextureName.startsWith('grass_block_top')) {
-      const GRASS_TINT = '#91BD59'; // Minecraft's default grass green
+      const GRASS_TINT = '#91BD59'; // Minecraft's default plains grass color
       image = await applyBiomeTint(texturePath, GRASS_TINT, transform);
     } else {
-      // Load texture normally
       image = sharp(texturePath);
 
-      // Ensure alpha channel is preserved (important for indexed-color PNGs)
+      // Indexed-color PNGs lose transparency without an explicit alpha channel
       image = image.ensureAlpha();
 
-      // Apply transformations to non-composite textures
       switch (transform) {
         case 'hflip':
           image = image.flop();
@@ -536,18 +462,14 @@ async function loadTexture(
     }
   }
 
-  // Convert to RGBA to ensure alpha is preserved in atlas
   return image.toFormat('png').toBuffer();
 }
 
-/**
- * Create magenta/black checkerboard for missing textures
- */
+// Solid magenta, so a missing texture stands out in the 3D view
 async function createMissingTexture(): Promise<Buffer> {
   const size = TEXTURE_SIZE;
   const half = size / 2;
 
-  // Create a simple magenta solid color for missing textures
   return sharp({
     create: {
       width: size,
@@ -560,13 +482,9 @@ async function createMissingTexture(): Promise<Buffer> {
     .toBuffer();
 }
 
-/**
- * Build the texture atlas
- */
 async function buildAtlas(options: BuildOptions): Promise<void> {
   console.log(`🎨 Building texture atlas for pack: ${options.pack}\n`);
 
-  // Load data
   console.log('📚 Loading data...');
   const canonicalBlocks = loadCanonicalBlocks();
   const packManifest = loadPackManifest(options.pack);
@@ -581,7 +499,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Collect unique textures
   console.log('🔍 Collecting textures...');
   const uniqueTextures = Array.from(collectUniqueTextures(canonicalBlocks, packManifest)).sort();
   const gridSize = calculateAtlasDimensions(uniqueTextures.length);
@@ -591,7 +508,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
   console.log(`   - Grid size: ${gridSize}x${gridSize}`);
   console.log(`   - Atlas dimensions: ${atlasSize}x${atlasSize}px\n`);
 
-  // Create texture map
   const textureMap: AtlasMetadata['textureMap'] = {};
 
   for (let i = 0; i < uniqueTextures.length; i++) {
@@ -605,7 +521,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     };
   }
 
-  // Load and composite textures
   console.log('📦 Loading textures...');
 
   const composites: Array<{ input: Buffer; top: number; left: number }> = [];
@@ -633,7 +548,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     console.log(`   ✓ Loaded ${composites.length} textures`);
   }
 
-  // Create and composite atlas
   console.log('\n🔨 Compositing atlas...');
 
   const atlas = sharp({
@@ -647,12 +561,10 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
 
   const atlasBuffer = await atlas.composite(composites).png().toBuffer();
 
-  // Save atlas image
   const atlasOutputPath = path.join(process.cwd(), 'public', 'atlas.png');
   fs.writeFileSync(atlasOutputPath, atlasBuffer);
   console.log(`   ✓ Atlas saved: ${atlasOutputPath}\n`);
 
-  // Generate UV coordinates
   console.log('📐 Generating UV coordinates...');
 
   const blockFaceUV: AtlasMetadata['blockFaceUV'] = {};
@@ -660,11 +572,9 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
 
   const uvSize = 1 / gridSize;
 
-  // Helper to get UV for a texture
   const getUV = (textureName: string) => {
     const pos = textureMap[textureName];
     if (!pos) {
-      // Fallback to missing texture
       const fallbackName = packManifest.fallbacks.missing.replace('.png', '');
       const fallbackPos = textureMap[fallbackName];
       if (fallbackPos) {
@@ -675,7 +585,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
           v1: fallbackPos.v + uvSize,
         };
       }
-      // If even fallback doesn't exist, use first texture
       const firstTexture = Object.values(textureMap)[0];
       if (firstTexture) {
         return {
@@ -685,7 +594,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
           v1: firstTexture.v + uvSize,
         };
       }
-      // Last resort - return (0,0)
       return { u0: 0, v0: 0, u1: uvSize, v1: uvSize };
     }
     return {
@@ -696,8 +604,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     };
   };
 
-  // Generate UV coordinates for each block
-  // Face order: [front, back, right, left, top, bottom]
   for (const [blockId, block] of Object.entries(canonicalBlocks)) {
     const frontTex = getBlockFaceTexture(block.textures, 'front');
     const backTex = getBlockFaceTexture(block.textures, 'back');
@@ -706,7 +612,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     const topTex = getBlockFaceTexture(block.textures, 'top');
     const bottomTex = getBlockFaceTexture(block.textures, 'bottom');
 
-    // 2D UV mapping (normal textures)
     blockFaceUV[blockId] = {
       faceUV: [
         getUV(frontTex),
@@ -719,13 +624,14 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
       faceOrder: ['front', 'back', 'right', 'left', 'top', 'bottom'],
     };
 
-    // 3D UV mapping (transformed textures for proper orientation)
+    // CreateBox orients each face's UVs its own way, and the right and left slots take each other's texture.
+    // src/core/rendering/README.md has the face table.
     blockFaceUV3D[blockId] = {
       faceUV: [
         getUV(frontTex + '_hflip'),
         getUV(backTex),
-        getUV(leftTex + '_rotated90ccw_vflip'),  // Swapped
-        getUV(rightTex + '_rotated90ccw_vflip'), // Swapped
+        getUV(leftTex + '_rotated90ccw_vflip'),
+        getUV(rightTex + '_rotated90ccw_vflip'),
         getUV(topTex + '_rotated90ccw'),
         getUV(bottomTex),
       ],
@@ -741,7 +647,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     console.log(`   ✓ Generated UV coordinates for ${Object.keys(blockFaceUV).length} blocks`);
   }
 
-  // Create metadata
   const metadata: AtlasMetadata = {
     atlasSize,
     textureSize: TEXTURE_SIZE,
@@ -751,7 +656,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     blockFaceUV3D,
   };
 
-  // Save metadata
   const metadataOutputPath = path.join(process.cwd(), 'public', 'atlas.json');
   fs.writeFileSync(metadataOutputPath, JSON.stringify(metadata, null, 2));
   console.log(`\n✓ Metadata saved: ${metadataOutputPath}`);
@@ -759,7 +663,6 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
   console.log('\n✅ Atlas build complete!\n');
 }
 
-// Run if called directly
 const exitWithError = (error: unknown): void => {
   console.error('Fatal error:', error);
   process.exit(1);

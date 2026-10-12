@@ -49,9 +49,7 @@ const syncDialog = (open: boolean) => (dialog: HTMLDialogElement | null): void =
 };
 
 /**
- * ModalDialog - Native modal <dialog> styled like an MUI paper
- *
- * The browser handles the focus trap, inert background, focus restore, and Escape.
+ * A native modal <dialog> styled like an MUI paper. The browser handles the focus trap, inert background, focus restore, and Escape.
  * Escape and a press on the backdrop call onClose, and the parent decides whether to close.
  * Children mount only while open, so a closed dialog costs no rendering.
  */

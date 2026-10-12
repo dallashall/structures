@@ -3,11 +3,7 @@ import type { ViewState } from "./ViewState";
 import { getOpacityForDistance } from "./renderingUtils";
 
 /**
- * GridBlock - Pre-resolved block for rendering
- *
- * Contains everything the renderer needs to draw a block,
- * with grid coordinates already resolved from model space.
- * No coordinate conversion needed at render time.
+ * GridBlock - A block already converted from model space to one view's grid cells
  */
 export interface GridBlock {
   gridX: number;
@@ -18,10 +14,8 @@ export interface GridBlock {
 }
 
 /**
- * Resolve model-position blocks to grid-position blocks for a specific view.
- *
- * This is THE single conversion point for model→grid in the 2D render pipeline.
- * Called once when data changes, not on every frame.
+ * The only model→grid conversion in the 2D render pipeline. Canvas2D calls it when data changes, not each frame.
+ * Blocks fade with distance from the active layer and drop out past two layers.
  */
 export function resolveBlocksToGrid(
   blocks: ReadonlyArray<{
@@ -63,8 +57,7 @@ export function resolveBlocksToGrid(
 }
 
 /**
- * Resolve preview blocks to grid — simpler variant for draft/editor preview
- * where all blocks render at full opacity on the active layer.
+ * Previews draw at full opacity whatever their layer, and erase operations (null blockType) are skipped
  */
 export function resolvePreviewToGrid(
   blocks: ReadonlyArray<{ position: Vector3D; blockType: string | null; blockState?: BlockStateProperties }>,

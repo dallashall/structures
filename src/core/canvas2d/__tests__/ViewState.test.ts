@@ -1,7 +1,3 @@
-/**
- * ViewState tests - fit-to-canvas, zoom clamping, and cursor-anchored zoom
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Project } from '../../../types';
 

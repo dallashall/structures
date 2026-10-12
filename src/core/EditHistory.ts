@@ -5,7 +5,7 @@
  * Undo and redo write an empty action that names its target. ModelReplayer then replays the
  * project and skips undone actions. No event stores the state an undo restores.
  *
- * Notifications:
+ * Events:
  * - history:replayed - stacks rebuilt for a newly opened project
  * - history:step-recorded - a new edit joined the undo stack and cleared the redo stack
  * - history:step-undone / history:step-redone - payload { actionId }. Fires as soon as the stacks move.
@@ -40,9 +40,6 @@ const countOf = (events: Event[], type: string, field: 'blocks' | 'positions'): 
 
 const plural = (count: number): string => (count === 1 ? '1 block' : `${count} blocks`);
 
-/**
- * Human-readable name for one action, built from its marker and its events
- */
 function describeAction(marker: ActionStartedData, events: Event[]): string {
   switch (marker.kind) {
     case 'paint': {
@@ -114,9 +111,6 @@ class EditHistory extends EventEmitter {
     return this.enqueueStep('redo');
   }
 
-  /**
-   * Rebuild the stacks from the log for one project
-   */
   async replay(projectId: string | null): Promise<void> {
     const generation = ++this.generation;
     this.projectId = projectId;

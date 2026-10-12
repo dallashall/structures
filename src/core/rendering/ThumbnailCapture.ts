@@ -12,7 +12,7 @@
  * that no longer exist. Thumbnails carry the view's post-processing as a result.
  *
  * During the capture the camera sees only meshes on THUMBNAIL_LAYER: blocks, the sky backdrop,
- * and the shadow ground. Axes, grid lines, slice planes, and previews stay out of it.
+ * and the shadow ground. Axes, slice planes, and previews stay out of it.
  */
 
 import { Vector3 } from '@babylonjs/core';
@@ -37,7 +37,7 @@ export interface Bounds {
 }
 
 /**
- * Tag a mesh so the thumbnail camera renders it
+ * Thumbnails show only tagged meshes
  */
 export function includeInThumbnail(mesh: { layerMask: number }): void {
   mesh.layerMask |= THUMBNAIL_LAYER;

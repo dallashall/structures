@@ -2,17 +2,9 @@ import { ToolBase } from "./ToolBase";
 import type { UniversalPosition } from "./ToolBase";
 
 /**
- * MultiClickTool - Behavioral base for multi-click interactions
+ * MultiClickTool - Base for tools that collect maxPoints clicks, then call onComplete
  *
- * Accumulates click positions up to maxPoints, then calls onComplete.
- * During accumulation, onHoverWithPoints is called on every move so
- * the tool can show a live preview with the cursor as the next point.
- *
- * Subclasses implement:
- * - onHoverWithPoints(cursor, placed) — show preview (always, even with 0 points)
- * - onPointPlaced(pos, count)         — point was committed
- * - onComplete(points)                — all points placed, finalize
- * - onMultiClickCancel()              — cancelled mid-sequence
+ * onHoverWithPoints runs on every move, even before the first click, so the preview treats the cursor as the next point.
  */
 export abstract class MultiClickTool extends ToolBase {
   protected points: UniversalPosition[] = [];
@@ -72,7 +64,6 @@ export abstract class MultiClickTool extends ToolBase {
     this.onHoverWithPoints(pos, this.points);
   }
 
-  // Subclass hooks
   protected onHoverWithPoints(
     _cursor: UniversalPosition,
     _placed: UniversalPosition[],

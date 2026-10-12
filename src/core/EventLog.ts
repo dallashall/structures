@@ -1,10 +1,11 @@
 /**
- * EventLog - Single immutable event log using IndexedDB
+ * EventLog - The append-only IndexedDB log every project's state is replayed from
  *
- * God source of truth for all events.
- * - Events have sequential IDs (auto-increment)
- * - Optimized for lookup by ID and type
- * - Projections rebuild from this log
+ * All projects share one store. Rows get auto-increment IDs, and ID order is event order.
+ * Projections and Storage derive everything they show from these rows.
+ *
+ * Events:
+ * - event:appended (Event) - a row committed. Fires after the transaction commits, never before.
  */
 
 import { EventEmitter } from './EventEmitter';
@@ -22,11 +23,11 @@ export const ACTION_STARTED = 'action:started';
 const ACTION_ENDED = 'action:ended';
 
 export interface Event {
-  id?: number;       // Auto-increment (omit when appending)
+  id?: number;       // Assigned by IndexedDB, so absent until the row is stored
   type: string;      // e.g., 'model:blockPlaced', 'metadata:renamed'
-  data: unknown;     // Event-specific payload
-  timestamp: number; // When it happened
-  projectId?: string; // Project this event belongs to
+  data: unknown;
+  timestamp: number;
+  projectId?: string;
   actionId?: string; // Shared by every event one user action wrote. Absent on events outside undo history.
 }
 
@@ -39,9 +40,6 @@ type EditKind =
 
 export type ActionKind = EditKind | 'undo' | 'redo';
 
-/**
- * Payload of an action:started marker
- */
 export interface ActionStartedData {
   kind: ActionKind;
   tool?: string;    // Paint tool name, for paint actions
@@ -53,10 +51,10 @@ export interface ActionDraft extends ActionStartedData {
 }
 
 interface EventQuery {
-  fromId?: number;     // Get events starting from this ID (inclusive)
-  toId?: number;       // Get events up to this ID (inclusive)
-  types?: string[];    // Filter by event types
-  projectId?: string;  // Filter by project ID
+  fromId?: number;     // Inclusive
+  toId?: number;       // Inclusive
+  types?: string[];
+  projectId?: string;
 }
 
 const toKeyRange = ({ fromId, toId }: EventQuery): IDBKeyRange | null => {
@@ -69,9 +67,6 @@ const toKeyRange = ({ fromId, toId }: EventQuery): IDBKeyRange | null => {
 const toProjectKeyRange = (projectId: string, { fromId, toId }: EventQuery): IDBKeyRange =>
   IDBKeyRange.bound([projectId, fromId ?? -Infinity], [projectId, toId ?? Infinity]);
 
-/**
- * EventLog singleton - IndexedDB-backed event store
- */
 class EventLog extends EventEmitter {
   private static instance: EventLog;
   private db: IDBDatabase | null = null;
@@ -92,9 +87,6 @@ class EventLog extends EventEmitter {
     return EventLog.instance;
   }
 
-  /**
-   * Initialize IndexedDB
-   */
   private initDatabase(): Promise<void> {
     const openDatabase = (resolve: () => void, reject: (error: unknown) => void): void => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -157,9 +149,6 @@ class EventLog extends EventEmitter {
     window.location.reload();
   };
 
-  /**
-   * Ensure database is ready
-   */
   private async ensureReady(): Promise<void> {
     await this.initPromise;
     if (!this.db) {
@@ -168,8 +157,7 @@ class EventLog extends EventEmitter {
   }
 
   /**
-   * Append event to log
-   * Returns the event ID
+   * Appends one row outside undo history
    */
   append(type: string, data: unknown, projectId?: string): Promise<number> {
     return saveTracker.track(this.writeEvent({ type, data, timestamp: Date.now(), projectId }));
@@ -327,9 +315,6 @@ class EventLog extends EventEmitter {
     return new Promise(readAction);
   }
 
-  /**
-   * Get events matching query
-   */
   async getEvents(query: EventQuery = {}): Promise<Event[]> {
     await this.ensureReady();
 
@@ -363,23 +348,19 @@ class EventLog extends EventEmitter {
     return new Promise(readEvents);
   }
 
-  /**
-   * Get latest event ID
-   */
   async getLatestEventId(): Promise<number> {
     await this.ensureReady();
 
     const readLatestId = (resolve: (eventId: number) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.openCursor(null, 'prev'); // Open cursor in reverse
+      const request = store.openCursor(null, 'prev');
 
       const handleSuccess = (): void => {
         const cursor = request.result;
         if (cursor) {
           resolve(cursor.value.id);
         } else {
-          // No events yet
           resolve(0);
         }
       };
@@ -396,9 +377,6 @@ class EventLog extends EventEmitter {
     return new Promise(readLatestId);
   }
 
-  /**
-   * Clear all events (for testing/reset)
-   */
   async clear(): Promise<void> {
     await this.ensureReady();
 
@@ -424,9 +402,6 @@ class EventLog extends EventEmitter {
     return new Promise(clearStore);
   }
 
-  /**
-   * Delete all events for a specific project
-   */
   async deleteProjectEvents(projectId: string): Promise<void> {
     await this.ensureReady();
 
@@ -453,12 +428,10 @@ class EventLog extends EventEmitter {
     return new Promise(deleteRows);
   }
 
-
   /**
-   * Delete entire database (for testing - resets auto-increment)
+   * Unlike clear(), this also restarts the auto-increment IDs
    */
   async deleteDatabase(): Promise<void> {
-    // Close connection first
     if (this.db) {
       this.db.close();
       this.db = null;
@@ -469,7 +442,6 @@ class EventLog extends EventEmitter {
 
       const handleSuccess = (): void => {
         console.log('EventLog: Database deleted');
-        // Reinitialize
         this.initPromise = this.initDatabase();
         resolve();
       };

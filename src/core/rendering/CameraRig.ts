@@ -250,10 +250,7 @@ export class CameraRig {
   }
 
   /**
-   * Set camera to a preset view
-   *
-   * Our coordinate system: X=width, Y=depth, Z=height (Z-up, right-handed)
-   * Babylon system: X, Z, Y (Y-up, left-handed)
+   * VIEW_ANGLES are in Babylon space, where model Z is up (see toBabylonVector)
    */
   setCameraView(view: CameraView): void {
     const angles = VIEW_ANGLES[view];

@@ -31,12 +31,6 @@ interface QuadEditorViewProps {
   onConfirmPlacement: () => void;
 }
 
-/**
- * QuadEditorView - Quad layout mode for the editor
- *
- * Shows four canvases simultaneously in a 2x2 grid.
- * Includes layer controls, action bar, and meta block placement UI.
- */
 export function QuadEditorView({
   activeLayers,
   foregroundBlock,
@@ -59,7 +53,6 @@ export function QuadEditorView({
   onAssignSlot,
   onConfirmPlacement,
 }: QuadEditorViewProps) {
-  // Handlers for foreground/background selector
   const handleOpenMaterialBrowser = () => {
     editorState.setMaterialBrowserOpen(true);
   };
@@ -80,7 +73,6 @@ export function QuadEditorView({
 
   return (
     <>
-      {/* Canvas Layout */}
       <Box sx={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', position: 'relative' }}>
         <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
           <QuadLayout
@@ -88,12 +80,10 @@ export function QuadEditorView({
           />
         </Box>
 
-        {/* Meta Block Placement Confirmation UI */}
         {isPlacementMode && (
           <MetaBlockPlacementBanner onConfirm={onConfirmPlacement} />
         )}
 
-        {/* Right Sidebar - Tool Panel + Material Selector */}
         <Paper
           elevation={0}
           sx={{

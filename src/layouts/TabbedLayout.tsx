@@ -12,15 +12,9 @@ interface TabbedLayoutProps {
   activeView: ViewType;
   onViewChange: (key: React.Key) => void;
   activeLayers: LayerState;
-  renderTabBar?: boolean; // Whether to render the tab bar internally (default false)
+  renderTabBar?: boolean; // False when the parent renders the tabs itself
 }
 
-/**
- * TabbedLayout - Single canvas with tab navigation
- *
- * Displays one view at a time with tabs to switch between different
- * orthographic views and 3D preview.
- */
 export function TabbedLayout({
   activeView,
   onViewChange,
@@ -41,7 +35,6 @@ export function TabbedLayout({
     "3d",
   ] as const;
 
-  // Get the depth coordinate for the current view
   const getDepthLabel = (view: ViewType | "3d"): string | null => {
     switch (view) {
       case "front":
@@ -74,7 +67,6 @@ export function TabbedLayout({
         </Box>
       ) : (
         <>
-          {/* Depth indicator */}
           {getDepthLabel(view) && (
             <Box
               sx={{

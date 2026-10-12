@@ -8,16 +8,15 @@ import { generateUUID } from '../utils/uuid';
 import type { Dimensions } from '../types';
 
 /**
- * CreateProjectCommand - Creates a new project
+ * CreateProjectCommand - Creates a new project and makes it current
  *
- * Appends to: EventLog (metadata:created, model:initialized)
+ * Appends to: EventLog (metadata:created, model:initialized), outside undo history
  * Saves to: Storage (last opened project ID)
- * Queries: None
  * Validates: name not empty, dimensions > 0
+ * The projections reset before the rows append, so they never fold the new rows onto the previous project.
  */
 class CreateProjectCommand {
   async execute(name: string, dimensions: Dimensions): Promise<string> {
-    // Validate
     if (!name || name.trim().length === 0) {
       throw new Error('Project name cannot be empty');
     }
@@ -26,25 +25,20 @@ class CreateProjectCommand {
       throw new Error('Dimensions must be greater than 0');
     }
 
-    // Generate project ID
     const projectId = generateUUID();
 
-    // Reset projections for new project
     metadataProjection.reset();
     modelProjection.reset();
     blockProjection.reset();
 
-    // Set as current project and reset placement mode
     editorState.setCurrentProjectId(projectId);
     editorState.setPlacementMode(false);
 
-    // Append metadata:created event (with projectId)
     await eventLog.append('metadata:created', {
       id: projectId,
       name,
     }, projectId);
 
-    // Append model:initialized event (with projectId)
     await eventLog.append('model:initialized', {
       projectId,
       dimensions,

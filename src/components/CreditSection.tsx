@@ -7,9 +7,6 @@ interface CreditSectionProps {
   credits: Credit[];
 }
 
-/**
- * CreditSection - One group of credits: title, author, license link, and source link per work
- */
 export function CreditSection({ heading, credits }: CreditSectionProps) {
   const renderCredit = (credit: Credit) => (
     <Box key={credit.title}>

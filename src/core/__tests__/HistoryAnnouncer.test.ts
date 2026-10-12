@@ -1,7 +1,3 @@
-/**
- * HistoryAnnouncer tests - one toast per undo or redo, expiry, and the visible limit
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { historyAnnouncer, type HistoryToast } from '../HistoryAnnouncer';
 import { editHistory } from '../EditHistory';

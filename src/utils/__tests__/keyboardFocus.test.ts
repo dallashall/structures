@@ -1,7 +1,3 @@
-/**
- * keyboardFocus tests - which keys window-level shortcut handlers must leave alone
- */
-
 import { describe, it, expect, afterEach } from 'vitest';
 import { isModalOpen, isTypingTarget } from '../keyboardFocus';
 
