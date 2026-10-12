@@ -10,7 +10,7 @@ import type { Dimensions } from '../types';
 /**
  * CreateProjectCommand - Creates a new project and makes it current
  *
- * Appends to: EventLog (metadata:created, model:initialized), outside undo history
+ * Appends to: EventLog (metadata:created, model:initialized, model:metaBlockPlaced), outside undo history
  * Saves to: Storage (last opened project ID)
  * Validates: name not empty, dimensions > 0
  * The projections reset before the rows append, so they never fold the new rows onto the previous project.
@@ -32,7 +32,6 @@ class CreateProjectCommand {
     blockProjection.reset();
 
     editorState.setCurrentProjectId(projectId);
-    editorState.setPlacementMode(false);
 
     await eventLog.append('metadata:created', {
       id: projectId,
@@ -42,6 +41,12 @@ class CreateProjectCommand {
     await eventLog.append('model:initialized', {
       projectId,
       dimensions,
+    }, projectId);
+
+    // The anchor starts on the ground at the center of the footprint, facing north
+    await eventLog.append('model:metaBlockPlaced', {
+      position: { x: Math.floor(dimensions.width / 2), y: Math.floor(dimensions.height / 2), z: 0 },
+      direction: 'y-',
     }, projectId);
 
     await storage.setLastOpenedProjectId(projectId);

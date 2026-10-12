@@ -1,7 +1,6 @@
 import { Box, Stack, Paper, Divider } from '@mui/material';
 import type { Block, LayerState, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { QuadLayout } from '../layouts/QuadLayout';
-import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
 import { BlockStateControls } from '../components/BlockStateControls';
 import { ForegroundBackgroundSelector } from '../components/ForegroundBackgroundSelector';
@@ -19,7 +18,6 @@ interface QuadEditorViewProps {
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
-  isPlacementMode: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
   onPaintModeChange: (mode: PaintMode) => void;
@@ -28,7 +26,6 @@ interface QuadEditorViewProps {
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
   onQuickSelectSlot: (index: number) => void;
   onAssignSlot: (index: number) => void;
-  onConfirmPlacement: () => void;
 }
 
 export function QuadEditorView({
@@ -42,7 +39,6 @@ export function QuadEditorView({
   paintBehavior: _paintBehavior,
   shapeFillMode: _shapeFillMode,
   depthConfig: _depthConfig,
-  isPlacementMode,
   quickSelectSlots,
   blocks,
   onPaintModeChange,
@@ -51,7 +47,6 @@ export function QuadEditorView({
   onDepthConfigChange: _onDepthConfigChange,
   onQuickSelectSlot,
   onAssignSlot,
-  onConfirmPlacement,
 }: QuadEditorViewProps) {
   const handleOpenMaterialBrowser = () => {
     editorState.setMaterialBrowserOpen(true);
@@ -80,9 +75,6 @@ export function QuadEditorView({
           />
         </Box>
 
-        {isPlacementMode && (
-          <MetaBlockPlacementBanner onConfirm={onConfirmPlacement} />
-        )}
 
         <Paper
           elevation={0}

@@ -26,7 +26,7 @@ The single source of truth. It holds one IndexedDB object store of events with a
 - `getEvents(query)` filters by `fromId`, `toId`, `types`, and `projectId`.
 - `getActionEvents(actionId)`, `getLatestEventId()`, `deleteProjectEvents(projectId)`, `clear()`, `deleteDatabase()`.
 
-Action kinds: `paint`, `dimension-expand`, `dimension-shrink`, `metablock-place`, `metablock-confirm`, `undo`, `redo`. Undo and redo markers carry `data.target`, the action ID they act on.
+Action kinds: `paint`, `dimension-expand`, `dimension-shrink`, `metablock-place`, `undo`, `redo`. Older logs may also hold `metablock-confirm`. Undo and redo markers carry `data.target`, the action ID they act on.
 
 Persisted event types: `metadata:created`, `metadata:renamed`, `model:initialized`, `model:blockPlaced`, `model:blockRemoved`, `model:blocksPlaced`, `model:blocksRemoved`, `model:dimensionExpanded`, `model:dimensionShrunk`, `model:metaBlockPlaced`, `model:metaBlockConfirmed`, plus the action markers.
 
@@ -43,8 +43,7 @@ Commands live in `src/commands/`. Each one validates against projections and app
 | `renameProjectCommand` | `execute(projectId, name)`. Trims the name and throws `RenameProjectError` when it is empty or another project holds it. | `metadata:renamed` |
 | `expandDimensionsCommand` | `execute(direction)` | A `dimension-expand` action |
 | `shrinkDimensionsCommand` | `execute(direction)` | A `dimension-shrink` action. Refuses when blocks would fall outside. |
-| `setMetaBlockCommand` | `execute(position)` | A `metablock-place` action |
-| `confirmMetaBlockCommand` | `execute()` | A `metablock-confirm` action |
+| `setMetaBlockCommand` | `execute(position, direction)` and `turn('left' \| 'right')`. Ignores positions outside the build volume and unchanged placements. | A `metablock-place` action |
 | `saveProjectFileCommand` | `execute()` returns false on cancel | Nothing. Writes the project's events to a file on disk. |
 | `loadProjectFileCommand` | `execute()` opens a picker, `load(text)` returns the new project ID | Every row in the file under a new project ID, in one transaction |
 
@@ -110,7 +109,7 @@ Holds preview blocks while a tool draws. Both the 2D and 3D views read it. `fina
 
 UI state for the editor. It holds the layout mode, active view, active layer per axis, tool, paint mode and behavior, shape fill mode, depth config, foreground and background blocks, quick-select slots, block state (facing, half), material browser state, slice guide visibility, render settings, hover previews, and the current project ID. Setters are arrow functions (`setActiveTool`, `incrementLayer`, `rotateFacing`, `setRenderSettings`, and so on) so components can pass them as callbacks.
 
-**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `modifiers:held`, `placementmode:toggled`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
+**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `modifiers:held`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
 
 ### ScreenRouter
 
@@ -253,12 +252,11 @@ App  (withAtlasStatus, withScreenState)
 │   │   ├── UndoRedoButtons  (withEditHistory)
 │   │   └── SaveStatusIndicator
 │   ├── ToolOptionsBar
-│   │   ├── PaintBehaviorControl, ShapeFillModeControl, DepthPaintingControl, ModifierHints
+│   │   ├── PaintBehaviorControl, ShapeFillModeControl, DepthPaintingControl, ModifierHints, MetaBlockControls
 │   │   └── LayerControls -> DialogTrigger -> LayerDimensionControl
 │   ├── TabbedEditorView or QuadEditorView
 │   │   ├── ToolPanel
 │   │   ├── QuickSelectPalette, ForegroundBackgroundSelector, BlockStateControls
-│   │   ├── MetaBlockPlacementBanner
 │   │   └── TabbedLayout or QuadLayout
 │   │       ├── Canvas2DView ...
 │   │       ├── Preview3DView  (withEditorState)
@@ -269,7 +267,6 @@ App  (withAtlasStatus, withScreenState)
 │   │   ├── MaterialGrid -> MaterialGridCell -> MaterialTile
 │   │   ├── QuickSelectDropBar -> QuickSelectDropSlot
 │   │   └── MaterialDragOverlay
-│   ├── MetaBlockPlacementModal
 │   └── HistoryToast  (withHistoryToast) -> HistoryToastItem
 ├── NewProjectDialog  (withNewProjectFormState)
 ├── CreditsDialog -> CreditSection

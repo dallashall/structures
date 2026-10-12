@@ -100,6 +100,7 @@ import { OutlinePaintTool } from "./OutlinePaintTool";
 import { CirclePaintTool } from "./CirclePaintTool";
 import { ArchPaintTool } from "./ArchPaintTool";
 import { CurvePaintTool } from "./CurvePaintTool";
+import { MetaBlockTool } from "./MetaBlockTool";
 
 type ToolFactory = ToolRegistration["create"];
 
@@ -115,6 +116,8 @@ const createArchTool: ToolFactory = (canvas, viewState, requestRender) =>
   new ArchPaintTool(canvas, viewState, requestRender);
 const createCurveTool: ToolFactory = (canvas, viewState, requestRender) =>
   new CurvePaintTool(canvas, viewState, requestRender);
+const createMetaBlockTool: ToolFactory = (canvas, viewState, requestRender) =>
+  new MetaBlockTool(canvas, viewState, requestRender);
 
 toolRegistry.register({
   name: "point",
@@ -156,4 +159,11 @@ toolRegistry.register({
   hotkey: "v",
   label: "Curve",
   create: createCurveTool,
+});
+
+toolRegistry.register({
+  name: "meta",
+  hotkey: "m",
+  label: "Meta Block",
+  create: createMetaBlockTool,
 });

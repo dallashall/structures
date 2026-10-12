@@ -1,4 +1,5 @@
-import type { Dimensions, LayerState, Vector3D } from "../../types";
+import type { Dimensions, LayerState, MetaBlock } from "../../types";
+import { addOffset, directionToOffset } from "../DirectionMath";
 import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
 import type { ViewState } from "./ViewState";
 import { getColorForAxis, getLayerForAxis } from "./renderingUtils";
@@ -188,7 +189,7 @@ export function drawLayerIndicators(
 
 export function drawMetaBlock(
   ctx: CanvasRenderingContext2D,
-  metaBlock: { position: Vector3D; isConfirmed: boolean } | null,
+  metaBlock: MetaBlock | null,
   viewState: ViewState,
   dimensions: Dimensions,
   activeLayers: LayerState,
@@ -225,18 +226,12 @@ export function drawMetaBlock(
   const centerX = px + cellSize / 2;
   const centerY = py + cellSize / 2;
 
-  const strokeColor = metaBlock.isConfirmed
-    ? colors.metaBlockBorder
-    : colors.metaBlockBorderUnconfirmed;
-  const strokeWidth = metaBlock.isConfirmed ? 2 : 3;
-  const fillOpacity = metaBlock.isConfirmed ? opacity : opacity * 0.7;
-
   ctx.fillStyle = colors.metaBlockFill;
-  ctx.globalAlpha = fillOpacity;
+  ctx.globalAlpha = opacity;
   ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
-  ctx.strokeStyle = strokeColor;
-  ctx.lineWidth = strokeWidth;
+  ctx.strokeStyle = colors.metaBlockBorder;
+  ctx.lineWidth = 3;
   ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
 
   ctx.strokeStyle = colors.metaBlockArrow;
@@ -245,10 +240,32 @@ export function drawMetaBlock(
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  const arrowSize = Math.min(cellSize * 0.6, 20);
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, arrowSize * 0.2, 0, Math.PI * 2);
-  ctx.fill();
+  // The facing projected onto this view. A facing along the view axis has no in-plane direction, so it draws a dot.
+  const ahead = viewState.modelToGrid(
+    addOffset(metaBlock.position, directionToOffset(metaBlock.direction)),
+    dimensions,
+  );
+  const stepX = ahead.gridX - gridX;
+  const stepY = ahead.gridY - gridY;
+  const arrowLength = cellSize * 0.32;
+
+  if (stepX === 0 && stepY === 0) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, arrowLength * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const tipX = centerX + stepX * arrowLength;
+    const tipY = centerY + stepY * arrowLength;
+    const headX = -stepX * arrowLength * 0.55;
+    const headY = -stepY * arrowLength * 0.55;
+    ctx.beginPath();
+    ctx.moveTo(centerX - stepX * arrowLength, centerY - stepY * arrowLength);
+    ctx.lineTo(tipX, tipY);
+    ctx.moveTo(tipX + headX - headY * 0.8, tipY + headY + headX * 0.8);
+    ctx.lineTo(tipX, tipY);
+    ctx.lineTo(tipX + headX + headY * 0.8, tipY + headY - headX * 0.8);
+    ctx.stroke();
+  }
 
   ctx.globalAlpha = 1.0;
 }

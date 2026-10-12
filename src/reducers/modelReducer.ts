@@ -9,7 +9,7 @@ import { BlockIndex } from '../core/BlockIndex';
 import { normalizeLegacyDirections } from '../core/DirectionMapping';
 import { ACTION_STARTED, type Event } from '../core/EventLog';
 import { foldHistory, isActionStart } from './historyReducer';
-import type { BlockData, BlockStateProperties, Dimensions, Vector3D, MetaBlock } from '../types';
+import type { BlockData, BlockStateProperties, Dimensions, HorizontalDirection, Vector3D, MetaBlock } from '../types';
 
 interface PlacedBlock {
   position: Vector3D;
@@ -45,7 +45,6 @@ export function createEmptyModel(): Model {
     metaBlock: {
       position: { x: 0, y: 0, z: 0 },
       direction: 'y-',
-      isConfirmed: false,
     },
   };
 }
@@ -153,15 +152,14 @@ export function applyModelEvent(model: Model, event: Event): boolean {
     }
 
     case 'model:metaBlockPlaced': {
-      const data = event.data as { position: Vector3D };
-      model.metaBlock = { ...model.metaBlock, position: data.position };
+      const data = event.data as { position: Vector3D; direction?: HorizontalDirection };
+      model.metaBlock = { position: data.position, direction: data.direction ?? model.metaBlock.direction };
       return true;
     }
 
-    case 'model:metaBlockConfirmed': {
-      model.metaBlock = { ...model.metaBlock, isConfirmed: true };
-      return true;
-    }
+    // Stored logs may hold confirm rows from a placement step the editor no longer has
+    case 'model:metaBlockConfirmed':
+      return false;
 
     default:
       return false;

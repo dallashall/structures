@@ -7,6 +7,7 @@ import type {
   Dimensions,
   LayerState,
   HeldModifiers,
+  HorizontalDirection,
 } from "../types";
 import { MODIFIER_HINTS } from "../config/modifierHints";
 import { ShapeFillModeControl } from "./ShapeFillModeControl";
@@ -14,6 +15,7 @@ import { DepthPaintingControl } from "./DepthPaintingControl";
 import { PaintBehaviorControl } from "./PaintBehaviorControl";
 import { LayerControls } from "./LayerControls";
 import { ModifierHints } from "./ModifierHints";
+import { MetaBlockControls } from "./MetaBlockControls";
 
 interface ToolOptionsBarProps {
   paintMode: PaintMode;
@@ -23,6 +25,9 @@ interface ToolOptionsBarProps {
   maxDimensions: Dimensions;
   activeLayers: LayerState;
   heldModifiers: HeldModifiers;
+  metaBlockDirection: HorizontalDirection;
+  onTurnMetaBlockLeft: () => void;
+  onTurnMetaBlockRight: () => void;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
@@ -37,6 +42,9 @@ export function ToolOptionsBar({
   maxDimensions,
   activeLayers,
   heldModifiers,
+  metaBlockDirection,
+  onTurnMetaBlockLeft,
+  onTurnMetaBlockRight,
   onPaintBehaviorChange,
   onShapeFillModeChange,
   onDepthConfigChange,
@@ -46,6 +54,7 @@ export function ToolOptionsBar({
     paintMode,
   );
   const modifierHints = MODIFIER_HINTS[paintMode];
+  const isMetaBlockMode = paintMode === "meta";
 
   return (
     <Box
@@ -75,17 +84,29 @@ export function ToolOptionsBar({
           />
         )}
 
-        <DepthPaintingControl
-          depthConfig={depthConfig}
-          onDepthConfigChange={onDepthConfigChange}
-          compact
-        />
+        {isMetaBlockMode && (
+          <MetaBlockControls
+            direction={metaBlockDirection}
+            onTurnLeft={onTurnMetaBlockLeft}
+            onTurnRight={onTurnMetaBlockRight}
+          />
+        )}
 
-        <PaintBehaviorControl
-          paintBehavior={paintBehavior}
-          onPaintBehaviorChange={onPaintBehaviorChange}
-          orientation="horizontal"
-        />
+        {!isMetaBlockMode && (
+          <DepthPaintingControl
+            depthConfig={depthConfig}
+            onDepthConfigChange={onDepthConfigChange}
+            compact
+          />
+        )}
+
+        {!isMetaBlockMode && (
+          <PaintBehaviorControl
+            paintBehavior={paintBehavior}
+            onPaintBehaviorChange={onPaintBehaviorChange}
+            orientation="horizontal"
+          />
+        )}
 
         {modifierHints && (
           <ModifierHints hints={modifierHints} heldModifiers={heldModifiers} />

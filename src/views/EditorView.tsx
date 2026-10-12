@@ -19,7 +19,6 @@ import {
 
 import { Toolbar } from "../layouts/Toolbar";
 import { ToolOptionsBar } from "../components/ToolOptionsBar";
-import { MetaBlockPlacementModal } from "../components/MetaBlockPlacementModal";
 import { MaterialBrowserModal } from "../components/MaterialBrowserModal";
 import { HistoryToast } from "../components/HistoryToast";
 import { TabbedEditorView } from "./TabbedEditorView";
@@ -27,8 +26,8 @@ import { QuadEditorView } from "./QuadEditorView";
 
 import { editorState } from "../core/EditorState";
 import { screenRouter } from "../core/ScreenRouter";
-import { confirmMetaBlockCommand } from "../commands/ConfirmMetaBlockCommand";
 import { saveProjectFileCommand } from "../commands/SaveProjectFileCommand";
+import { setMetaBlockCommand } from "../commands/SetMetaBlockCommand";
 import { toFileErrorMessage } from "../utils/projectFile";
 
 interface EditorViewProps
@@ -57,7 +56,6 @@ function EditorViewComponent(props: EditorViewProps) {
     shapeFillMode,
     depthConfig,
     heldModifiers,
-    isPlacementMode,
     saveState,
     activeBlockState,
     hasBlockState,
@@ -88,14 +86,6 @@ function EditorViewComponent(props: EditorViewProps) {
     );
   }
 
-  // "Got it" enters placement mode, which hides the modal until the meta block is confirmed
-  const metaBlock = project?.metaBlock;
-  const showMetaBlockModal =
-    metaBlock ? !metaBlock.isConfirmed && !isPlacementMode : false;
-
-  const handleMetaBlockModalClose = () => {
-    editorState.setPlacementMode(true);
-  };
 
   const handleViewTabChange = (
     _event: React.SyntheticEvent,
@@ -121,14 +111,13 @@ function EditorViewComponent(props: EditorViewProps) {
     }
   };
 
+  const handleTurnMetaBlockLeft = () => { void setMetaBlockCommand.turn('left'); };
+  const handleTurnMetaBlockRight = () => { void setMetaBlockCommand.turn('right'); };
+
   const handleMaterialBrowserClose = () => {
     editorState.setMaterialBrowserOpen(false);
   };
 
-  const handleConfirmMetaBlockPlacement = () => {
-    // Command handles exiting placement mode after event is persisted
-    void confirmMetaBlockCommand.execute();
-  };
 
   const handleSaveToFile = async () => {
     try {
@@ -160,6 +149,9 @@ function EditorViewComponent(props: EditorViewProps) {
           maxDimensions={project.dimensions}
           activeLayers={activeLayers}
           heldModifiers={heldModifiers}
+          metaBlockDirection={project.metaBlock.direction}
+          onTurnMetaBlockLeft={handleTurnMetaBlockLeft}
+          onTurnMetaBlockRight={handleTurnMetaBlockRight}
           onPaintBehaviorChange={editorState.setPaintBehavior}
           onShapeFillModeChange={editorState.setShapeFillMode}
           onDepthConfigChange={editorState.setDepthConfig}
@@ -190,7 +182,6 @@ function EditorViewComponent(props: EditorViewProps) {
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}
               depthConfig={depthConfig}
-              isPlacementMode={isPlacementMode}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
               onViewChange={editorState.setActiveView}
@@ -201,7 +192,6 @@ function EditorViewComponent(props: EditorViewProps) {
               onDepthConfigChange={editorState.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
-              onConfirmPlacement={handleConfirmMetaBlockPlacement}
             />
           ) : (
             <QuadEditorView
@@ -215,7 +205,6 @@ function EditorViewComponent(props: EditorViewProps) {
               paintBehavior={paintBehavior}
               shapeFillMode={shapeFillMode}
               depthConfig={depthConfig}
-              isPlacementMode={isPlacementMode}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
               onPaintModeChange={editorState.setPaintMode}
@@ -224,16 +213,11 @@ function EditorViewComponent(props: EditorViewProps) {
               onDepthConfigChange={editorState.setDepthConfig}
               onQuickSelectSlot={handleQuickSelectSlot}
               onAssignSlot={handleAssignSlot}
-              onConfirmPlacement={handleConfirmMetaBlockPlacement}
             />
           )}
         </Box>
       </Stack>
 
-      <MetaBlockPlacementModal
-        isOpen={showMetaBlockModal}
-        onClose={handleMetaBlockModalClose}
-      />
 
       <MaterialBrowserModal
         blocks={blocks}

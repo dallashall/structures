@@ -4,7 +4,6 @@ import { WelcomePreview } from './WelcomePreview';
 import { ToolbarPreview } from './previews/ToolbarPreview';
 import { NewProjectDialogPreview } from './previews/NewProjectDialogPreview';
 import { QuickSelectPalettePreview } from './previews/QuickSelectPalettePreview';
-import { MetaBlockPlacementModalPreview } from './previews/MetaBlockPlacementModalPreview';
 import { LayerControlsPreview } from './previews/LayerControlsPreview';
 import { LayerDimensionControlPreview } from './previews/LayerDimensionControlPreview';
 import { Canvas2DViewPreview } from './previews/Canvas2DViewPreview';
@@ -27,7 +26,6 @@ export function ComponentPreview() {
     { name: 'Toolbar', path: 'toolbar', component: ToolbarPreview },
     { name: 'NewProjectDialog', path: 'new-project-dialog', component: NewProjectDialogPreview },
     { name: 'QuickSelectPalette', path: 'quick-select-palette', component: QuickSelectPalettePreview },
-    { name: 'MetaBlockPlacementModal', path: 'meta-block-placement-modal', component: MetaBlockPlacementModalPreview },
     { name: 'LayerControls', path: 'layer-controls', component: LayerControlsPreview },
     { name: 'LayerDimensionControl', path: 'layer-dimension-control', component: LayerDimensionControlPreview },
     { name: 'Canvas2DView', path: 'canvas-2d-view', component: Canvas2DViewPreview },

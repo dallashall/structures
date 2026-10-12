@@ -31,7 +31,6 @@ class OpenProjectCommand {
     if (!(await storage.getProject(projectId))) return false;
 
     editorState.setCurrentProjectId(projectId);
-    editorState.setPlacementMode(false);
     metadataProjection.reset();
     modelProjection.reset();
     blockProjection.reset();

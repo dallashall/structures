@@ -33,6 +33,15 @@ export function rotateRight(dir: HorizontalDirection): HorizontalDirection {
   }
 }
 
+export function rotateLeft(dir: HorizontalDirection): HorizontalDirection {
+  switch (dir) {
+    case 'x+': return 'y-';
+    case 'y-': return 'x-';
+    case 'x-': return 'y+';
+    case 'y+': return 'x+';
+  }
+}
+
 export function addOffset(pos: Vector3D, offset: Vector3D): Vector3D {
   return { x: pos.x + offset.x, y: pos.y + offset.y, z: pos.z + offset.z };
 }

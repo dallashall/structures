@@ -58,7 +58,7 @@ function describeAction(marker: ActionStartedData, events: Event[]): string {
       return direction ? `${verb} ${direction}` : verb;
     }
     case 'metablock-place':
-      return 'Move meta block';
+      return 'Meta block';
     case 'metablock-confirm':
       return 'Confirm meta block';
     default:

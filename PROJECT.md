@@ -41,6 +41,7 @@ Each 2D view is an HTML canvas that draws one slice of the model.
 - Circle (O): draw an ellipse or a circle
 - Arch (G): draw an arch from clicked points
 - Curve (V): draw a Bezier curve from clicked points
+- Meta Block (M): move the meta block to a clicked cell. T and Shift+T turn it.
 
 **Modifier keys:** the tool options bar lists the active tool's modifiers and fills in each one while it is held.
 - Rectangle: drag corner to corner. Shift makes a square. Alt draws from the center.
@@ -72,10 +73,11 @@ The 3D view renders the whole structure with Babylon.js.
 
 Every project has one meta block. It marks the structure's origin and its front direction.
 
-- The meta block is the point where the structure appears in game.
-- Its arrow marks the structure's front. In game, the arrow aligns with the player's facing.
-- All other blocks are positioned relative to it.
-- A new project starts with an explanatory dialog, then a placement banner with a Confirm button. Confirming finalizes the meta block.
+- The meta block is the point where the structure appears in game. Used on a block, the export item anchors the build at that block. Used in the air, it anchors at the player's feet.
+- Its arrow is the way the player faces when the build appears. The build turns with the player.
+- A new project places it on the ground at the center of the footprint, facing −Y (north).
+- The Meta Block tool (M) moves it to a clicked cell on the active layer. T turns it right and Shift+T turns it left. Each move or turn is one undoable action.
+- Its own cell exports as air, so the player is never buried.
 
 ### Materials
 
@@ -124,7 +126,7 @@ Event types:
 - `metadata:created`, `metadata:renamed`
 - `model:initialized`, `model:blockPlaced`, `model:blockRemoved`, `model:blocksPlaced`, `model:blocksRemoved`
 - `model:dimensionExpanded`, `model:dimensionShrunk`
-- `model:metaBlockPlaced`, `model:metaBlockConfirmed`
+- `model:metaBlockPlaced` (position and facing). Older logs may hold `model:metaBlockConfirmed` rows, which replay ignores.
 - `action:started`, `action:ended`, which bracket one user action
 
 An undo or redo appends an `action:started` marker whose `target` names the action it acts on. Replay skips undone actions. No event stores the state an undo restores.
@@ -136,7 +138,7 @@ Projections replay the log into the model the views read (`src/types/index.ts`):
 ```typescript
 interface Model {
   dimensions: Dimensions;  // { width, height, depth }
-  metaBlock: MetaBlock;    // { position, direction, isConfirmed }
+  metaBlock: MetaBlock;    // { position, direction }
   blocks: BlockIndex;      // Blocks indexed by position and by layer
 }
 
@@ -168,7 +170,6 @@ Load from File reads that file into a new project with a new ID. Action IDs get 
 1. **Create a project**
    - Enter a name
    - Pick Small (16), Medium (32), Large (64), or custom dimensions
-   - Read the meta block dialog and confirm the meta block
 
 2. **Build the structure**
    - Pick a material from the quick-select slots or the material browser
@@ -186,7 +187,9 @@ Load from File reads that file into a new project with a new ID. Action IDs get 
 
 ## Future Enhancements
 
-- Export to Minecraft formats such as NBT structure files. The meta block marks the export origin, and its placement flow will take shape with export.
+- Export as a Bedrock add-on: a `.mcstructure` file, a custom item, and a script that places the build around the meta block with a layer-by-layer animation
+- A custom placeable block as a third export trigger
+- Explicit air blocks that clear existing world blocks when the build appears. Empty cells leave the world alone.
 - UI to expand and shrink a project. The commands exist without controls.
 - A confirmation before deleting a project
 - An eyedropper that samples a placed block

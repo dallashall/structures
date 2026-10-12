@@ -18,12 +18,12 @@ This document records the interaction decisions for Structures and how the app c
 
 ## 2. Project Creation Flow
 
-**Decision:** A dialog asks for a name and dimensions. The meta block comes next.
+**Decision:** A dialog asks for a name and dimensions. The editor opens at once.
 
 **Details:**
 1. The project name is required.
 2. Dimensions come from presets, Small (16×16×16), Medium (32×32×32), and Large (64×64×64), or from custom width, height, and depth fields.
-3. The meta block has a fixed direction. The six views look at it from different sides, so the user never sets a direction.
+3. The meta block starts on the ground at the center of the footprint, facing −Y.
 
 **Meta block concept:** a block with an arrow that points forward. All other blocks are positioned relative to it. In game it stands for an activatable block or a player who holds an item and uses it.
 
@@ -77,6 +77,7 @@ This document records the interaction decisions for Structures and how the app c
 - Circle (O)
 - Arch (G): placed by clicking points
 - Curve (V): a Bezier curve placed by clicking points
+- Meta Block (M): move the meta block to a clicked cell. T and Shift+T turn it.
 
 **Decision:** modifiers follow design-tool convention. Shift keeps sides equal and Alt draws from the center. Ctrl and Cmd stay free for shortcuts, and Ctrl-click is a right-click on macOS.
 
@@ -136,16 +137,15 @@ This document records the interaction decisions for Structures and how the app c
 
 ## 7. Meta Block Handling
 
-**Decision:** Guided placement is the first step in a new project.
+**Decision:** The meta block is a tool, not a setup step. It always exists and stays editable.
 
 **Flow:**
-1. The user creates a project.
-2. A dialog explains what the meta block is.
-3. "Got it" closes the dialog and enters placement mode.
-4. A banner over the canvas reads "Click to place meta block, then confirm" and offers a Confirm button.
-5. Confirm finalizes the meta block.
+1. The Meta Block tool (M, anchor icon) is in the side panel.
+2. A click on a 2D view moves the meta block to that cell on the active layer.
+3. T turns it right and Shift+T turns it left. The tool options bar shows its facing and two turn buttons.
+4. Each move or turn is one undoable action, labeled "Meta block".
 
-**Visual representation:** the 2D views draw the meta block with a heavier outline until it is confirmed. The 3D view draws it as a block with an arrow.
+**Visual representation:** the 2D views draw it as a green-bordered cell with an arrow for its facing. A view that looks along the facing draws a dot instead. The 3D view does not draw it yet.
 
 **Placement restrictions:** the app does not check for player standing space.
 

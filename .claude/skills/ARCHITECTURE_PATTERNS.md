@@ -133,7 +133,7 @@ Indexes:
 | `model:dimensionExpanded` | ExpandDimensionsCommand (kind `dimension-expand`) | Yes |
 | `model:dimensionShrunk` | ShrinkDimensionsCommand (kind `dimension-shrink`) | Yes |
 | `model:metaBlockPlaced` | SetMetaBlockCommand (kind `metablock-place`) | Yes |
-| `model:metaBlockConfirmed` | ConfirmMetaBlockCommand (kind `metablock-confirm`) | Yes |
+| `model:metaBlockConfirmed` | Nothing. Older logs hold it, and replay ignores it. | Yes |
 | `action:started`, `action:ended` | every undoable action, plus undo and redo | Markers |
 
 `modelReducer` also applies the single-block types `model:blockPlaced` and `model:blockRemoved`. No writer appends them.

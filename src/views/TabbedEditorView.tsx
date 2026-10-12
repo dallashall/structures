@@ -2,7 +2,6 @@ import { Box, Stack, Tab, Paper, Divider } from '@mui/material';
 import { TabList, TabContext } from '@mui/lab';
 import type { Block, LayerState, ViewType, PaintMode, PaintBehavior, ShapeFillMode, DepthConfig, BlockStateProperties } from '../types';
 import { TabbedLayout } from '../layouts/TabbedLayout';
-import { MetaBlockPlacementBanner } from '../components/MetaBlockPlacementBanner';
 import { ToolPanel } from '../components/ToolPanel';
 import { BlockStateControls } from '../components/BlockStateControls';
 import { ForegroundBackgroundSelector } from '../components/ForegroundBackgroundSelector';
@@ -21,7 +20,6 @@ interface TabbedEditorViewProps {
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
-  isPlacementMode: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
   onViewChange: (view: ViewType) => void;
@@ -32,7 +30,6 @@ interface TabbedEditorViewProps {
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
   onQuickSelectSlot: (index: number) => void;
   onAssignSlot: (index: number) => void;
-  onConfirmPlacement: () => void;
 }
 
 export function TabbedEditorView({
@@ -47,7 +44,6 @@ export function TabbedEditorView({
   paintBehavior: _paintBehavior,
   shapeFillMode: _shapeFillMode,
   depthConfig: _depthConfig,
-  isPlacementMode,
   quickSelectSlots,
   blocks,
   onViewChange,
@@ -58,7 +54,6 @@ export function TabbedEditorView({
   onDepthConfigChange: _onDepthConfigChange,
   onQuickSelectSlot,
   onAssignSlot,
-  onConfirmPlacement,
 }: TabbedEditorViewProps) {
   const handleOpenMaterialBrowser = () => {
     editorState.setMaterialBrowserOpen(true);
@@ -103,9 +98,6 @@ export function TabbedEditorView({
           />
         </Box>
 
-        {isPlacementMode && (
-          <MetaBlockPlacementBanner onConfirm={onConfirmPlacement} />
-        )}
 
         <Paper
           elevation={0}

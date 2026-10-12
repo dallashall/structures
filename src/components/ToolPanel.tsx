@@ -10,6 +10,7 @@ import {
   BorderOuter,
   Circle,
   Timeline,
+  Anchor,
 } from "@mui/icons-material";
 import type { PaintMode } from "../types";
 
@@ -103,6 +104,12 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
         <ShortcutTooltip title="Curve" shortcut={toolShortcut("curve")} placement="right">
           <ToggleButton value="curve" aria-label="Curve mode">
             <Timeline fontSize="small" />
+          </ToggleButton>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip title="Meta Block" shortcut={toolShortcut("meta")} placement="right">
+          <ToggleButton value="meta" aria-label="Meta block mode">
+            <Anchor fontSize="small" />
           </ToggleButton>
         </ShortcutTooltip>
       </ToggleButtonGroup>

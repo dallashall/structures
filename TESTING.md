@@ -71,7 +71,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] Custom shows Width, Height, and Depth fields limited to 1 to 256
   - [ ] Create stays disabled until the form is valid
   - [ ] Cancel closes the dialog and creates nothing
-  - [ ] Create opens the editor with the meta block dialog showing
+  - [ ] Create opens the editor with no dialog. The meta block sits on the ground at the center, facing −Y.
 
 - [ ] **Persistence**
   - [ ] Place blocks, reload the page, and the same project reopens with its blocks
@@ -135,12 +135,13 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ## Meta Block
 
-- [ ] A new project shows the "Place the Meta Block" dialog
-- [ ] Got it closes the dialog and shows the placement banner, "Click to place meta block, then confirm"
-- [ ] The meta block draws at the origin with a green border and an arrow while unconfirmed
-- [ ] Clicking a 2D view moves the meta block to the clicked cell
-- [ ] Confirm locks the meta block. The border turns dark and the banner hides.
-- [ ] Undo of the confirm reads "Undid Confirm meta block"
+- [ ] M selects the Meta Block tool. The options bar shows "Facing" with turn buttons and hides depth and behavior.
+- [ ] Clicking a 2D view moves the meta block to the clicked cell on the active layer
+- [ ] T turns it right and Shift+T turns it left. The arrow in the top view follows.
+- [ ] A view looking along the facing draws a dot instead of an arrow
+- [ ] Undo of a move or turn reads "Undid Meta block"
+- [ ] Clicking outside the grid does nothing
+- [ ] A project made before the Meta Block tool existed opens with its meta block where it was
 
 ---
 

@@ -99,13 +99,21 @@ describe('ModelProjection', () => {
     expect(model.blocks.get({ x: 0, y: 0, z: 0 })?.blockType).toBe('stone');
   });
 
-  it('places and confirms the meta block', async () => {
+  it('places and turns the meta block', async () => {
     await append('model:metaBlockPlaced', { position: { x: 5, y: 5, z: 5 } });
+    await append('model:metaBlockPlaced', { position: { x: 5, y: 5, z: 5 }, direction: 'x+' });
+
+    const { metaBlock } = await modelProjection.getModel();
+    expect(metaBlock).toEqual({ position: { x: 5, y: 5, z: 5 }, direction: 'x+' });
+  });
+
+  it('keeps the facing when a placement row carries none', async () => {
+    await append('model:metaBlockPlaced', { position: { x: 1, y: 1, z: 0 }, direction: 'x-' });
+    await append('model:metaBlockPlaced', { position: { x: 2, y: 1, z: 0 } });
     await append('model:metaBlockConfirmed', {});
 
     const { metaBlock } = await modelProjection.getModel();
-    expect(metaBlock.position).toEqual({ x: 5, y: 5, z: 5 });
-    expect(metaBlock.isConfirmed).toBe(true);
+    expect(metaBlock).toEqual({ position: { x: 2, y: 1, z: 0 }, direction: 'x-' });
   });
 
   it('ignores events for other projects', async () => {
@@ -136,13 +144,13 @@ describe('ModelProjection', () => {
         { position: { x: 1, y: 0, z: 0 }, blockType: 'dirt' },
       ],
     });
-    await append('model:metaBlockConfirmed', {});
+    await append('model:metaBlockPlaced', { position: { x: 3, y: 2, z: 0 }, direction: 'y+' });
 
     modelProjection.reset();
     const model = await modelProjection.getModel();
 
     expect(model.dimensions).toEqual(DIMENSIONS);
     expect(model.blocks.size).toBe(2);
-    expect(model.metaBlock.isConfirmed).toBe(true);
+    expect(model.metaBlock).toEqual({ position: { x: 3, y: 2, z: 0 }, direction: 'y+' });
   });
 });

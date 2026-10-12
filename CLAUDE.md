@@ -453,7 +453,6 @@ src/
 │   ├── ExpandDimensionsCommand.ts
 │   ├── ShrinkDimensionsCommand.ts
 │   ├── SetMetaBlockCommand.ts
-│   ├── ConfirmMetaBlockCommand.ts
 │   ├── SaveProjectFileCommand.ts
 │   └── LoadProjectFileCommand.ts
 ├── projections/       # Read models replayed from the EventLog

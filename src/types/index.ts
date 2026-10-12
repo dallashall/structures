@@ -26,7 +26,8 @@ export type PaintMode =
   | "outline"
   | "circle"
   | "arch"
-  | "curve";
+  | "curve"
+  | "meta";
 
 export type PaintBehavior =
   | "normal"
@@ -177,8 +178,8 @@ export interface BlockData {
 
 export interface MetaBlock {
   position: Vector3D;
+  // The way the player faces when the build appears around them
   direction: HorizontalDirection;
-  isConfirmed: boolean;
 }
 
 // The model joined with its metadata, as the editor UI reads it

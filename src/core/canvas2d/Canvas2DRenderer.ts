@@ -17,7 +17,6 @@ export interface Canvas2DColorConfig {
   axisZ: string;
   axisLabel: string;
   metaBlockBorder: string;
-  metaBlockBorderUnconfirmed: string;
   metaBlockFill: string;
   metaBlockArrow: string;
   layerIndicator: string;
@@ -30,8 +29,7 @@ const DARK_MODE_COLORS: Canvas2DColorConfig = {
   axisY: "#3498db",
   axisZ: "#27ae60",
   axisLabel: "#a0a0a0",
-  metaBlockBorder: "#2a2a2a",
-  metaBlockBorderUnconfirmed: "#4CAF50",
+  metaBlockBorder: "#4CAF50",
   metaBlockFill: "#e0e0e0",
   metaBlockArrow: "#1a1a1a",
   layerIndicator: "#666666",

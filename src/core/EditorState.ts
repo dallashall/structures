@@ -43,7 +43,6 @@ export interface PreviewBlock {
  * - shapefillmode:selected - When shape fill mode is selected
  * - depthconfig:applied - When depth config is updated
  * - modifiers:held - When Shift or Alt goes down or up over a canvas tool (passes HeldModifiers)
- * - placementmode:toggled - When placement mode is toggled
  * - materialbrowser:toggled - When material browser is toggled open/closed
  * - materialbrowser:search:entered - When material browser search query is updated
  * - materialbrowser:tab:switched - When material browser tab is switched
@@ -75,7 +74,6 @@ class EditorState extends EventEmitter {
     mode: 'through',
   };
   private heldModifiers: HeldModifiers = { shift: false, alt: false };
-  private isPlacementMode = false;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
   private foregroundSlotIndex = 0;
   private backgroundSlotIndex = 1;
@@ -276,17 +274,6 @@ class EditorState extends EventEmitter {
 
   getHeldModifiers(): HeldModifiers {
     return this.heldModifiers;
-  }
-
-  setPlacementMode = (isPlacementMode: boolean): void => {
-    if (this.isPlacementMode !== isPlacementMode) {
-      this.isPlacementMode = isPlacementMode;
-      this.emit('placementmode:toggled', isPlacementMode);
-    }
-  }
-
-  getPlacementMode(): boolean {
-    return this.isPlacementMode;
   }
 
   setMaterialBrowserOpen = (isOpen: boolean): void => {

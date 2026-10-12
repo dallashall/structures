@@ -6,6 +6,7 @@ import { editHistory } from './EditHistory';
 import { isModalOpen, isTypingTarget } from '../utils/keyboardFocus';
 import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
+import { setMetaBlockCommand } from '../commands/SetMetaBlockCommand';
 
 /**
  * HotkeyDispatcher - The window-level keydown handler for app shortcuts. Keys live in Shortcuts.ts,
@@ -92,6 +93,12 @@ class HotkeyDispatcher {
     if (matchesShortcut(event, SHORTCUTS.swapMaterialSlot)) {
       event.preventDefault();
       editorState.toggleMaterialSlot();
+    }
+
+    if (matchesShortcut(event, SHORTCUTS.rotateFacing) && editorState.getPaintMode() === 'meta') {
+      event.preventDefault();
+      void setMetaBlockCommand.turn(event.shiftKey ? 'left' : 'right');
+      return;
     }
 
     if (matchesShortcut(event, SHORTCUTS.rotateFacing)) {
