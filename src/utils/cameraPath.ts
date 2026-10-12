@@ -45,15 +45,16 @@ const BLEND_IN = 0.12;
 // Ticks the orbit holds on the finished build, then ticks it spends coming back into the player's eyes
 const ORBIT_HOLD_TICKS = 30;
 const ORBIT_RETURN_TICKS = 30;
-const ORBIT_RADIUS_SCALE = 1.6;
-const ORBIT_MIN_RADIUS = 8;
+const ORBIT_RADIUS_SCALE = 2.2;
+const ORBIT_MIN_RADIUS = 12;
 // Camera height above the point it looks at, as a share of the orbit radius, with a floor in blocks
 const ORBIT_LIFT_SCALE = 0.35;
 const ORBIT_MIN_LIFT = 2;
-// On a rising build the camera starts this many blocks above the base and climbs this share of the build's
-// height while its aim climbs all of it, so the view tilts up as the layers rise
+// On a rising build the camera starts this many blocks above the base and climbs RISE_CLIMB of the build's
+// height. Its aim climbs RISE_AIM_CLIMB, so the view tilts up a little while the unbuilt top stays out of frame.
 const RISE_START_LIFT = 2;
-const RISE_CLIMB = 0.6;
+const RISE_CLIMB = 0.35;
+const RISE_AIM_CLIMB = 0.55;
 // How far the look-around view tilts up at its highest, in radians
 const LOOK_UP = 0.45;
 // Camera key frames per second. The game eases linearly between them.
@@ -113,7 +114,7 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = smoothstep(0, 1, build);
-  const focusY = rising ? lerp(bottom, top, rise) : center.y;
+  const focusY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
     : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);

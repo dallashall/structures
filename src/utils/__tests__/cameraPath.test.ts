@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CameraMode, CameraScene } from '../cameraPath';
+import type { CameraMode, CameraPose, CameraScene } from '../cameraPath';
 import { toCameraBounds, toCameraPose, toCameraTicks } from '../cameraPath';
 
 const SCENE: CameraScene = {
@@ -38,14 +38,14 @@ describe('toCameraPose', () => {
 
   it('orbits above the build and looks at its center mid-path', () => {
     const pose = toCameraPose('orbit', SCENE, 0.5);
-    expect(distance(pose.location, SCENE.center)).toBeCloseTo(9.6, 1);
+    expect(distance(pose.location, SCENE.center)).toBeCloseTo(13.2, 1);
     expect(pose.location.y).toBeGreaterThan(SCENE.center.y);
     expect(pose.facing).toEqual(SCENE.center);
   });
 
   it('stops behind the player when the last block lands, holds, then comes back into their eyes', () => {
     const landed = toCameraPose('orbit', SCENE, SCENE.landedAt);
-    expect(distance(landed.location, SCENE.center)).toBeCloseTo(9.6, 1);
+    expect(distance(landed.location, SCENE.center)).toBeCloseTo(13.2, 1);
     expect(Math.atan2(landed.location.z - SCENE.center.z, landed.location.x - SCENE.center.x)).toBeCloseTo(
       Math.atan2(SCENE.eye.z - SCENE.center.z, SCENE.eye.x - SCENE.center.x),
       6,
@@ -71,12 +71,14 @@ describe('toCameraPose', () => {
     const early = toCameraPose('orbit', RISING, atBuild(0.15));
     const middle = toCameraPose('orbit', RISING, atBuild(0.5));
     const late = toCameraPose('orbit', RISING, atBuild(0.65));
+    const pitch = ({ location, facing }: CameraPose): number =>
+      Math.atan2(facing.y - location.y, Math.hypot(facing.x - location.x, facing.z - location.z));
     expect(early.facing.y).toBeLessThan(RISING.center.y / 2);
-    expect(middle.facing.y).toBeCloseTo(RISING.center.y, 6);
     expect(late.facing.y).toBeGreaterThan(middle.facing.y);
+    expect(late.facing.y).toBeLessThan(RISING.center.y);
     expect(early.location.y).toBeLessThan(middle.location.y);
-    expect(early.location.y).toBeGreaterThan(early.facing.y);
-    expect(late.location.y).toBeLessThan(late.facing.y);
+    expect(pitch(middle)).toBeGreaterThan(pitch(early));
+    expect(pitch(late)).toBeGreaterThan(pitch(middle));
   });
 
   it('looks around from the eye, tilting up halfway through', () => {

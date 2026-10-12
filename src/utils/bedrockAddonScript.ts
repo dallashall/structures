@@ -130,12 +130,13 @@ const LOOK_DISTANCE = 8;
 const BLEND_IN = 0.12;
 const ORBIT_HOLD_TICKS = 30;
 const ORBIT_RETURN_TICKS = 30;
-const ORBIT_RADIUS_SCALE = 1.6;
-const ORBIT_MIN_RADIUS = 8;
+const ORBIT_RADIUS_SCALE = 2.2;
+const ORBIT_MIN_RADIUS = 12;
 const ORBIT_LIFT_SCALE = 0.35;
 const ORBIT_MIN_LIFT = 2;
 const RISE_START_LIFT = 2;
-const RISE_CLIMB = 0.6;
+const RISE_CLIMB = 0.35;
+const RISE_AIM_CLIMB = 0.55;
 const LOOK_UP = 0.45;
 
 function lerp(a, b, t) {
@@ -188,7 +189,7 @@ function toCameraPose(mode, scene, t) {
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = smoothstep(0, 1, build);
-  const focusY = rising ? lerp(bottom, top, rise) : center.y;
+  const focusY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
     : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
