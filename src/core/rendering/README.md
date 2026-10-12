@@ -41,7 +41,7 @@ The model is Z-up and right-handed. X and Y are horizontal and Z is vertical. Ba
 
 `toBabylonVector` in `babylonUtils.ts` maps model `(x, y, z)` to Babylon `(x, z, y)` with no negation. Every module converts through it.
 
-The bounds check in `src/reducers/modelReducer.ts` pairs X with `dimensions.width`, Y with `dimensions.height`, and Z with `dimensions.depth`. So `depth` is the vertical extent. Some rendering comments and `CameraRig.structureCenter` read the names the other way round (Y as depth, Z as height).
+The bounds check in `src/reducers/modelReducer.ts` pairs X with `dimensions.width`, Y with `dimensions.height`, and Z with `dimensions.depth`. So `depth` is the vertical extent. The new-project dialog labels follow the same fields, so "Height" sets the front-to-back size and "Depth" sets the vertical size.
 
 ## Texture atlas
 
