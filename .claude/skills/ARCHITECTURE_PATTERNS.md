@@ -251,7 +251,7 @@ Notifications are not persisted rows:
 **Purpose:** request work.
 
 ```typescript
-await renameProjectCommand.execute('Keep');
+await renameProjectCommand.execute(projectId, 'Keep');
 await draftingService.finalize(operations);
 void editHistory.undo();
 editorState.setPaintMode('fill');

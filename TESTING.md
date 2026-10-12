@@ -57,7 +57,11 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 - [ ] **Welcome screen**
   - [ ] With no projects, the grid shows "No projects yet"
   - [ ] Each project card shows a thumbnail, name, and details
-  - [ ] Clicking a card selects it and fills the side panel with name, created date, Open, and Delete
+  - [ ] Clicking a card selects it and fills the side panel with name, created date, Open, Rename, and Delete
+  - [ ] Rename turns the name into a selected text field. Enter saves and the card shows the new name.
+  - [ ] Escape or Cancel leaves the name unchanged
+  - [ ] An empty name or another project's name shows an error under the field and saves nothing
+  - [ ] Selecting another card closes the rename field
   - [ ] Open shows the project in the editor
   - [ ] Delete removes the project with no confirmation step. Its thumbnail, quick-select slots, and render settings go with it. A new project never inherits them.
 

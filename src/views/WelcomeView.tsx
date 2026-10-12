@@ -7,6 +7,7 @@ import { withProjectListState } from "../hocs/withProjectListState";
 import type { WithProjectListStateProps } from "../hocs/withProjectListState";
 
 import { ProjectCard } from "../components/ProjectCard";
+import { ProjectDetails } from "../components/ProjectDetails";
 import { TexturesMissingAlert } from "../components/TexturesMissingAlert";
 
 interface WelcomeViewOwnProps {
@@ -29,9 +30,9 @@ type WelcomeViewProps = WelcomeViewOwnProps & WithProjectListStateProps;
  * - "Credits" button
  * - Notice when the build has no texture atlas
  * - Select project to show metadata panel
- * - Open and delete actions for selected project
+ * - Open, rename, and delete actions for selected project
  *
- * Project list and selection come from withProjectListState.
+ * Project list, selection, and rename state come from withProjectListState.
  */
 function WelcomeViewComponent({
   onNewProject,
@@ -42,8 +43,13 @@ function WelcomeViewComponent({
   projects,
   isLoadingProjects,
   selectedProjectId,
+  isRenaming,
+  renameError,
   onSelectProject,
   onDeleteProject,
+  onStartRename,
+  onCancelRename,
+  onRenameProject,
 }: WelcomeViewProps) {
   const isSelectedProject = (project: StorageMetadata): boolean =>
     project.id === selectedProjectId;
@@ -73,6 +79,12 @@ function WelcomeViewComponent({
   const handleDeleteSelected = () => {
     if (selectedProject) {
       onDeleteProject(selectedProject.id);
+    }
+  };
+
+  const handleRenameSelected = (name: string) => {
+    if (selectedProject) {
+      onRenameProject(selectedProject.id, name);
     }
   };
 
@@ -164,18 +176,16 @@ function WelcomeViewComponent({
           {/* Metadata Panel */}
           <Box sx={{ flex: 1 }}>
             {selectedProject ? (
-              <Box sx={{ p: 2 }}>
-                <Typography variant="h6">{selectedProject.name}</Typography>
-                <Typography variant="body2">
-                  Created: {selectedProject.created.toLocaleDateString()}
-                </Typography>
-                <Button onClick={handleOpenSelected}>
-                  Open
-                </Button>
-                <Button onClick={handleDeleteSelected}>
-                  Delete
-                </Button>
-              </Box>
+              <ProjectDetails
+                project={selectedProject}
+                isRenaming={isRenaming}
+                renameError={renameError}
+                onOpen={handleOpenSelected}
+                onDelete={handleDeleteSelected}
+                onStartRename={onStartRename}
+                onCancelRename={onCancelRename}
+                onRename={handleRenameSelected}
+              />
             ) : (
               <Box
                 sx={{

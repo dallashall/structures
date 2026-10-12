@@ -40,7 +40,7 @@ Commands live in `src/commands/`. Each one validates against projections and app
 |---|---|---|
 | `createProjectCommand` | `execute(name, dimensions)` returns the project ID | `metadata:created`, `model:initialized` |
 | `openProjectCommand` | `execute(projectId)`, `executeLastOpened()` | Nothing. Sets the current project and waits until every projection holds it. |
-| `renameProjectCommand` | `execute(newName)` | `metadata:renamed` |
+| `renameProjectCommand` | `execute(projectId, name)`. Trims the name and throws `RenameProjectError` when it is empty or another project holds it. | `metadata:renamed` |
 | `expandDimensionsCommand` | `execute(direction)` | A `dimension-expand` action |
 | `shrinkDimensionsCommand` | `execute(direction)` | A `dimension-shrink` action. Refuses when blocks would fall outside. |
 | `setMetaBlockCommand` | `execute(position)` | A `metablock-place` action |
@@ -126,7 +126,7 @@ Which top-level screen shows (`welcome`, `editor`, or the `#/preview` component 
 
 Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. The app writes nothing to localStorage.
 
-**Emits:** `project:deleted`.
+**Emits:** `project:renamed` ({ projectId, newName }) when a `metadata:renamed` row commits, and `project:deleted`.
 
 ### SaveTracker
 
@@ -218,7 +218,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 | `withScreenState` | `screen`, `isNewProjectDialogOpen`, `isCreditsDialogOpen`, `fileError` | ScreenRouter: all five notifications |
 | `withAtlasStatus` | `atlasStatus` | TextureResolver: `atlas:ready`, `atlas:error`. It reads the status once more after subscribing, since the load can settle before the subscription. |
 | `withProjectState` | `project` | `model:rebuilt`, `metadata:rebuilt` |
-| `withProjectListState` | `projects`, `isLoadingProjects`, `selectedProjectId`, `onSelectProject`, `onDeleteProject` | `project:deleted`, `thumbnail:saved` |
+| `withProjectListState` | `projects`, `isLoadingProjects`, `selectedProjectId`, `isRenaming`, `renameError`, `onSelectProject`, `onDeleteProject`, `onStartRename`, `onCancelRename`, `onRenameProject` | `project:renamed`, `project:deleted`, `thumbnail:saved` |
 | `withEditorState` | Every EditorState value the editor shows | The EditorState notifications that change those values |
 | `withBlockRegistry` | `blocks`, `getBlock`, `searchBlocks` | `blocks:registered` |
 | `withEditHistory` | `canUndo`, `canRedo`, `onUndo`, `onRedo` | The four `history:*` notifications |
@@ -245,7 +245,9 @@ App  (withAtlasStatus, withScreenState)
 ├── ComponentPreview                 when the URL hash is #/preview
 ├── WelcomeView  (withProjectListState)
 │   ├── TexturesMissingAlert
-│   └── ProjectCard ...
+│   ├── ProjectCard ...
+│   └── ProjectDetails
+│       └── ProjectNameForm          while renaming
 ├── EditorView  (withSaveState, withBlockRegistry, withEditorState, withProjectState)
 │   ├── Toolbar
 │   │   ├── UndoRedoButtons  (withEditHistory)

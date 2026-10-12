@@ -8,6 +8,10 @@
  * Thumbnails come from ThumbnailStore, since they are derived images, not events.
  * The last opened project ID lives in a separate IndexedDB database.
  * All persistence is IndexedDB: the app writes nothing to localStorage.
+ *
+ * Events:
+ * - project:renamed ({ projectId, newName }) - a metadata:renamed event committed
+ * - project:deleted - a project and all its records were removed
  */
 
 import { EventEmitter } from './EventEmitter';
@@ -74,7 +78,14 @@ class Storage extends EventEmitter {
   private constructor() {
     super();
     this.initPromise = this.initDatabase();
+    eventLog.on('event:appended', this.handleEventAppended);
   }
+
+  private handleEventAppended = (event: Event): void => {
+    if (event.type !== 'metadata:renamed' || !event.projectId) return;
+    const { newName } = event.data as { newName: string };
+    this.emit('project:renamed', { projectId: event.projectId, newName });
+  };
 
   static getInstance(): Storage {
     if (!Storage.instance) {

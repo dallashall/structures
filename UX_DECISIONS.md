@@ -86,7 +86,7 @@ This document records the interaction decisions for Structures and how the app c
 - Normal: paint anywhere
 - Only Replace: paint only over existing blocks
 - Selective Replace: replace only a chosen block type
-- Erase: remove blocks. The preview turns red.
+- Erase: remove blocks. The preview turns red. Erase with an outline shape and depth cuts a tunnel. Erase with a filled shape and depth hollows out a volume.
 
 **Zoom and pan:**
 - The grid fits the panel until the user zooms or pans.
@@ -159,7 +159,9 @@ This document records the interaction decisions for Structures and how the app c
 
 **Project browser:**
 - A grid of cards with name and thumbnail
-- A selected project shows its name and created date, with Open and Delete buttons
+- A selected project shows its name and created date, with Open, Rename, and Delete buttons
+
+**Rename:** the name turns into a text field. Enter or Save keeps the new name, and Escape or Cancel leaves it. An empty name or a name another project holds shows an error under the field.
 - The 3D view captures thumbnails shortly after the structure settles
 
 **Delete:** removes the project at once, with no confirmation.

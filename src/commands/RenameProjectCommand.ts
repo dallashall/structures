@@ -1,43 +1,54 @@
 import { eventLog } from '../core/EventLog';
-import { editorState } from '../core/EditorState';
-import { metadataProjection } from '../projections/MetadataProjection';
+import { storage } from '../core/Storage';
 
 /**
- * RenameProjectCommand - Renames the current project
+ * RenameProjectCommand - Renames any stored project, open or not
  *
  * Appends to: EventLog (metadata:renamed)
- * Queries: MetadataProjection (to verify project exists)
- * Validates: name not empty, name different from current
+ * Queries: Storage (the project must exist and no other project may hold the name)
+ * Throws RenameProjectError with a message for the user when validation fails.
  */
-export class RenameProjectCommand {
-  async execute(newName: string): Promise<void> {
-    // Validate
-    if (!newName || newName.trim().length === 0) {
-      throw new Error('Project name cannot be empty');
-    }
-
-    // Query current metadata
-    const metadata = await metadataProjection.getMetadata();
-    if (!metadata) {
-      throw new Error('No active project');
-    }
-
-    // Check if name actually changed
-    if (metadata.name === newName) {
-      return; // No-op if name unchanged
-    }
-
-    const projectId = editorState.getCurrentProjectId();
-    if (!projectId) {
-      throw new Error('No current project');
-    }
-
-    // Append to EventLog
-    await eventLog.append('metadata:renamed', {
-      previousName: metadata.name,
-      newName,
-    }, projectId);
+export class RenameProjectError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RenameProjectError';
   }
 }
 
-export const renameProjectCommand = new RenameProjectCommand();
+class RenameProjectCommand {
+  private static instance: RenameProjectCommand;
+
+  private constructor() {}
+
+  static getInstance(): RenameProjectCommand {
+    if (!RenameProjectCommand.instance) {
+      RenameProjectCommand.instance = new RenameProjectCommand();
+    }
+    return RenameProjectCommand.instance;
+  }
+
+  async execute(projectId: string, name: string): Promise<void> {
+    const newName = name.trim();
+    if (!newName) {
+      throw new RenameProjectError('A project needs a name.');
+    }
+
+    const projects = await storage.listProjects();
+    const isTarget = (project: { id: string }): boolean => project.id === projectId;
+    const project = projects.find(isTarget);
+    if (!project) {
+      throw new RenameProjectError('That project no longer exists.');
+    }
+    if (project.name === newName) return;
+
+    const holdsName = (other: { id: string; name: string }): boolean =>
+      other.id !== projectId && other.name === newName;
+    if (projects.some(holdsName)) {
+      throw new RenameProjectError('Another project already has that name.');
+    }
+
+    await eventLog.append('metadata:renamed', { previousName: project.name, newName }, projectId);
+  }
+}
+
+export const renameProjectCommand = RenameProjectCommand.getInstance();

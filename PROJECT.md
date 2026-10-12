@@ -180,18 +180,15 @@ Load from File reads that file into a new project with a new ID. Action IDs get 
 
 ## Future Enhancements
 
-- Click to place the meta block in placement mode. The meta block stays at the origin until this exists.
-- UI to expand, shrink, and rename a project. The commands exist without controls.
+- Export to Minecraft formats such as NBT structure files. The meta block marks the export origin, and its placement flow will take shape with export.
+- UI to expand and shrink a project. The commands exist without controls.
 - A confirmation before deleting a project
 - Shift and Alt modifiers on the shape tools
 - An eyedropper that samples a placed block
 - Copy and paste of regions
 - Symmetry tools (mirror, rotate)
-- A tunnel mode that works like outline but clears the interior
-- A hollow delete that uses the painting shapes to delete in a shape
 - Categories in the material browser taken from the block registry
 - Doors and other multi-part blocks in block state controls
-- Export to Minecraft formats such as NBT structure files
 - A template library
 - An animation timeline for the structure's entrance effect
 - Collaborative editing
