@@ -135,8 +135,8 @@ const ORBIT_MIN_RADIUS = 12;
 const ORBIT_LIFT_SCALE = 0.35;
 const ORBIT_MIN_LIFT = 2;
 const RISE_START_LIFT = 2;
-const RISE_CLIMB = 0.35;
-const RISE_AIM_CLIMB = 0.55;
+const RISE_CLIMB = 0.3;
+const RISE_AIM_CLIMB = 0.4;
 const LOOK_UP = 0.45;
 
 function lerp(a, b, t) {
@@ -188,7 +188,7 @@ function toCameraPose(mode, scene, t) {
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
-  const rise = smoothstep(0, 1, build);
+  const rise = build * build;
   const focusY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
