@@ -158,7 +158,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] A glow in each block's color appears in each cell just before its block lands
   - [ ] Stairs, logs, and other directional blocks face the right way for all four player facings
   - [ ] With uses set to 3, the item shows a wear bar, and the third use builds and then breaks the item
-- [ ] Orbit in game: the camera rises out of first person, circles the build once while it lands, stops behind the player when the last block lands, and only then comes back into their eyes. The circle speeds up from rest and slows to a stop. Movement and looking stay locked until then.
+- [ ] Orbit in game: the camera rises out of first person, circles the build once while it lands, stops behind the player when the last block lands, holds on the finished build, and only then comes back into their eyes. The circle speeds up from rest and slows to a stop. Movement and looking stay locked until then.
 - [ ] Orbit with Rise: the camera starts low near the base and tilts up as the layers climb
 - [ ] Look around in game: the view turns once around the player and tilts up while the build rises
 - [ ] Preview with Orbit or Look around flies the 3D view along the same path, then returns the editor camera

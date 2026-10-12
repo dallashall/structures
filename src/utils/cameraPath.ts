@@ -42,7 +42,8 @@ export interface CameraPose {
 const LOOK_DISTANCE = 8;
 // Share of the build spent easing out of first person
 const BLEND_IN = 0.12;
-// Ticks the orbit spends coming back into the player's eyes after the last block lands
+// Ticks the orbit holds on the finished build, then ticks it spends coming back into the player's eyes
+const ORBIT_HOLD_TICKS = 30;
 const ORBIT_RETURN_TICKS = 30;
 const ORBIT_RADIUS_SCALE = 1.6;
 const ORBIT_MIN_RADIUS = 8;
@@ -69,7 +70,7 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
  * Length of the camera path in ticks, for a build whose last block lands after buildTicks
  */
 export function toCameraTicks(mode: CameraMode, buildTicks: number): number {
-  return mode === 'orbit' ? buildTicks + ORBIT_RETURN_TICKS : buildTicks;
+  return mode === 'orbit' ? buildTicks + ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS : buildTicks;
 }
 
 /**
@@ -103,9 +104,10 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
 
   // One full revolution over the build that eases in and out and stops behind the player.
   // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
-  // Once the last block lands, the camera comes back into the player's eyes.
+  // Once the last block lands, the camera holds on the finished build, then comes back into the player's eyes.
   const build = Math.min(1, t / landedAt);
-  const settle = landedAt < 1 ? smoothstep(landedAt, 1, t) : 0;
+  const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
+  const settle = returnsAt < 1 ? smoothstep(returnsAt, 1, t) : 0;
   const sweep = 0.5 - 0.5 * Math.cos(Math.PI * build);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);

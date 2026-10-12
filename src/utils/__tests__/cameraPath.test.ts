@@ -43,14 +43,16 @@ describe('toCameraPose', () => {
     expect(pose.facing).toEqual(SCENE.center);
   });
 
-  it('stops behind the player when the last block lands, then comes back into their eyes', () => {
+  it('stops behind the player when the last block lands, holds, then comes back into their eyes', () => {
     const landed = toCameraPose('orbit', SCENE, SCENE.landedAt);
     expect(distance(landed.location, SCENE.center)).toBeCloseTo(9.6, 1);
     expect(Math.atan2(landed.location.z - SCENE.center.z, landed.location.x - SCENE.center.x)).toBeCloseTo(
       Math.atan2(SCENE.eye.z - SCENE.center.z, SCENE.eye.x - SCENE.center.x),
       6,
     );
-    const returning = toCameraPose('orbit', SCENE, (SCENE.landedAt + 1) / 2);
+    const holding = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.45);
+    expect(holding).toEqual(landed);
+    const returning = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.75);
     expect(distance(returning.location, SCENE.eye)).toBeLessThan(distance(landed.location, SCENE.eye));
   });
 
