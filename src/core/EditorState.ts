@@ -75,6 +75,8 @@ class EditorState extends EventEmitter {
     mode: 'through',
   };
   private heldModifiers: HeldModifiers = { shift: false, alt: false };
+  // Every 2D view and tool switch makes a new tool instance, so the point tool's line anchor lives here
+  private lastPointStrokeEnd: Vector3D | null = null;
   private isPlacementMode = false;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
   private foregroundSlotIndex = 0;
@@ -278,6 +280,14 @@ class EditorState extends EventEmitter {
     return this.heldModifiers;
   }
 
+  setLastPointStrokeEnd = (position: Vector3D): void => {
+    this.lastPointStrokeEnd = { ...position };
+  }
+
+  getLastPointStrokeEnd(): Vector3D | null {
+    return this.lastPointStrokeEnd;
+  }
+
   setPlacementMode = (isPlacementMode: boolean): void => {
     if (this.isPlacementMode !== isPlacementMode) {
       this.isPlacementMode = isPlacementMode;
@@ -458,6 +468,7 @@ class EditorState extends EventEmitter {
   setCurrentProjectId = (projectId: string | null): void => {
     if (this.currentProjectId !== projectId) {
       this.currentProjectId = projectId;
+      this.lastPointStrokeEnd = null;
       this.emit('project:switched', projectId);
 
       if (projectId) {

@@ -18,7 +18,6 @@ import type { Vector3D } from "../../types";
 export class PointPaintTool extends ClickDragReleaseTool {
   private strategy = new PointPaintStrategy();
   private lastPaintedCell: string | null = null;
-  private lastStrokeEnd: Vector3D | null = null;
   private draftPositions = new Map<string, PaintOperation>();
 
   protected onHover(pos: UniversalPosition): void {
@@ -31,7 +30,7 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.draftPositions.clear();
     draftingService.start();
 
-    const lineStart = this.modifiers.shift ? this.lastStrokeEnd : null;
+    const lineStart = this.modifiers.shift ? editorState.getLastPointStrokeEnd() : null;
     if (lineStart) {
       this.paintModels(this.toLine(lineStart, this.toModel(pos)));
       this.lastPaintedCell = `${pos.gridX},${pos.gridY}`;
@@ -45,7 +44,7 @@ export class PointPaintTool extends ClickDragReleaseTool {
   }
 
   protected async onDragEnd(_start: UniversalPosition, end: UniversalPosition): Promise<void> {
-    this.lastStrokeEnd = this.toModel(end);
+    editorState.setLastPointStrokeEnd(this.toModel(end));
     await this.finalizeDraft();
     this.previewData = { blocks: [] };
     this.requestRender();

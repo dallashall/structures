@@ -196,6 +196,7 @@ Painting uses the material in the active slot (foreground or background).
   - [ ] Drag paints along the path without doubling cells
   - [ ] One undo removes the whole stroke
   - [ ] Shift-click draws a straight line from the previous stroke's last cell. One undo removes the line.
+  - [ ] The line still starts from the last stroke after a tool switch or a stroke in another view
   - [ ] Shift-click with no previous stroke places one block
 
 - [ ] **Fill (no key)**
