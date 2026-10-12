@@ -21,9 +21,10 @@ const angleAround = (scene: CameraScene, t: number): number => {
   return Math.atan2(location.z - scene.center.z, location.x - scene.center.x);
 };
 
-// Largest shake in the test, with headroom over the path's WOBBLE_DEGREES and WOBBLE_LOCATION
-const WOBBLE_BOUND_DEGREES = 2;
-const WOBBLE_BOUND = 0.3;
+// Largest gap between two shaken poses: twice the path's WOBBLE_DEGREES and WOBBLE_LOCATION on each axis.
+// On the look-around's 8-block reach the camera's drift turns the aim by up to about 3.7 degrees more.
+const WOBBLE_BOUND_DEGREES = 2 * (3 + 3.8);
+const WOBBLE_BOUND = 2 * 0.3 * Math.sqrt(3);
 const toAimTurn = (pose: CameraPose, other: CameraPose): number => {
   const a = { x: pose.facing.x - pose.location.x, y: pose.facing.y - pose.location.y, z: pose.facing.z - pose.location.z };
   const b = { x: other.facing.x - other.location.x, y: other.facing.y - other.location.y, z: other.facing.z - other.location.z };

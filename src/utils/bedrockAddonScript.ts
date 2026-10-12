@@ -154,8 +154,8 @@ function smoothstep(edge0, edge1, t) {
 
 const WOBBLE_HZ = 1;
 const WOBBLE_OCTAVE_HZ = 2.3;
-const WOBBLE_DEGREES = 1.2;
-const WOBBLE_LOCATION = 0.12;
+const WOBBLE_DEGREES = 3;
+const WOBBLE_LOCATION = 0.3;
 
 function toNoise(key, seed) {
   const x = Math.sin(key * 127.1 + seed * 311.7) * 43758.5453;

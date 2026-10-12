@@ -75,8 +75,8 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
 // The aim turns by up to WOBBLE_DEGREES. The camera itself drifts by up to WOBBLE_LOCATION blocks.
 const WOBBLE_HZ = 1;
 const WOBBLE_OCTAVE_HZ = 2.3;
-const WOBBLE_DEGREES = 1.2;
-const WOBBLE_LOCATION = 0.12;
+const WOBBLE_DEGREES = 3;
+const WOBBLE_LOCATION = 0.3;
 
 // A repeatable 0–1 draw for an integer key, so the game and the preview shake the same way
 const toNoise = (key: number, seed: number): number => {
