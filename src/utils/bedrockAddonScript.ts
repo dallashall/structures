@@ -128,6 +128,7 @@ function setBlock(dimension, location, permutation) {
 // CAMERA PATH START: a copy of the functions in src/utils/cameraPath.ts
 const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
 const CAMERA_LAG = 0.6;
+const SPRING_DAMPING = 0.7;
 const SETTLE_SECONDS = 2;
 const LOOK_DISTANCE = 8;
 const PULL_OUT_SECONDS = 1;
@@ -143,8 +144,8 @@ const RISE_AIM_CLIMB = 0.4;
 const LOOK_UP = 0.45;
 const SHAKE_HZ = 1.5;
 const SHAKE_LAG = 0.3;
-const SHAKE_DEGREES = 3;
-const SHAKE_LOCATION = 0.3;
+const SHAKE_DEGREES = 2.4;
+const SHAKE_LOCATION = 0.24;
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
@@ -160,13 +161,16 @@ function clamp01(x) {
 
 function stepSpring(spring, target, lag) {
   const omega = 2 / lag;
-  const x = omega * KEY_SECONDS;
-  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const decay = SPRING_DAMPING * omega;
+  const wobble = omega * Math.sqrt(1 - SPRING_DAMPING * SPRING_DAMPING);
+  const fade = Math.exp(-decay * KEY_SECONDS);
+  const cos = Math.cos(wobble * KEY_SECONDS) * fade;
+  const sin = (Math.sin(wobble * KEY_SECONDS) * fade) / wobble;
   for (const axis of ["x", "y", "z"]) {
-    const change = spring.value[axis] - target[axis];
-    const push = (spring.velocity[axis] + omega * change) * KEY_SECONDS;
-    spring.value[axis] = target[axis] + (change + push) * decay;
-    spring.velocity[axis] = (spring.velocity[axis] - omega * push) * decay;
+    const offset = spring.value[axis] - target[axis];
+    const velocity = spring.velocity[axis];
+    spring.value[axis] = target[axis] + offset * cos + (velocity + decay * offset) * sin;
+    spring.velocity[axis] = velocity * cos - (decay * velocity + omega * omega * offset) * sin;
   }
 }
 

@@ -67,9 +67,20 @@ describe('toCameraKeys', () => {
     expect(rates[0]).toBeLessThan(0.2 * peak);
     for (let i = 1; i < 5; i++) expect(rates[i]).toBeGreaterThan(rates[i - 1]);
     // The last step is the snap onto the eyes, so the settle is measured before it
-    const settle = rates.slice(-12, -1);
-    for (let i = 1; i < settle.length; i++) expect(settle[i]).toBeLessThan(settle[i - 1]);
-    expect(settle[settle.length - 1]).toBeLessThan(0.05 * peak);
+    const settle = rates.slice(-6, -1);
+    expect(Math.max(...settle)).toBeLessThan(0.05 * peak);
+  });
+
+  it('drifts a little past the player\'s facing at the end of a look-around, then settles back', () => {
+    const keys = toCameraKeys('lookAround', SCENE);
+    const toYawDegrees = ({ location, facing }: CameraPose): number =>
+      (Math.atan2(facing.x - location.x, location.z - facing.z) * 180) / Math.PI;
+    const yaws = keys.slice(keyAt(SCENE.buildSeconds)).map(toYawDegrees);
+    const past = Math.max(...yaws);
+    expect(yaws[0]).toBeLessThan(0);
+    expect(past).toBeGreaterThan(0.5);
+    expect(past).toBeLessThan(5);
+    expect(Math.abs(yaws[yaws.length - 2])).toBeLessThan(0.2);
   });
 
   it('never jolts: speed changes by under a quarter of its peak from one key to the next', () => {

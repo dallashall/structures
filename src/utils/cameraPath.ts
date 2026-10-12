@@ -50,6 +50,8 @@ const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
 
 // Seconds the camera takes to catch up with its target. Larger is heavier.
 const CAMERA_LAG = 0.6;
+// Damping ratio of every spring. 0.7 overshoots a stopped target by about 5%.
+const SPRING_DAMPING = 0.7;
 // Seconds after the target comes to rest at the eyes, for the spring to settle there
 const SETTLE_SECONDS = 2;
 
@@ -79,8 +81,8 @@ const LOOK_UP = 0.45;
 // SHAKE_LOCATION blocks.
 const SHAKE_HZ = 1.5;
 const SHAKE_LAG = 0.3;
-const SHAKE_DEGREES = 3;
-const SHAKE_LOCATION = 0.3;
+const SHAKE_DEGREES = 2.4;
+const SHAKE_LOCATION = 0.24;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
@@ -92,18 +94,21 @@ interface Spring {
 }
 
 /**
- * Moves a spring one key toward target, critically damped, so it never overshoots.
- * Closed-form step from Game Programming Gems 4, section 1.10, which stays stable at any key spacing.
+ * Moves a spring one key toward target with the exact solution of a damped spring, so it stays stable at any
+ * key spacing. Below 1, SPRING_DAMPING lets the camera drift a little past its mark and settle back.
  */
 function stepSpring(spring: Spring, target: Vec3, lag: number): void {
   const omega = 2 / lag;
-  const x = omega * KEY_SECONDS;
-  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const decay = SPRING_DAMPING * omega;
+  const wobble = omega * Math.sqrt(1 - SPRING_DAMPING * SPRING_DAMPING);
+  const fade = Math.exp(-decay * KEY_SECONDS);
+  const cos = Math.cos(wobble * KEY_SECONDS) * fade;
+  const sin = (Math.sin(wobble * KEY_SECONDS) * fade) / wobble;
   for (const axis of ['x', 'y', 'z'] as const) {
-    const change = spring.value[axis] - target[axis];
-    const push = (spring.velocity[axis] + omega * change) * KEY_SECONDS;
-    spring.value[axis] = target[axis] + (change + push) * decay;
-    spring.velocity[axis] = (spring.velocity[axis] - omega * push) * decay;
+    const offset = spring.value[axis] - target[axis];
+    const velocity = spring.velocity[axis];
+    spring.value[axis] = target[axis] + offset * cos + (velocity + decay * offset) * sin;
+    spring.velocity[axis] = velocity * cos - (decay * velocity + omega * omega * offset) * sin;
   }
 }
 
