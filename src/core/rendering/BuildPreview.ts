@@ -11,11 +11,14 @@
  * Babylon's particles would not match Bedrock's anyway, so the glow is an approximation of the look.
  */
 
-import { Color3, Material, Matrix, MeshBuilder, StandardMaterial } from '@babylonjs/core';
+import { Color3, Material, Matrix, MeshBuilder, StandardMaterial, Vector3 } from '@babylonjs/core';
 import type { InstancedMesh, Mesh, Observer, Scene } from '@babylonjs/core';
 
 import type { MetaBlock } from '../../types';
 import type { AnimatedSequence } from '../../utils/buildSequence';
+import type { CameraMode, CameraScene } from '../../utils/cameraPath';
+import { toCameraBounds, toCameraPose } from '../../utils/cameraPath';
+import { directionToOffset } from '../DirectionMath';
 import {
   LEAD_TICKS,
   TICKS_PER_SECOND,
@@ -26,6 +29,18 @@ import {
 } from '../../utils/buildSequence';
 
 export type GlowColor = [number, number, number];
+
+// The parts of CameraRig the preview flies the camera with
+export interface CameraDriver {
+  beginDrive(): void;
+  drive(location: Vector3, facing: Vector3): void;
+  endDrive(): void;
+}
+
+export interface PreviewCamera {
+  mode: CameraMode;
+  driver: CameraDriver;
+}
 
 interface PreviewCell {
   mesh: InstancedMesh;
@@ -50,6 +65,9 @@ const GLOW_RISE = 0.6;
 // Spread of puffs around the cell center, in blocks
 const GLOW_SPREAD = 0.35;
 
+// Bedrock's eye height above the feet, so the preview's first-person view matches the game's
+const EYE_HEIGHT = 1.62;
+
 const parseKey = (key: string): [number, number, number] => key.split(',').map(Number) as [number, number, number];
 
 export class BuildPreview {
@@ -65,6 +83,8 @@ export class BuildPreview {
   private glowCursor = 0;
   private landCursor = 0;
   private onDone: (() => void) | null = null;
+  private camera: PreviewCamera | null = null;
+  private cameraScene: CameraScene | null = null;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -98,6 +118,7 @@ export class BuildPreview {
     metaBlock: MetaBlock,
     blocks: Map<string, InstancedMesh>,
     toColor: (mesh: InstancedMesh) => GlowColor,
+    camera: PreviewCamera | null = null,
   ): Promise<void> {
     this.stop();
     const anchor = metaBlock.position;
@@ -121,6 +142,7 @@ export class BuildPreview {
     this.landCursor = 0;
     this.glows = [];
     this.startMs = performance.now();
+    this.startCamera(camera, metaBlock);
     this.observer = this.scene.onBeforeRenderObservable.add(this.step);
 
     const waitForEnd = (resolve: () => void): void => {
@@ -145,6 +167,9 @@ export class BuildPreview {
     this.cells = [];
     this.glows = [];
     this.glowMesh.thinInstanceCount = 0;
+    this.camera?.driver.endDrive();
+    this.camera = null;
+    this.cameraScene = null;
 
     const onDone = this.onDone;
     this.onDone = null;
@@ -172,9 +197,39 @@ export class BuildPreview {
     }
 
     this.drawGlows(now);
+    this.flyCamera(tick);
 
     if (this.landCursor >= count && this.glows.length === 0) this.stop();
   };
+
+  /**
+   * The player stands in the meta block's cell facing its arrow, which is what the game's camera starts from
+   */
+  private startCamera(camera: PreviewCamera | null, metaBlock: MetaBlock): void {
+    if (!camera || camera.mode === 'none') return;
+    // Model (x, y, z) with z up is Babylon (x, z, y), the same Y-up axes the camera path uses
+    const toCorner = (cell: PreviewCell): { x: number; y: number; z: number } => ({
+      x: cell.mesh.position.x - 0.5,
+      y: cell.mesh.position.y - 0.5,
+      z: cell.mesh.position.z - 0.5,
+    });
+    const { x, y, z } = metaBlock.position;
+    const forward = directionToOffset(metaBlock.direction);
+    this.cameraScene = {
+      ...toCameraBounds(this.cells.map(toCorner)),
+      eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
+      forward: { x: forward.x, y: 0, z: forward.y },
+    };
+    this.camera = camera;
+    camera.driver.beginDrive();
+  }
+
+  private flyCamera(tick: number): void {
+    if (!this.camera || !this.cameraScene) return;
+    const t = Math.min(1, tick / (this.durationTicks + LEAD_TICKS));
+    const { location, facing } = toCameraPose(this.camera.mode, this.cameraScene, t);
+    this.camera.driver.drive(new Vector3(location.x, location.y, location.z), new Vector3(facing.x, facing.y, facing.z));
+  }
 
   private addGlow(cell: PreviewCell, now: number): void {
     const { x, y, z } = cell.mesh.position;

@@ -76,7 +76,7 @@ export function withExportState<P extends object>(
       screenRouter.closeExportDialog();
       if (editorState.getLayoutMode() === 'tabbed') editorState.setActiveView('3d' as ViewType);
       const reopen = (): void => screenRouter.openExportDialog();
-      babylon3d.playBuildPreview(options.sequence, options.seconds).then(reopen, reopen);
+      babylon3d.playBuildPreview(options.sequence, options.seconds, options.camera).then(reopen, reopen);
     };
 
     const handleReset = (): void => {

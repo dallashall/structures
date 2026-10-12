@@ -158,6 +158,10 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] A glow in each block's color appears in each cell just before its block lands
   - [ ] Stairs, logs, and other directional blocks face the right way for all four player facings
   - [ ] With uses set to 3, the item shows a wear bar, and the third use builds and then breaks the item
+- [ ] Orbit in game: the camera rises out of first person, circles the build once while it lands, and comes back into the player's eyes. Movement and looking stay locked until then.
+- [ ] Look around in game: the view turns once around the player and tilts up while the build rises
+- [ ] Preview with Orbit or Look around flies the 3D view along the same path, then returns the editor camera
+- [ ] Re-exporting the same add-on name replaces the installed add-on. Another name installs beside it.
 - [ ] Preview hides the dialog, plays the chosen animation in the 3D view with tinted glow puffs ahead of the blocks, then shows the dialog again
 - [ ] In the tabbed layout, Preview switches to the 3D tab first
 - [ ] Preview is disabled for "All at once"

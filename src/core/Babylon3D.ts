@@ -42,6 +42,7 @@ import { BackdropRenderer } from './rendering/BackdropRenderer';
 import { BuildPreview } from './rendering/BuildPreview';
 import type { GlowColor } from './rendering/BuildPreview';
 import type { AnimatedSequence } from '../utils/buildSequence';
+import type { CameraMode } from '../utils/cameraPath';
 import { toGlowTint } from '../utils/buildSequence';
 import { cssColorToRgb } from '../utils/cssColor';
 import { positionKey, toBabylonVector } from './rendering/babylonUtils';
@@ -245,7 +246,7 @@ class Babylon3D {
   /**
    * Plays the add-on's build animation over the current model. Resolves when it ends or stops.
    */
-  async playBuildPreview(sequence: AnimatedSequence, seconds: number): Promise<void> {
+  async playBuildPreview(sequence: AnimatedSequence, seconds: number, cameraMode: CameraMode = 'none'): Promise<void> {
     // Switching to the 3D tab remounts the view, and its block meshes return over the next frames
     const expected = blockProjection.getCached().size;
     for (let frame = 0; frame < PREVIEW_WAIT_FRAMES; frame++) {
@@ -254,7 +255,8 @@ class Babylon3D {
     }
     if (!this.buildPreview || !this.blockRenderer) return;
     const { metaBlock } = modelProjection.getCached();
-    await this.buildPreview.play(sequence, seconds, metaBlock, this.blockRenderer.getBlockMeshes(), toGlowColor);
+    const camera = this.cameraRig ? { mode: cameraMode, driver: this.cameraRig } : null;
+    await this.buildPreview.play(sequence, seconds, metaBlock, this.blockRenderer.getBlockMeshes(), toGlowColor, camera);
   }
 
   stopBuildPreview(): void {

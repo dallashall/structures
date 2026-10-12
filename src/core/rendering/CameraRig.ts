@@ -84,6 +84,8 @@ export class CameraRig {
   private goal: CameraGoal;
   private lastFrameMs = performance.now();
   private follower: Observer<Scene>;
+  // Set while the build preview flies the camera. The rig keeps its hands off until the preview ends.
+  private drivenFrom: CameraGoal | null = null;
 
   constructor(private scene: Scene, canvas: HTMLCanvasElement) {
     this.camera = new ArcRotateCamera(
@@ -296,6 +298,34 @@ export class CameraRig {
     );
   }
 
+  /**
+   * Hands the camera to the caller, which then moves it with drive() until endDrive()
+   */
+  beginDrive(): void {
+    this.stopAnimation();
+    this.drivenFrom ??= { ...this.goal, target: this.goal.target.clone() };
+  }
+
+  /**
+   * Puts the camera at `location` looking at `facing`, both in Babylon space, with no easing
+   */
+  drive(location: Vector3, facing: Vector3): void {
+    if (!this.drivenFrom) return;
+    this.camera.target.copyFrom(facing);
+    this.camera.setPosition(location);
+  }
+
+  /**
+   * Eases back to the view the camera had before beginDrive()
+   */
+  endDrive(): void {
+    const from = this.drivenFrom;
+    if (!from) return;
+    this.drivenFrom = null;
+    this.goal = this.currentPose();
+    this.moveTo(from, true);
+  }
+
   private currentPose(): CameraGoal {
     return {
       alpha: this.camera.alpha,
@@ -326,7 +356,7 @@ export class CameraRig {
     const now = performance.now();
     const elapsed = now - this.lastFrameMs;
     this.lastFrameMs = now;
-    if (this.tween) return;
+    if (this.tween || this.drivenFrom) return;
 
     const k = 1 - Math.exp(-elapsed / FOLLOW_TIME_MS);
     const camera = this.camera;
