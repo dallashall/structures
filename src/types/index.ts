@@ -50,7 +50,7 @@ export interface DepthConfig {
   mode: DepthPaintMode;
 }
 
-// Shift keeps a shape's sides equal and turns a point click into a line. Alt draws a shape from its center.
+// Shift keeps a shape's sides equal and turns a point stroke into a straight line. Alt draws a shape from its center.
 export interface HeldModifiers {
   shift: boolean;
   alt: boolean;

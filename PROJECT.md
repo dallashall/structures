@@ -45,7 +45,7 @@ Each 2D view is an HTML canvas that draws one slice of the model.
 **Modifier keys:** the tool options bar lists the active tool's modifiers and fills in each one while it is held.
 - Rectangle: drag corner to corner. Shift makes a square. Alt draws from the center.
 - Circle: drag corner to corner for an ellipse. Shift makes a true circle. Alt draws from the center.
-- Point: Shift-click draws a straight line from the previous stroke's last cell.
+- Point: holding Shift turns the stroke into a straight line from the press cell to the cursor, whatever path the pointer takes.
 - Shift and Alt combine. A modifier pressed mid-drag reshapes the preview at once.
 
 Shape tools draw an outline or a filled shape. Depth painting repeats a stroke through 1 to 10 layers, either through everything or until it hits a block.

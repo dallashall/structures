@@ -13,7 +13,7 @@ const ALT = { key: 'alt', keyLabel: 'Alt' } as const;
  * The modifiers each tool reads. Tools absent from this map ignore Shift and Alt.
  */
 export const MODIFIER_HINTS: Partial<Record<PaintMode, ModifierHint[]>> = {
-  point: [{ ...SHIFT, action: 'Line from last block' }],
+  point: [{ ...SHIFT, action: 'Straight line' }],
   outline: [
     { ...SHIFT, action: 'Square' },
     { ...ALT, action: 'From center' },

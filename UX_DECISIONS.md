@@ -83,7 +83,7 @@ This document records the interaction decisions for Structures and how the app c
 **Modifier keys:** the tool options bar lists the active tool's modifiers and fills in each one while it is held.
 - Rectangle: drag corner to corner. Shift makes a square. Alt draws from the center.
 - Circle: drag corner to corner for an ellipse. Shift makes a true circle. Alt draws from the center.
-- Point: Shift-click draws a straight line from the previous stroke's last cell.
+- Point: holding Shift turns the stroke into a straight line from the press cell to the cursor, whatever path the pointer takes.
 - Shift and Alt combine. A modifier pressed mid-drag reshapes the preview at once.
 
 **Shape fill:** shape tools draw an outline or a filled shape.

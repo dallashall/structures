@@ -13,7 +13,7 @@ import type { Vector3D } from "../../types";
 /**
  * PointPaintTool - Paints every cell the drag crosses, and the whole stroke commits as one undoable action
  *
- * Shift-press first paints a straight line from the previous stroke's last cell to the press point.
+ * Holding Shift turns the stroke into a straight line from the press cell to the cursor, whatever path the pointer takes.
  */
 export class PointPaintTool extends ClickDragReleaseTool {
   private strategy = new PointPaintStrategy();
@@ -29,22 +29,18 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.lastPaintedCell = null;
     this.draftPositions.clear();
     draftingService.start();
-
-    const lineStart = this.modifiers.shift ? editorState.getLastPointStrokeEnd() : null;
-    if (lineStart) {
-      this.paintModels(this.toLine(lineStart, this.toModel(pos)));
-      this.lastPaintedCell = `${pos.gridX},${pos.gridY}`;
-      return;
-    }
     this.paintAt(pos);
   }
 
-  protected onDrag(_start: UniversalPosition, current: UniversalPosition): void {
+  protected onDrag(start: UniversalPosition, current: UniversalPosition): void {
+    if (this.modifiers.shift) {
+      this.paintLine(start, current);
+      return;
+    }
     this.paintAt(current);
   }
 
-  protected async onDragEnd(_start: UniversalPosition, end: UniversalPosition): Promise<void> {
-    editorState.setLastPointStrokeEnd(this.toModel(end));
+  protected async onDragEnd(_start: UniversalPosition, _end: UniversalPosition): Promise<void> {
     await this.finalizeDraft();
     this.previewData = { blocks: [] };
     this.requestRender();
@@ -63,14 +59,16 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.requestRender();
   }
 
-  /**
-   * Cells from `from` to `to` on this view's plane. A `from` on another layer moves onto the active layer first.
-   */
-  private toLine(from: Vector3D, to: Vector3D): Vector3D[] {
+  // The line replaces the whole draft, so cells from the freehand path or an earlier cursor position drop out
+  private paintLine(start: UniversalPosition, current: UniversalPosition): void {
     const { axis } = PaintPipeline.getConstrainedAxis(this.viewState.getViewType(), editorState.getActiveLayers());
     const plane = ShapeUtils.planeFromConstrainAxis(axis);
-    const toPosition = (cell: { u: number; v: number }): Vector3D => ShapeUtils.from2D(cell, plane, to);
-    return lineCells(ShapeUtils.to2D(from, plane), ShapeUtils.to2D(to, plane)).map(toPosition);
+    const end = this.toModel(current);
+    const toPosition = (cell: { u: number; v: number }): Vector3D => ShapeUtils.from2D(cell, plane, end);
+
+    this.draftPositions.clear();
+    this.lastPaintedCell = `${current.gridX},${current.gridY}`;
+    this.paintModels(lineCells(ShapeUtils.to2D(this.toModel(start), plane), ShapeUtils.to2D(end, plane)).map(toPosition));
   }
 
   private paintAt(pos: UniversalPosition): void {
