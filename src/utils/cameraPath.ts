@@ -61,7 +61,7 @@ const RISE_AIM_CLIMB = 0.4;
 // How far the look-around view tilts up at its highest, in radians
 const LOOK_UP = 0.45;
 // Camera key frames per second. The game eases linearly between them.
-export const CAMERA_KEYS_PER_SECOND = 4;
+export const CAMERA_KEYS_PER_SECOND = 10;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
@@ -70,29 +70,47 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
   return x * x * (3 - 2 * x);
 };
 
-// Handheld drift in blocks for the camera and for the point it looks at. Frequencies sit well under
-// CAMERA_KEYS_PER_SECOND, so the game's linear easing between keys still traces each sway.
-const WOBBLE_LOCATION = 0.08;
-const WOBBLE_FACING = 0.2;
-const WOBBLE_HZ = [0.23, 0.37, 0.53];
+// Handheld shake in the manner of After Effects' wiggle(freq, amp): a fresh random target WOBBLE_HZ times a
+// second, eased toward, plus a second octave at WOBBLE_OCTAVE_HZ times the rate and half the size.
+// The aim turns by up to WOBBLE_DEGREES. The camera itself drifts by up to WOBBLE_LOCATION blocks.
+const WOBBLE_HZ = 1;
+const WOBBLE_OCTAVE_HZ = 2.3;
+const WOBBLE_DEGREES = 1.2;
+const WOBBLE_LOCATION = 0.12;
 
-const toWobble = (seconds: number, amount: number): Vec3 => {
-  const toPhase = (hz: number): number => 2 * Math.PI * hz * seconds;
-  const [a, b, c] = WOBBLE_HZ.map(toPhase);
-  return {
-    x: amount * (Math.sin(a) + 0.5 * Math.sin(c + 1.3)) / 1.5,
-    y: amount * (Math.sin(b + 0.7) + 0.5 * Math.sin(a + 2.1)) / 1.5,
-    z: amount * (Math.sin(c + 2.9) + 0.5 * Math.sin(b + 0.4)) / 1.5,
-  };
+// A repeatable 0–1 draw for an integer key, so the game and the preview shake the same way
+const toNoise = (key: number, seed: number): number => {
+  const x = Math.sin(key * 127.1 + seed * 311.7) * 43758.5453;
+  return x - Math.floor(x);
 };
 
-// Adds the drift scaled by fade, which is 0 in first person so the path still starts and ends exactly there
+const toWiggleLayer = (seconds: number, hz: number, seed: number): number => {
+  const position = seconds * hz;
+  const key = Math.floor(position);
+  return lerp(toNoise(key, seed) * 2 - 1, toNoise(key + 1, seed) * 2 - 1, smoothstep(0, 1, position - key));
+};
+
+// -1 to 1, with the octave offset in time so the two layers never settle on a key together
+const toWiggle = (seconds: number, seed: number): number =>
+  (toWiggleLayer(seconds, WOBBLE_HZ, seed) + 0.5 * toWiggleLayer(seconds + 0.37, WOBBLE_HZ * WOBBLE_OCTAVE_HZ, seed + 7)) / 1.5;
+
+// Adds the shake scaled by fade, which is 0 in first person so the path still starts and ends exactly there
 const withWobble = (pose: CameraPose, seconds: number, fade: number): CameraPose => {
-  const location = toWobble(seconds, WOBBLE_LOCATION * fade);
-  const facing = toWobble(seconds + 17, WOBBLE_FACING * fade);
+  const { location, facing } = pose;
+  const reach = Math.hypot(facing.x - location.x, facing.y - location.y, facing.z - location.z);
+  const aim = reach * Math.tan((WOBBLE_DEGREES * Math.PI) / 180) * fade;
+  const drift = WOBBLE_LOCATION * fade;
   return {
-    location: { x: pose.location.x + location.x, y: pose.location.y + location.y, z: pose.location.z + location.z },
-    facing: { x: pose.facing.x + facing.x, y: pose.facing.y + facing.y, z: pose.facing.z + facing.z },
+    location: {
+      x: location.x + drift * toWiggle(seconds, 1),
+      y: location.y + drift * toWiggle(seconds, 2),
+      z: location.z + drift * toWiggle(seconds, 3),
+    },
+    facing: {
+      x: facing.x + aim * toWiggle(seconds, 4),
+      y: facing.y + aim * toWiggle(seconds, 5),
+      z: facing.z + aim * toWiggle(seconds, 6),
+    },
   };
 };
 
@@ -134,13 +152,13 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     return withWobble(look, time, Math.sin(Math.PI * t));
   }
 
-  // One full revolution over the build that eases in and out and stops behind the player.
+  // One full revolution over the whole path that eases in and out, so the camera keeps circling through the
+  // hold and is still moving when it turns back into the player's eyes.
   // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
-  // Once the last block lands, the camera holds on the finished build, then comes back into the player's eyes.
   const build = Math.min(1, t / landedAt);
   const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
   const settle = returnsAt < 1 ? smoothstep(returnsAt, 1, t) : 0;
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * build);
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);

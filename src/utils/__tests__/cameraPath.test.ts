@@ -21,8 +21,15 @@ const angleAround = (scene: CameraScene, t: number): number => {
   return Math.atan2(location.z - scene.center.z, location.x - scene.center.x);
 };
 
-// Largest wobble offset in blocks, with headroom over the path's WOBBLE_FACING
+// Largest shake in the test, with headroom over the path's WOBBLE_DEGREES and WOBBLE_LOCATION
+const WOBBLE_BOUND_DEGREES = 2;
 const WOBBLE_BOUND = 0.3;
+const toAimTurn = (pose: CameraPose, other: CameraPose): number => {
+  const a = { x: pose.facing.x - pose.location.x, y: pose.facing.y - pose.location.y, z: pose.facing.z - pose.location.z };
+  const b = { x: other.facing.x - other.location.x, y: other.facing.y - other.location.y, z: other.facing.z - other.location.z };
+  const cos = (a.x * b.x + a.y * b.y + a.z * b.z) / (Math.hypot(a.x, a.y, a.z) * Math.hypot(b.x, b.y, b.z));
+  return (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
+};
 const distance3 = (a: Vec3, b: Vec3): number => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 const distance = (a: { x: number; z: number }, b: { x: number; z: number }): number => Math.hypot(a.x - b.x, a.z - b.z);
@@ -43,7 +50,7 @@ describe('toCameraPose', () => {
 
   it('orbits above the build and looks at its center mid-path', () => {
     const pose = toCameraPose('orbit', SCENE, 0.5);
-    expect(distance(pose.location, SCENE.center)).toBeCloseTo(13.2, 1);
+    expect(distance(pose.location, SCENE.center)).toBeCloseTo(13.2, 0);
     expect(pose.location.y).toBeGreaterThan(SCENE.center.y);
     expect(distance3(pose.facing, SCENE.center)).toBeLessThan(WOBBLE_BOUND);
   });
@@ -51,20 +58,17 @@ describe('toCameraPose', () => {
   it.each(['orbit', 'lookAround'] as CameraMode[])('%s wobbles faintly mid-path', (mode) => {
     const still = toCameraPose(mode, { ...SCENE, seconds: 0 }, 0.5);
     const moving = toCameraPose(mode, SCENE, 0.5);
-    expect(distance3(moving.facing, still.facing)).toBeGreaterThan(0);
-    expect(distance3(moving.facing, still.facing)).toBeLessThan(WOBBLE_BOUND);
+    expect(toAimTurn(moving, still)).toBeGreaterThan(0);
+    expect(toAimTurn(moving, still)).toBeLessThan(WOBBLE_BOUND_DEGREES);
     expect(distance3(moving.location, still.location)).toBeLessThan(WOBBLE_BOUND);
   });
 
-  it('stops behind the player when the last block lands, holds, then comes back into their eyes', () => {
-    const landed = toCameraPose('orbit', SCENE, SCENE.landedAt);
-    expect(distance(landed.location, SCENE.center)).toBeCloseTo(13.2, 1);
-    expect(Math.atan2(landed.location.z - SCENE.center.z, landed.location.x - SCENE.center.x)).toBeCloseTo(
-      Math.atan2(SCENE.eye.z - SCENE.center.z, SCENE.eye.x - SCENE.center.x),
-      2,
-    );
-    const holding = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.45);
-    expect(distance3(holding.location, landed.location)).toBeLessThan(WOBBLE_BOUND);
+  it('keeps circling after the last block lands, then comes back into the player\'s eyes', () => {
+    const angleOf = (t: number): number => angleAround({ ...SCENE, seconds: 0 }, t);
+    const landed = toCameraPose('orbit', { ...SCENE, seconds: 0 }, SCENE.landedAt);
+    expect(distance(landed.location, SCENE.center)).toBeCloseTo(13.2, 0);
+    const holdEnd = SCENE.landedAt + (1 - SCENE.landedAt) * 0.5;
+    expect(Math.abs(angleOf(holdEnd) - angleOf(holdEnd - 0.01))).toBeGreaterThan(0.01);
     const returning = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.75);
     expect(distance(returning.location, SCENE.eye)).toBeLessThan(distance(landed.location, SCENE.eye));
   });

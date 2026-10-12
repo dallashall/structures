@@ -152,25 +152,42 @@ function smoothstep(edge0, edge1, t) {
   return x * x * (3 - 2 * x);
 }
 
-const WOBBLE_LOCATION = 0.08;
-const WOBBLE_FACING = 0.2;
-const WOBBLE_HZ = [0.23, 0.37, 0.53];
+const WOBBLE_HZ = 1;
+const WOBBLE_OCTAVE_HZ = 2.3;
+const WOBBLE_DEGREES = 1.2;
+const WOBBLE_LOCATION = 0.12;
 
-function toWobble(seconds, amount) {
-  const [a, b, c] = WOBBLE_HZ.map(function toPhase(hz) { return 2 * Math.PI * hz * seconds; });
-  return {
-    x: amount * (Math.sin(a) + 0.5 * Math.sin(c + 1.3)) / 1.5,
-    y: amount * (Math.sin(b + 0.7) + 0.5 * Math.sin(a + 2.1)) / 1.5,
-    z: amount * (Math.sin(c + 2.9) + 0.5 * Math.sin(b + 0.4)) / 1.5,
-  };
+function toNoise(key, seed) {
+  const x = Math.sin(key * 127.1 + seed * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function toWiggleLayer(seconds, hz, seed) {
+  const position = seconds * hz;
+  const key = Math.floor(position);
+  return lerp(toNoise(key, seed) * 2 - 1, toNoise(key + 1, seed) * 2 - 1, smoothstep(0, 1, position - key));
+}
+
+function toWiggle(seconds, seed) {
+  return (toWiggleLayer(seconds, WOBBLE_HZ, seed) + 0.5 * toWiggleLayer(seconds + 0.37, WOBBLE_HZ * WOBBLE_OCTAVE_HZ, seed + 7)) / 1.5;
 }
 
 function withWobble(pose, seconds, fade) {
-  const location = toWobble(seconds, WOBBLE_LOCATION * fade);
-  const facing = toWobble(seconds + 17, WOBBLE_FACING * fade);
+  const { location, facing } = pose;
+  const reach = Math.hypot(facing.x - location.x, facing.y - location.y, facing.z - location.z);
+  const aim = reach * Math.tan((WOBBLE_DEGREES * Math.PI) / 180) * fade;
+  const drift = WOBBLE_LOCATION * fade;
   return {
-    location: { x: pose.location.x + location.x, y: pose.location.y + location.y, z: pose.location.z + location.z },
-    facing: { x: pose.facing.x + facing.x, y: pose.facing.y + facing.y, z: pose.facing.z + facing.z },
+    location: {
+      x: location.x + drift * toWiggle(seconds, 1),
+      y: location.y + drift * toWiggle(seconds, 2),
+      z: location.z + drift * toWiggle(seconds, 3),
+    },
+    facing: {
+      x: facing.x + aim * toWiggle(seconds, 4),
+      y: facing.y + aim * toWiggle(seconds, 5),
+      z: facing.z + aim * toWiggle(seconds, 6),
+    },
   };
 }
 
@@ -208,7 +225,7 @@ function toCameraPose(mode, scene, t) {
   const build = Math.min(1, t / landedAt);
   const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
   const settle = returnsAt < 1 ? smoothstep(returnsAt, 1, t) : 0;
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * build);
+  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
   const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
