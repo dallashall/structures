@@ -15,6 +15,7 @@ import type { UniversalPosition } from "./ToolBase";
 export abstract class ClickDragReleaseTool extends ToolBase {
   private state: "idle" | "hovering" | "dragging" = "idle";
   protected downPosition?: UniversalPosition;
+  private dragPosition?: UniversalPosition;
 
   protected onActivate(): void {
     this.state = "hovering";
@@ -45,6 +46,7 @@ export abstract class ClickDragReleaseTool extends ToolBase {
     if (e.button !== 0) return;
     this.state = "dragging";
     this.downPosition = pos;
+    this.dragPosition = pos;
     this.unlistenPointerDown();
     this.listenPointerUp();
     this.onDragStart(pos);
@@ -54,7 +56,15 @@ export abstract class ClickDragReleaseTool extends ToolBase {
     if (this.state === "hovering") {
       this.onHover(pos);
     } else if (this.state === "dragging" && this.downPosition) {
+      this.dragPosition = pos;
       this.onDrag(this.downPosition, pos);
+    }
+  }
+
+  // A held modifier reshapes the drag in place, without waiting for the pointer to move
+  protected onModifiersChanged(): void {
+    if (this.state === "dragging" && this.downPosition && this.dragPosition) {
+      this.onDrag(this.downPosition, this.dragPosition);
     }
   }
 

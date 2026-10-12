@@ -9,7 +9,6 @@ export type Plane = 'xy' | 'xz' | 'yz';
  * ShapeUtils - Mathematical utilities for shape drawing
  *
  * Provides algorithms for:
- * - Circle calculations (midpoint circle algorithm)
  * - Arch calculations (arc segments)
  * - Bezier curve calculations (cubic bezier)
  * - Depth projection for multi-layer painting
@@ -20,7 +19,7 @@ export type Plane = 'xy' | 'xz' | 'yz';
  * - xz plane: u=x, v=z (constrained y)
  * - yz plane: u=y, v=z (constrained x)
  *
- * Use to2D() to project 3D→2D and applyToPlane() to project 2D→3D.
+ * Use to2D() to project 3D→2D and from2D() to project 2D→3D.
  */
 export class ShapeUtils {
   /**
@@ -40,86 +39,10 @@ export class ShapeUtils {
   }
 
   /**
-   * Calculate circle outline using midpoint circle algorithm
-   * Uses 8-way symmetry for perfect discrete circles
+   * Place a plane cell back in 3D. The axis the plane holds constant comes from `reference`.
    */
-  static calculateCircleOutline(
-    center: Vector3D,
-    radius: number,
-    plane: Plane,
-    dimensions: Dimensions
-  ): Vector3D[] {
-    const positions: Vector3D[] = [];
-    const r = Math.round(radius);
-    const c = this.to2D(center, plane);
-
-    // Midpoint circle algorithm
-    let x = 0;
-    let y = r;
-    let d = 1 - r;
-
-    const addSymmetricPoints = (cu: number, cv: number, dx: number, dy: number) => {
-      const points = [
-        { dx, dy },
-        { dx: -dx, dy },
-        { dx, dy: -dy },
-        { dx: -dx, dy: -dy },
-        { dx: dy, dy: dx },
-        { dx: -dy, dy: dx },
-        { dx: dy, dy: -dx },
-        { dx: -dy, dy: -dx },
-      ];
-
-      for (const point of points) {
-        const pos = this.applyToPlane(cu, cv, point.dx, point.dy, plane, center);
-        if (this.isValidPosition(pos, dimensions)) {
-          positions.push(pos);
-        }
-      }
-    };
-
-    while (x <= y) {
-      addSymmetricPoints(c.u, c.v, x, y);
-
-      if (d < 0) {
-        d += 2 * x + 3;
-      } else {
-        d += 2 * (x - y) + 5;
-        y--;
-      }
-      x++;
-    }
-
-    return this.removeDuplicates(positions);
-  }
-
-  /**
-   * Calculate filled circle using scan-line algorithm
-   */
-  static calculateCircleFilled(
-    center: Vector3D,
-    radius: number,
-    plane: Plane,
-    dimensions: Dimensions
-  ): Vector3D[] {
-    const positions: Vector3D[] = [];
-    const r = Math.round(radius);
-    const rSquared = r * r;
-    const c = this.to2D(center, plane);
-
-    // Scan-line fill using circle equation
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (dx * dx + dy * dy <= rSquared) {
-          const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
-          if (this.isValidPosition(pos, dimensions)) {
-            positions.push(pos);
-          }
-        }
-      }
-    }
-
-    return positions;
+  static from2D(cell: { u: number; v: number }, plane: Plane, reference: Vector3D): Vector3D {
+    return this.applyToPlane(cell.u, cell.v, 0, 0, plane, reference);
   }
 
   /**
@@ -150,7 +73,7 @@ export class ShapeUtils {
       const dy = Math.round(r * Math.sin(rad));
 
       const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
-      if (this.isValidPosition(pos, dimensions)) {
+      if (this.isInBounds(pos, dimensions)) {
         positions.push(pos);
       }
     }
@@ -187,7 +110,7 @@ export class ShapeUtils {
 
           if (this.isAngleInRange(angle, normalizedStart, normalizedEnd)) {
             const pos = this.applyToPlane(c.u, c.v, dx, dy, plane, center);
-            if (this.isValidPosition(pos, dimensions)) {
+            if (this.isInBounds(pos, dimensions)) {
               positions.push(pos);
             }
           }
@@ -237,7 +160,7 @@ export class ShapeUtils {
         Math.pow(t, 3) * e.v;
 
       const pos = this.applyToPlane(Math.round(u), Math.round(v), 0, 0, plane, start);
-      if (this.isValidPosition(pos, dimensions)) {
+      if (this.isInBounds(pos, dimensions)) {
         positions.push(pos);
       }
     }
@@ -310,7 +233,7 @@ export class ShapeUtils {
   /**
    * Check if position is within valid dimensions
    */
-  private static isValidPosition(pos: Vector3D, dimensions: Dimensions): boolean {
+  static isInBounds(pos: Vector3D, dimensions: Dimensions): boolean {
     return (
       pos.x >= 0 &&
       pos.x < dimensions.width &&

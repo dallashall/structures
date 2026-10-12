@@ -61,11 +61,11 @@ export interface DepthConfig {
   mode: DepthPaintMode;
 }
 
-// Circle drawing modes (for modifier keys)
-export type CircleDrawMode =
-  | "center-radius"
-  | "bounding-box"
-  | "constrained-box";
+// Shift keeps a shape's sides equal and turns a point click into a line. Alt draws a shape from its center.
+export interface HeldModifiers {
+  shift: boolean;
+  alt: boolean;
+}
 
 // Tool types (simplified for initial implementation)
 export type ToolType = "paint" | "erase";

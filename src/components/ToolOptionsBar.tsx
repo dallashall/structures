@@ -6,11 +6,14 @@ import type {
   DepthConfig,
   Dimensions,
   LayerState,
+  HeldModifiers,
 } from "../types";
+import { MODIFIER_HINTS } from "../config/modifierHints";
 import { ShapeFillModeControl } from "./ShapeFillModeControl";
 import { DepthPaintingControl } from "./DepthPaintingControl";
 import { PaintBehaviorControl } from "./PaintBehaviorControl";
 import { LayerControls } from "./LayerControls";
+import { ModifierHints } from "./ModifierHints";
 
 interface ToolOptionsBarProps {
   paintMode: PaintMode;
@@ -19,6 +22,7 @@ interface ToolOptionsBarProps {
   depthConfig: DepthConfig;
   maxDimensions: Dimensions;
   activeLayers: LayerState;
+  heldModifiers: HeldModifiers;
   onPaintBehaviorChange: (behavior: PaintBehavior) => void;
   onShapeFillModeChange: (mode: ShapeFillMode) => void;
   onDepthConfigChange: (config: Partial<DepthConfig>) => void;
@@ -32,6 +36,7 @@ interface ToolOptionsBarProps {
  * 1. Shape fill mode (outline/filled) - only for shape tools
  * 2. Depth painting (thickness slider + through/until-collision mode) - always visible
  * 3. Paint behavior (normal/replace/selective/delete) - always visible
+ * 4. Modifier keys - only for tools that read Shift or Alt
  *
  * Hierarchy: Tool → Shape → Depth → Behavior
  * Inspired by Adobe Illustrator's horizontal options bar pattern.
@@ -43,6 +48,7 @@ export function ToolOptionsBar({
   depthConfig,
   maxDimensions,
   activeLayers,
+  heldModifiers,
   onPaintBehaviorChange,
   onShapeFillModeChange,
   onDepthConfigChange,
@@ -51,6 +57,7 @@ export function ToolOptionsBar({
   const isShapeMode = ["outline", "circle", "arch", "curve"].includes(
     paintMode,
   );
+  const modifierHints = MODIFIER_HINTS[paintMode];
 
   return (
     <Box
@@ -95,6 +102,10 @@ export function ToolOptionsBar({
           onPaintBehaviorChange={onPaintBehaviorChange}
           orientation="horizontal"
         />
+
+        {modifierHints && (
+          <ModifierHints hints={modifierHints} heldModifiers={heldModifiers} />
+        )}
       </Stack>
 
       {/* Right side: Layer controls (X, Y, Z + gear) */}

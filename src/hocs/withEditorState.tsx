@@ -13,6 +13,7 @@ import type {
   DepthConfig,
   BlockStateProperties,
   RenderSettings,
+  HeldModifiers,
 } from "../types";
 
 /**
@@ -31,6 +32,7 @@ export interface WithEditorStateProps {
   paintBehavior: PaintBehavior;
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
+  heldModifiers: HeldModifiers;
   isPlacementMode: boolean;
   quickSelectSlots: (string | null)[];
   sliceGuideVisibility: { x: boolean; y: boolean; z: boolean };
@@ -54,6 +56,7 @@ const EDITOR_EVENTS = [
   "paintbehavior:selected",
   "shapefillmode:selected",
   "depthconfig:applied",
+  "modifiers:held",
   "placementmode:toggled",
   "quickselect:assigned",
   "sliceguide:axis:toggled",
@@ -87,6 +90,7 @@ const readEditorState = (): WithEditorStateProps => {
     paintBehavior: editorState.getPaintBehavior(),
     shapeFillMode: editorState.getShapeFillMode(),
     depthConfig: editorState.getDepthConfig(),
+    heldModifiers: editorState.getHeldModifiers(),
     isPlacementMode: editorState.getPlacementMode(),
     quickSelectSlots: editorState.getQuickSelectSlots(),
     sliceGuideVisibility: editorState.getSliceGuideVisibility(),

@@ -195,6 +195,8 @@ Painting uses the material in the active slot (foreground or background).
   - [ ] Click places one block
   - [ ] Drag paints along the path without doubling cells
   - [ ] One undo removes the whole stroke
+  - [ ] Shift-click draws a straight line from the previous stroke's last cell. One undo removes the line.
+  - [ ] Shift-click with no previous stroke places one block
 
 - [ ] **Fill (no key)**
   - [ ] Click fills the connected region of matching cells on the active layer
@@ -204,10 +206,18 @@ Painting uses the material in the active slot (foreground or background).
 - [ ] **Rectangle (R)**
   - [ ] Drag shows the rectangle preview. Release places it.
   - [ ] Outline fill mode places only the edge. Filled mode places the whole rectangle.
+  - [ ] Shift makes a square. Alt draws from the press point outward on all sides. Both together draw a square from the center.
+  - [ ] Pressing or releasing Shift or Alt mid-drag reshapes the preview without moving the pointer
 
 - [ ] **Circle (O)**
-  - [ ] Drag from the center outward sets the radius
+  - [ ] Drag corner to corner draws the ellipse that fits the box
+  - [ ] Shift draws a true circle. Alt draws from the center. Both together draw a circle around the press point.
+  - [ ] The outline has no gaps for even and odd sizes
   - [ ] Outline and filled modes both work
+
+- [ ] **Modifier hints**
+  - [ ] Point, Rectangle, and Circle show their modifier chips in the tool options bar. Fill, Arch, and Curve show none.
+  - [ ] A chip fills in while its key is held, and clears when the window loses focus
 
 - [ ] **Arch (G)**
   - [ ] Clicks one and two set the feet. Click three sets the apex.

@@ -4,17 +4,16 @@ import type { GuideGeometry } from "../painting/strategies/GuideGeometry";
 import { throttled } from "../../utils/throttle";
 import { wheelZoomFactor } from "../../utils/wheelZoom";
 import { isModalOpen } from "../../utils/keyboardFocus";
+import { editorState } from "../EditorState";
 
-/**
- * Modifier key state
- */
 interface ModifierKeys {
   space: boolean;
   shift: boolean;
   alt: boolean;
-  ctrl: boolean;
-  meta: boolean;
 }
+
+const isShiftCode = (code: string): boolean => code === "ShiftLeft" || code === "ShiftRight";
+const isAltCode = (code: string): boolean => code === "AltLeft" || code === "AltRight";
 
 /**
  * Position resolved from a pointer event — carries all coordinate forms
@@ -60,8 +59,6 @@ export abstract class ToolBase {
     space: false,
     shift: false,
     alt: false,
-    ctrl: false,
-    meta: false,
   };
 
   public previewData: PreviewData = { blocks: [] };
@@ -90,6 +87,7 @@ export abstract class ToolBase {
     this.canvas.addEventListener("pointerleave", this._onPointerLeave);
     window.addEventListener("keydown", this._onKeyDown);
     window.addEventListener("keyup", this._onKeyUp);
+    window.addEventListener("blur", this._onWindowBlur);
     this.onActivate();
   }
 
@@ -100,6 +98,7 @@ export abstract class ToolBase {
     this.canvas.removeEventListener("pointerleave", this._onPointerLeave);
     window.removeEventListener("keydown", this._onKeyDown);
     window.removeEventListener("keyup", this._onKeyUp);
+    window.removeEventListener("blur", this._onWindowBlur);
     this.unlistenPointerDown();
     this.unlistenPointerMove();
     this.unlistenPointerUp();
@@ -179,6 +178,7 @@ export abstract class ToolBase {
   // ============================================================================
 
   private _onPointerDown = (e: PointerEvent): void => {
+    this.syncDrawingModifiers(e.shiftKey, e.altKey);
     // Pan: space+left or middle button
     if ((e.button === 0 && this.modifiers.space) || e.button === 1) {
       this.panning = true;
@@ -195,6 +195,7 @@ export abstract class ToolBase {
   };
 
   private _onPointerMoveRaw = (e: PointerEvent): void => {
+    this.syncDrawingModifiers(e.shiftKey, e.altKey);
     if (this.panning) {
       const dx = e.offsetX - this.lastPanX;
       const dy = e.offsetY - this.lastPanY;
@@ -213,6 +214,7 @@ export abstract class ToolBase {
   private _onPointerMoveThrottled = throttled(this._onPointerMoveRaw, 10);
 
   private _onPointerUp = (e: PointerEvent): void => {
+    this.syncDrawingModifiers(e.shiftKey, e.altKey);
     // A move held by the throttle would otherwise run after the release and miss the drag
     this._onPointerMoveThrottled.flush();
 
@@ -267,65 +269,47 @@ export abstract class ToolBase {
       return;
     }
 
-    let changed = false;
-
     if (e.code === "Space") {
       e.preventDefault();
       this.modifiers.space = true;
       this.setOverrideCursor("grab");
-      changed = true;
     }
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-      this.modifiers.shift = true;
-      changed = true;
+    // Alt alone focuses the browser menu bar on Windows
+    if (isAltCode(e.code)) e.preventDefault();
+    if (isShiftCode(e.code) || isAltCode(e.code)) {
+      this.syncDrawingModifiers(e.shiftKey, e.altKey);
     }
-    if (e.code === "AltLeft" || e.code === "AltRight") {
-      e.preventDefault();
-      this.modifiers.alt = true;
-      changed = true;
-    }
-    if (e.code === "ControlLeft" || e.code === "ControlRight") {
-      this.modifiers.ctrl = true;
-      changed = true;
-    }
-    if (e.code === "MetaLeft" || e.code === "MetaRight") {
-      this.modifiers.meta = true;
-      changed = true;
-    }
-
-    if (changed) this.onModifiersChanged(this.modifiers);
   };
 
   private _onKeyUp = (e: KeyboardEvent): void => {
-    let changed = false;
-
     if (e.code === "Space") {
       e.preventDefault();
       this.modifiers.space = false;
       this.panning = false;
       this.restoreCursor();
-      changed = true;
     }
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-      this.modifiers.shift = false;
-      changed = true;
+    if (isAltCode(e.code)) e.preventDefault();
+    if (isShiftCode(e.code) || isAltCode(e.code)) {
+      this.syncDrawingModifiers(e.shiftKey, e.altKey);
     }
-    if (e.code === "AltLeft" || e.code === "AltRight") {
-      e.preventDefault();
-      this.modifiers.alt = false;
-      changed = true;
-    }
-    if (e.code === "ControlLeft" || e.code === "ControlRight") {
-      this.modifiers.ctrl = false;
-      changed = true;
-    }
-    if (e.code === "MetaLeft" || e.code === "MetaRight") {
-      this.modifiers.meta = false;
-      changed = true;
-    }
-
-    if (changed) this.onModifiersChanged(this.modifiers);
   };
+
+  // A key released while another window has focus never reaches this one
+  private _onWindowBlur = (): void => {
+    this.modifiers.space = false;
+    this.syncDrawingModifiers(false, false);
+  };
+
+  /**
+   * Pointer events carry the true modifier state, so every pointer event corrects any key event this window missed.
+   */
+  private syncDrawingModifiers(shift: boolean, alt: boolean): void {
+    editorState.setHeldModifiers({ shift, alt });
+    if (this.modifiers.shift === shift && this.modifiers.alt === alt) return;
+    this.modifiers.shift = shift;
+    this.modifiers.alt = alt;
+    this.onModifiersChanged();
+  }
 
   // ============================================================================
   // Coordinate resolution — zero getBoundingClientRect()
@@ -367,5 +351,5 @@ export abstract class ToolBase {
   protected onUp(_e: PointerEvent, _pos: UniversalPosition): void {}
   protected onEnter(_e: PointerEvent, _pos: UniversalPosition): void {}
   protected onLeave(): void {}
-  protected onModifiersChanged(_modifiers: ModifierKeys): void {}
+  protected onModifiersChanged(): void {}
 }

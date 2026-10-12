@@ -13,7 +13,7 @@ import type {
   Vector3D,
   ShapeFillMode,
   DepthConfig,
-  CircleDrawMode,
+  HeldModifiers,
   RenderSettings,
   BlockStateProperties,
   HorizontalDirection,
@@ -51,6 +51,7 @@ export interface PreviewBlock {
  * - paintbehavior:selected - When paint behavior is selected
  * - shapefillmode:selected - When shape fill mode is selected
  * - depthconfig:applied - When depth config is updated
+ * - modifiers:held - When Shift or Alt goes down or up over a canvas tool (passes HeldModifiers)
  * - placementmode:toggled - When placement mode is toggled
  * - materialbrowser:toggled - When material browser is toggled open/closed
  * - materialbrowser:search:entered - When material browser search query is updated
@@ -80,7 +81,7 @@ class EditorState extends EventEmitter {
     thickness: 1,
     mode: 'through',
   };
-  private circleDrawMode: CircleDrawMode = 'center-radius';
+  private heldModifiers: HeldModifiers = { shift: false, alt: false };
   private isPlacementMode = false;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
   private foregroundSlotIndex = 0; // Which of the 9 slots is foreground (0-8)
@@ -358,18 +359,16 @@ class EditorState extends EventEmitter {
   }
 
   /**
-   * Set the circle draw mode
+   * Record which drawing modifier keys are down. The canvas tools write this on every key and pointer event.
    */
-  setCircleDrawMode = (mode: CircleDrawMode): void => {
-    this.circleDrawMode = mode;
-    // No event needed - used during interaction only
+  setHeldModifiers = (modifiers: HeldModifiers): void => {
+    if (this.heldModifiers.shift === modifiers.shift && this.heldModifiers.alt === modifiers.alt) return;
+    this.heldModifiers = { ...modifiers };
+    this.emit('modifiers:held', this.heldModifiers);
   }
 
-  /**
-   * Get the current circle draw mode
-   */
-  getCircleDrawMode(): CircleDrawMode {
-    return this.circleDrawMode;
+  getHeldModifiers(): HeldModifiers {
+    return this.heldModifiers;
   }
 
   /**

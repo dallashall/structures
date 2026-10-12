@@ -110,7 +110,7 @@ Holds preview blocks while a tool draws. Both the 2D and 3D views read it. `fina
 
 UI state for the editor. It holds the layout mode, active view, active layer per axis, tool, paint mode and behavior, shape fill mode, depth config, foreground and background blocks, quick-select slots, block state (facing, half), material browser state, slice guide visibility, render settings, hover previews, and the current project ID. Setters are arrow functions (`setActiveTool`, `incrementLayer`, `rotateFacing`, `setRenderSettings`, and so on) so components can pass them as callbacks.
 
-**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `placementmode:toggled`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
+**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `modifiers:held`, `placementmode:toggled`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
 
 ### ScreenRouter
 
@@ -253,7 +253,7 @@ App  (withAtlasStatus, withScreenState)
 │   │   ├── UndoRedoButtons  (withEditHistory)
 │   │   └── SaveStatusIndicator
 │   ├── ToolOptionsBar
-│   │   ├── PaintBehaviorControl, ShapeFillModeControl, DepthPaintingControl
+│   │   ├── PaintBehaviorControl, ShapeFillModeControl, DepthPaintingControl, ModifierHints
 │   │   └── LayerControls -> DialogTrigger -> LayerDimensionControl
 │   ├── TabbedEditorView or QuadEditorView
 │   │   ├── ToolPanel

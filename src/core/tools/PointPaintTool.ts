@@ -2,21 +2,26 @@ import { ClickDragReleaseTool } from "./ClickDragReleaseTool";
 import type { UniversalPosition } from "./ToolBase";
 import { PaintPipeline } from "./PaintPipeline";
 import { PointPaintStrategy } from "../painting/strategies/PointPaintStrategy";
+import { ShapeUtils } from "../painting/strategies/ShapeUtils";
+import { lineCells } from "../painting/strategies/DragShape";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { projectView } from "../../projections/ProjectView";
 import type { PaintOperation } from "../painting/strategies/PaintStrategy";
+import type { Vector3D } from "../../types";
 
 /**
  * PointPaintTool - Single-cell painting via click-drag
  *
  * Hover: shows single-block preview at cursor.
  * Drag: paints cells along the drag path (with duplicate prevention).
+ * Shift-press: first paints a straight line from the previous stroke's last cell to the press point.
  * Release: persists all painted cells as a single compound event.
  */
 export class PointPaintTool extends ClickDragReleaseTool {
   private strategy = new PointPaintStrategy();
   private lastPaintedCell: string | null = null;
+  private lastStrokeEnd: Vector3D | null = null;
   private draftPositions = new Map<string, PaintOperation>();
 
   protected onHover(pos: UniversalPosition): void {
@@ -28,6 +33,13 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.lastPaintedCell = null;
     this.draftPositions.clear();
     draftingService.start();
+
+    const lineStart = this.modifiers.shift ? this.lastStrokeEnd : null;
+    if (lineStart) {
+      this.paintModels(this.toLine(lineStart, this.toModel(pos)));
+      this.lastPaintedCell = `${pos.gridX},${pos.gridY}`;
+      return;
+    }
     this.paintAt(pos);
   }
 
@@ -35,7 +47,8 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.paintAt(current);
   }
 
-  protected async onDragEnd(_start: UniversalPosition, _end: UniversalPosition): Promise<void> {
+  protected async onDragEnd(_start: UniversalPosition, end: UniversalPosition): Promise<void> {
+    this.lastStrokeEnd = this.toModel(end);
     await this.finalizeDraft();
     this.previewData = { blocks: [] };
     this.requestRender();
@@ -54,33 +67,38 @@ export class PointPaintTool extends ClickDragReleaseTool {
     this.requestRender();
   }
 
+  /**
+   * Cells from `from` to `to` on this view's plane. A `from` on another layer moves onto the active layer first.
+   */
+  private toLine(from: Vector3D, to: Vector3D): Vector3D[] {
+    const { axis } = PaintPipeline.getConstrainedAxis(this.viewState.getViewType(), editorState.getActiveLayers());
+    const plane = ShapeUtils.planeFromConstrainAxis(axis);
+    const toPosition = (cell: { u: number; v: number }): Vector3D => ShapeUtils.from2D(cell, plane, to);
+    return lineCells(ShapeUtils.to2D(from, plane), ShapeUtils.to2D(to, plane)).map(toPosition);
+  }
+
   private paintAt(pos: UniversalPosition): void {
     const cellKey = `${pos.gridX},${pos.gridY}`;
     if (this.lastPaintedCell === cellKey) return;
     this.lastPaintedCell = cellKey;
+    this.paintModels([this.toModel(pos)]);
+  }
 
+  private paintModels(models: Vector3D[]): void {
     const project = projectView.getCached();
     if (!project) return;
     const selectedBlock = editorState.getSelectedBlock();
     if (!selectedBlock) return;
 
-    const model = this.toModel(pos);
-    const activeLayers = editorState.getActiveLayers();
     const constrainAxis = PaintPipeline.getConstrainedAxis(
       this.viewState.getViewType(),
-      activeLayers,
+      editorState.getActiveLayers(),
     );
-
-    const baseOps = this.strategy.calculateOperations(
-      model,
-      selectedBlock,
-      project.dimensions,
-      constrainAxis,
-    );
-    if (baseOps instanceof Promise) return; // PointPaintStrategy is always sync
+    const toBaseOps = (model: Vector3D): PaintOperation[] =>
+      this.strategy.calculateOperations(model, selectedBlock, project.dimensions, constrainAxis);
 
     const finalOps = PaintPipeline.process(
-      baseOps,
+      models.flatMap(toBaseOps),
       this.viewState.getViewType(),
       project.dimensions,
     );
@@ -104,6 +122,5 @@ export class PointPaintTool extends ClickDragReleaseTool {
   }
 }
 
-// Helpers
 const hasBlockType = (op: PaintOperation): op is PaintOperation & { blockType: string } =>
   op.blockType !== null;

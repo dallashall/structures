@@ -65,6 +65,7 @@ function EditorViewComponent(props: EditorViewProps) {
     paintBehavior,
     shapeFillMode,
     depthConfig,
+    heldModifiers,
     isPlacementMode,
     saveState,
     activeBlockState,
@@ -176,6 +177,7 @@ function EditorViewComponent(props: EditorViewProps) {
           depthConfig={depthConfig}
           maxDimensions={project.dimensions}
           activeLayers={activeLayers}
+          heldModifiers={heldModifiers}
           onPaintBehaviorChange={editorState.setPaintBehavior}
           onShapeFillModeChange={editorState.setShapeFillMode}
           onDepthConfigChange={editorState.setDepthConfig}

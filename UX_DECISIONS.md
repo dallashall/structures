@@ -78,6 +78,14 @@ This document records the interaction decisions for Structures and how the app c
 - Arch (G): placed by clicking points
 - Curve (V): a Bezier curve placed by clicking points
 
+**Decision:** modifiers follow design-tool convention. Shift keeps sides equal and Alt draws from the center. Ctrl and Cmd stay free for shortcuts, and Ctrl-click is a right-click on macOS.
+
+**Modifier keys:** the tool options bar lists the active tool's modifiers and fills in each one while it is held.
+- Rectangle: drag corner to corner. Shift makes a square. Alt draws from the center.
+- Circle: drag corner to corner for an ellipse. Shift makes a true circle. Alt draws from the center.
+- Point: Shift-click draws a straight line from the previous stroke's last cell.
+- Shift and Alt combine. A modifier pressed mid-drag reshapes the preview at once.
+
 **Shape fill:** shape tools draw an outline or a filled shape.
 
 **Depth painting:** a stroke repeats through 1 to 10 layers. "Through" paints every layer. "Until Hit" stops at the first block.

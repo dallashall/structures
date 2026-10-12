@@ -38,9 +38,15 @@ Each 2D view is an HTML canvas that draws one slice of the model.
 - Point (B): paint one cell at a time
 - Fill: flood-fill the connected cells of one block type on the active layer
 - Rectangle (R): draw a rectangle
-- Circle (O): draw a circle
+- Circle (O): draw an ellipse or a circle
 - Arch (G): draw an arch from clicked points
 - Curve (V): draw a Bezier curve from clicked points
+
+**Modifier keys:** the tool options bar lists the active tool's modifiers and fills in each one while it is held.
+- Rectangle: drag corner to corner. Shift makes a square. Alt draws from the center.
+- Circle: drag corner to corner for an ellipse. Shift makes a true circle. Alt draws from the center.
+- Point: Shift-click draws a straight line from the previous stroke's last cell.
+- Shift and Alt combine. A modifier pressed mid-drag reshapes the preview at once.
 
 Shape tools draw an outline or a filled shape. Depth painting repeats a stroke through 1 to 10 layers, either through everything or until it hits a block.
 
@@ -183,7 +189,6 @@ Load from File reads that file into a new project with a new ID. Action IDs get 
 - Export to Minecraft formats such as NBT structure files. The meta block marks the export origin, and its placement flow will take shape with export.
 - UI to expand and shrink a project. The commands exist without controls.
 - A confirmation before deleting a project
-- Shift and Alt modifiers on the shape tools
 - An eyedropper that samples a placed block
 - Copy and paste of regions
 - Symmetry tools (mirror, rotate)

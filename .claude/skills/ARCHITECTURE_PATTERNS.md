@@ -273,12 +273,16 @@ Tools turn pointer input on one canvas into preview blocks and paint actions. Al
 |------|------|----------|
 | PointPaintTool | ClickDragReleaseTool | PointPaintStrategy |
 | FillPaintTool | ClickDragReleaseTool | FillPaintStrategy |
-| OutlinePaintTool | ClickDragReleaseTool | OutlinePaintStrategy |
-| CirclePaintTool | ClickDragReleaseTool | CirclePaintStrategy |
+| OutlinePaintTool | ClickDragReleaseTool | OutlinePaintStrategy (a DragShapeStrategy) |
+| CirclePaintTool | ClickDragReleaseTool | CirclePaintStrategy (a DragShapeStrategy) |
 | ArchPaintTool | MultiClickTool | ArchPaintStrategy |
 | CurvePaintTool | MultiClickTool | CurvePaintStrategy |
 
 `toolRegistry` (`src/core/tools/ToolRegistry.ts`) registers each tool with a name, hotkey, label, and factory at module load. `Canvas2D` creates the active tool from the registry. `hotkeyDispatcher` resolves hotkeys to tool names.
+
+### Modifier Keys
+
+`ToolBase` reads Shift and Alt from key events and from every pointer event, which carries the true state. It writes them to `editorState.setHeldModifiers`, which emits `modifiers:held`. `DragShapeStrategy` reads them when it computes the drag box: Shift squares the box and Alt centers it on the press point. `ClickDragReleaseTool` redraws an active drag when a modifier changes. `src/config/modifierHints.ts` lists each tool's modifiers for the hint chips in the tool options bar.
 
 ### Strategies: What to Paint
 
