@@ -138,6 +138,7 @@ function EditorViewComponent(props: EditorViewProps) {
           onBackToProjects={handleBackToProjects}
           onLayoutModeChange={editorState.setLayoutMode}
           onSaveToFile={handleSaveToFile}
+          onExport={screenRouter.openExportDialog}
           onShowCredits={screenRouter.openCreditsDialog}
         />
 

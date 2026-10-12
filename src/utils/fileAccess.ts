@@ -1,5 +1,5 @@
 /**
- * Text file save and open through the browser
+ * File save and open through the browser
  *
  * Save uses the File System Access picker where the browser has it (Chromium), so the user
  * picks the folder and name. Other browsers download the file to their download folder.
@@ -22,7 +22,7 @@ interface SaveFileHandle {
 
 type ShowSaveFilePicker = (options: SaveFilePickerOptions) => Promise<SaveFileHandle>;
 
-interface TextFileType {
+interface SaveFileType {
   description: string;
   mimeType: string;
   extension: string;
@@ -41,11 +41,16 @@ const downloadBlob = (fileName: string, blob: Blob): void => {
   setTimeout(URL.revokeObjectURL, 0, url);
 };
 
-/**
- * Returns false when the user cancels the save picker
- */
-export async function saveTextFile(fileName: string, text: string, fileType: TextFileType): Promise<boolean> {
-  const blob = new Blob([text], { type: fileType.mimeType });
+// Both save helpers return false when the user cancels the save picker
+export function saveTextFile(fileName: string, text: string, fileType: SaveFileType): Promise<boolean> {
+  return saveFile(fileName, new Blob([text], { type: fileType.mimeType }), fileType);
+}
+
+export function saveBinaryFile(fileName: string, bytes: Uint8Array, fileType: SaveFileType): Promise<boolean> {
+  return saveFile(fileName, new Blob([bytes as BlobPart], { type: fileType.mimeType }), fileType);
+}
+
+async function saveFile(fileName: string, blob: Blob, fileType: SaveFileType): Promise<boolean> {
   const showSaveFilePicker = (window as { showSaveFilePicker?: ShowSaveFilePicker }).showSaveFilePicker;
 
   if (!showSaveFilePicker) {

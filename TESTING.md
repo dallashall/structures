@@ -133,6 +133,25 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ---
 
+## Bedrock Export
+
+- [ ] Export in the editor toolbar opens "Export for Bedrock" with item name, icon, animation, and seconds
+- [ ] The item name placeholder reads "<project> Wand". Seconds disable for "All at once".
+- [ ] Export saves `<project_slug>.mcaddon` through the save picker or a download
+- [ ] The dialog then shows the file name and the `/give @s structures:<slug>_wand` command
+- [ ] A project holding a block with no Bedrock version lists it in a warning, with its count
+- [ ] Unzipped, the file holds `<slug>_BP` (manifest, items, scripts/main.js, structures/structures/<slug>.mcstructure) and `<slug>_RP` (manifest, textures/item_texture.json), and no image files
+- [ ] Exporting the same project twice gives the same pack UUIDs and a higher version
+- [ ] In Bedrock 1.26.50+, opening the file imports both packs. With them on in a world:
+  - [ ] The item appears in the creative inventory under its name and vanilla icon
+  - [ ] Used in the air, the build appears with the meta block cell at the player's feet, and the player faces the arrow's way
+  - [ ] Used on a block, the build anchors in the cell next to the clicked face
+  - [ ] Facing each of north, east, south, and west, the build turns with the player
+  - [ ] The chosen animation plays over the chosen seconds
+  - [ ] Existing world blocks stay where the design has empty cells
+
+---
+
 ## Meta Block
 
 - [ ] M selects the Meta Block tool. The options bar shows "Facing" with turn buttons and hides depth and behavior.

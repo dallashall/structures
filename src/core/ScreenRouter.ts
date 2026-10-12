@@ -15,6 +15,7 @@ const PREVIEW_HASH_PREFIX = '#/preview';
  * - screen:shown (screen) - The visible screen switched
  * - newprojectdialog:toggled (isOpen) - The new project dialog opened or closed
  * - creditsdialog:toggled (isOpen) - The credits dialog opened or closed
+ * - exportdialog:toggled (isOpen) - The export dialog opened or closed
  * - file-error:shown (message) - A file save or load failed
  * - file-error:dismissed - The file error message closed
  */
@@ -25,6 +26,7 @@ class ScreenRouter extends EventEmitter {
   private newProjectDialogOpen = false;
   private fileError: string | null = null;
   private creditsDialogOpen = false;
+  private exportDialogOpen = false;
 
   private constructor() {
     super();
@@ -56,6 +58,18 @@ class ScreenRouter extends EventEmitter {
 
   closeCreditsDialog = (): void => {
     this.setCreditsDialogOpen(false);
+  };
+
+  isExportDialogOpen(): boolean {
+    return this.exportDialogOpen;
+  }
+
+  openExportDialog = (): void => {
+    this.setExportDialogOpen(true);
+  };
+
+  closeExportDialog = (): void => {
+    this.setExportDialogOpen(false);
   };
 
   getFileError(): string | null {
@@ -105,6 +119,12 @@ class ScreenRouter extends EventEmitter {
     if (this.creditsDialogOpen === isOpen) return;
     this.creditsDialogOpen = isOpen;
     this.emit('creditsdialog:toggled', isOpen);
+  }
+
+  private setExportDialogOpen(isOpen: boolean): void {
+    if (this.exportDialogOpen === isOpen) return;
+    this.exportDialogOpen = isOpen;
+    this.emit('exportdialog:toggled', isOpen);
   }
 
   private handleHashChange = (): void => {

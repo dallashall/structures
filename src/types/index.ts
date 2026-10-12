@@ -156,8 +156,8 @@ export interface Block {
   category: string;
   color: string; // Hex fill drawn when no texture renders
 
+  // The real Minecraft block ID. Differs from id only for a catalog entry named after its texture.
   javaId?: string;
-  bedrockId?: string;
 
   textures?: TextureFaceMap;
 

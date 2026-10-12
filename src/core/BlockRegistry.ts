@@ -140,8 +140,7 @@ class BlockRegistry extends EventEmitter {
           name: (canonicalBlock as any).displayName,
           category: (canonicalBlock as any).category,
           color: (canonicalBlock as any).color,
-          javaId: canonicalId,
-          bedrockId: canonicalId,
+          javaId: (canonicalBlock as any).javaId ?? canonicalId,
           textures: (canonicalBlock as any).textures,
           hasBlockState: (canonicalBlock as any).hasBlockState || false,
           defaultState: (canonicalBlock as any).defaultState

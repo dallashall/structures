@@ -4,6 +4,7 @@ import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
 import { CreditsDialog } from "./components/CreditsDialog";
+import { ExportDialog } from "./components/ExportDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
 import { openProjectCommand } from "./commands/OpenProjectCommand";
@@ -155,6 +156,7 @@ function AppComponent({
   screen,
   isNewProjectDialogOpen,
   isCreditsDialogOpen,
+  isExportDialogOpen,
   fileError,
   atlasStatus,
 }: WithScreenStateProps & WithAtlasStatusProps) {
@@ -212,6 +214,7 @@ function AppComponent({
       />
 
       <CreditsDialog isOpen={isCreditsDialogOpen} onClose={screenRouter.closeCreditsDialog} />
+      <ExportDialog isOpen={isExportDialogOpen} onClose={screenRouter.closeExportDialog} />
 
       <FileErrorSnackbar message={fileError} onClose={screenRouter.dismissFileError} />
     </ThemeProvider>

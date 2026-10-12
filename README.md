@@ -36,6 +36,12 @@ npm run setup:textures
 
 `setup:textures` always rebuilds. `build:atlas` rebuilds the atlas from the extracted pack without downloading it.
 
+## Exporting to Minecraft
+
+Export in the editor toolbar saves a `.mcaddon` for Minecraft Bedrock 1.26.50 or newer. Open the file to import its packs, turn both on in a world's settings, then get the item from the creative inventory or with `/give @s structures:<project>_wand`. Use it in the air or on a block, and the build animates in around you.
+
+The Java-to-Bedrock block table is `public/data/bedrock-blocks.json`. `npm run build:bedrock-blocks` rebuilds it, and the block catalog checks, from minecraft-data at a pinned commit.
+
 ## Deploying
 
 The app is a static site. The `Dockerfile` builds it and serves `dist/` with nginx on port 80.

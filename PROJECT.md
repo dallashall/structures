@@ -165,6 +165,23 @@ Save writes the open project to a `.mcblueprint` file. The file is JSON holding 
 
 Load from File reads that file into a new project with a new ID. Action IDs get new values, so a file can load beside the project it came from. When the name is taken, the loaded project becomes "Name (from file)" or "Name (from file N)".
 
+### Bedrock Export
+
+Export in the editor toolbar saves a `.mcaddon` for Minecraft Bedrock 1.26.50 or newer. Opening the file imports two packs:
+
+- A behavior pack with the build as a `.mcstructure`, an item, and a script on `@minecraft/server` 2.10.0.
+- A resource pack that points the item icon at a vanilla texture. Neither pack ships a texture file.
+
+In game, the item builds the project around the player:
+
+- Used on a block, it anchors the meta block in the cell next to the clicked face. Used in the air, it anchors at the player's feet.
+- The build turns so the player faces the meta block's arrow, then animates in layer by layer, block by block, or all at once.
+- The meta block's cell becomes air. Empty cells leave the world's blocks in place.
+
+Every export starts from the project's model. Each block's state goes app → Java → Bedrock through `public/data/bedrock-blocks.json` (from minecraft-data). Blocks with no Bedrock version are left out, and the export dialog names them. Pack UUIDs come from the project ID, so exporting again updates the installed packs.
+
+Known limits: walls load as posts until a neighbor changes, since the editor stores no wall connections. Bedrock's rotation direction for `Rotate90` is assumed clockwise from above and needs an in-game check.
+
 ## User Workflow
 
 1. **Create a project**
@@ -184,10 +201,10 @@ Load from File reads that file into a new project with a new ID. Action IDs get 
 4. **Keep and share**
    - Edits persist in the browser on their own
    - Save writes a project file. Load from File on the welcome screen reads one back.
+   - Export saves a Bedrock add-on whose item builds the project around the player.
 
 ## Future Enhancements
 
-- Export as a Bedrock add-on: a `.mcstructure` file, a custom item, and a script that places the build around the meta block with a layer-by-layer animation
 - A custom placeable block as a third export trigger
 - Explicit air blocks that clear existing world blocks when the build appears. Empty cells leave the world alone.
 - UI to expand and shrink a project. The commands exist without controls.

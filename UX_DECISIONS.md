@@ -182,6 +182,17 @@ This document records the interaction decisions for Structures and how the app c
 
 ---
 
+## 10. Bedrock Export
+
+**Decision:** Export is one dialog with item name, icon, animation, and seconds. Defaults: "<project> Wand", Blaze Rod, layer by layer, 5 seconds.
+
+**Details:**
+- The icon list holds vanilla item textures only, so the add-on ships no image.
+- One item handles both triggers: use on a block (the anchor goes next to the clicked face) and use in the air (the anchor goes at the player's feet).
+- After a save, the dialog shows the file name and the `/give` command. Blocks left out of the export show in a warning with their counts.
+
+---
+
 ## 9. Keyboard Focus
 
 **Decision:** Global keys never act while the user types or while a dialog is open.

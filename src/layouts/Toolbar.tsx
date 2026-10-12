@@ -11,7 +11,7 @@ import {
   InputLabel,
   SelectChangeEvent,
 } from '@mui/material';
-import { InfoOutlined, Save, ViewList } from '@mui/icons-material';
+import { InfoOutlined, IosShare, Save, ViewList } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
 import type { SaveState } from '../core/SaveTracker';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
@@ -23,10 +23,10 @@ interface ToolbarProps {
   saveState: SaveState;
   onBackToProjects: () => void;
   onLayoutModeChange: (mode: LayoutMode) => void;
-  // Absent in previews, which hide the Save and Credits buttons
+  // Absent in previews, which hide the Save, Export, and Credits buttons
   onSaveToFile?: () => void;
+  onExport?: () => void;
   onShowCredits?: () => void;
-  // Toolbar ignores these. Only the preview gallery passes them.
 }
 
 export function Toolbar({
@@ -36,6 +36,7 @@ export function Toolbar({
   onBackToProjects,
   onLayoutModeChange,
   onSaveToFile,
+  onExport,
   onShowCredits,
 }: ToolbarProps) {
   const handleProjectsClick = () => {
@@ -96,6 +97,12 @@ export function Toolbar({
           {projectName && onSaveToFile && (
             <Button variant="outlined" onClick={onSaveToFile} startIcon={<Save />}>
               Save
+            </Button>
+          )}
+
+          {projectName && onExport && (
+            <Button variant="outlined" onClick={onExport} startIcon={<IosShare />}>
+              Export
             </Button>
           )}
 
