@@ -256,7 +256,7 @@ Painting uses the material in the active slot (foreground or background).
 - [ ] **Quick-select palette**
   - [ ] Nine slots. Keys 1 to 9 put a slot's material in the active slot.
   - [ ] Clicking a slot does the same
-  - [ ] Shift+click or right-click assigns the active material to that slot
+  - [ ] Right-click assigns the active material to that slot
   - [ ] Slots persist per project across reloads
 
 - [ ] **Foreground and background**

@@ -55,8 +55,6 @@ export function ToolbarPreview() {
                 saveState="saved"
                 onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-                onToggle3D={mockCallbacks.onToggle3D}
-                is3DMode={false}
               />
             </Box>
           </Box>
@@ -76,8 +74,6 @@ export function ToolbarPreview() {
                 saveState="error"
                 onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-                onToggle3D={mockCallbacks.onToggle3D}
-                is3DMode={false}
               />
             </Box>
           </Box>
@@ -97,8 +93,6 @@ export function ToolbarPreview() {
                 saveState="saving"
                 onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-                onToggle3D={mockCallbacks.onToggle3D}
-                is3DMode={false}
               />
             </Box>
           </Box>
@@ -147,8 +141,6 @@ export function ToolbarPreview() {
             saveState="saved"
             onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
-            onToggle3D={mockCallbacks.onToggle3D}
-            is3DMode={true}
           />
         </Box>
       </Box>

@@ -27,8 +27,6 @@ interface ToolbarProps {
   onSaveToFile?: () => void;
   onShowCredits?: () => void;
   // Toolbar ignores these. Only the preview gallery passes them.
-  onToggle3D?: () => void;
-  is3DMode?: boolean;
 }
 
 export function Toolbar({

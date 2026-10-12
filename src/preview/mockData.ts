@@ -1,4 +1,4 @@
-import type { Block, ViewType, LayoutMode } from '../types';
+import type { Block, LayoutMode } from '../types';
 
 export const mockBlocks: Block[] = [
   { id: 'stone', name: 'Stone', category: 'stone', color: '#7D7D7D', hasBlockState: false, isCube: true, isTransparent: false },
@@ -40,18 +40,6 @@ export const mockBlocks: Block[] = [
   { id: 'diamond_block', name: 'Diamond Block', category: 'metal', color: '#5DECF5', hasBlockState: false, isCube: true, isTransparent: false },
 ];
 
-const logBlockSelected = (blockId: string): void => {
-  console.log('[Mock Callback] Block selected:', blockId);
-};
-
-const logViewChanged = (view: ViewType): void => {
-  console.log('[Mock Callback] View changed:', view);
-};
-
-const logLayerChanged = (layer: number): void => {
-  console.log('[Mock Callback] Layer changed:', layer);
-};
-
 const logLayoutModeChanged = (mode: LayoutMode): void => {
   console.log('[Mock Callback] Layout mode changed:', mode);
 };
@@ -60,25 +48,7 @@ const logBackToProjects = (): void => {
   console.log('[Mock Callback] Back to projects clicked');
 };
 
-const logToggle3D = (): void => {
-  console.log('[Mock Callback] Toggle 3D clicked');
-};
-
-const logExport = (): void => {
-  console.log('[Mock Callback] Export clicked');
-};
-
-const logSettings = (): void => {
-  console.log('[Mock Callback] Settings clicked');
-};
-
 export const mockCallbacks = {
-  onSelectBlock: logBlockSelected,
-  onViewChange: logViewChanged,
-  onLayerChange: logLayerChanged,
   onLayoutModeChange: logLayoutModeChanged,
   onBackToProjects: logBackToProjects,
-  onToggle3D: logToggle3D,
-  onExport: logExport,
-  onSettings: logSettings,
 };
