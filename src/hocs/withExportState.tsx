@@ -22,6 +22,7 @@ export interface WithExportStateProps {
 }
 
 const DEFAULT_OPTIONS: BedrockExportOptions = {
+  addonName: '',
   itemName: '',
   icon: 'blaze_rod',
   sequence: 'rise',

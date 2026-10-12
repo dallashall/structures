@@ -84,11 +84,13 @@ describe('toAddonFiles', () => {
     expect(findBadManifestVersions({ modules: [{ version: [1, 0, 1_800_000_000] }] })).toEqual(['manifest/modules/0/version [1,0,1800000000]']);
   });
 
-  it('gives the same project the same pack UUIDs on every export', async () => {
+  it('keeps pack UUIDs for the same project and add-on name, and changes them for a new name', async () => {
     const first = readJson(await toAddonFiles(OPTIONS), 'castle_keep_BP/manifest.json');
     const later = readJson(await toAddonFiles({ ...OPTIONS, exportedAt: 1_900_000_000_000 }), 'castle_keep_BP/manifest.json');
     const other = readJson(await toAddonFiles({ ...OPTIONS, projectId: 'project-2' }), 'castle_keep_BP/manifest.json');
     expect(later.header.uuid).toBe(first.header.uuid);
+    const renamed = readJson(await toAddonFiles({ ...OPTIONS, projectName: 'Castle Gate' }), 'castle_gate_BP/manifest.json');
+    expect(renamed.header.uuid).not.toBe(first.header.uuid);
     expect(other.header.uuid).not.toBe(first.header.uuid);
     expect(first.header.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });

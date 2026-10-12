@@ -18,7 +18,8 @@ interface Finding {
 }
 
 const SOURCE_FILE = /\.tsx?$/;
-const TEST_STRUCTURE = /^(describe|it|test|beforeEach|afterEach|beforeAll|afterAll)(\.\w+)?$/;
+// Also matches table forms such as it.each([...]), whose callee is itself a call
+const TEST_STRUCTURE = /^(describe|it|test|beforeEach|afterEach|beforeAll|afterAll)(\.\w+)?(\([\s\S]*\))?$/;
 const SNIPPET_LENGTH = 60;
 
 function listSourceFiles(path: string): string[] {

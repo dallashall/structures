@@ -23,6 +23,9 @@ const PACK_ICON_URL = '/logo-256.png';
 const MCADDON_TYPE = { description: 'Minecraft add-on', mimeType: 'application/zip', extension: '.mcaddon' };
 
 export interface BedrockExportOptions {
+  // Empty means the project name
+  addonName: string;
+  // Empty means "<add-on name> Wand"
   itemName: string;
   icon: ItemIcon;
   sequence: BuildSequence;
@@ -103,7 +106,7 @@ class ExportBedrockAddonCommand {
       metadataProjection.getMetadata(),
       loadPackIcon(),
     ]);
-    const projectName = metadata?.name ?? 'Build';
+    const addonName = options.addonName.trim() || metadata?.name || 'Build';
 
     const resolve = (block: BlockData): BlockData => shapeCatalog.resolveBlockState(block.position, model.blocks) ?? block;
     const toJavaId = (blockId: string): string => blockRegistry.getBlock(blockId)?.javaId ?? blockId;
@@ -114,8 +117,8 @@ class ExportBedrockAddonCommand {
     const [major, minor, patch] = table.bedrockVersion;
     const addon = await toMcaddon({
       projectId,
-      projectName,
-      itemName: options.itemName.trim() || `${projectName} Wand`,
+      projectName: addonName,
+      itemName: options.itemName.trim() || `${addonName} Wand`,
       icon: options.icon,
       sequence: options.sequence,
       seconds: options.seconds,
@@ -128,7 +131,7 @@ class ExportBedrockAddonCommand {
       packIcon,
     });
 
-    const names = toAddonNames(projectName);
+    const names = toAddonNames(addonName);
     const fileName = `${names.slug}.mcaddon`;
     const isSaved = await saveBinaryFile(fileName, addon, MCADDON_TYPE);
 

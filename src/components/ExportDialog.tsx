@@ -27,7 +27,7 @@ import { Form } from './Form';
 import { ModalDialog, IN_DIALOG_MENU_PROPS } from './ModalDialog';
 import { NumberField } from './NumberField';
 
-import { ITEM_ICONS } from '../utils/bedrockAddon';
+import { ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
 
 const TITLE_ID = 'export-title';
 
@@ -58,9 +58,14 @@ function ExportDialogComponent({
   onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { itemName, icon, sequence, seconds, uses } = exportOptions;
-  const placeholderName = `${projectName} Wand`;
+  const { addonName, itemName, icon, sequence, seconds, uses } = exportOptions;
+  const resolvedAddonName = addonName.trim() || projectName;
+  const placeholderName = `${resolvedAddonName} Wand`;
+  const { itemId } = toAddonNames(resolvedAddonName);
 
+  const handleAddonNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    onExportOptionsChange({ addonName: event.target.value });
+  };
   const handleItemNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     onExportOptionsChange({ itemName: event.target.value });
   };
@@ -97,12 +102,22 @@ function ExportDialogComponent({
           </Typography>
 
           <TextField
+            label="Add-on name"
+            value={addonName}
+            placeholder={projectName}
+            onChange={handleAddonNameChange}
+            helperText={`In game: /give @s ${itemId}. A new name installs as a separate add-on.`}
+            fullWidth
+            slotProps={{ htmlInput: { 'data-autofocus': true }, inputLabel: { shrink: true } }}
+          />
+
+          <TextField
             label="Item name"
             value={itemName}
             placeholder={placeholderName}
             onChange={handleItemNameChange}
             fullWidth
-            slotProps={{ htmlInput: { 'data-autofocus': true }, inputLabel: { shrink: true } }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
 
           <FormControl fullWidth>

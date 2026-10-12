@@ -3,7 +3,8 @@
  * and a resource pack with the item's vanilla icon and the build's glow particle. No game texture ships in either pack. The only image is
  * the app logo as each pack's icon.
  *
- * Pack UUIDs derive from the project ID, so a later export of the same project updates the installed packs.
+ * Pack UUIDs derive from the project ID and the add-on name, so exporting the same add-on again updates the
+ * installed packs, and an export under a new name installs beside it.
  * The version comes from the export time, so it rises with every export (see toPackVersion).
  */
 
@@ -35,6 +36,7 @@ export type ItemIcon = keyof typeof ITEM_ICONS;
 
 export interface AddonOptions {
   projectId: string;
+  // The add-on's name in the game's pack list. Its slug names the file, the structure, and the item.
   projectName: string;
   itemName: string;
   icon: ItemIcon;
@@ -135,12 +137,14 @@ const toJson = (value: unknown): Uint8Array => strToU8(`${JSON.stringify(value, 
 export async function toAddonFiles(options: AddonOptions): Promise<Record<string, Uint8Array>> {
   const names = toAddonNames(options.projectName);
   const version = toPackVersion(options.exportedAt);
+  // The same add-on name from the same project updates its packs. A new name makes a separate add-on.
+  const packSeed = `${options.projectId}:${names.slug}`;
   const [behaviorUuid, dataUuid, scriptUuid, resourceUuid, resourceModuleUuid] = await Promise.all([
-    toStableUuid(`${options.projectId}:behavior`),
-    toStableUuid(`${options.projectId}:behavior:data`),
-    toStableUuid(`${options.projectId}:behavior:script`),
-    toStableUuid(`${options.projectId}:resource`),
-    toStableUuid(`${options.projectId}:resource:module`),
+    toStableUuid(`${packSeed}:behavior`),
+    toStableUuid(`${packSeed}:behavior:data`),
+    toStableUuid(`${packSeed}:behavior:script`),
+    toStableUuid(`${packSeed}:resource`),
+    toStableUuid(`${packSeed}:resource:module`),
   ]);
   const iconKey = `${NAMESPACE}_${names.slug}_wand`;
   const behaviorRoot = `${names.slug}_BP`;

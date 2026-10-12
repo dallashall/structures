@@ -63,8 +63,12 @@ const FACINGS = ["north", "east", "south", "west"];
 
 const FACE_OFFSETS = { Up: [0, 1, 0], Down: [0, -1, 0], North: [0, 0, -1], South: [0, 0, 1], East: [1, 0, 0], West: [-1, 0, 0] };
 
-// A use on a block also raises the plain use event in the same tick
-let lastUseOnTick = -1;
+// A use on a block also raises the in-air use event, in either order. Both record a request, and the next
+// tick builds once from it, preferring the block anchor. Player ID -> { player, anchor, isOnBlock }
+const pendingBuilds = new Map();
+// Ignores repeat requests while the use button stays held. Player ID -> tick of the last build.
+const lastBuildTicks = new Map();
+const REPEAT_COOLDOWN_TICKS = 10;
 
 // Bedrock yaw: 0 faces south, 90 west, 180 north, -90 east
 /** @param {Player} player */
@@ -212,32 +216,47 @@ function wearItem(player) {
   equippable.setEquipment(EquipmentSlot.Mainhand, item);
 }
 
+/** @param {string} playerId */
+function runPendingBuild(playerId) {
+  const pending = pendingBuilds.get(playerId);
+  pendingBuilds.delete(playerId);
+  if (!pending || !pending.player.isValid) return;
+  lastBuildTicks.set(playerId, system.currentTick);
+  wearItem(pending.player);
+  if (SEQUENCE === "instant") placeInstantly(pending.player, pending.anchor);
+  else animateBuild(pending.player, pending.anchor);
+}
+
 // Item events run before the world may change, so the build starts on the next tick
-/** @param {Player} player @param {Vector3} anchor */
-function buildAround(player, anchor) {
-  function start() {
-    wearItem(player);
-    if (SEQUENCE === "instant") placeInstantly(player, anchor);
-    else animateBuild(player, anchor);
+/** @param {Player} player @param {Vector3} anchor @param {boolean} isOnBlock */
+function requestBuild(player, anchor, isOnBlock) {
+  const lastBuildTick = lastBuildTicks.get(player.id);
+  if (lastBuildTick !== undefined && system.currentTick - lastBuildTick < REPEAT_COOLDOWN_TICKS) return;
+
+  const pending = pendingBuilds.get(player.id);
+  if (pending && (pending.isOnBlock || !isOnBlock)) return;
+  pendingBuilds.set(player.id, { player, anchor, isOnBlock });
+  if (!pending) {
+    function run() {
+      runPendingBuild(player.id);
+    }
+    system.run(run);
   }
-  system.run(start);
 }
 
 /** @param {import("@minecraft/server").ItemComponentUseOnEvent} event */
 function handleUseOn(event) {
   // Only a player has the facing and inventory the build needs
   if (!(event.source instanceof Player)) return;
-  lastUseOnTick = system.currentTick;
   const offset = FACE_OFFSETS[event.blockFace] ?? FACE_OFFSETS.Up;
   const { x, y, z } = event.block.location;
-  buildAround(event.source, { x: x + offset[0], y: y + offset[1], z: z + offset[2] });
+  requestBuild(event.source, { x: x + offset[0], y: y + offset[1], z: z + offset[2] }, true);
 }
 
 /** @param {import("@minecraft/server").ItemComponentUseEvent} event */
 function handleUse(event) {
-  if (system.currentTick === lastUseOnTick) return;
   const { x, y, z } = event.source.location;
-  buildAround(event.source, { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) });
+  requestBuild(event.source, { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) }, false);
 }
 
 /** @param {import("@minecraft/server").StartupEvent} startup */
