@@ -17,6 +17,7 @@ import type { SelectChangeEvent } from '@mui/material';
 
 import type { ItemIcon } from '../utils/bedrockAddon';
 import type { BuildSequence } from '../utils/bedrockAddonScript';
+import type { CameraMode } from '../utils/cameraPath';
 
 import { withExportState } from '../hocs/withExportState';
 import type { WithExportStateProps } from '../hocs/withExportState';
@@ -30,6 +31,12 @@ import { NumberField } from './NumberField';
 import { ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
 
 const TITLE_ID = 'export-title';
+
+const CAMERA_LABELS: Record<CameraMode, string> = {
+  none: 'Player keeps control',
+  orbit: 'Orbit the build, end at the player',
+  lookAround: 'Look around from the player',
+};
 
 const SEQUENCE_LABELS: Record<BuildSequence, string> = {
   rise: 'Rise, layer by layer',
@@ -50,6 +57,7 @@ function ExportDialogComponent({
   onClose,
   exportOptions,
   projectName,
+  projectId,
   isExporting,
   exportResult,
   exportError,
@@ -58,10 +66,10 @@ function ExportDialogComponent({
   onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { addonName, itemName, icon, sequence, seconds, uses } = exportOptions;
+  const { addonName, itemName, icon, sequence, seconds, uses, camera } = exportOptions;
   const resolvedAddonName = addonName.trim() || projectName;
   const placeholderName = `${resolvedAddonName} Wand`;
-  const { itemId } = toAddonNames(resolvedAddonName);
+  const { itemId } = toAddonNames(resolvedAddonName, projectId);
 
   const handleAddonNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     onExportOptionsChange({ addonName: event.target.value });
@@ -77,6 +85,9 @@ function ExportDialogComponent({
   };
   const handleSecondsChange = (value: number): void => {
     onExportOptionsChange({ seconds: value });
+  };
+  const handleCameraChange = (event: SelectChangeEvent<CameraMode>): void => {
+    onExportOptionsChange({ camera: event.target.value as CameraMode });
   };
   const handleUsesChange = (value: number): void => {
     onExportOptionsChange({ uses: value });
@@ -148,6 +159,19 @@ function ExportDialogComponent({
             maxValue={60}
             disabled={sequence === 'instant'}
           />
+
+          <FormControl fullWidth disabled={sequence === 'instant'}>
+            <InputLabel id="export-camera-label">Camera</InputLabel>
+            <Select
+              labelId="export-camera-label"
+              label="Camera"
+              value={sequence === 'instant' ? 'none' : camera}
+              onChange={handleCameraChange}
+              MenuProps={IN_DIALOG_MENU_PROPS}
+            >
+              {Object.entries(CAMERA_LABELS).map(renderOption)}
+            </Select>
+          </FormControl>
 
           <NumberField
             label="Uses before it breaks (0 for unlimited)"

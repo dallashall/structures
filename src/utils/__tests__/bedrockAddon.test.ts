@@ -2,7 +2,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
-import { findBadManifestVersions, toAddonFiles, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
+import { findBadManifestVersions, toAddonFiles, toAddonNames, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
 import type { AddonOptions } from '../bedrockAddon';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: -1, y: 0, z: -2 } };
@@ -15,6 +15,7 @@ const OPTIONS: AddonOptions = {
   seconds: 6,
   uses: 0,
   metaFacing: 'y-',
+  camera: 'none',
   structure: new Uint8Array([10, 0, 0]),
   build: {
     palette: [{ rotations: [['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}]], color: [0.5, 0.5, 0.5] }],
@@ -25,6 +26,8 @@ const OPTIONS: AddonOptions = {
   exportedAt: 1_800_000_000_000,
   packIcon: new Uint8Array([137, 80, 78, 71]),
 };
+
+const NAMES = toAddonNames(OPTIONS.projectName, OPTIONS.projectId);
 
 const readJson = (files: Record<string, Uint8Array>, path: string): Record<string, any> =>
   JSON.parse(strFromU8(files[path]));
@@ -51,6 +54,17 @@ describe('toPackVersion', () => {
   });
 });
 
+describe('toAddonNames', () => {
+  it('namespaces each add-on by its name and its project', () => {
+    const castle = toAddonNames('Castle', 'project-1');
+    expect(castle.namespace).toMatch(/^castle_[0-9a-z]{4}$/);
+    expect(castle.itemId).toBe(`${castle.namespace}:wand`);
+    expect(toAddonNames('Castle', 'project-1')).toEqual(castle);
+    expect(toAddonNames('Castle', 'project-2').namespace).not.toBe(castle.namespace);
+    expect(toAddonNames('Castle Gate', 'project-1').namespace).not.toBe(castle.namespace);
+  });
+});
+
 describe('toAddonFiles', () => {
   it('lays out a behavior pack and a resource pack whose only image is the pack icon', async () => {
     const files = await toAddonFiles(OPTIONS);
@@ -59,7 +73,7 @@ describe('toAddonFiles', () => {
       'castle_keep_BP/manifest.json',
       'castle_keep_BP/pack_icon.png',
       'castle_keep_BP/scripts/main.js',
-      'castle_keep_BP/structures/structures/castle_keep.mcstructure',
+      `castle_keep_BP/structures/${NAMES.namespace}/build.mcstructure`,
       'castle_keep_RP/manifest.json',
       'castle_keep_RP/pack_icon.png',
       'castle_keep_RP/particles/build_glow.json',
@@ -107,8 +121,8 @@ describe('toAddonFiles', () => {
     const files = await toAddonFiles(OPTIONS);
     const item = readJson(files, 'castle_keep_BP/items/castle_keep_wand.json')['minecraft:item'];
     const textures = readJson(files, 'castle_keep_RP/textures/item_texture.json');
-    expect(item.description.identifier).toBe('structures:castle_keep_wand');
-    expect(item.components['structures:build_castle_keep']).toEqual({});
+    expect(item.description.identifier).toBe(`${NAMES.namespace}:wand`);
+    expect(item.components[NAMES.componentId]).toEqual({});
     expect(textures.texture_data[item.components['minecraft:icon']]).toEqual({ textures: ['textures/items/trial_key'] });
   });
 });
@@ -117,6 +131,6 @@ describe('toMcaddon', () => {
   it('zips every pack file', async () => {
     const unzipped = unzipSync(await toMcaddon(OPTIONS));
     expect(Object.keys(unzipped)).toHaveLength(9);
-    expect(unzipped['castle_keep_BP/structures/structures/castle_keep.mcstructure']).toEqual(OPTIONS.structure);
+    expect(unzipped[`castle_keep_BP/structures/${NAMES.namespace}/build.mcstructure`]).toEqual(OPTIONS.structure);
   });
 });

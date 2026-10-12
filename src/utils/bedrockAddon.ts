@@ -14,13 +14,13 @@ import type { AnimatedBuild } from './bedrockAnimation';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { BuildSequence } from './bedrockAddonScript';
 import type { HorizontalDirection } from '../types';
+import type { CameraMode } from './cameraPath';
 import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from './bedrockAddonScript';
 
 // Latest stable @minecraft/server, and the game version that ships it
 export const SCRIPT_API_VERSION = '2.10.0';
 const MIN_ENGINE_VERSION = [1, 26, 50];
 const ITEM_FORMAT_VERSION = '1.26.50';
-const NAMESPACE = 'structures';
 
 // Vanilla item textures. Resource packs may point at them without shipping a copy.
 export const ITEM_ICONS = {
@@ -45,6 +45,7 @@ export interface AddonOptions {
   // Uses before the item breaks. 0 means unlimited.
   uses: number;
   metaFacing: HorizontalDirection;
+  camera: CameraMode;
   // Whole structure, placed at once by the "instant" sequence
   structure: Uint8Array;
   placements: Record<PlayerFacing, Placement>;
@@ -57,6 +58,7 @@ export interface AddonOptions {
 
 export interface AddonNames {
   slug: string;
+  namespace: string;
   structureId: string;
   itemId: string;
   componentId: string;
@@ -70,13 +72,33 @@ export function toSlug(name: string): string {
   return slug || 'build';
 }
 
-export function toAddonNames(projectName: string): AddonNames {
-  const slug = toSlug(projectName);
+// FNV-1a. Only needs to spread project IDs, not resist attack.
+function hashString(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+const PROJECT_CODE_LENGTH = 4;
+
+/**
+ * Each add-on gets its own namespace: the name's slug plus a short code from the project ID.
+ * Two projects exported under the same name then still register different items, and the same project
+ * and name always give the same identifiers, so a later export replaces the installed one.
+ */
+export function toAddonNames(addonName: string, projectId: string): AddonNames {
+  const slug = toSlug(addonName);
+  const code = hashString(projectId).toString(36).padStart(PROJECT_CODE_LENGTH, '0').slice(-PROJECT_CODE_LENGTH);
+  const namespace = `${slug}_${code}`;
   return {
     slug,
-    structureId: `${NAMESPACE}:${slug}`,
-    itemId: `${NAMESPACE}:${slug}_wand`,
-    componentId: `${NAMESPACE}:build_${slug}`,
+    namespace,
+    structureId: `${namespace}:build`,
+    itemId: `${namespace}:wand`,
+    componentId: `${namespace}:build`,
   };
 }
 
@@ -135,7 +157,7 @@ const toJson = (value: unknown): Uint8Array => strToU8(`${JSON.stringify(value, 
  * File path → bytes for both packs, under "<slug>_BP/" and "<slug>_RP/"
  */
 export async function toAddonFiles(options: AddonOptions): Promise<Record<string, Uint8Array>> {
-  const names = toAddonNames(options.projectName);
+  const names = toAddonNames(options.projectName, options.projectId);
   const version = toPackVersion(options.exportedAt);
   // The same add-on name from the same project updates its packs. A new name makes a separate add-on.
   const packSeed = `${options.projectId}:${names.slug}`;
@@ -146,7 +168,7 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
     toStableUuid(`${packSeed}:resource`),
     toStableUuid(`${packSeed}:resource:module`),
   ]);
-  const iconKey = `${NAMESPACE}_${names.slug}_wand`;
+  const iconKey = `${names.namespace}_wand`;
   const behaviorRoot = `${names.slug}_BP`;
   const resourceRoot = `${names.slug}_RP`;
 
@@ -171,7 +193,8 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
     }),
     [`${behaviorRoot}/pack_icon.png`]: options.packIcon,
     [`${resourceRoot}/pack_icon.png`]: options.packIcon,
-    [`${behaviorRoot}/structures/${NAMESPACE}/${names.slug}.mcstructure`]: options.structure,
+    // The first folder under structures/ is the identifier's namespace
+    [`${behaviorRoot}/structures/${names.namespace}/build.mcstructure`]: options.structure,
     [`${behaviorRoot}/items/${names.slug}_wand.json`]: toJson({
       format_version: ITEM_FORMAT_VERSION,
       'minecraft:item': {
@@ -192,6 +215,7 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
       seconds: options.seconds,
       uses: options.uses,
       metaFacing: options.metaFacing,
+      camera: options.camera,
       placements: options.placements,
       build: options.build,
     })),

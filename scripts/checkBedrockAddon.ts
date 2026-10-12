@@ -57,6 +57,7 @@ async function writeSampleAddon(): Promise<void> {
     seconds: 5,
     uses: 10,
     metaFacing: metaBlock.direction,
+    camera: 'orbit',
     build,
     structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
     placements: structure.placements,

@@ -14,6 +14,8 @@ import type { AnimatedSequence } from './buildSequence';
 import { JITTER, LEAD_TICKS, MAX_GLOWS, toDurationTicks } from './buildSequence';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { HorizontalDirection } from '../types';
+import type { CameraMode } from './cameraPath';
+import { CAMERA_KEYS_PER_SECOND } from './cameraPath';
 
 export type BuildSequence = AnimatedSequence | 'instant';
 
@@ -29,6 +31,7 @@ export interface AddonScriptOptions {
   // 0 means unlimited
   uses: number;
   metaFacing: HorizontalDirection;
+  camera: CameraMode;
   placements: Record<PlayerFacing, Placement>;
   build: AnimatedBuild;
 }
@@ -36,9 +39,12 @@ export interface AddonScriptOptions {
 const toPaletteLiteral = ({ rotations, color }: AnimatedBuild['palette'][number]): unknown => [rotations, color];
 
 export function toAddonScript(options: AddonScriptOptions): string {
-  return `import { system, world, BlockPermutation, EquipmentSlot, MolangVariableMap, Player, StructureRotation } from "@minecraft/server";
+  return `import { system, world, BlockPermutation, EasingType, EquipmentSlot, InputPermissionCategory, MolangVariableMap, Player, StructureRotation } from "@minecraft/server";
 
 const STRUCTURE_ID = ${JSON.stringify(options.structureId)};
+/** @type {string} */
+const CAMERA_MODE = ${JSON.stringify(options.camera)};
+const CAMERA_KEYS_PER_SECOND = ${CAMERA_KEYS_PER_SECOND};
 /** @type {string} */
 const SEQUENCE = ${JSON.stringify(options.sequence)};
 const DURATION_TICKS = ${toDurationTicks(options.seconds)};
@@ -119,6 +125,146 @@ function setBlock(dimension, location, permutation) {
   }
 }
 
+// CAMERA PATH START: a copy of toCameraPose and toCameraBounds in src/utils/cameraPath.ts
+const LOOK_DISTANCE = 8;
+const BLEND_IN = 0.12;
+const BLEND_OUT = 0.3;
+const ORBIT_RADIUS_SCALE = 1.6;
+const ORBIT_MIN_RADIUS = 8;
+const ORBIT_LIFT = 4;
+const LOOK_UP = 0.45;
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function lerpVec(a, b, t) {
+  return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) };
+}
+
+function smoothstep(edge0, edge1, t) {
+  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
+  return x * x * (3 - 2 * x);
+}
+
+function toCameraPose(mode, scene, t) {
+  const { center, radius, top, eye, forward } = scene;
+  const firstPerson = {
+    location: eye,
+    facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
+  };
+  if (mode === "none") return firstPerson;
+
+  if (mode === "lookAround") {
+    const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
+    const turn = 2 * Math.PI * eased;
+    const tilt = Math.sin(Math.PI * t) * LOOK_UP;
+    const cos = Math.cos(turn);
+    const sin = Math.sin(turn);
+    const horizontal = Math.cos(tilt) * LOOK_DISTANCE;
+    return {
+      location: eye,
+      facing: {
+        x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
+        y: eye.y + Math.sin(tilt) * LOOK_DISTANCE,
+        z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
+      },
+    };
+  }
+
+  const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
+  const angle = startAngle + 2 * Math.PI * (1 - t);
+  const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
+  const orbit = {
+    location: {
+      x: center.x + Math.cos(angle) * orbitRadius,
+      y: Math.max(top, center.y) + ORBIT_LIFT,
+      z: center.z + Math.sin(angle) * orbitRadius,
+    },
+    facing: center,
+  };
+  const blend = Math.max(1 - smoothstep(0, BLEND_IN, t), smoothstep(1 - BLEND_OUT, 1, t));
+  return {
+    location: lerpVec(orbit.location, firstPerson.location, blend),
+    facing: lerpVec(orbit.facing, firstPerson.facing, blend),
+  };
+}
+
+function toCameraBounds(cells) {
+  if (cells.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 0, top: 0 };
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const { x, y, z } of cells) {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    minZ = Math.min(minZ, z);
+    maxX = Math.max(maxX, x + 1);
+    maxY = Math.max(maxY, y + 1);
+    maxZ = Math.max(maxZ, z + 1);
+  }
+  return {
+    center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 },
+    radius: Math.hypot(maxX - minX, maxZ - minZ) / 2,
+    top: maxY,
+  };
+}
+// CAMERA PATH END
+
+// Flies the camera along the mode's path while the build lands, then hands the view back to the player.
+// Movement and look input stay off for the shot, so the path ends exactly where the player stands.
+/** @param {Player} player @param {Vector3[]} cells @param {number} totalTicks */
+function runCamera(player, cells, totalTicks) {
+  if (CAMERA_MODE === "none") return;
+  const view = player.getViewDirection();
+  const length = Math.hypot(view.x, view.z) || 1;
+  const scene = {
+    ...toCameraBounds(cells),
+    eye: player.getHeadLocation(),
+    forward: { x: view.x / length, y: 0, z: view.z / length },
+  };
+  const keyTicks = Math.max(1, Math.round(20 / CAMERA_KEYS_PER_SECOND));
+  const keyCount = Math.max(1, Math.ceil(totalTicks / keyTicks));
+  const permissions = player.inputPermissions;
+  permissions.setPermissionCategory(InputPermissionCategory.Camera, false);
+  permissions.setPermissionCategory(InputPermissionCategory.Movement, false);
+
+  /** @param {number} t @param {number} easeSeconds */
+  function setPose(t, easeSeconds) {
+    const pose = toCameraPose(CAMERA_MODE, scene, t);
+    const options = { location: pose.location, facingLocation: pose.facing };
+    if (easeSeconds > 0) options.easeOptions = { easeTime: easeSeconds, easeType: EasingType.Linear };
+    player.camera.setCamera("minecraft:free", options);
+  }
+
+  function release() {
+    if (!player.isValid) return;
+    player.camera.clear();
+    permissions.setPermissionCategory(InputPermissionCategory.Camera, true);
+    permissions.setPermissionCategory(InputPermissionCategory.Movement, true);
+  }
+
+  let key = 0;
+  function nextKey() {
+    if (!player.isValid) {
+      system.clearRun(keys);
+      return;
+    }
+    key++;
+    setPose(key / keyCount, keyTicks / 20);
+    if (key >= keyCount) {
+      system.clearRun(keys);
+      system.runTimeout(release, keyTicks);
+    }
+  }
+
+  setPose(0, 0);
+  const keys = system.runInterval(nextKey, keyTicks);
+}
+
 /** @param {Player} player @param {Vector3} anchor */
 function animateBuild(player, anchor) {
   const dimension = player.dimension;
@@ -150,6 +296,7 @@ function animateBuild(player, anchor) {
   order.sort(byKey);
 
   setBlock(dimension, anchor, BlockPermutation.resolve("minecraft:air"));
+  runCamera(player, order, DURATION_TICKS + LEAD_TICKS);
 
   const count = order.length;
   const glowEvery = Math.max(1, Math.ceil(count / MAX_GLOWS));

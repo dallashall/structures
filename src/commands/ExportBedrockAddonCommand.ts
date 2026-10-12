@@ -9,6 +9,7 @@ import type { BlockData } from '../types';
 import type { ItemIcon } from '../utils/bedrockAddon';
 import type { BuildSequence } from '../utils/bedrockAddonScript';
 import type { Rgb } from '../utils/bedrockAnimation';
+import type { CameraMode } from '../utils/cameraPath';
 import type { BedrockBlockTable } from '../utils/bedrockBlocks';
 import { toAddonNames, toMcaddon } from '../utils/bedrockAddon';
 import { toAnimatedBuild } from '../utils/bedrockAnimation';
@@ -32,6 +33,7 @@ export interface BedrockExportOptions {
   seconds: number;
   // 0 means unlimited
   uses: number;
+  camera: CameraMode;
 }
 
 // The glow particle takes 0-1 channels. Faces with no texture fall back to the catalog color.
@@ -124,6 +126,7 @@ class ExportBedrockAddonCommand {
       seconds: options.seconds,
       uses: options.uses,
       metaFacing: model.metaBlock.direction,
+      camera: options.sequence === 'instant' ? 'none' : options.camera,
       build,
       structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
       placements: structure.placements,
@@ -131,7 +134,7 @@ class ExportBedrockAddonCommand {
       packIcon,
     });
 
-    const names = toAddonNames(addonName);
+    const names = toAddonNames(addonName, projectId);
     const fileName = `${names.slug}.mcaddon`;
     const isSaved = await saveBinaryFile(fileName, addon, MCADDON_TYPE);
 

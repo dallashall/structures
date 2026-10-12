@@ -12,6 +12,7 @@ import type { ViewType } from '../types';
 export interface WithExportStateProps {
   exportOptions: BedrockExportOptions;
   projectName: string;
+  projectId: string;
   isExporting: boolean;
   exportResult: BedrockExportResult | null;
   exportError: string | null;
@@ -28,6 +29,7 @@ const DEFAULT_OPTIONS: BedrockExportOptions = {
   sequence: 'rise',
   seconds: 6,
   uses: 0,
+  camera: 'none',
 };
 
 const toErrorMessage = (error: unknown): string =>
@@ -87,6 +89,7 @@ export function withExportState<P extends object>(
         {...props}
         exportOptions={options}
         projectName={metadataProjection.getCached()?.name ?? 'Build'}
+        projectId={editorState.getCurrentProjectId() ?? ''}
         isExporting={isExporting}
         exportResult={result}
         exportError={error}

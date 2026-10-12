@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import type { AddonScriptOptions, BuildSequence } from '../bedrockAddonScript';
 import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from '../bedrockAddonScript';
 import { JITTER, toSequenceKey } from '../buildSequence';
+import { toCameraBounds, toCameraPose } from '../cameraPath';
+import type { CameraMode, CameraScene } from '../cameraPath';
 import type { AnimatedSequence } from '../buildSequence';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: 0, y: 0, z: 0 } };
@@ -17,6 +19,7 @@ const OPTIONS: AddonScriptOptions = {
   seconds: 4,
   uses: 5,
   metaFacing: 'x+',
+  camera: 'none',
   placements: { north: PLACEMENT, east: PLACEMENT, south: PLACEMENT, west: PLACEMENT },
   build: {
     palette: [{ rotations: [['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}]], color: [0.5, 0.5, 0.5] }],
@@ -61,6 +64,27 @@ describe('the script copy of toSequenceKey', () => {
         (dx: number, dy: number, dz: number, random: number) => number;
       for (const [dx, dy, dz, random] of [[0, 0, 0, 0], [3, 1, -2, 0.5], [-4, 6, 7, 0.9]]) {
         expect(scriptKey(dx, dy, dz, random)).toBeCloseTo(toSequenceKey(sequence, dx, dy, dz, random), 10);
+      }
+    }
+  });
+});
+
+describe('the script copy of the camera path', () => {
+  it('matches the shared path the editor preview flies', () => {
+    const script = toAddonScript(OPTIONS);
+    const start = script.indexOf('// CAMERA PATH START');
+    const end = script.indexOf('// CAMERA PATH END');
+    expect(start).toBeGreaterThan(-1);
+    const load = new Function(`${script.slice(start, end)}\nreturn { toCameraPose, toCameraBounds };`);
+    const copy = load() as { toCameraPose: typeof toCameraPose; toCameraBounds: typeof toCameraBounds };
+
+    const cells = [{ x: 0, y: 0, z: -8 }, { x: 5, y: 6, z: -2 }];
+    expect(copy.toCameraBounds(cells)).toEqual(toCameraBounds(cells));
+    const scene: CameraScene = { ...toCameraBounds(cells), eye: { x: 1.5, y: 65.6, z: 2.5 }, forward: { x: 0.6, y: 0, z: -0.8 } };
+    const modes: CameraMode[] = ['none', 'orbit', 'lookAround'];
+    for (const mode of modes) {
+      for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) {
+        expect(copy.toCameraPose(mode, scene, t)).toEqual(toCameraPose(mode, scene, t));
       }
     }
   });
