@@ -4,6 +4,10 @@ import type { BedrockExportOptions, BedrockExportResult } from '../commands/Expo
 
 import { exportBedrockAddonCommand } from '../commands/ExportBedrockAddonCommand';
 import { metadataProjection } from '../projections/MetadataProjection';
+import { babylon3d } from '../core/Babylon3D';
+import { editorState } from '../core/EditorState';
+import { screenRouter } from '../core/ScreenRouter';
+import type { ViewType } from '../types';
 
 export interface WithExportStateProps {
   exportOptions: BedrockExportOptions;
@@ -13,6 +17,7 @@ export interface WithExportStateProps {
   exportError: string | null;
   onExportOptionsChange: (changes: Partial<BedrockExportOptions>) => void;
   onExport: () => void;
+  onPreview: () => void;
   onExportReset: () => void;
 }
 
@@ -28,7 +33,8 @@ const toErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'The add-on could not be exported.';
 
 /**
- * HOC that holds the export form, runs ExportBedrockAddonCommand, and keeps its last result for the dialog.
+ * HOC that holds the export form, runs ExportBedrockAddonCommand, plays the 3D preview, and keeps the last
+ * export result for the dialog.
  * The options persist between openings. The result and error clear on reset.
  */
 export function withExportState<P extends object>(
@@ -61,6 +67,15 @@ export function withExportState<P extends object>(
       exportBedrockAddonCommand.execute(options).then(showResult, showError);
     };
 
+    // The dialog steps aside while the 3D view plays the animation, then comes back
+    const handlePreview = (): void => {
+      if (options.sequence === 'instant') return;
+      screenRouter.closeExportDialog();
+      if (editorState.getLayoutMode() === 'tabbed') editorState.setActiveView('3d' as ViewType);
+      const reopen = (): void => screenRouter.openExportDialog();
+      babylon3d.playBuildPreview(options.sequence, options.seconds).then(reopen, reopen);
+    };
+
     const handleReset = (): void => {
       setResult(null);
       setError(null);
@@ -76,6 +91,7 @@ export function withExportState<P extends object>(
         exportError={error}
         onExportOptionsChange={handleOptionsChange}
         onExport={handleExport}
+        onPreview={handlePreview}
         onExportReset={handleReset}
       />
     );

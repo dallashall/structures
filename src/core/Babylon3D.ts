@@ -39,6 +39,11 @@ import { ThumbnailCapture, type Bounds } from './rendering/ThumbnailCapture';
 import { thumbnailStore } from './ThumbnailStore';
 import { PreviewRenderer } from './rendering/PreviewRenderer';
 import { BackdropRenderer } from './rendering/BackdropRenderer';
+import { BuildPreview } from './rendering/BuildPreview';
+import type { GlowColor } from './rendering/BuildPreview';
+import type { AnimatedSequence } from '../utils/buildSequence';
+import { toGlowTint } from '../utils/buildSequence';
+import { cssColorToRgb } from '../utils/cssColor';
 import { positionKey, toBabylonVector } from './rendering/babylonUtils';
 import { shapeCatalog } from './shapes/ShapeCatalog';
 
@@ -49,6 +54,25 @@ import type { PostProcessingPipelines } from './rendering/PostProcessingSetup';
 
 // Longer than the grow and shrink sequence, so the thumbnail shows blocks at full size
 const THUMBNAIL_DELAY_MS = 1000;
+
+// About two seconds at 60 fps
+const PREVIEW_WAIT_FRAMES = 120;
+const GLOW_FACE = 0;
+const GLOW_FALLBACK: GlowColor = [0.8, 0.8, 0.8];
+
+const nextFrame = (): Promise<void> => {
+  const waitForFrame = (resolve: () => void): void => {
+    requestAnimationFrame(resolve as FrameRequestCallback);
+  };
+  return new Promise(waitForFrame);
+};
+
+const toGlowColor = (mesh: AbstractMesh): GlowColor => {
+  const blockType = (mesh.metadata as { blockType?: string } | null)?.blockType;
+  const css = blockType ? textureResolver.getFaceColor(blockType, GLOW_FACE) : null;
+  const rgb = css ? cssColorToRgb(css) : null;
+  return rgb ? toGlowTint(rgb) : GLOW_FALLBACK;
+};
 
 const toShownKey = ({ id, dimensions: { width, height, depth } }: Project): string =>
   `${id}:${width}x${height}x${depth}`;
@@ -83,6 +107,7 @@ class Babylon3D {
   // Project and size the meshes on screen show. Blocks animate only while this stays the same.
   private shownKey: string | null = null;
   private thumbnailCapture: ThumbnailCapture | null = null;
+  private buildPreview: BuildPreview | null = null;
   // Project whose scene changed since its last thumbnail. Null when the stored thumbnail is current.
   private thumbnailProjectId: string | null = null;
   private thumbnailTimer: ReturnType<typeof setTimeout> | null = null;
@@ -138,6 +163,7 @@ class Babylon3D {
     this.materialResolver = new MaterialResolver(this.scene);
     this.blockRenderer = new BlockRenderer(this.scene, this.materialResolver);
     this.thumbnailCapture = new ThumbnailCapture(this.scene, this.cameraRig.getCamera());
+    this.buildPreview = new BuildPreview(this.scene);
     // Shadows draw once per update. Redraw them when growing and shrinking blocks reach their final size.
     this.blockRenderer.setAnimationSettledCallback(this.boundHandlers.animationSettled);
     this.previewRenderer = new PreviewRenderer(this.scene, this.materialResolver);
@@ -167,6 +193,8 @@ class Babylon3D {
     // Leaving the editor unmounts the view, so a pending thumbnail is captured now or never
     this.flushThumbnail();
     this.thumbnailCapture = null;
+    this.buildPreview?.dispose();
+    this.buildPreview = null;
 
     renderLoop.off('tick', this.boundHandlers.renderFrame);
     renderLoop.unregister();
@@ -213,6 +241,25 @@ class Babylon3D {
     this.sceneUpdateQueued = false;
   }
 
+
+  /**
+   * Plays the add-on's build animation over the current model. Resolves when it ends or stops.
+   */
+  async playBuildPreview(sequence: AnimatedSequence, seconds: number): Promise<void> {
+    // Switching to the 3D tab remounts the view, and its block meshes return over the next frames
+    const expected = blockProjection.getCached().size;
+    for (let frame = 0; frame < PREVIEW_WAIT_FRAMES; frame++) {
+      if (this.blockRenderer && this.blockRenderer.getBlockMeshes().size >= expected && !this.paused) break;
+      await nextFrame();
+    }
+    if (!this.buildPreview || !this.blockRenderer) return;
+    const { metaBlock } = modelProjection.getCached();
+    await this.buildPreview.play(sequence, seconds, metaBlock, this.blockRenderer.getBlockMeshes(), toGlowColor);
+  }
+
+  stopBuildPreview(): void {
+    this.buildPreview?.stop();
+  }
 
   setCameraView(view: CameraView): void {
     this.cameraRig?.setCameraView(view);
@@ -432,6 +479,8 @@ class Babylon3D {
 
   private async updateScene(): Promise<void> {
     if (!this.blockRenderer || !this.cameraRig) return;
+    // An edit during a preview shows the real model at once
+    this.buildPreview?.stop();
 
     // A mesh built before the atlas loads caches a colorless material in BlockRenderer's
     // instanceTypeMap, and later updates reuse that cache instead of the textured material.

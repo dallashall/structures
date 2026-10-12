@@ -178,6 +178,7 @@ In game, the item builds the project around the player:
 - The build turns so the player faces the meta block's arrow.
 - The script places the blocks itself, in one of three sequences: rise (layer by layer, shuffled within each layer), ripple out from the meta block, or ripple in toward it. Each cell glows in its block's average color 16 ticks before the block lands, so the outline sweeps ahead of the build. "All at once" places the whole `.mcstructure` instead.
 - With a use limit, the item gets a wear bar and breaks on its last use.
+- Preview in the export dialog plays the animation in the 3D view with the same order and timing as the game.
 - The meta block's cell becomes air. Empty cells leave the world's blocks in place.
 
 Every export starts from the project's model. Each block's state goes app → Java → Bedrock through `public/data/bedrock-blocks.json` (from minecraft-data). Blocks with no Bedrock version are left out, and the export dialog names them. Pack UUIDs come from the project ID, so exporting again updates the installed packs.

@@ -13,6 +13,8 @@ import type { BedrockBlockTable } from '../utils/bedrockBlocks';
 import { toAddonNames, toMcaddon } from '../utils/bedrockAddon';
 import { toAnimatedBuild } from '../utils/bedrockAnimation';
 import { toBedrockStructure } from '../utils/bedrockExport';
+import { toGlowTint } from '../utils/buildSequence';
+import { cssColorToRgb } from '../utils/cssColor';
 import { saveBinaryFile } from '../utils/fileAccess';
 import { toBlockVersion, toMcstructure } from '../utils/mcstructure';
 
@@ -31,14 +33,10 @@ export interface BedrockExportOptions {
 
 // The glow particle takes 0-1 channels. Faces with no texture fall back to the catalog color.
 const FRONT_FACE = 0;
-const parseHexByte = (part: string): number => parseInt(part, 16);
 const toRgb = (blockId: string): Rgb | null => {
   const css = textureResolver.getFaceColor(blockId, FRONT_FACE) ?? blockRegistry.getBlock(blockId)?.color ?? null;
-  if (!css) return null;
-  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(css);
-  const channels = hex ? hex.slice(1).map(parseHexByte) : css.match(/\d+(\.\d+)?/g)?.slice(0, 3).map(Number);
-  if (!channels || channels.length < 3) return null;
-  return [channels[0] / 255, channels[1] / 255, channels[2] / 255];
+  const rgb = css ? cssColorToRgb(css) : null;
+  return rgb ? toGlowTint(rgb) : null;
 };
 
 export interface SkippedBlock {

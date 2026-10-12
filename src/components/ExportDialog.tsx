@@ -55,6 +55,7 @@ function ExportDialogComponent({
   exportError,
   onExportOptionsChange,
   onExport,
+  onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
   const { itemName, icon, sequence, seconds, uses } = exportOptions;
@@ -160,6 +161,9 @@ function ExportDialogComponent({
       <DialogActions>
         <Button variant="outlined" onClick={handleClose}>
           Close
+        </Button>
+        <Button variant="outlined" onClick={onPreview} disabled={sequence === 'instant' || isExporting}>
+          Preview
         </Button>
         <Button
           variant="contained"

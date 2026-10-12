@@ -10,10 +10,12 @@
  */
 
 import type { AnimatedBuild } from './bedrockAnimation';
+import type { AnimatedSequence } from './buildSequence';
+import { JITTER, LEAD_TICKS, MAX_GLOWS, toDurationTicks } from './buildSequence';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { HorizontalDirection } from '../types';
 
-export type BuildSequence = 'rise' | 'rippleOut' | 'rippleIn' | 'instant';
+export type BuildSequence = AnimatedSequence | 'instant';
 
 export const GLOW_PARTICLE_ID = 'structures:build_glow';
 
@@ -39,16 +41,14 @@ export function toAddonScript(options: AddonScriptOptions): string {
 const STRUCTURE_ID = ${JSON.stringify(options.structureId)};
 /** @type {string} */
 const SEQUENCE = ${JSON.stringify(options.sequence)};
-const DURATION_TICKS = ${Math.max(1, Math.round(options.seconds * 20))};
+const DURATION_TICKS = ${toDurationTicks(options.seconds)};
 const USES = ${Math.max(0, Math.floor(options.uses))};
 const META_FACING = ${FACING_INDEX[options.metaFacing]};
 const GLOW_PARTICLE = ${JSON.stringify(GLOW_PARTICLE_ID)};
-// A cell glows this many ticks before its block lands
-const LEAD_TICKS = 16;
-// Larger builds glow on a sample of cells, which keeps the particle count bounded
-const MAX_GLOWS = 3000;
-// Sequence keys spread by up to this much, so blocks of one layer or ring land in shuffled order
-const JITTER = 1.6;
+// Order and timing constants come from src/utils/buildSequence.ts, which the editor preview also uses
+const LEAD_TICKS = ${LEAD_TICKS};
+const MAX_GLOWS = ${MAX_GLOWS};
+const JITTER = ${JITTER};
 // Rotation and minimum-corner offset of the whole structure, for "instant"
 const PLACEMENTS = ${JSON.stringify(options.placements)};
 // Per palette entry: [[name, states] for 0-3 clockwise quarter turns, [r, g, b]]
@@ -83,8 +83,9 @@ function turnOffset(dx, dz, turns) {
   }
 }
 
-function toSequenceKey(dx, dy, dz) {
-  const jitter = Math.random() * JITTER;
+// The same formula as toSequenceKey in src/utils/buildSequence.ts
+function toSequenceKey(dx, dy, dz, random) {
+  const jitter = random * JITTER;
   if (SEQUENCE === "rise") return dy + jitter;
   const distance = Math.sqrt(dx * dx + dz * dz) + Math.abs(dy) * 0.5;
   return SEQUENCE === "rippleIn" ? -distance + jitter : distance + jitter;
@@ -137,7 +138,7 @@ function animateBuild(player, anchor) {
   for (let i = 0; i < CELLS.length; i += 4) {
     const [dx, dz] = turnOffset(CELLS[i], CELLS[i + 2], turns);
     const dy = CELLS[i + 1];
-    order.push({ x: anchor.x + dx, y: anchor.y + dy, z: anchor.z + dz, paletteIndex: CELLS[i + 3], key: toSequenceKey(dx, dy, dz) });
+    order.push({ x: anchor.x + dx, y: anchor.y + dy, z: anchor.z + dz, paletteIndex: CELLS[i + 3], key: toSequenceKey(dx, dy, dz, Math.random()) });
   }
   function byKey(a, b) {
     return a.key - b.key;

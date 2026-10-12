@@ -155,6 +155,10 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] A glow in each block's color appears in each cell just before its block lands
   - [ ] Stairs, logs, and other directional blocks face the right way for all four player facings
   - [ ] With uses set to 3, the item shows a wear bar, and the third use builds and then breaks the item
+- [ ] Preview hides the dialog, plays the chosen animation in the 3D view with tinted glow puffs ahead of the blocks, then shows the dialog again
+- [ ] In the tabbed layout, Preview switches to the 3D tab first
+- [ ] Preview is disabled for "All at once"
+- [ ] An edit during a preview ends it and shows the full model
   - [ ] Existing world blocks stay where the design has empty cells
 
 ---

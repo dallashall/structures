@@ -192,6 +192,7 @@ This document records the interaction decisions for Structures and how the app c
 - The icon list holds vanilla item textures only, so the add-on ships no game texture.
 - Animations: rise (bottom up, shuffled within each layer, layers overlapping), ripple out from the meta block, ripple in toward it, or all at once. A glow in each block's own color sweeps through the build just ahead of the blocks.
 - Uses above 0 give the item a wear bar. The use that breaks it still builds.
+- Preview steps the dialog aside and plays the chosen animation in the 3D view, switching to the 3D tab in the tabbed layout, then brings the dialog back. Order and timing come from the same module the add-on script embeds, so the preview matches the game's sequence. The glow is an approximation, and sounds do not play.
 - One item handles both triggers: use on a block (the anchor goes next to the clicked face) and use in the air (the anchor goes at the player's feet).
 - After a save, the dialog shows the file name and the `/give` command. Blocks left out of the export show in a warning with their counts.
 

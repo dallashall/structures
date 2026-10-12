@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddonScriptOptions, BuildSequence } from '../bedrockAddonScript';
 import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from '../bedrockAddonScript';
+import { JITTER, toSequenceKey } from '../buildSequence';
+import type { AnimatedSequence } from '../buildSequence';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: 0, y: 0, z: 0 } };
 const OPTIONS: AddonScriptOptions = {
@@ -45,6 +47,22 @@ describe('toAddonScript', () => {
     expect(script).toContain('const USES = 5;');
     expect(script).toContain('const DURATION_TICKS = 80;');
     expect(script).toContain('registerCustomComponent("structures:build_castle"');
+  });
+});
+
+describe('the script copy of toSequenceKey', () => {
+  it('matches the shared formula the editor preview uses', () => {
+    const script = toAddonScript(OPTIONS);
+    const source = /function toSequenceKey[\s\S]*?\n}\n/.exec(script)?.[0];
+    expect(source).toBeDefined();
+    const sequences: AnimatedSequence[] = ['rise', 'rippleOut', 'rippleIn'];
+    for (const sequence of sequences) {
+      const scriptKey = new Function('SEQUENCE', 'JITTER', `${source}\nreturn toSequenceKey;`)(sequence, JITTER) as
+        (dx: number, dy: number, dz: number, random: number) => number;
+      for (const [dx, dy, dz, random] of [[0, 0, 0, 0], [3, 1, -2, 0.5], [-4, 6, 7, 0.9]]) {
+        expect(scriptKey(dx, dy, dz, random)).toBeCloseTo(toSequenceKey(sequence, dx, dy, dz, random), 10);
+      }
+    }
   });
 });
 
