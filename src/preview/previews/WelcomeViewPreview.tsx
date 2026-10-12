@@ -5,6 +5,7 @@ export function WelcomeViewPreview() {
   const handleNewProject = () => console.log('[Preview] New project');
   const handleOpenProject = (id: string) => console.log('[Preview] Open:', id);
   const handleLoadFromFile = () => console.log('[Preview] Load from file');
+  const handleShowCredits = () => console.log('[Preview] Show credits');
 
   return (
     <Box>
@@ -19,6 +20,8 @@ export function WelcomeViewPreview() {
           onNewProject={handleNewProject}
           onOpenProject={handleOpenProject}
           onLoadFromFile={handleLoadFromFile}
+          onShowCredits={handleShowCredits}
+          areTexturesMissing={false}
         />
       </Box>
     </Box>

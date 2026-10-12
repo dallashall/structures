@@ -4,11 +4,11 @@
   "description": "A web-based 2D/3D editor for designing Minecraft structures",
   "type": "module",
   "scripts": {
+    "predev": "tsx scripts/setupTextures.ts",
     "dev": "vite",
-    "build": "npm run build:atlas && tsc && vite build",
+    "build": "tsx scripts/setupTextures.ts && tsc && vite build",
+    "setup:textures": "tsx scripts/setupTextures.ts --force",
     "build:atlas": "tsx scripts/buildTextureAtlas.ts --pack squareful",
-    "build:atlas:squareful": "npm run build:atlas -- --pack squareful",
-    "build:atlas:excaliber": "npm run build:atlas -- --pack excaliber",
     "parse:pack": "tsx scripts/parseResourcePack.ts",
     "merge:fragments": "tsx scripts/mergeTextureFragments.ts data/canonical-blocks.json public/data/canonical-blocks.json",
     "generate:manifest": "tsx scripts/generatePackManifest.ts",
@@ -40,6 +40,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^4.0.18",
     "fake-indexeddb": "^6.2.5",
+    "fflate": "^0.8.2",
     "jsdom": "^28.1.0",
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
@@ -55,5 +56,5 @@
     "voxel"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "MIT"
 }

@@ -49,7 +49,7 @@ function parseArgs(): GenerateOptions {
 Usage: npx tsx scripts/generatePackManifest.ts --pack <packId> --source <pack-directory> [options]
 
 Options:
-  --pack <id>       Pack identifier (e.g., "squareful", "excaliber") (required)
+  --pack <id>       Pack identifier, e.g. "squareful" (required)
   --source <dir>    Path to resource pack directory (required)
   --output <file>   Output path for manifest (default: resource-packs/<packId>/pack-manifest.json)
   --verbose, -v     Enable verbose logging

@@ -4,13 +4,14 @@ import {
   Button,
   Typography,
   Divider,
+  IconButton,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   SelectChangeEvent,
 } from '@mui/material';
-import { ViewList } from '@mui/icons-material';
+import { InfoOutlined, Save, ViewList } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
 import type { SaveState } from '../core/Storage';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
@@ -22,6 +23,9 @@ interface ToolbarProps {
   saveState: SaveState;
   onBackToProjects: () => void;
   onLayoutModeChange: (mode: LayoutMode) => void;
+  // Absent in previews, which hide the Save and Credits buttons
+  onSaveToFile?: () => void;
+  onShowCredits?: () => void;
   // Optional props for preview compatibility (3D feature not yet implemented)
   onToggle3D?: () => void;
   is3DMode?: boolean;
@@ -34,8 +38,10 @@ interface ToolbarProps {
  * - Project name (left)
  * - Save status indicator (center, between name and controls)
  * - Undo and redo buttons (after the save status)
+ * - Save button, which writes the project to a file (right)
  * - Projects button (right)
  * - View mode selector (right)
+ * - Credits button (far right)
  *
  * Uses MUI components for consistent theming and
  * automatic light/dark mode support.
@@ -46,6 +52,8 @@ export function Toolbar({
   saveState,
   onBackToProjects,
   onLayoutModeChange,
+  onSaveToFile,
+  onShowCredits,
 }: ToolbarProps) {
   const handleProjectsClick = () => {
     onBackToProjects();
@@ -106,6 +114,12 @@ export function Toolbar({
           spacing={1}
           alignItems="center"
         >
+          {projectName && onSaveToFile && (
+            <Button variant="outlined" onClick={onSaveToFile} startIcon={<Save />}>
+              Save
+            </Button>
+          )}
+
           <Button
             variant="outlined"
             onClick={handleProjectsClick}
@@ -134,6 +148,12 @@ export function Toolbar({
               <MenuItem value="quad">Quad Layout</MenuItem>
             </Select>
           </FormControl>
+
+          {onShowCredits && (
+            <IconButton onClick={onShowCredits} aria-label="Credits">
+              <InfoOutlined />
+            </IconButton>
+          )}
         </Stack>
       </Stack>
     </Box>

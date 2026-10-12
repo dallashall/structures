@@ -26,7 +26,10 @@ import { TabbedEditorView } from "./TabbedEditorView";
 import { QuadEditorView } from "./QuadEditorView";
 
 import { editorState } from "../core/EditorState";
+import { screenRouter } from "../core/ScreenRouter";
 import { confirmMetaBlockCommand } from "../commands/ConfirmMetaBlockCommand";
+import { saveProjectFileCommand } from "../commands/SaveProjectFileCommand";
+import { toFileErrorMessage } from "../utils/projectFile";
 
 /**
  * EditorView - Main editor orchestrator
@@ -141,6 +144,15 @@ function EditorViewComponent(props: EditorViewProps) {
     void confirmMetaBlockCommand.execute();
   };
 
+  const handleSaveToFile = async () => {
+    try {
+      await saveProjectFileCommand.execute();
+    } catch (error) {
+      console.error("Failed to save project file:", error);
+      screenRouter.showFileError(toFileErrorMessage(error, "The project file could not be saved."));
+    }
+  };
+
   // Keyboard shortcuts handled by HotkeyDispatcher singleton
 
   return (
@@ -153,6 +165,8 @@ function EditorViewComponent(props: EditorViewProps) {
           saveState={saveState}
           onBackToProjects={handleBackToProjects}
           onLayoutModeChange={editorState.setLayoutMode}
+          onSaveToFile={handleSaveToFile}
+          onShowCredits={screenRouter.openCreditsDialog}
         />
 
         {/* Tool Options Bar */}

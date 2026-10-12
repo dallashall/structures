@@ -12,3 +12,5 @@ export { shrinkDimensionsCommand } from './ShrinkDimensionsCommand';
 export { renameProjectCommand } from './RenameProjectCommand';
 export { setMetaBlockCommand } from './SetMetaBlockCommand';
 export { confirmMetaBlockCommand } from './ConfirmMetaBlockCommand';
+export { saveProjectFileCommand } from './SaveProjectFileCommand';
+export { loadProjectFileCommand } from './LoadProjectFileCommand';

@@ -42,6 +42,8 @@ interface AtlasMetadata {
 
 interface BuildOptions {
   pack: string;
+  // Unpacked resource pack folder. Defaults to the folder setupTextures.ts extracts into.
+  source?: string;
   verbose?: boolean;
 }
 
@@ -65,6 +67,9 @@ function parseArgs(): BuildOptions | null {
       case '--pack':
         options.pack = args[++i];
         break;
+      case '--source':
+        options.source = args[++i];
+        break;
       case '--verbose':
       case '-v':
         options.verbose = true;
@@ -75,7 +80,8 @@ function parseArgs(): BuildOptions | null {
 Usage: npx tsx scripts/buildTextureAtlas.ts --pack <packId> [options]
 
 Options:
-  --pack <id>       Pack identifier (e.g., "squareful", "excaliber") (required)
+  --pack <id>       Pack identifier, e.g. "squareful" (required)
+  --source <dir>    Unpacked pack folder (default: .cache/packs/<id>)
   --list            List available packs
   --verbose, -v     Enable verbose logging
   --help, -h        Show this help message
@@ -567,9 +573,12 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
   console.log(`   ✓ Loaded ${Object.keys(canonicalBlocks).length} canonical blocks`);
   console.log(`   ✓ Loaded pack manifest: ${packManifest.packName} v${packManifest.version}\n`);
 
-  // Find pack source directory - use the Squareful pack directory
-  // TODO: This should come from pack manifest or CLI arg, but hardcoded for now
-  const packSourceDir = path.join(process.cwd(), 'Squareful方纹v26.0.6');
+  const packSourceDir = path.resolve(options.source ?? path.join('.cache', 'packs', options.pack));
+  if (!fs.existsSync(path.join(packSourceDir, packManifest.textureBasePath))) {
+    console.error(`Error: No textures at ${path.join(packSourceDir, packManifest.textureBasePath)}`);
+    console.error('Run: npm run setup:textures');
+    process.exit(1);
+  }
 
   // Collect unique textures
   console.log('🔍 Collecting textures...');

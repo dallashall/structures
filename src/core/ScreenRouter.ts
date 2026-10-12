@@ -6,19 +6,25 @@ export type Screen = 'welcome' | 'editor' | 'preview';
 const PREVIEW_HASH_PREFIX = '#/preview';
 
 /**
- * ScreenRouter - Which top-level screen is shown, and whether the new project dialog is open
+ * ScreenRouter - Which top-level screen is shown, which app-level dialog is open,
+ * and which file error message is on screen
  *
  * The #/preview hash overrides the app screens with the component preview gallery.
  *
  * Events:
  * - screen:shown (screen) - The visible screen switched
  * - newprojectdialog:toggled (isOpen) - The new project dialog opened or closed
+ * - creditsdialog:toggled (isOpen) - The credits dialog opened or closed
+ * - file-error:shown (message) - A file save or load failed
+ * - file-error:dismissed - The file error message closed
  */
 class ScreenRouter extends EventEmitter {
   private static instance: ScreenRouter;
   private appScreen: 'welcome' | 'editor' = 'welcome';
   private isPreviewHash = window.location.hash.startsWith(PREVIEW_HASH_PREFIX);
   private newProjectDialogOpen = false;
+  private fileError: string | null = null;
+  private creditsDialogOpen = false;
 
   private constructor() {
     super();
@@ -39,6 +45,33 @@ class ScreenRouter extends EventEmitter {
   isNewProjectDialogOpen(): boolean {
     return this.newProjectDialogOpen;
   }
+
+  isCreditsDialogOpen(): boolean {
+    return this.creditsDialogOpen;
+  }
+
+  openCreditsDialog = (): void => {
+    this.setCreditsDialogOpen(true);
+  };
+
+  closeCreditsDialog = (): void => {
+    this.setCreditsDialogOpen(false);
+  };
+
+  getFileError(): string | null {
+    return this.fileError;
+  }
+
+  showFileError = (message: string): void => {
+    this.fileError = message;
+    this.emit('file-error:shown', message);
+  };
+
+  dismissFileError = (): void => {
+    if (this.fileError === null) return;
+    this.fileError = null;
+    this.emit('file-error:dismissed');
+  };
 
   showWelcome = (): void => {
     this.showAppScreen('welcome');
@@ -66,6 +99,12 @@ class ScreenRouter extends EventEmitter {
     if (this.newProjectDialogOpen === isOpen) return;
     this.newProjectDialogOpen = isOpen;
     this.emit('newprojectdialog:toggled', isOpen);
+  }
+
+  private setCreditsDialogOpen(isOpen: boolean): void {
+    if (this.creditsDialogOpen === isOpen) return;
+    this.creditsDialogOpen = isOpen;
+    this.emit('creditsdialog:toggled', isOpen);
   }
 
   private handleHashChange = (): void => {

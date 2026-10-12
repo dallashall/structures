@@ -1,5 +1,5 @@
 import { Box, Stack, Typography, Button, Divider } from "@mui/material";
-import { Add, FolderOpen } from "@mui/icons-material";
+import { Add, FolderOpen, InfoOutlined } from "@mui/icons-material";
 
 import type { StorageMetadata } from "../types";
 
@@ -7,11 +7,14 @@ import { withProjectListState } from "../hocs/withProjectListState";
 import type { WithProjectListStateProps } from "../hocs/withProjectListState";
 
 import { ProjectCard } from "../components/ProjectCard";
+import { TexturesMissingAlert } from "../components/TexturesMissingAlert";
 
 interface WelcomeViewOwnProps {
   onNewProject: () => void;
   onOpenProject: (projectId: string) => void;
   onLoadFromFile: () => void;
+  onShowCredits: () => void;
+  areTexturesMissing: boolean;
 }
 
 type WelcomeViewProps = WelcomeViewOwnProps & WithProjectListStateProps;
@@ -23,6 +26,8 @@ type WelcomeViewProps = WelcomeViewOwnProps & WithProjectListStateProps;
  * - Grid of project cards with thumbnails
  * - "New Project" button (prominent)
  * - "Load from File" button
+ * - "Credits" button
+ * - Notice when the build has no texture atlas
  * - Select project to show metadata panel
  * - Open and delete actions for selected project
  *
@@ -32,6 +37,8 @@ function WelcomeViewComponent({
   onNewProject,
   onOpenProject,
   onLoadFromFile,
+  onShowCredits,
+  areTexturesMissing,
   projects,
   isLoadingProjects,
   selectedProjectId,
@@ -92,6 +99,8 @@ function WelcomeViewComponent({
 
         <Divider />
 
+        {areTexturesMissing && <TexturesMissingAlert />}
+
         {/* Action Buttons */}
         <Stack direction="row" spacing={2}>
           <Button
@@ -107,6 +116,14 @@ function WelcomeViewComponent({
             startIcon={<FolderOpen />}
           >
             Load from File
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            variant="text"
+            onClick={onShowCredits}
+            startIcon={<InfoOutlined />}
+          >
+            Credits
           </Button>
         </Stack>
 

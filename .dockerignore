@@ -1,0 +1,10 @@
+.git
+node_modules
+dist
+.cache
+coverage
+Squareful*
+Excalibur*
+PixelBOX
+public/atlas.png
+public/atlas.json

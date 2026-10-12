@@ -40,14 +40,18 @@ coverage/
 .tmp/
 temp/
 
-# Resource packs (third-party, not committed)
-# Users should download and place in resource-packs/ directory
-resource-packs/
-Excalibur*/
-Squareful*/
-PixelBOX/
-data/
+# Resource packs are CC BY-NC-ND and never committed. scripts/setupTextures.ts downloads
+# the pinned pack into .cache/. Only the pack manifest and source pin are tracked.
+/.cache/
+/resource-packs/*
+!/resource-packs/squareful/
+/resource-packs/squareful/*
+!/resource-packs/squareful/pack-manifest.json
+!/resource-packs/squareful/pack-source.json
+/Excalibur*/
+/Squareful*/
+/PixelBOX/
 
 # Generated texture atlas (rebuild with: npm run build:atlas)
-public/atlas.png
-public/atlas.json
+/public/atlas.png
+/public/atlas.json

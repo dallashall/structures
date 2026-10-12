@@ -12,14 +12,18 @@ import { blockRegistry } from './BlockRegistry';
  *
  * Events:
  * - atlas:ready - When the atlas image and metadata are both available
- * - atlas:error - When the atlas fails to load
+ * - atlas:error - When the atlas fails to load. Blocks then draw in flat colors.
  */
+
+export type AtlasStatus = 'loading' | 'ready' | 'missing';
+
 class TextureResolver extends EventEmitter {
   private static instance: TextureResolver;
 
   private atlas: LoadedTexture | null = null;
   private atlasMetadata: AtlasMetadata | null = null;
   private loadingPromise: Promise<void> | null = null;
+  private atlasStatus: AtlasStatus = 'loading';
 
   // Cache for dynamically generated tinted textures
   private tintedTextureCache = new Map<string, HTMLCanvasElement>();
@@ -77,12 +81,18 @@ class TextureResolver extends EventEmitter {
         loaded: true,
       };
 
+      this.atlasStatus = 'ready';
       this.emit('atlas:ready', this.atlas);
     } catch (error) {
+      this.atlasStatus = 'missing';
       this.emit('atlas:error', error);
       console.error('Failed to load texture atlas:', error);
       throw error;
     }
+  }
+
+  getAtlasStatus(): AtlasStatus {
+    return this.atlasStatus;
   }
 
   /**

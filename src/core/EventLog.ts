@@ -254,6 +254,43 @@ class EventLog extends EventEmitter {
   }
 
   /**
+   * Append complete event rows in one transaction, so the log never holds part of the batch.
+   * Rows keep their own timestamp, projectId, and actionId. event:appended fires after the commit.
+   */
+  async appendBatch(events: Event[]): Promise<void> {
+    await this.ensureReady();
+
+    const writeBatch = (resolve: () => void, reject: (error: unknown) => void): void => {
+      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const saved: Event[] = [];
+
+      const addEvent = ({ id: _id, ...event }: Event): void => {
+        const request = store.add(event);
+        const recordSaved = (): void => {
+          saved.push({ ...event, id: request.result as number });
+        };
+        request.onsuccess = recordSaved;
+      };
+      events.forEach(addEvent);
+
+      const emitAppended = (event: Event): void => { this.emit('event:appended', event); };
+      const handleComplete = (): void => {
+        saved.forEach(emitAppended);
+        resolve();
+      };
+      const handleError = (): void => {
+        console.error('Failed to append batch:', transaction.error);
+        reject(transaction.error);
+      };
+      transaction.oncomplete = handleComplete;
+      transaction.onerror = handleError;
+    };
+
+    return new Promise(writeBatch);
+  }
+
+  /**
    * Resolves when every appendAction call made so far has committed or failed
    */
   async settled(): Promise<void> {

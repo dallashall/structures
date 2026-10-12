@@ -2,13 +2,19 @@ import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import { WelcomeView } from "./views/WelcomeView";
 import { EditorView } from "./views/EditorView";
 import { NewProjectDialog } from "./components/NewProjectDialog";
+import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
+import { CreditsDialog } from "./components/CreditsDialog";
 import { ComponentPreview } from "./preview/ComponentPreview";
 import { createProjectCommand } from "./commands/CreateProjectCommand";
 import { openProjectCommand } from "./commands/OpenProjectCommand";
+import { loadProjectFileCommand } from "./commands/LoadProjectFileCommand";
 import { screenRouter } from "./core/ScreenRouter";
 import { withScreenState } from "./hocs/withScreenState";
 import type { WithScreenStateProps } from "./hocs/withScreenState";
+import { withAtlasStatus } from "./hocs/withAtlasStatus";
+import type { WithAtlasStatusProps } from "./hocs/withAtlasStatus";
 import type { Dimensions } from "./types";
+import { toFileErrorMessage } from "./utils/projectFile";
 
 // Create dark professional theme inspired by Adobe/Blender
 const darkTheme = createTheme({
@@ -158,7 +164,13 @@ const darkTheme = createTheme({
  * EditorView (main editor), or the component preview gallery (#/preview).
  * Handlers run commands, then tell ScreenRouter where to go.
  */
-function AppComponent({ screen, isNewProjectDialogOpen }: WithScreenStateProps) {
+function AppComponent({
+  screen,
+  isNewProjectDialogOpen,
+  isCreditsDialogOpen,
+  fileError,
+  atlasStatus,
+}: WithScreenStateProps & WithAtlasStatusProps) {
   const handleCreateProject = async (name: string, dimensions: Dimensions) => {
     await createProjectCommand.execute(name, dimensions);
     screenRouter.closeNewProjectDialog();
@@ -171,9 +183,15 @@ function AppComponent({ screen, isNewProjectDialogOpen }: WithScreenStateProps) 
     }
   };
 
-  const handleLoadFromFile = () => {
-    // TODO: Implement file picker and import
-    console.log("Load from file not yet implemented");
+  const handleLoadFromFile = async () => {
+    try {
+      if (await loadProjectFileCommand.execute()) {
+        screenRouter.showEditor();
+      }
+    } catch (error) {
+      console.error("Failed to load project file:", error);
+      screenRouter.showFileError(toFileErrorMessage(error, "The project file could not be loaded."));
+    }
   };
 
   if (screen === "preview") {
@@ -193,6 +211,8 @@ function AppComponent({ screen, isNewProjectDialogOpen }: WithScreenStateProps) 
           onNewProject={screenRouter.openNewProjectDialog}
           onOpenProject={handleOpenProject}
           onLoadFromFile={handleLoadFromFile}
+          onShowCredits={screenRouter.openCreditsDialog}
+          areTexturesMissing={atlasStatus === "missing"}
         />
       ) : (
         <EditorView onBackToWelcome={screenRouter.showWelcome} />
@@ -203,8 +223,12 @@ function AppComponent({ screen, isNewProjectDialogOpen }: WithScreenStateProps) 
         onClose={screenRouter.closeNewProjectDialog}
         onCreate={handleCreateProject}
       />
+
+      <CreditsDialog isOpen={isCreditsDialogOpen} onClose={screenRouter.closeCreditsDialog} />
+
+      <FileErrorSnackbar message={fileError} onClose={screenRouter.dismissFileError} />
     </ThemeProvider>
   );
 }
 
-export const App = withScreenState(AppComponent);
+export const App = withAtlasStatus(withScreenState(AppComponent));

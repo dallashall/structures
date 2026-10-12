@@ -78,7 +78,7 @@ export interface CanonicalBlocks {
  * Resource pack manifest describing texture mappings
  */
 export interface PackManifest {
-  /** Unique pack identifier (e.g., "squareful", "excaliber") */
+  /** Unique pack identifier (e.g., "squareful") */
   packId: string;
   /** Display name of the pack */
   packName: string;
