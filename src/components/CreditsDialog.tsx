@@ -1,6 +1,6 @@
 import { Button, DialogActions, DialogContent, DialogTitle, Divider, Stack, Typography } from '@mui/material';
 
-import { FONT_CREDITS, LIBRARY_CREDITS, MINECRAFT_NOTICE, TEXTURE_CREDITS } from '../config/credits';
+import { FONT_CREDITS, LIBRARY_CREDITS, MINECRAFT_NOTICE, PROJECT_CREDITS, TEXTURE_CREDITS } from '../config/credits';
 
 import { CreditSection } from './CreditSection';
 import { ModalDialog } from './ModalDialog';
@@ -22,6 +22,7 @@ export function CreditsDialog({ isOpen, onClose }: CreditsDialogProps) {
       <Divider />
       <DialogContent>
         <Stack spacing={3}>
+          <CreditSection heading="This app" credits={PROJECT_CREDITS} />
           <CreditSection heading="Textures" credits={TEXTURE_CREDITS} />
           <CreditSection heading="Fonts" credits={FONT_CREDITS} />
           <CreditSection heading="Libraries" credits={LIBRARY_CREDITS} />

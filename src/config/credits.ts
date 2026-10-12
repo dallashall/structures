@@ -26,6 +26,17 @@ const SIL_OFL: CreditLink = {
 
 const MIT: CreditLink = { label: 'MIT', url: 'https://opensource.org/license/mit' };
 
+const REPOSITORY_URL = 'https://github.com/dallashall/structures';
+
+export const PROJECT_CREDITS: Credit[] = [
+  {
+    title: 'Structures',
+    author: 'Dallas Hall',
+    license: { label: 'MIT', url: `${REPOSITORY_URL}/blob/main/LICENSE` },
+    source: { label: 'GitHub', url: REPOSITORY_URL },
+  },
+];
+
 // The pack's version and download page come from the same pin the setup script downloads
 export const TEXTURE_CREDITS: Credit[] = [
   {

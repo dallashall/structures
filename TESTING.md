@@ -124,6 +124,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 - [ ] The Credits button on the welcome screen opens the Credits dialog
 - [ ] The info icon in the editor toolbar opens the same dialog
+- [ ] The dialog's first entry is Structures by Dallas Hall under MIT, linking to github.com/dallashall/structures
 - [ ] The dialog lists Squareful by XeKr under CC BY-NC-ND 4.0 with links to the license and the Modrinth page
 - [ ] The dialog notes the textures are copied unchanged into one atlas image
 - [ ] The dialog lists Chakra Petch, Lexend, and Red Hat Mono under SIL OFL 1.1
