@@ -13,6 +13,7 @@ import { saveBinaryFile } from '../utils/fileAccess';
 import { toBlockVersion, toMcstructure } from '../utils/mcstructure';
 
 const TABLE_URL = '/data/bedrock-blocks.json';
+const PACK_ICON_URL = '/logo-256.png';
 const MCADDON_TYPE = { description: 'Minecraft add-on', mimeType: 'application/zip', extension: '.mcaddon' };
 
 export interface BedrockExportOptions {
@@ -42,6 +43,12 @@ export interface BedrockExportResult {
  * BlockRegistry (real Minecraft IDs), and public/data/bedrock-blocks.json on first use.
  * Appends nothing. Stair corners are resolved from neighbors first, the same way the editor draws them.
  */
+async function loadPackIcon(): Promise<Uint8Array> {
+  const response = await fetch(PACK_ICON_URL);
+  if (!response.ok) throw new Error(`The pack icon did not load (${response.status}).`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
 class ExportBedrockAddonCommand {
   private static instance: ExportBedrockAddonCommand;
   private table: Promise<BedrockBlockTable> | null = null;
@@ -74,10 +81,11 @@ class ExportBedrockAddonCommand {
     if (!projectId) throw new Error('No project is open.');
 
     await eventLog.settled();
-    const [table, model, metadata] = await Promise.all([
+    const [table, model, metadata, packIcon] = await Promise.all([
       this.loadTable(),
       modelProjection.getModel(),
       metadataProjection.getMetadata(),
+      loadPackIcon(),
     ]);
     const projectName = metadata?.name ?? 'Build';
 
@@ -102,6 +110,7 @@ class ExportBedrockAddonCommand {
       structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
       placements: structure.placements,
       exportedAt: Date.now(),
+      packIcon,
     });
 
     const names = toAddonNames(projectName);

@@ -6,7 +6,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
-import { toAddonFiles, toAddonNames, toAddonScript, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
+import { findBadManifestVersions, toAddonFiles, toAddonNames, toAddonScript, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
 import type { AddonOptions } from '../bedrockAddon';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: -1, y: 0, z: -2 } };
@@ -20,6 +20,7 @@ const OPTIONS: AddonOptions = {
   structure: new Uint8Array([10, 0, 0]),
   placements: { north: PLACEMENT, east: PLACEMENT, south: PLACEMENT, west: PLACEMENT },
   exportedAt: 1_800_000_000_000,
+  packIcon: new Uint8Array([137, 80, 78, 71]),
 };
 
 const readJson = (files: Record<string, Uint8Array>, path: string): Record<string, any> =>
@@ -48,14 +49,16 @@ describe('toPackVersion', () => {
 });
 
 describe('toAddonFiles', () => {
-  it('lays out a behavior pack and a resource pack with no texture files', async () => {
+  it('lays out a behavior pack and a resource pack whose only image is the pack icon', async () => {
     const files = await toAddonFiles(OPTIONS);
     expect(Object.keys(files).sort()).toEqual([
       'castle_keep_BP/items/castle_keep_wand.json',
       'castle_keep_BP/manifest.json',
+      'castle_keep_BP/pack_icon.png',
       'castle_keep_BP/scripts/main.js',
       'castle_keep_BP/structures/structures/castle_keep.mcstructure',
       'castle_keep_RP/manifest.json',
+      'castle_keep_RP/pack_icon.png',
       'castle_keep_RP/textures/item_texture.json',
     ]);
   });
@@ -68,6 +71,13 @@ describe('toAddonFiles', () => {
     expect(behavior.dependencies).toContainEqual({ uuid: resource.header.uuid, version });
     expect(resource.dependencies).toContainEqual({ uuid: behavior.header.uuid, version });
     expect(behavior.dependencies).toContainEqual({ module_name: '@minecraft/server', version: SCRIPT_API_VERSION });
+  });
+
+  it('writes only manifest versions Bedrock can read', async () => {
+    const files = await toAddonFiles(OPTIONS);
+    expect(findBadManifestVersions(readJson(files, 'castle_keep_BP/manifest.json'))).toEqual([]);
+    expect(findBadManifestVersions(readJson(files, 'castle_keep_RP/manifest.json'))).toEqual([]);
+    expect(findBadManifestVersions({ modules: [{ version: [1, 0, 1_800_000_000] }] })).toEqual(['manifest/modules/0/version [1,0,1800000000]']);
   });
 
   it('gives the same project the same pack UUIDs on every export', async () => {
@@ -85,7 +95,7 @@ describe('toAddonFiles', () => {
     const textures = readJson(files, 'castle_keep_RP/textures/item_texture.json');
     expect(item.description.identifier).toBe('structures:castle_keep_wand');
     expect(item.components['structures:build_castle_keep']).toEqual({});
-    expect(textures.texture_data[item.components['minecraft:icon']]).toEqual({ textures: 'textures/items/trial_key' });
+    expect(textures.texture_data[item.components['minecraft:icon']]).toEqual({ textures: ['textures/items/trial_key'] });
   });
 });
 
@@ -106,7 +116,7 @@ describe('toAddonScript', () => {
 describe('toMcaddon', () => {
   it('zips every pack file', async () => {
     const unzipped = unzipSync(await toMcaddon(OPTIONS));
-    expect(Object.keys(unzipped)).toHaveLength(6);
+    expect(Object.keys(unzipped)).toHaveLength(8);
     expect(unzipped['castle_keep_BP/structures/structures/castle_keep.mcstructure']).toEqual(OPTIONS.structure);
   });
 });

@@ -1,6 +1,7 @@
 /**
  * Bedrock .mcaddon packaging: a behavior pack holding the structure, the item, and its script,
- * and a resource pack that gives the item a vanilla icon. No texture file ships in either pack.
+ * and a resource pack that gives the item a vanilla icon. No game texture ships in either pack. The only image is
+ * the app logo as each pack's icon.
  *
  * Pack UUIDs derive from the project ID, so a later export of the same project updates the installed packs.
  * The version comes from the export time, so it rises with every export (see toPackVersion).
@@ -13,7 +14,7 @@ import type { Placement, PlayerFacing } from './bedrockExport';
 // Latest stable @minecraft/server, and the game version that ships it
 export const SCRIPT_API_VERSION = '2.10.0';
 const MIN_ENGINE_VERSION = [1, 26, 50];
-const ITEM_FORMAT_VERSION = '1.26.10';
+const ITEM_FORMAT_VERSION = '1.26.50';
 const NAMESPACE = 'structures';
 
 export type AnimationMode = 'Layers' | 'Blocks' | 'None';
@@ -40,6 +41,8 @@ export interface AddonOptions {
   structure: Uint8Array;
   placements: Record<PlayerFacing, Placement>;
   exportedAt: number;
+  // The app logo, shown beside both packs in the game's pack list. It is app artwork, not a game texture.
+  packIcon: Uint8Array;
 }
 
 export interface AddonNames {
@@ -78,6 +81,28 @@ const VERSION_EPOCH_MS = Date.UTC(2026, 0, 1);
 export function toPackVersion(exportedAt: number): [number, number, number] {
   const sinceEpoch = Math.max(0, exportedAt - VERSION_EPOCH_MS);
   return [1, Math.floor(sinceEpoch / DAY_MS), Math.floor((sinceEpoch % DAY_MS) / MINUTE_MS)];
+}
+
+const isVersionPart = (part: unknown): boolean => Number.isInteger(part) && (part as number) >= 0 && (part as number) <= 65535;
+
+/**
+ * Every "version" array in a manifest whose parts Bedrock cannot read. Mojang's validator does not check this.
+ */
+export function findBadManifestVersions(manifest: unknown, at = 'manifest'): string[] {
+  if (Array.isArray(manifest)) {
+    const inItem = (item: unknown, index: number): string[] => findBadManifestVersions(item, `${at}/${index}`);
+    return manifest.flatMap(inItem);
+  }
+  if (typeof manifest !== 'object' || manifest === null) return [];
+
+  const problems: string[] = [];
+  for (const [key, value] of Object.entries(manifest)) {
+    if (key === 'version' && Array.isArray(value) && !value.every(isVersionPart)) {
+      problems.push(`${at}/version ${JSON.stringify(value)}`);
+    }
+    problems.push(...findBadManifestVersions(value, `${at}/${key}`));
+  }
+  return problems;
 }
 
 const toHex = (byte: number): string => byte.toString(16).padStart(2, '0');
@@ -204,6 +229,8 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
         { module_name: '@minecraft/server', version: SCRIPT_API_VERSION },
       ],
     }),
+    [`${behaviorRoot}/pack_icon.png`]: options.packIcon,
+    [`${resourceRoot}/pack_icon.png`]: options.packIcon,
     [`${behaviorRoot}/structures/${NAMESPACE}/${names.slug}.mcstructure`]: options.structure,
     [`${behaviorRoot}/items/${names.slug}_wand.json`]: toJson({
       format_version: ITEM_FORMAT_VERSION,
@@ -233,7 +260,7 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
     [`${resourceRoot}/textures/item_texture.json`]: toJson({
       resource_pack_name: options.projectName,
       texture_name: 'atlas.items',
-      texture_data: { [iconKey]: { textures: `textures/items/${options.icon}` } },
+      texture_data: { [iconKey]: { textures: [`textures/items/${options.icon}`] } },
     }),
   };
 }

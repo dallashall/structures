@@ -21,6 +21,8 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 - `src/reducers/__tests__` (history reducer)
 - `src/utils/__tests__` (project file codec, wheel zoom, throttle, keyboard focus, material categories, frame stats)
 
+
+`npm run check:addon` builds a sample Bedrock add-on with the export code and validates it with Mojang's `@minecraft/creator-tools` plus a manifest version range check. Run it after any change under `src/utils/bedrock*` or `src/utils/mcstructure.ts`.
 ---
 
 ## Setup and Textures

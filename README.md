@@ -42,6 +42,8 @@ npm run setup:textures
 
 Export in the editor toolbar saves a `.mcaddon` for Minecraft Bedrock 1.26.50 or newer. Open the file to import its packs, turn both on in a world's settings, then get the item from the creative inventory or with `/give @s structures:<project>_wand`. Use it in the air or on a block, and the build animates in around you.
 
+`npm run check:addon` builds a sample add-on with the export code and checks it without the game. It runs Mojang's validator (`@minecraft/creator-tools`), plus a manifest version check the validator lacks.
+
 The Java-to-Bedrock block table is `public/data/bedrock-blocks.json`. `npm run build:bedrock-blocks` rebuilds it, and the block catalog checks, from minecraft-data at a pinned commit.
 
 ## Deploying
