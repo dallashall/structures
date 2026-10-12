@@ -32,7 +32,6 @@ export interface WithEditorStateProps {
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
   isPlacementMode: boolean;
-  isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   sliceGuideVisibility: { x: boolean; y: boolean; z: boolean };
   renderSettings: RenderSettings;
@@ -56,7 +55,6 @@ const EDITOR_EVENTS = [
   "shapefillmode:selected",
   "depthconfig:applied",
   "placementmode:toggled",
-  "actionbar:toggled",
   "quickselect:assigned",
   "sliceguide:axis:toggled",
   "rendersettings:applied",
@@ -90,7 +88,6 @@ const readEditorState = (): WithEditorStateProps => {
     shapeFillMode: editorState.getShapeFillMode(),
     depthConfig: editorState.getDepthConfig(),
     isPlacementMode: editorState.getPlacementMode(),
-    isActionBarExpanded: editorState.getActionBarExpanded(),
     quickSelectSlots: editorState.getQuickSelectSlots(),
     sliceGuideVisibility: editorState.getSliceGuideVisibility(),
     renderSettings: editorState.getRenderSettings(),

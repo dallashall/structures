@@ -51,9 +51,7 @@ export interface PreviewBlock {
  * - paintbehavior:selected - When paint behavior is selected
  * - shapefillmode:selected - When shape fill mode is selected
  * - depthconfig:applied - When depth config is updated
- * - curvecontrol:updated - When curve control state is updated
  * - placementmode:toggled - When placement mode is toggled
- * - actionbar:toggled - When action bar expanded state is toggled
  * - materialbrowser:toggled - When material browser is toggled open/closed
  * - materialbrowser:search:entered - When material browser search query is updated
  * - materialbrowser:tab:switched - When material browser tab is switched
@@ -84,7 +82,6 @@ class EditorState extends EventEmitter {
   };
   private circleDrawMode: CircleDrawMode = 'center-radius';
   private isPlacementMode = false;
-  private isActionBarExpanded = true;
   private quickSelectSlots: (string | null)[] = [null, null, null, null, null, null, null, null, null];
   private foregroundSlotIndex = 0; // Which of the 9 slots is foreground (0-8)
   private backgroundSlotIndex = 1; // Which of the 9 slots is background (0-8)
@@ -390,23 +387,6 @@ class EditorState extends EventEmitter {
    */
   getPlacementMode(): boolean {
     return this.isPlacementMode;
-  }
-
-  /**
-   * Set action bar expanded state
-   */
-  setActionBarExpanded = (isExpanded: boolean): void => {
-    if (this.isActionBarExpanded !== isExpanded) {
-      this.isActionBarExpanded = isExpanded;
-      this.emit('actionbar:toggled', isExpanded);
-    }
-  }
-
-  /**
-   * Get the action bar expanded state
-   */
-  getActionBarExpanded(): boolean {
-    return this.isActionBarExpanded;
   }
 
   /**

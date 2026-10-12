@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { PreviewLayout } from './PreviewLayout';
 import { WelcomePreview } from './WelcomePreview';
-import { BlockButtonPreview } from './previews/BlockButtonPreview';
-import { ViewSelectorPreview } from './previews/ViewSelectorPreview';
-import { LayerDepthSelectorPreview } from './previews/LayerDepthSelectorPreview';
-import { MaterialPalettePreview } from './previews/MaterialPalettePreview';
 import { ToolbarPreview } from './previews/ToolbarPreview';
 import { NewProjectDialogPreview } from './previews/NewProjectDialogPreview';
 import { QuickSelectPalettePreview } from './previews/QuickSelectPalettePreview';
@@ -15,7 +11,6 @@ import { Canvas2DViewPreview } from './previews/Canvas2DViewPreview';
 import { TabbedLayoutPreview } from './previews/TabbedLayoutPreview';
 import { QuadLayoutPreview } from './previews/QuadLayoutPreview';
 import { WelcomeViewPreview } from './previews/WelcomeViewPreview';
-import { CanvasPlaceholderPreview } from './previews/CanvasPlaceholderPreview';
 import { Preview3DViewPreview } from './previews/Preview3DViewPreview';
 
 interface PreviewRoute {
@@ -35,10 +30,6 @@ export function ComponentPreview() {
   // New component previews will be registered here as they're implemented
   const routes: PreviewRoute[] = [
     { name: 'Welcome', path: 'welcome', component: WelcomePreview },
-    { name: 'BlockButton', path: 'block-button', component: BlockButtonPreview },
-    { name: 'ViewSelector', path: 'view-selector', component: ViewSelectorPreview },
-    { name: 'LayerDepthSelector', path: 'layer-depth-selector', component: LayerDepthSelectorPreview },
-    { name: 'MaterialPalette', path: 'material-palette', component: MaterialPalettePreview },
     { name: 'Toolbar', path: 'toolbar', component: ToolbarPreview },
     { name: 'NewProjectDialog', path: 'new-project-dialog', component: NewProjectDialogPreview },
     { name: 'QuickSelectPalette', path: 'quick-select-palette', component: QuickSelectPalettePreview },
@@ -50,7 +41,6 @@ export function ComponentPreview() {
     { name: 'TabbedLayout', path: 'tabbed-layout', component: TabbedLayoutPreview },
     { name: 'QuadLayout', path: 'quad-layout', component: QuadLayoutPreview },
     { name: 'WelcomeView', path: 'welcome-view', component: WelcomeViewPreview },
-    { name: 'CanvasPlaceholder', path: 'canvas-placeholder', component: CanvasPlaceholderPreview },
   ];
 
   const handleRouteChange = (path: string) => {

@@ -24,7 +24,7 @@ export interface Model {
   metaBlock: MetaBlock;
 }
 
-export const MODEL_EVENT_TYPES = [
+const MODEL_EVENT_TYPES = [
   'model:initialized',
   'model:blockPlaced',
   'model:blockRemoved',

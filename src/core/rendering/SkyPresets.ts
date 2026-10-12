@@ -17,7 +17,7 @@ export interface SkyColor {
   b: number;
 }
 
-export interface SkyPreset {
+interface SkyPreset {
   zenith: SkyColor;
   horizon: SkyColor;
   ground: SkyColor;

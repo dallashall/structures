@@ -23,20 +23,12 @@ import type { GuideGeometryProvider } from './GuideGeometryProvider';
  */
 export class ArchPaintStrategy implements PaintStrategy, GuideGeometryProvider {
   private points: Vector3D[] = [];
-  private readonly requiredPoints = 3;
 
   /**
    * Add a clicked point to the arch definition
    */
   addPoint(position: Vector3D): void {
     this.points.push(position);
-  }
-
-  /**
-   * Check if all required points have been placed
-   */
-  isComplete(): boolean {
-    return this.points.length >= this.requiredPoints;
   }
 
   /**

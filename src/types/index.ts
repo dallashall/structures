@@ -118,14 +118,6 @@ export interface BlockStateProperties {
   hinge?: 'left' | 'right';
 }
 
-/**
- * Blockstate - combines block type with properties
- */
-export interface BlockState {
-  blockType: string; // Base block ID (e.g., 'stone', 'oak_stairs')
-  properties: BlockStateProperties;
-}
-
 // ============ TEXTURE TYPES ============
 
 /**
@@ -152,18 +144,6 @@ export interface BlockVariant {
   name: string; // Display name
   stateProperties: BlockStateProperties; // Required properties for this variant
   textures: TextureFaceMap; // Texture mapping for each face
-}
-
-/**
- * Texture pack metadata
- */
-export interface TexturePack {
-  id: string; // Unique pack ID (e.g., 'pixelbox')
-  name: string; // Display name
-  version: string; // Pack version
-  resolution: number; // Texture resolution (16, 32, 64, etc.)
-  basePath: string; // Base path to texture files
-  mappings: Record<string, string>; // blockId → texture filename mapping
 }
 
 /**
@@ -242,21 +222,6 @@ export interface MetaBlock {
   isConfirmed: boolean; // Whether the user has finalized this position
 }
 
-// Model state (for rendering)
-export interface Model {
-  dimensions: Dimensions;
-  metaBlock: MetaBlock;
-  blocks: BlockIndex; // Efficient block storage with layer-based queries
-}
-
-// Metadata (project info)
-export interface Metadata {
-  id: string;
-  name: string;
-  created: Date;
-  modified: Date;
-}
-
 // Project (combines Model + Metadata for UI components)
 export interface Project {
   id: string;
@@ -277,29 +242,6 @@ export interface StorageMetadata {
   dimensions: Dimensions;
   blockCount: number;
   thumbnail: string; // Base64 data URL
-}
-
-export interface EditorState {
-  layoutMode: LayoutMode;
-  activeView: ViewType;
-  activeLayers: LayerState;
-  selectedBlockId: string | null;
-  activeTool: ToolType;
-  paintMode: PaintMode;
-  paintBehavior: PaintBehavior;
-  quickSelectSlots: (string | null)[]; // 5 slots for quick-select palette
-}
-
-export interface CameraState {
-  position: Vector3D;
-  target: Vector3D;
-  zoom: number;
-}
-
-export interface ExportConfig {
-  format: "json" | "nbt";
-  filename: string;
-  includeMetadata: boolean;
 }
 
 // ============ RENDER SETTINGS ============
@@ -388,21 +330,3 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 
 // Utility type for event handlers
 export type EventHandler<T = any> = (...args: T[]) => void;
-
-// Re-export event types for event sourcing
-export type {
-  BaseEvent,
-  ProjectEvent,
-  ProjectCreatedEvent,
-  BlockPlacedEvent,
-  BlockRemovedEvent,
-  MetaBlockPlacedEvent,
-  MetaBlockConfirmedEvent,
-  DimensionExpandedEvent,
-  DimensionShrunkEvent,
-  ProjectRenamedEvent,
-  CompoundEvent,
-  ProjectDataEvent,
-  Snapshot,
-  VersionPointer,
-} from "../events/types";

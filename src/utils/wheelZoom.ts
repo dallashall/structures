@@ -18,7 +18,7 @@ export const wheelZoomFactor = (
   return Math.exp(step);
 };
 
-export type WheelGesture = "pinch" | "mouse" | "trackpad";
+type WheelGesture = "pinch" | "mouse" | "trackpad";
 
 // Wheel events carry no device type, so these are heuristics:
 // - pinch: browsers set ctrlKey on trackpad pinch gestures.

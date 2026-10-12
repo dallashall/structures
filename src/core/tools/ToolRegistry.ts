@@ -4,7 +4,7 @@ import type { ViewState } from "../canvas2d/ViewState";
 /**
  * A tool registration — everything needed to instantiate and identify a tool.
  */
-export interface ToolRegistration {
+interface ToolRegistration {
   /** Unique identifier (matches PaintMode values for paint tools) */
   name: string;
   /** Single-character hotkey, or empty string for no hotkey */

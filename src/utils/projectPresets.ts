@@ -8,7 +8,7 @@ export interface NewProjectForm {
   customDimensions: Dimensions;
 }
 
-export const PRESET_DIMENSIONS: Record<Exclude<ProjectPreset, 'custom'>, Dimensions> = {
+const PRESET_DIMENSIONS: Record<Exclude<ProjectPreset, 'custom'>, Dimensions> = {
   small: { width: 16, height: 16, depth: 16 },
   medium: { width: 32, height: 32, depth: 32 },
   large: { width: 64, height: 64, depth: 64 },

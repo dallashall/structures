@@ -1,4 +1,4 @@
-export interface Throttled<Args extends unknown[]> {
+interface Throttled<Args extends unknown[]> {
   (...args: Args): void;
   /** Run a call held for the trailing edge now, so it lands before whatever comes next */
   flush(): void;
@@ -54,40 +54,4 @@ export const throttled = <Args extends unknown[]>(
   };
 
   return Object.assign(call, { flush });
-};
-
-export const asyncDebounce = <T extends (...args: any[]) => Promise<any>>(
-  cb: T,
-) => {
-  let isRunning = false;
-  let hasPending = false;
-  let latestArgs: any[] = [];
-
-  return async (...args: any[]) => {
-    if (isRunning) {
-      latestArgs = args;
-      hasPending = true;
-      return;
-    }
-
-    isRunning = true;
-    let currentArgs = args;
-
-    try {
-      // Use a "do...while" or a controlled "while" to ensure we
-      // check the flag, not the truthiness of the args.
-      while (true) {
-        await cb(...currentArgs);
-
-        if (!hasPending) break;
-
-        // Reset the flag and grab the next batch
-        currentArgs = latestArgs;
-        hasPending = false;
-        latestArgs = []; // Clear for GC
-      }
-    } finally {
-      isRunning = false;
-    }
-  };
 };

@@ -22,7 +22,6 @@ interface TabbedEditorViewProps {
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
   isPlacementMode: boolean;
-  isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
   onViewChange: (view: ViewType) => void;
@@ -55,7 +54,6 @@ export function TabbedEditorView({
   shapeFillMode: _shapeFillMode,
   depthConfig: _depthConfig,
   isPlacementMode,
-  isActionBarExpanded: _isActionBarExpanded,
   quickSelectSlots,
   blocks,
   onViewChange,

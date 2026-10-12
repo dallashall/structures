@@ -18,7 +18,7 @@ import { DEFAULT_ALPHA, DEFAULT_BETA } from './CameraRig';
 
 // Bit 28: outside Babylon's default mesh mask (0x0FFFFFFF), so no mesh carries it unless tagged.
 // The view's camera keeps the default mask, which still sees tagged meshes through their low bits.
-export const THUMBNAIL_LAYER = 0x10000000;
+const THUMBNAIL_LAYER = 0x10000000;
 
 const WIDTH = 320;
 const HEIGHT = 200;

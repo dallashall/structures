@@ -33,22 +33,6 @@ export function oppositeDirection(dir: AxisDirection): AxisDirection {
 }
 
 /**
- * Rotate 90° to the character's left.
- * If a character faces dir and turns left, they now face the returned direction.
- *
- * Cycle: x+ → y- → x- → y+ → x+
- * (This is CW when viewed from +Z looking down.)
- */
-export function rotateLeft(dir: HorizontalDirection): HorizontalDirection {
-  switch (dir) {
-    case 'x+': return 'y-';
-    case 'y-': return 'x-';
-    case 'x-': return 'y+';
-    case 'y+': return 'x+';
-  }
-}
-
-/**
  * Rotate 90° to the character's right.
  * If a character faces dir and turns right, they now face the returned direction.
  *
@@ -63,42 +47,6 @@ export function rotateRight(dir: HorizontalDirection): HorizontalDirection {
     case 'y-': return 'x+';
   }
 }
-
-/**
- * Convert facing direction to Y-axis rotation in radians for BabylonJS.
- * Default mesh orientation faces y+ (+Z in Babylon = +Y in our system).
- * Positive rotation is clockwise when viewed from above (+Z).
- *
- * Rotation mapping (CW from north):
- * - 0° → y+ (north)
- * - 90° → x+ (east)
- * - 180° → y- (south)
- * - 270° → x- (west)
- */
-export function directionToYRotation(dir: AxisDirection): number {
-  switch (dir) {
-    case 'y+': return 0;
-    case 'x+': return Math.PI / 2;
-    case 'y-': return Math.PI;
-    case 'x-': return -Math.PI / 2;
-    default: return 0;
-  }
-}
-
-/** All 4 horizontal neighbor offsets */
-export const HORIZONTAL_OFFSETS: Vector3D[] = [
-  { x: 1, y: 0, z: 0 },   // x+
-  { x: -1, y: 0, z: 0 },  // x-
-  { x: 0, y: 1, z: 0 },   // y+
-  { x: 0, y: -1, z: 0 },  // y-
-];
-
-/** All 6 axis-aligned neighbor offsets */
-export const ALL_OFFSETS: Vector3D[] = [
-  ...HORIZONTAL_OFFSETS,
-  { x: 0, y: 0, z: 1 },   // z+
-  { x: 0, y: 0, z: -1 },  // z-
-];
 
 /** Add an offset to a position. */
 export function addOffset(pos: Vector3D, offset: Vector3D): Vector3D {

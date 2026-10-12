@@ -30,7 +30,7 @@ export interface PostProcessingPipelines {
  * Create post-processing pipelines based on render settings.
  * SSAO must be created before the default pipeline.
  */
-export function setupPostProcessing(
+function setupPostProcessing(
   scene: Scene,
   camera: Camera,
   settings: RenderSettings

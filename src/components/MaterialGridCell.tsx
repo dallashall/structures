@@ -5,7 +5,7 @@ import type { Block } from '../types';
 
 import { MaterialTile } from './MaterialTile';
 
-export interface MaterialGridCellProps {
+interface MaterialGridCellProps {
   blocks: Block[];
   columnCount: number;
   onPick: (blockId: string) => void;

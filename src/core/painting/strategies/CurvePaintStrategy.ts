@@ -22,20 +22,12 @@ import type { GuideGeometryProvider } from './GuideGeometryProvider';
  */
 export class CurvePaintStrategy implements PaintStrategy, GuideGeometryProvider {
   private points: Vector3D[] = [];
-  private readonly requiredPoints = 4;
 
   /**
    * Add a clicked point to the curve definition
    */
   addPoint(position: Vector3D): void {
     this.points.push(position);
-  }
-
-  /**
-   * Check if all required points have been placed
-   */
-  isComplete(): boolean {
-    return this.points.length >= this.requiredPoints;
   }
 
   /**

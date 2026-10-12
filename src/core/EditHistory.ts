@@ -43,7 +43,7 @@ const plural = (count: number): string => (count === 1 ? '1 block' : `${count} b
 /**
  * Human-readable name for one action, built from its marker and its events
  */
-export function describeAction(marker: ActionStartedData, events: Event[]): string {
+function describeAction(marker: ActionStartedData, events: Event[]): string {
   switch (marker.kind) {
     case 'paint': {
       const tool = toolRegistry.getRegistration(marker.tool ?? '')?.label ?? 'Paint';

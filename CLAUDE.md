@@ -191,10 +191,8 @@ MUI provides accessibility, keyboard navigation, theming, and TypeScript types.
 
 **Custom Components:**
 
-- **ColorSwatch** (`src/components/ColorSwatch.tsx`): color square for a block color
 - **BlockTextureSwatch** (`src/components/BlockTextureSwatch.tsx`): block texture from the atlas
 - **NumberField** (`src/components/NumberField.tsx`): numeric input with increment and decrement buttons
-- **ActionGroup** (`src/components/ActionGroup.tsx`): button group with selection state (MUI ToggleButtonGroup)
 - **Form** (`src/components/Form.tsx`): form container with consistent spacing
 - **DialogTrigger** (`src/components/DialogTrigger.tsx`): pattern for triggering dialogs and popovers
 - **ModalDialog** (`src/components/ModalDialog.tsx`): native modal dialog that holds focus and the keyboard
@@ -410,23 +408,21 @@ Most components are pure rendering:
 - Do not hold complex state
 
 ```typescript
-interface MaterialPaletteProps {
-  blocks: Block[];
-  selectedBlockId: string | null;
-  onSelectBlock: (blockId: string) => void;
+interface ProjectDetailsProps {
+  project: StorageMetadata;
+  isRenaming: boolean;
+  onOpen: () => void;
+  onStartRename: () => void;
 }
 
-export function MaterialPalette({ blocks, selectedBlockId, onSelectBlock }: MaterialPaletteProps) {
-  const renderBlock = (block: Block) => (
-    <BlockButton
-      key={block.id}
-      block={block}
-      isSelected={block.id === selectedBlockId}
-      onClick={onSelectBlock}
-    />
+export function ProjectDetails({ project, isRenaming, onOpen, onStartRename }: ProjectDetailsProps) {
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="h6">{project.name}</Typography>
+      <Button onClick={onOpen}>Open</Button>
+      <Button onClick={onStartRename} disabled={isRenaming}>Rename</Button>
+    </Stack>
   );
-
-  return <Stack direction="row" spacing={1}>{blocks.map(renderBlock)}</Stack>;
 }
 ```
 
@@ -486,7 +482,7 @@ src/
 ├── layouts/           # Toolbar, TabbedLayout, QuadLayout
 ├── panels/            # Canvas2DView, Preview3DView
 ├── views/             # WelcomeView, EditorView, TabbedEditorView, QuadEditorView
-├── config/            # Static configuration (texture packs, credits)
+├── config/            # Static configuration (credits)
 ├── types/             # Shared TypeScript types
 ├── utils/             # Pure helpers
 ├── test/              # Test setup and fixtures
@@ -502,7 +498,7 @@ src/
 
 ## File Naming Conventions
 
-- Components: PascalCase (`MaterialPalette.tsx`)
+- Components: PascalCase (`ProjectCard.tsx`)
 - HOCs: camelCase with the `with` prefix (`withProjectState.tsx`)
 - Singletons: PascalCase (`EditorState.ts`), exported instance in camelCase (`editorState`)
 - Commands: PascalCase ending in `Command` (`RenameProjectCommand.ts`)
@@ -528,7 +524,7 @@ import { editorState } from '../core/EditorState';
 
 import { withProjectState } from '../hocs/withProjectState';
 
-import { MaterialPalette } from '../components/MaterialPalette';
+import { ProjectCard } from '../components/ProjectCard';
 
 import { toProjectFileName } from '../utils/projectFile';
 ```

@@ -31,13 +31,6 @@ export class CirclePaintStrategy implements PaintStrategy {
     this.dragStart = null;
   }
 
-  /**
-   * Check if currently in a drag operation
-   */
-  isDragging(): boolean {
-    return this.dragStart !== null;
-  }
-
   calculateOperations(
     endPosition: Vector3D,
     selectedBlockId: string | null,

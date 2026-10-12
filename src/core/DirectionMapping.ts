@@ -16,8 +16,6 @@
 
 import type { BlockStateProperties, AxisDirection } from '../types';
 
-export type MinecraftFacing = 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
-
 const MC_TO_APP: Record<string, AxisDirection> = {
   north: 'y-',
   south: 'y+',
@@ -25,15 +23,6 @@ const MC_TO_APP: Record<string, AxisDirection> = {
   west: 'x-',
   up: 'z+',
   down: 'z-',
-};
-
-const APP_TO_MC: Record<string, MinecraftFacing> = {
-  'y-': 'north',
-  'y+': 'south',
-  'x+': 'east',
-  'x-': 'west',
-  'z+': 'up',
-  'z-': 'down',
 };
 
 /**
@@ -49,12 +38,8 @@ const LEGACY_TO_AXIS: Record<string, AxisDirection> = {
   down: 'z-',
 };
 
-export function mcFacingToApp(facing: string): AxisDirection {
+function mcFacingToApp(facing: string): AxisDirection {
   return MC_TO_APP[facing] ?? (facing as AxisDirection);
-}
-
-export function appFacingToMc(facing: string): MinecraftFacing {
-  return APP_TO_MC[facing] ?? (facing as MinecraftFacing);
 }
 
 /**

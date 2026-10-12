@@ -3,7 +3,7 @@ import { summarizeFrames } from '../utils/frameStats';
 
 import type { FrameStatsSummary } from '../utils/frameStats';
 
-export interface FrameSample {
+interface FrameSample {
   startMs: number;
   renderMs: number;
   // CPU time of the previous whole loop tick

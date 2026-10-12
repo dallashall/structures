@@ -15,7 +15,7 @@ export interface HistoryState {
   undone: Set<string>;   // Every action whose events replay must skip
 }
 
-export type HistoryStep =
+type HistoryStep =
   | { kind: 'edit'; actionId: string }
   | { kind: 'undo' | 'redo'; actionId: string }
   | null;

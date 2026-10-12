@@ -5,7 +5,6 @@ import { projectView } from "../../projections/ProjectView";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { renderLoop } from "../RenderLoop";
-import { confirmMetaBlockCommand } from "../../commands/ConfirmMetaBlockCommand";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 import { ViewState } from "./ViewState";
@@ -194,22 +193,11 @@ export class Canvas2D {
     this.needsRender = true;
   }
 
-  setViewType(viewType: ViewType): void {
-    this.viewState.setViewType(viewType);
-    this.resolvePersistentBlocks();
-    this.resolveDraftBlocks();
-    this.resolveEditorPreview();
-  }
-
   destroy(): void {
     this.resizeObserver.disconnect();
     this.activeTool?.deactivate();
     this.activeTool = null;
     this.unsubscribeFromEvents();
-  }
-
-  static confirmAllPlacements(): void {
-    confirmMetaBlockCommand.execute();
   }
 
   // ============================================================================

@@ -19,7 +19,7 @@ const ACTION_ID_INDEX = 'actionId';
 const PROJECT_INDEX = 'projectId_id';
 
 export const ACTION_STARTED = 'action:started';
-export const ACTION_ENDED = 'action:ended';
+const ACTION_ENDED = 'action:ended';
 
 export interface Event {
   id?: number;       // Auto-increment (omit when appending)
@@ -30,7 +30,7 @@ export interface Event {
   actionId?: string; // Shared by every event one user action wrote. Absent on events outside undo history.
 }
 
-export type EditKind =
+type EditKind =
   | 'paint'
   | 'dimension-expand'
   | 'dimension-shrink'
@@ -52,7 +52,7 @@ export interface ActionDraft extends ActionStartedData {
   events: Array<{ type: string; data: unknown }>;
 }
 
-export interface EventQuery {
+interface EventQuery {
   fromId?: number;     // Get events starting from this ID (inclusive)
   toId?: number;       // Get events up to this ID (inclusive)
   types?: string[];    // Filter by event types

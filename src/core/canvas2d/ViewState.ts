@@ -49,15 +49,6 @@ export class ViewState {
   }
 
   /**
-   * Update view type
-   */
-  setViewType(viewType: ViewType): void {
-    this.viewType = viewType;
-    this.isUserAdjusted = false;
-    this.fitToCanvas();
-  }
-
-  /**
    * Re-fit the grid unless the user has zoomed or panned
    */
   fitIfUnadjusted(): void {
@@ -209,13 +200,6 @@ export class ViewState {
    */
   getPan(): { x: number; y: number } {
     return { ...this.pan };
-  }
-
-  /**
-   * Get base cell size
-   */
-  getBaseCellSize(): number {
-    return this.BASE_CELL_SIZE;
   }
 
   /**

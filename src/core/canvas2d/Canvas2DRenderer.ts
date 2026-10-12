@@ -30,7 +30,7 @@ export interface Canvas2DColorConfig {
 /**
  * Default dark mode colors
  */
-export const DARK_MODE_COLORS: Canvas2DColorConfig = {
+const DARK_MODE_COLORS: Canvas2DColorConfig = {
   grid: "#444444",
   axisX: "#e74c3c",
   axisY: "#3498db",
@@ -42,23 +42,6 @@ export const DARK_MODE_COLORS: Canvas2DColorConfig = {
   metaBlockArrow: "#1a1a1a",
   layerIndicator: "#666666",
   textSecondary: "#888888",
-};
-
-/**
- * Default light mode colors
- */
-export const LIGHT_MODE_COLORS: Canvas2DColorConfig = {
-  grid: "#cccccc",
-  axisX: "#e74c3c",
-  axisY: "#3498db",
-  axisZ: "#27ae60",
-  axisLabel: "#666666",
-  metaBlockBorder: "#000000",
-  metaBlockBorderUnconfirmed: "#4CAF50",
-  metaBlockFill: "#ffffff",
-  metaBlockArrow: "#000000",
-  layerIndicator: "#999999",
-  textSecondary: "#666666",
 };
 
 /**
@@ -88,10 +71,6 @@ export class Canvas2DRenderer {
     if (colors) {
       this.colors = colors;
     }
-  }
-
-  setColors(colors: Canvas2DColorConfig): void {
-    this.colors = colors;
   }
 
   /**

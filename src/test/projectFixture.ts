@@ -15,7 +15,7 @@ import { editHistory } from '../core/EditHistory';
 import type { ActionDraft } from '../core/EventLog';
 
 export const PROJECT_ID = 'project-under-test';
-export const OTHER_PROJECT_ID = 'other-project';
+const OTHER_PROJECT_ID = 'other-project';
 
 export async function startProject(): Promise<void> {
   await eventLog.clear();

@@ -26,7 +26,7 @@ import type { PaintOperation } from './painting/strategies/PaintStrategy';
 
 type PlacedOperation = PaintOperation & { blockType: string };
 
-export interface PreviewBlock {
+interface PreviewBlock {
   position: Vector3D;
   blockType: string;
   blockState?: BlockStateProperties;

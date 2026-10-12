@@ -17,13 +17,3 @@ export interface GuideGeometryProvider {
    */
   getGuideGeometry(cursorPosition: Vector3D): GuideGeometry | null;
 }
-
-/**
- * Type guard to check if a strategy implements GuideGeometryProvider
- */
-export const isGuideGeometryProvider = (
-  strategy: unknown
-): strategy is GuideGeometryProvider =>
-  strategy !== null &&
-  typeof strategy === 'object' &&
-  'getGuideGeometry' in (strategy as object);

@@ -1,4 +1,4 @@
-import type { Vector3D, Dimensions, DepthConfig } from '../../../types';
+import type { Vector3D, Dimensions } from '../../../types';
 
 /**
  * Plane types for 2D drawing in 3D space
@@ -246,100 +246,6 @@ export class ShapeUtils {
   }
 
   /**
-   * Apply depth to 2D positions, extending them through multiple layers
-   *
-   * OPTIMIZATION: For collision detection, pre-fetch all potentially colliding blocks
-   * instead of calling getBlock() hundreds/thousands of times individually.
-   */
-  static applyDepth(
-    positions: Vector3D[],
-    depthConfig: DepthConfig,
-    constrainAxis: 'x' | 'y' | 'z',
-    dimensions: Dimensions,
-    getBlock: (pos: Vector3D) => string | null
-  ): Vector3D[] {
-    if (!depthConfig.enabled || depthConfig.thickness <= 1) {
-      return positions;
-    }
-
-    const result: Vector3D[] = [];
-
-    // OPTIMIZATION: Pre-fetch all blocks in collision check range
-    // This converts O(positions × depth) individual queries into a single batch
-    let blockLookup: Set<string> | null = null;
-    if (depthConfig.mode === 'until-collision') {
-      blockLookup = new Set<string>();
-
-      // Build set of all occupied positions in the depth range we'll check
-      for (const basePos of positions) {
-        for (let depth = 1; depth < depthConfig.thickness; depth++) {
-          const pos = { ...basePos };
-
-          switch (constrainAxis) {
-            case 'x':
-              pos.x = basePos.x + depth;
-              break;
-            case 'y':
-              pos.y = basePos.y + depth;
-              break;
-            case 'z':
-              pos.z = basePos.z + depth;
-              break;
-          }
-
-          if (this.isValidPosition(pos, dimensions)) {
-            const block = getBlock(pos);
-            if (block !== null) {
-              blockLookup.add(`${pos.x},${pos.y},${pos.z}`);
-            }
-          }
-        }
-      }
-    }
-
-    // Now do the actual depth application with fast O(1) collision lookups
-    for (const basePos of positions) {
-      // Add base position
-      result.push(basePos);
-
-      // Extend through depth
-      for (let depth = 1; depth < depthConfig.thickness; depth++) {
-        const pos = { ...basePos };
-
-        // Apply depth in constrained axis direction
-        switch (constrainAxis) {
-          case 'x':
-            pos.x = basePos.x + depth;
-            break;
-          case 'y':
-            pos.y = basePos.y + depth;
-            break;
-          case 'z':
-            pos.z = basePos.z + depth;
-            break;
-        }
-
-        // Check bounds
-        if (!this.isValidPosition(pos, dimensions)) {
-          break; // Stop extending this position
-        }
-
-        // Check collision mode using pre-fetched lookup
-        if (depthConfig.mode === 'until-collision' && blockLookup) {
-          const key = `${pos.x},${pos.y},${pos.z}`;
-          if (blockLookup.has(key)) {
-            break; // Stop at collision
-          }
-        }
-
-        result.push(pos);
-      }
-    }
-
-    return result;
-  }
-
-  /**
    * Get the drawing plane from a constrain axis
    *
    * This is the authoritative way to determine the plane when the
@@ -372,20 +278,6 @@ export class ShapeUtils {
       return 'xz'; // Y is constrained, draw in XZ plane
     } else {
       return 'xy'; // Z is constrained, draw in XY plane
-    }
-  }
-
-  /**
-   * Get the perpendicular axis for a given plane (for depth)
-   */
-  static getPerpendicularAxis(plane: Plane): 'x' | 'y' | 'z' {
-    switch (plane) {
-      case 'xy':
-        return 'z';
-      case 'xz':
-        return 'y';
-      case 'yz':
-        return 'x';
     }
   }
 

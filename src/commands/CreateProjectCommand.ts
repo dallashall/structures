@@ -15,7 +15,7 @@ import type { Dimensions } from '../types';
  * Queries: None
  * Validates: name not empty, dimensions > 0
  */
-export class CreateProjectCommand {
+class CreateProjectCommand {
   async execute(name: string, dimensions: Dimensions): Promise<string> {
     // Validate
     if (!name || name.trim().length === 0) {

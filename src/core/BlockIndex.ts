@@ -72,14 +72,6 @@ export class BlockIndex implements BlockIndexReader {
   }
 
   /**
-   * Check if a block exists at position
-   */
-  has(position: Vector3D): boolean {
-    const key = this.positionToKey(position);
-    return this.blocks.has(key);
-  }
-
-  /**
    * Get all blocks at a specific layer
    * This is the key optimization - O(blocks at layer) instead of O(all blocks)
    */
@@ -101,13 +93,6 @@ export class BlockIndex implements BlockIndexReader {
   }
 
   /**
-   * Get all blocks as an iterator
-   */
-  values(): IterableIterator<BlockData> {
-    return this.blocks.values();
-  }
-
-  /**
    * Get all blocks as an array
    */
   toArray(): BlockData[] {
@@ -119,16 +104,6 @@ export class BlockIndex implements BlockIndexReader {
    */
   get size(): number {
     return this.blocks.size;
-  }
-
-  /**
-   * Clear all blocks and indices
-   */
-  clear(): void {
-    this.blocks.clear();
-    this.layerIndex.xyz.clear();
-    this.layerIndex.yxz.clear();
-    this.layerIndex.zxy.clear();
   }
 
   /**

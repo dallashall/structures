@@ -8,23 +8,23 @@
 
 import { ACTION_STARTED, type Event } from '../core/EventLog';
 
-export const PROJECT_FILE_FORMAT = 'mc-blueprint';
-export const PROJECT_FILE_VERSION = 1;
-export const PROJECT_FILE_EXTENSION = '.mcblueprint';
+const PROJECT_FILE_FORMAT = 'mc-blueprint';
+const PROJECT_FILE_VERSION = 1;
+const PROJECT_FILE_EXTENSION = '.mcblueprint';
 export const PROJECT_FILE_TYPE = {
   description: 'Structures project',
   mimeType: 'application/json',
   extension: PROJECT_FILE_EXTENSION,
 };
 
-export interface ProjectFileEvent {
+interface ProjectFileEvent {
   type: string;
   data: unknown;
   timestamp: number;
   actionId?: string;
 }
 
-export interface ProjectFile {
+interface ProjectFile {
   format: typeof PROJECT_FILE_FORMAT;
   version: number;
   // Informational only. The name the app shows comes from the metadata events.

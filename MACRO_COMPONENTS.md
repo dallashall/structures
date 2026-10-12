@@ -110,7 +110,7 @@ Holds preview blocks while a tool draws. Both the 2D and 3D views read it. `fina
 
 UI state for the editor. It holds the layout mode, active view, active layer per axis, tool, paint mode and behavior, shape fill mode, depth config, foreground and background blocks, quick-select slots, block state (facing, half), material browser state, slice guide visibility, render settings, hover previews, and the current project ID. Setters are arrow functions (`setActiveTool`, `incrementLayer`, `rotateFacing`, `setRenderSettings`, and so on) so components can pass them as callbacks.
 
-**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `placementmode:toggled`, `actionbar:toggled`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
+**Emits:** `layout:toggled`, `view:switched`, `layer:adjusted`, `block:selected`, `materialslot:toggled`, `tool:selected`, `paintmode:selected`, `paintbehavior:selected`, `shapefillmode:selected`, `depthconfig:applied`, `placementmode:toggled`, `materialbrowser:toggled`, `materialbrowser:search:entered`, `materialbrowser:tab:switched`, `drag:started`, `drag:cleared`, `quickselect:assigned`, `quickselect:foreground:selected`, `quickselect:background:selected`, `blockstate:applied`, `preview:rendered`, `project:switched`, `sliceguide:axis:toggled`, `rendersettings:applied`, `rendersettingsmodal:toggled`.
 
 ### ScreenRouter
 
@@ -279,5 +279,3 @@ App  (withAtlasStatus, withScreenState)
 Every dialog renders through `ModalDialog`, which opens a native modal that holds focus and the keyboard.
 
 `CreditsDialog` reads `src/config/credits.ts`. The texture entry comes from `resource-packs/squareful/pack-source.json`, so the credited version always matches the version the setup script downloads.
-
-These components exist but no screen mounts them. Only the preview gallery shows some of them: `ActionBarExpandButton`, `BlockButton`, `DeleteModeControl`, `DraggableMaterialBlock`, `LayerDepthSelector`, `MaterialPalette`, `MaterialQuickSelect`, `PaintControls`, `ViewSelector`, `CanvasPlaceholder`.

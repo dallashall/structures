@@ -98,10 +98,6 @@ export class GrowAnimator {
     this.detach();
   }
 
-  dispose(): void {
-    this.clear();
-  }
-
   private start(
     tween: Omit<Tween, 'startMs' | 'durationMs'>,
     { delayMs, durationMs }: StepTiming,

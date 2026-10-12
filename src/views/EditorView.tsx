@@ -66,7 +66,6 @@ function EditorViewComponent(props: EditorViewProps) {
     shapeFillMode,
     depthConfig,
     isPlacementMode,
-    isActionBarExpanded,
     saveState,
     activeBlockState,
     hasBlockState,
@@ -209,7 +208,6 @@ function EditorViewComponent(props: EditorViewProps) {
               shapeFillMode={shapeFillMode}
               depthConfig={depthConfig}
               isPlacementMode={isPlacementMode}
-              isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
               onViewChange={editorState.setActiveView}
@@ -235,7 +233,6 @@ function EditorViewComponent(props: EditorViewProps) {
               shapeFillMode={shapeFillMode}
               depthConfig={depthConfig}
               isPlacementMode={isPlacementMode}
-              isActionBarExpanded={isActionBarExpanded}
               quickSelectSlots={quickSelectSlots}
               blocks={blocks}
               onPaintModeChange={editorState.setPaintMode}

@@ -13,33 +13,6 @@ import {
   Scene,
 } from '@babylonjs/core';
 
-import type { BlockStateProperties } from '../../types';
-
-/**
- * Determine the geometry variant key for a given block and its state.
- * Blocks with the same geometry key share a base mesh.
- * Rotation (facing direction) is per-instance, NOT encoded in the key.
- */
-export function getGeometryKey(blockId: string, blockState?: BlockStateProperties): string {
-  const name = blockId.replace('minecraft:', '');
-
-  if (name.includes('slab')) {
-    const slabType = blockState?.type ?? 'bottom';
-    return `slab_${slabType}`;
-  }
-
-  if (name.includes('stair')) {
-    const half = blockState?.half ?? 'bottom';
-    const shape = blockState?.shape ?? 'straight';
-    return `stair_${half}_${shape}`;
-  }
-
-  // Future: doors
-  // if (name.includes('door')) { ... }
-
-  return ''; // cube — default geometry
-}
-
 /**
  * Create a slab mesh (half-height block).
  *

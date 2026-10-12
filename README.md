@@ -64,9 +64,8 @@ The textures keep their own CC BY-NC-ND 4.0 license. A public deployment must st
 src/
 ├── commands/      # Commands that validate a request and append events
 ├── components/    # Rendering components, one per file
-├── config/        # Static configuration (texture packs, credits)
+├── config/        # Static configuration (credits)
 ├── core/          # Singletons: event log, editor state, tools, 2D and 3D rendering
-├── events/        # Event type definitions
 ├── hocs/          # Higher-order components that subscribe to singletons
 ├── layouts/       # Toolbar, tabbed layout, quad layout
 ├── panels/        # 2D canvas and 3D view panels

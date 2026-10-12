@@ -17,7 +17,7 @@ import {
 } from '../reducers/modelReducer';
 import { isHistoryStep } from '../reducers/historyReducer';
 
-export type ReceiveResult = 'applied' | 'replaying' | 'ignored';
+type ReceiveResult = 'applied' | 'replaying' | 'ignored';
 
 export class ModelReplayer {
   private model: Model = createEmptyModel();

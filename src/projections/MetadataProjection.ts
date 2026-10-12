@@ -12,7 +12,7 @@ import { EventEmitter } from '../core/EventEmitter';
 import { eventLog, type Event } from '../core/EventLog';
 import { editorState } from '../core/EditorState';
 
-export interface Metadata {
+interface Metadata {
   id: string;
   name: string;
   created: Date;

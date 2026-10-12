@@ -1,5 +1,4 @@
-import type { Block, Project, ViewType, LayoutMode } from '../types';
-import { BlockIndex } from '../core/BlockIndex';
+import type { Block, ViewType, LayoutMode } from '../types';
 
 /**
  * Mock Minecraft blocks for component testing
@@ -86,35 +85,4 @@ export const mockCallbacks = {
   onSettings: (): void => {
     console.log('[Mock Callback] Settings clicked');
   },
-};
-
-/**
- * Mock project data for component testing
- */
-export const mockProject: Project = {
-  id: 'preview-project-001',
-  name: 'Sample House',
-  dimensions: { width: 10, height: 8, depth: 10 },
-  metaBlock: {
-    position: { x: 5, y: 0, z: 5 },
-    direction: 'y-',
-    isConfirmed: true,
-  },
-  blocks: new BlockIndex(),
-  created: new Date('2026-03-01T10:00:00Z'),
-  modified: new Date('2026-03-01T14:30:00Z'),
-};
-
-/**
- * Helper to get blocks by category
- */
-export const getBlocksByCategory = (category: string): Block[] => {
-  return mockBlocks.filter((block) => block.category === category);
-};
-
-/**
- * Helper to get a specific mock block by ID
- */
-export const getMockBlock = (id: string): Block | undefined => {
-  return mockBlocks.find((block) => block.id === id);
 };

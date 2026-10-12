@@ -49,10 +49,4 @@ export class EventEmitter {
     }
   }
 
-  /**
-   * Remove all event listeners (useful for testing/cleanup)
-   */
-  removeAllListeners(): void {
-    this.events.clear();
-  }
 }

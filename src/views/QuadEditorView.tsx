@@ -20,7 +20,6 @@ interface QuadEditorViewProps {
   shapeFillMode: ShapeFillMode;
   depthConfig: DepthConfig;
   isPlacementMode: boolean;
-  isActionBarExpanded: boolean;
   quickSelectSlots: (string | null)[];
   blocks: Block[];
   onPaintModeChange: (mode: PaintMode) => void;
@@ -50,7 +49,6 @@ export function QuadEditorView({
   shapeFillMode: _shapeFillMode,
   depthConfig: _depthConfig,
   isPlacementMode,
-  isActionBarExpanded: _isActionBarExpanded,
   quickSelectSlots,
   blocks,
   onPaintModeChange,

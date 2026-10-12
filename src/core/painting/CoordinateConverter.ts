@@ -96,33 +96,4 @@ export class CoordinateConverter {
     }
   }
 
-  /**
-   * Get grid dimensions for a specific view type
-   *
-   * @param dimensions - Project dimensions
-   * @param viewType - Current view
-   * @returns Grid width and height for this view
-   */
-  static getGridDimensions(
-    dimensions: Dimensions,
-    viewType: ViewType
-  ): { gridWidth: number; gridHeight: number } {
-    // Z-up coordinate system: X=width, Y=height, Z=depth
-    switch (viewType) {
-      case 'front':
-      case 'back':
-        // Looking North/South: see X (width) and Z (depth)
-        return { gridWidth: dimensions.width, gridHeight: dimensions.depth };
-      case 'left':
-      case 'right':
-        // Looking East/West: see Y (height) and Z (depth)
-        return { gridWidth: dimensions.height, gridHeight: dimensions.depth };
-      case 'top':
-      case 'bottom':
-        // Looking Down/Up: see X (width) and Y (height)
-        return { gridWidth: dimensions.width, gridHeight: dimensions.height };
-      default:
-        return { gridWidth: 16, gridHeight: 16 };
-    }
-  }
 }

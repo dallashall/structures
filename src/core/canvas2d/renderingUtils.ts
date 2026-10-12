@@ -8,7 +8,7 @@
 /**
  * Axis color constants
  */
-export const AXIS_COLORS = {
+const AXIS_COLORS = {
   X: '#e74c3c', // Red
   Y: '#3498db', // Blue
   Z: '#27ae60', // Green

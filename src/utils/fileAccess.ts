@@ -22,7 +22,7 @@ interface SaveFileHandle {
 
 type ShowSaveFilePicker = (options: SaveFilePickerOptions) => Promise<SaveFileHandle>;
 
-export interface TextFileType {
+interface TextFileType {
   description: string;
   mimeType: string;
   extension: string;

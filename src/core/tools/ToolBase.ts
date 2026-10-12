@@ -8,7 +8,7 @@ import { isModalOpen } from "../../utils/keyboardFocus";
 /**
  * Modifier key state
  */
-export interface ModifierKeys {
+interface ModifierKeys {
   space: boolean;
   shift: boolean;
   alt: boolean;
@@ -163,11 +163,6 @@ export abstract class ToolBase {
   // ============================================================================
   // Cursor
   // ============================================================================
-
-  protected setCursor(style: string): void {
-    this.toolCursor = style;
-    this.canvas.style.cursor = style;
-  }
 
   /** Override the displayed cursor without changing the tool's desired cursor */
   private setOverrideCursor(style: string): void {
