@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CameraMode, CameraPose, CameraScene } from '../cameraPath';
+import type { CameraMode, CameraPose, CameraScene, Vec3 } from '../cameraPath';
 import { toCameraBounds, toCameraPose, toCameraTicks } from '../cameraPath';
 
 const SCENE: CameraScene = {
@@ -9,6 +9,7 @@ const SCENE: CameraScene = {
   top: 8,
   rising: false,
   landedAt: 0.8,
+  seconds: 10,
   eye: { x: 0, y: 1.62, z: 0 },
   forward: { x: 0, y: 0, z: -1 },
 };
@@ -19,6 +20,10 @@ const angleAround = (scene: CameraScene, t: number): number => {
   const { location } = toCameraPose('orbit', scene, t);
   return Math.atan2(location.z - scene.center.z, location.x - scene.center.x);
 };
+
+// Largest wobble offset in blocks, with headroom over the path's WOBBLE_FACING
+const WOBBLE_BOUND = 0.3;
+const distance3 = (a: Vec3, b: Vec3): number => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 const distance = (a: { x: number; z: number }, b: { x: number; z: number }): number => Math.hypot(a.x - b.x, a.z - b.z);
 
@@ -40,7 +45,15 @@ describe('toCameraPose', () => {
     const pose = toCameraPose('orbit', SCENE, 0.5);
     expect(distance(pose.location, SCENE.center)).toBeCloseTo(13.2, 1);
     expect(pose.location.y).toBeGreaterThan(SCENE.center.y);
-    expect(pose.facing).toEqual(SCENE.center);
+    expect(distance3(pose.facing, SCENE.center)).toBeLessThan(WOBBLE_BOUND);
+  });
+
+  it.each(['orbit', 'lookAround'] as CameraMode[])('%s wobbles faintly mid-path', (mode) => {
+    const still = toCameraPose(mode, { ...SCENE, seconds: 0 }, 0.5);
+    const moving = toCameraPose(mode, SCENE, 0.5);
+    expect(distance3(moving.facing, still.facing)).toBeGreaterThan(0);
+    expect(distance3(moving.facing, still.facing)).toBeLessThan(WOBBLE_BOUND);
+    expect(distance3(moving.location, still.location)).toBeLessThan(WOBBLE_BOUND);
   });
 
   it('stops behind the player when the last block lands, holds, then comes back into their eyes', () => {
@@ -48,10 +61,10 @@ describe('toCameraPose', () => {
     expect(distance(landed.location, SCENE.center)).toBeCloseTo(13.2, 1);
     expect(Math.atan2(landed.location.z - SCENE.center.z, landed.location.x - SCENE.center.x)).toBeCloseTo(
       Math.atan2(SCENE.eye.z - SCENE.center.z, SCENE.eye.x - SCENE.center.x),
-      6,
+      2,
     );
     const holding = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.45);
-    expect(holding).toEqual(landed);
+    expect(distance3(holding.location, landed.location)).toBeLessThan(WOBBLE_BOUND);
     const returning = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.75);
     expect(distance(returning.location, SCENE.eye)).toBeLessThan(distance(landed.location, SCENE.eye));
   });
@@ -83,7 +96,7 @@ describe('toCameraPose', () => {
 
   it('looks around from the eye, tilting up halfway through', () => {
     const pose = toCameraPose('lookAround', SCENE, 0.5);
-    expect(pose.location).toEqual(SCENE.eye);
+    expect(distance3(pose.location, SCENE.eye)).toBeLessThan(WOBBLE_BOUND);
     expect(pose.facing.y).toBeGreaterThan(SCENE.eye.y);
   });
 });

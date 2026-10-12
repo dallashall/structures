@@ -225,6 +225,7 @@ export class BuildPreview {
       ...toCameraBounds(this.cells.map(toCorner)),
       rising: this.sequence === 'rise',
       landedAt: buildTicks / this.cameraTicks,
+      seconds: this.cameraTicks / TICKS_PER_SECOND,
       eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
       forward: { x: forward.x, y: 0, z: forward.y },
     };

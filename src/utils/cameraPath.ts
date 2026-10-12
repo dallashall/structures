@@ -28,6 +28,8 @@ export interface CameraScene {
   rising: boolean;
   // Share of the camera path (0–1) at which the last block lands. toCameraTicks sets the path length.
   landedAt: number;
+  // Length of the camera path in seconds
+  seconds: number;
   eye: Vec3;
   // Horizontal unit vector the player faces
   forward: Vec3;
@@ -68,6 +70,32 @@ const smoothstep = (edge0: number, edge1: number, t: number): number => {
   return x * x * (3 - 2 * x);
 };
 
+// Handheld drift in blocks for the camera and for the point it looks at. Frequencies sit well under
+// CAMERA_KEYS_PER_SECOND, so the game's linear easing between keys still traces each sway.
+const WOBBLE_LOCATION = 0.08;
+const WOBBLE_FACING = 0.2;
+const WOBBLE_HZ = [0.23, 0.37, 0.53];
+
+const toWobble = (seconds: number, amount: number): Vec3 => {
+  const toPhase = (hz: number): number => 2 * Math.PI * hz * seconds;
+  const [a, b, c] = WOBBLE_HZ.map(toPhase);
+  return {
+    x: amount * (Math.sin(a) + 0.5 * Math.sin(c + 1.3)) / 1.5,
+    y: amount * (Math.sin(b + 0.7) + 0.5 * Math.sin(a + 2.1)) / 1.5,
+    z: amount * (Math.sin(c + 2.9) + 0.5 * Math.sin(b + 0.4)) / 1.5,
+  };
+};
+
+// Adds the drift scaled by fade, which is 0 in first person so the path still starts and ends exactly there
+const withWobble = (pose: CameraPose, seconds: number, fade: number): CameraPose => {
+  const location = toWobble(seconds, WOBBLE_LOCATION * fade);
+  const facing = toWobble(seconds + 17, WOBBLE_FACING * fade);
+  return {
+    location: { x: pose.location.x + location.x, y: pose.location.y + location.y, z: pose.location.z + location.z },
+    facing: { x: pose.facing.x + facing.x, y: pose.facing.y + facing.y, z: pose.facing.z + facing.z },
+  };
+};
+
 /**
  * Length of the camera path in ticks, for a build whose last block lands after buildTicks
  */
@@ -79,7 +107,8 @@ export function toCameraTicks(mode: CameraMode, buildTicks: number): number {
  * The camera at progress t (0–1) along the mode's path
  */
 export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): CameraPose {
-  const { center, radius, bottom, top, rising, landedAt, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, landedAt, seconds, eye, forward } = scene;
+  const time = t * seconds;
   const firstPerson: CameraPose = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -94,7 +123,7 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     const cos = Math.cos(turn);
     const sin = Math.sin(turn);
     const horizontal = Math.cos(tilt) * LOOK_DISTANCE;
-    return {
+    const look: CameraPose = {
       location: eye,
       facing: {
         x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
@@ -102,6 +131,7 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
         z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
       },
     };
+    return withWobble(look, time, Math.sin(Math.PI * t));
   }
 
   // One full revolution over the build that eases in and out and stops behind the player.
@@ -128,10 +158,11 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     facing: { x: center.x, y: focusY, z: center.z },
   };
   const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
-  return {
+  const pose: CameraPose = {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),
   };
+  return withWobble(pose, time, 1 - blend);
 }
 
 /**

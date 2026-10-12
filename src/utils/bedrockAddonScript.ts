@@ -152,12 +152,35 @@ function smoothstep(edge0, edge1, t) {
   return x * x * (3 - 2 * x);
 }
 
+const WOBBLE_LOCATION = 0.08;
+const WOBBLE_FACING = 0.2;
+const WOBBLE_HZ = [0.23, 0.37, 0.53];
+
+function toWobble(seconds, amount) {
+  const [a, b, c] = WOBBLE_HZ.map(function toPhase(hz) { return 2 * Math.PI * hz * seconds; });
+  return {
+    x: amount * (Math.sin(a) + 0.5 * Math.sin(c + 1.3)) / 1.5,
+    y: amount * (Math.sin(b + 0.7) + 0.5 * Math.sin(a + 2.1)) / 1.5,
+    z: amount * (Math.sin(c + 2.9) + 0.5 * Math.sin(b + 0.4)) / 1.5,
+  };
+}
+
+function withWobble(pose, seconds, fade) {
+  const location = toWobble(seconds, WOBBLE_LOCATION * fade);
+  const facing = toWobble(seconds + 17, WOBBLE_FACING * fade);
+  return {
+    location: { x: pose.location.x + location.x, y: pose.location.y + location.y, z: pose.location.z + location.z },
+    facing: { x: pose.facing.x + facing.x, y: pose.facing.y + facing.y, z: pose.facing.z + facing.z },
+  };
+}
+
 function toCameraTicks(mode, buildTicks) {
   return mode === "orbit" ? buildTicks + ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS : buildTicks;
 }
 
 function toCameraPose(mode, scene, t) {
-  const { center, radius, bottom, top, rising, landedAt, eye, forward } = scene;
+  const { center, radius, bottom, top, rising, landedAt, seconds, eye, forward } = scene;
+  const time = t * seconds;
   const firstPerson = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
@@ -171,7 +194,7 @@ function toCameraPose(mode, scene, t) {
     const cos = Math.cos(turn);
     const sin = Math.sin(turn);
     const horizontal = Math.cos(tilt) * LOOK_DISTANCE;
-    return {
+    const look = {
       location: eye,
       facing: {
         x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
@@ -179,6 +202,7 @@ function toCameraPose(mode, scene, t) {
         z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
       },
     };
+    return withWobble(look, time, Math.sin(Math.PI * t));
   }
 
   const build = Math.min(1, t / landedAt);
@@ -202,10 +226,11 @@ function toCameraPose(mode, scene, t) {
     facing: { x: center.x, y: focusY, z: center.z },
   };
   const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
-  return {
+  const pose = {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),
   };
+  return withWobble(pose, time, 1 - blend);
 }
 
 function toCameraBounds(cells) {
@@ -245,6 +270,7 @@ function runCamera(player, cells, buildTicks) {
     ...toCameraBounds(cells),
     rising: SEQUENCE === "rise",
     landedAt: buildTicks / totalTicks,
+    seconds: totalTicks / 20,
     eye: player.getHeadLocation(),
     forward: { x: view.x / length, y: 0, z: view.z / length },
   };
