@@ -46,7 +46,7 @@ const LOOK_DISTANCE = 8;
 const BLEND_IN = 0.12;
 // Ticks the orbit holds on the finished build, then ticks it spends coming back into the player's eyes
 const ORBIT_HOLD_TICKS = 30;
-const ORBIT_RETURN_TICKS = 30;
+const ORBIT_RETURN_TICKS = 45;
 const ORBIT_RADIUS_SCALE = 2.2;
 const ORBIT_MIN_RADIUS = 12;
 // Camera height above the point it looks at, as a share of the orbit radius, with a floor in blocks
@@ -68,6 +68,11 @@ const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), 
 const smoothstep = (edge0: number, edge1: number, t: number): number => {
   const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
   return x * x * (3 - 2 * x);
+};
+// Like smoothstep, but acceleration is also zero at both ends, so a heavy camera eases into motion and out of it
+const smootherstep = (edge0: number, edge1: number, t: number): number => {
+  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
+  return x * x * x * (x * (6 * x - 15) + 10);
 };
 
 // Handheld shake in the manner of After Effects' wiggle(freq, amp): a fresh random target WOBBLE_HZ times a
@@ -154,12 +159,13 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
 
   // One full revolution over the whole path that eases in and out, so the camera keeps circling through the
   // hold and is still moving when it turns back into the player's eyes.
+  // The circle starts and ends straight behind the player, aimed along their facing, so the return is a dolly in.
   // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
   const build = Math.min(1, t / landedAt);
   const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
-  const settle = returnsAt < 1 ? smoothstep(returnsAt, 1, t) : 0;
+  const settle = returnsAt < 1 ? smootherstep(returnsAt, 1, t) : 0;
   const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
-  const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
+  const startAngle = Math.atan2(-forward.z, -forward.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = build * build;
@@ -175,7 +181,7 @@ export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): C
     },
     facing: { x: center.x, y: focusY, z: center.z },
   };
-  const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
+  const blend = Math.max(1 - smootherstep(0, BLEND_IN, build), settle);
   const pose: CameraPose = {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),

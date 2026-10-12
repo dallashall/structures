@@ -129,7 +129,7 @@ function setBlock(dimension, location, permutation) {
 const LOOK_DISTANCE = 8;
 const BLEND_IN = 0.12;
 const ORBIT_HOLD_TICKS = 30;
-const ORBIT_RETURN_TICKS = 30;
+const ORBIT_RETURN_TICKS = 45;
 const ORBIT_RADIUS_SCALE = 2.2;
 const ORBIT_MIN_RADIUS = 12;
 const ORBIT_LIFT_SCALE = 0.35;
@@ -191,6 +191,11 @@ function withWobble(pose, seconds, fade) {
   };
 }
 
+function smootherstep(edge0, edge1, t) {
+  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
+  return x * x * x * (x * (6 * x - 15) + 10);
+}
+
 function toCameraTicks(mode, buildTicks) {
   return mode === "orbit" ? buildTicks + ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS : buildTicks;
 }
@@ -224,9 +229,9 @@ function toCameraPose(mode, scene, t) {
 
   const build = Math.min(1, t / landedAt);
   const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
-  const settle = returnsAt < 1 ? smoothstep(returnsAt, 1, t) : 0;
+  const settle = returnsAt < 1 ? smootherstep(returnsAt, 1, t) : 0;
   const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
-  const startAngle = Math.atan2(eye.z - center.z, eye.x - center.x);
+  const startAngle = Math.atan2(-forward.z, -forward.x);
   const angle = startAngle + 2 * Math.PI * (1 - sweep);
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = build * build;
@@ -242,7 +247,7 @@ function toCameraPose(mode, scene, t) {
     },
     facing: { x: center.x, y: focusY, z: center.z },
   };
-  const blend = Math.max(1 - smoothstep(0, BLEND_IN, build), settle);
+  const blend = Math.max(1 - smootherstep(0, BLEND_IN, build), settle);
   const pose = {
     location: lerpVec(orbit.location, firstPerson.location, blend),
     facing: lerpVec(orbit.facing, firstPerson.facing, blend),

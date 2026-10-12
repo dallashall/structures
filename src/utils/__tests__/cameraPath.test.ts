@@ -79,6 +79,22 @@ describe('toCameraPose', () => {
     expect(toCameraTicks('lookAround', 136)).toBe(136);
   });
 
+  it('turns the view toward the player\'s facing without a stall and surge on the way back', () => {
+    // The player stands to one side of the build, still facing north
+    const still: CameraScene = { ...SCENE, seconds: 0, eye: { x: 10, y: 1.62, z: -6 } };
+    const returnsAt = SCENE.landedAt + (1 - SCENE.landedAt) * 0.4;
+    const steps = 40;
+    const rates: number[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = returnsAt + ((1 - returnsAt) * i) / steps;
+      rates.push(toAimTurn(toCameraPose('orbit', still, t), toCameraPose('orbit', still, t + (1 - returnsAt) / steps)));
+    }
+    // A stall is a turn rate near zero followed by a surge back up to the peak
+    const peak = Math.max(...rates);
+    const beforePeak = rates.slice(0, rates.indexOf(peak));
+    expect(Math.min(...beforePeak, peak)).toBeGreaterThan(0.3 * peak);
+  });
+
   it('orbits slower near its ends than in its middle', () => {
     const turn = (from: number, to: number): number => Math.abs(angleAround(SCENE, to) - angleAround(SCENE, from));
     expect(turn(0.45, 0.5)).toBeGreaterThan(turn(0.15, 0.2) * 1.5);
