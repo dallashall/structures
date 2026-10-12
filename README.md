@@ -77,9 +77,9 @@ src/
 ├── views/         # Welcome screen and editor views
 ├── App.tsx        # Root component
 └── main.tsx       # Entry point
-scripts/           # Texture download and atlas build
+scripts/           # Texture download, atlas build, catalog checks
 resource-packs/    # Texture pack pin and manifest
-public/data/       # Block catalog
+public/data/       # Block catalog and the Java-to-Bedrock block table
 ```
 
 ## Technology Stack

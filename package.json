@@ -11,6 +11,7 @@
     "build:atlas": "tsx scripts/buildTextureAtlas.ts --pack squareful",
     "parse:pack": "tsx scripts/parseResourcePack.ts",
     "merge:fragments": "tsx scripts/mergeTextureFragments.ts data/canonical-blocks.json public/data/canonical-blocks.json",
+    "build:bedrock-blocks": "tsx scripts/buildBedrockBlocks.ts data/canonical-blocks.json public/data/canonical-blocks.json",
     "generate:manifest": "tsx scripts/generatePackManifest.ts",
     "generate:env": "tsx scripts/generateEnvironments.ts",
     "preview": "vite preview",

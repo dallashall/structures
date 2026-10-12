@@ -40,6 +40,8 @@ export interface CanonicalBlock {
   parentModel?: string;
   /** A face or state texture of another block. It renders where placed but never lists in the material browser. */
   hidden?: boolean;
+  /** The real Minecraft block ID when this entry's ID is a texture name for it, such as grass for short_grass */
+  javaId?: string;
 }
 
 /** Keyed by namespaced ID, such as "minecraft:oak_log" */

@@ -147,7 +147,7 @@ These hold derived or per-project preference data outside the EventLog.
 
 **File:** `src/core/BlockRegistry.ts`
 
-The block catalog, loaded from `public/data/canonical-blocks.json`. `getBlock(id)`, `getAllBlocks()`, `getPickableBlocks()`, `getBlocksByCategory(category)`, `searchBlocks(query)`, `waitForLoad()`.
+The block catalog, loaded from `public/data/canonical-blocks.json`. `npm run build:bedrock-blocks` checks the catalog against Minecraft's block list: entries that are no real block are hidden, and texture names for a real block get a `javaId`. The same script writes `public/data/bedrock-blocks.json`, the Java-to-Bedrock state table for export. `getBlock(id)`, `getAllBlocks()`, `getPickableBlocks()`, `getBlocksByCategory(category)`, `searchBlocks(query)`, `waitForLoad()`.
 
 **Emits:** `blocks:loading`, `blocks:registered` (blocks), `blocks:error`.
 

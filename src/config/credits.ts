@@ -89,6 +89,13 @@ export const LIBRARY_CREDITS: Credit[] = [
     license: MIT,
     source: { label: 'GitHub', url: 'https://github.com/bvaughn/react-window' },
   },
+  {
+    title: 'minecraft-data',
+    author: 'PrismarineJS',
+    license: MIT,
+    source: { label: 'GitHub', url: 'https://github.com/PrismarineJS/minecraft-data' },
+    note: 'The Java-to-Bedrock block state table behind the Bedrock export.',
+  },
 ];
 
 export const MINECRAFT_NOTICE =
