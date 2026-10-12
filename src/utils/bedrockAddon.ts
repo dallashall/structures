@@ -1,6 +1,6 @@
 /**
  * Bedrock .mcaddon packaging: a behavior pack holding the structure, the item, and its script,
- * and a resource pack that gives the item a vanilla icon. No game texture ships in either pack. The only image is
+ * and a resource pack with the item's vanilla icon and the build's glow particle. No game texture ships in either pack. The only image is
  * the app logo as each pack's icon.
  *
  * Pack UUIDs derive from the project ID, so a later export of the same project updates the installed packs.
@@ -9,15 +9,17 @@
 
 import { strToU8, zipSync } from 'fflate';
 
+import type { AnimatedBuild } from './bedrockAnimation';
 import type { Placement, PlayerFacing } from './bedrockExport';
+import type { BuildSequence } from './bedrockAddonScript';
+import type { HorizontalDirection } from '../types';
+import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from './bedrockAddonScript';
 
 // Latest stable @minecraft/server, and the game version that ships it
 export const SCRIPT_API_VERSION = '2.10.0';
 const MIN_ENGINE_VERSION = [1, 26, 50];
 const ITEM_FORMAT_VERSION = '1.26.50';
 const NAMESPACE = 'structures';
-
-export type AnimationMode = 'Layers' | 'Blocks' | 'None';
 
 // Vanilla item textures. Resource packs may point at them without shipping a copy.
 export const ITEM_ICONS = {
@@ -36,10 +38,16 @@ export interface AddonOptions {
   projectName: string;
   itemName: string;
   icon: ItemIcon;
-  animationMode: AnimationMode;
-  animationSeconds: number;
+  sequence: BuildSequence;
+  seconds: number;
+  // Uses before the item breaks. 0 means unlimited.
+  uses: number;
+  metaFacing: HorizontalDirection;
+  // Whole structure, placed at once by the "instant" sequence
   structure: Uint8Array;
   placements: Record<PlayerFacing, Placement>;
+  // Block list for the animated sequences
+  build: AnimatedBuild;
   exportedAt: number;
   // The app logo, shown beside both packs in the game's pack list. It is app artwork, not a game texture.
   packIcon: Uint8Array;
@@ -119,78 +127,6 @@ async function toStableUuid(seed: string): Promise<string> {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-/**
- * The script inside the behavior pack. Used on a block, the item anchors the build in the cell next to
- * the clicked face. Used in the air, it anchors at the player's feet. Placement waits one tick, since
- * item events run before the world may change.
- */
-export function toAddonScript(names: AddonNames, options: Pick<AddonOptions, 'animationMode' | 'animationSeconds' | 'placements'>): string {
-  return `import { system, world, StructureAnimationMode, StructureRotation } from "@minecraft/server";
-
-const STRUCTURE_ID = ${JSON.stringify(names.structureId)};
-const ANIMATION_MODE = StructureAnimationMode.${options.animationMode};
-const ANIMATION_SECONDS = ${options.animationSeconds};
-// Rotation and minimum-corner offset from the anchor, for each way the player can face
-const PLACEMENTS = ${JSON.stringify(options.placements)};
-const FACINGS = ["north", "east", "south", "west"];
-const FACE_OFFSETS = { Up: [0, 1, 0], Down: [0, -1, 0], North: [0, 0, -1], South: [0, 0, 1], East: [1, 0, 0], West: [-1, 0, 0] };
-
-// A use on a block also raises the plain use event in the same tick
-let lastUseOnTick = -1;
-
-// Bedrock yaw: 0 faces south, 90 west, 180 north, -90 east
-function toFacing(player) {
-  const yaw = player.getRotation().y;
-  const quarter = Math.round(((((yaw + 180) % 360) + 360) % 360) / 90) % 4;
-  return FACINGS[quarter];
-}
-
-function placeAround(player, anchor) {
-  const placement = PLACEMENTS[toFacing(player)];
-  const location = {
-    x: anchor.x + placement.offset.x,
-    y: anchor.y + placement.offset.y,
-    z: anchor.z + placement.offset.z,
-  };
-  function place() {
-    try {
-      world.structureManager.place(STRUCTURE_ID, player.dimension, location, {
-        rotation: StructureRotation[placement.rotation],
-        animationMode: ANIMATION_MODE,
-        animationSeconds: ANIMATION_SECONDS,
-        includeEntities: false,
-      });
-    } catch (error) {
-      player.sendMessage("The build could not be placed here: " + error);
-    }
-  }
-  system.run(place);
-}
-
-function handleUseOn(event) {
-  lastUseOnTick = system.currentTick;
-  const offset = FACE_OFFSETS[event.blockFace] ?? FACE_OFFSETS.Up;
-  const { x, y, z } = event.block.location;
-  placeAround(event.source, { x: x + offset[0], y: y + offset[1], z: z + offset[2] });
-}
-
-function handleUse(event) {
-  if (system.currentTick === lastUseOnTick) return;
-  const { x, y, z } = event.source.location;
-  placeAround(event.source, { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) });
-}
-
-function registerComponent(startup) {
-  startup.itemComponentRegistry.registerCustomComponent(${JSON.stringify(names.componentId)}, {
-    onUse: handleUse,
-    onUseOn: handleUseOn,
-  });
-}
-
-system.beforeEvents.startup.subscribe(registerComponent);
-`;
-}
-
 const toJson = (value: unknown): Uint8Array => strToU8(`${JSON.stringify(value, null, 2)}\n`);
 
 /**
@@ -240,11 +176,21 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
           'minecraft:icon': iconKey,
           'minecraft:display_name': { value: options.itemName },
           'minecraft:max_stack_size': 1,
+          ...(options.uses > 0 ? { 'minecraft:durability': { max_durability: options.uses } } : {}),
           [names.componentId]: {},
         },
       },
     }),
-    [`${behaviorRoot}/scripts/main.js`]: strToU8(toAddonScript(names, options)),
+    [`${behaviorRoot}/scripts/main.js`]: strToU8(toAddonScript({
+      structureId: names.structureId,
+      componentId: names.componentId,
+      sequence: options.sequence,
+      seconds: options.seconds,
+      uses: options.uses,
+      metaFacing: options.metaFacing,
+      placements: options.placements,
+      build: options.build,
+    })),
     [`${resourceRoot}/manifest.json`]: toJson({
       format_version: 2,
       header: {
@@ -257,6 +203,7 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
       modules: [{ type: 'resources', uuid: resourceModuleUuid, version }],
       dependencies: [{ uuid: behaviorUuid, version }],
     }),
+    [`${resourceRoot}/particles/${GLOW_PARTICLE_ID.split(':')[1]}.json`]: toJson(toGlowParticle()),
     [`${resourceRoot}/textures/item_texture.json`]: toJson({
       resource_pack_name: options.projectName,
       texture_name: 'atlas.items',

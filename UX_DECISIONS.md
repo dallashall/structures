@@ -186,10 +186,12 @@ This document records the interaction decisions for Structures and how the app c
 
 ## 10. Bedrock Export
 
-**Decision:** Export is one dialog with item name, icon, animation, and seconds. Defaults: "<project> Wand", Blaze Rod, layer by layer, 5 seconds.
+**Decision:** Export is one dialog with item name, icon, build animation, seconds, and uses. Defaults: "<project> Wand", Blaze Rod, rise, 6 seconds, unlimited uses.
 
 **Details:**
-- The icon list holds vanilla item textures only, so the add-on ships no image.
+- The icon list holds vanilla item textures only, so the add-on ships no game texture.
+- Animations: rise (bottom up, shuffled within each layer, layers overlapping), ripple out from the meta block, ripple in toward it, or all at once. A glow in each block's own color sweeps through the build just ahead of the blocks.
+- Uses above 0 give the item a wear bar. The use that breaks it still builds.
 - One item handles both triggers: use on a block (the anchor goes next to the clicked face) and use in the air (the anchor goes at the player's feet).
 - After a save, the dialog shows the file name and the `/give` command. Blocks left out of the export show in a warning with their counts.
 

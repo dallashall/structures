@@ -1,12 +1,8 @@
 // fflate tells files from folders with instanceof Uint8Array, which fails across jsdom's realm
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
-import { findBadManifestVersions, toAddonFiles, toAddonNames, toAddonScript, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
+import { findBadManifestVersions, toAddonFiles, toMcaddon, toPackVersion, toSlug, SCRIPT_API_VERSION } from '../bedrockAddon';
 import type { AddonOptions } from '../bedrockAddon';
 
 const PLACEMENT = { rotation: 'None' as const, offset: { x: -1, y: 0, z: -2 } };
@@ -15,9 +11,16 @@ const OPTIONS: AddonOptions = {
   projectName: 'Castle Keep!',
   itemName: 'Castle Key',
   icon: 'trial_key',
-  animationMode: 'Layers',
-  animationSeconds: 6,
+  sequence: 'rise',
+  seconds: 6,
+  uses: 0,
+  metaFacing: 'y-',
   structure: new Uint8Array([10, 0, 0]),
+  build: {
+    palette: [{ rotations: [['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}], ['minecraft:stone', {}]], color: [0.5, 0.5, 0.5] }],
+    cells: [1, 0, 0, 0],
+    skipped: new Map(),
+  },
   placements: { north: PLACEMENT, east: PLACEMENT, south: PLACEMENT, west: PLACEMENT },
   exportedAt: 1_800_000_000_000,
   packIcon: new Uint8Array([137, 80, 78, 71]),
@@ -59,6 +62,7 @@ describe('toAddonFiles', () => {
       'castle_keep_BP/structures/structures/castle_keep.mcstructure',
       'castle_keep_RP/manifest.json',
       'castle_keep_RP/pack_icon.png',
+      'castle_keep_RP/particles/build_glow.json',
       'castle_keep_RP/textures/item_texture.json',
     ]);
   });
@@ -89,6 +93,14 @@ describe('toAddonFiles', () => {
     expect(first.header.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
+  it('gives the item durability only when uses are limited', async () => {
+    const itemPath = 'castle_keep_BP/items/castle_keep_wand.json';
+    const unlimited = readJson(await toAddonFiles(OPTIONS), itemPath)['minecraft:item'].components;
+    const limited = readJson(await toAddonFiles({ ...OPTIONS, uses: 3 }), itemPath)['minecraft:item'].components;
+    expect(unlimited['minecraft:durability']).toBeUndefined();
+    expect(limited['minecraft:durability']).toEqual({ max_durability: 3 });
+  });
+
   it('wires the item to its component and a vanilla icon path', async () => {
     const files = await toAddonFiles(OPTIONS);
     const item = readJson(files, 'castle_keep_BP/items/castle_keep_wand.json')['minecraft:item'];
@@ -99,24 +111,10 @@ describe('toAddonFiles', () => {
   });
 });
 
-describe('toAddonScript', () => {
-  it('is valid JavaScript that names the structure and component', () => {
-    const script = toAddonScript(toAddonNames(OPTIONS.projectName), OPTIONS);
-    const file = join(mkdtempSync(join(tmpdir(), 'addon-script-')), 'main.mjs');
-    writeFileSync(file, script);
-
-    const checkSyntax = (): Buffer => execFileSync(process.execPath, ['--check', file]);
-    expect(checkSyntax).not.toThrow();
-    expect(script).toContain('"structures:castle_keep"');
-    expect(script).toContain('registerCustomComponent("structures:build_castle_keep"');
-    expect(script).toContain('StructureAnimationMode.Layers');
-  });
-});
-
 describe('toMcaddon', () => {
   it('zips every pack file', async () => {
     const unzipped = unzipSync(await toMcaddon(OPTIONS));
-    expect(Object.keys(unzipped)).toHaveLength(8);
+    expect(Object.keys(unzipped)).toHaveLength(9);
     expect(unzipped['castle_keep_BP/structures/structures/castle_keep.mcstructure']).toEqual(OPTIONS.structure);
   });
 });

@@ -1,13 +1,17 @@
 import { blockRegistry } from '../core/BlockRegistry';
+import { textureResolver } from '../core/TextureResolver';
 import { editorState } from '../core/EditorState';
 import { eventLog } from '../core/EventLog';
 import { shapeCatalog } from '../core/shapes/ShapeCatalog';
 import { metadataProjection } from '../projections/MetadataProjection';
 import { modelProjection } from '../projections/ModelProjection';
 import type { BlockData } from '../types';
-import type { AnimationMode, ItemIcon } from '../utils/bedrockAddon';
+import type { ItemIcon } from '../utils/bedrockAddon';
+import type { BuildSequence } from '../utils/bedrockAddonScript';
+import type { Rgb } from '../utils/bedrockAnimation';
 import type { BedrockBlockTable } from '../utils/bedrockBlocks';
 import { toAddonNames, toMcaddon } from '../utils/bedrockAddon';
+import { toAnimatedBuild } from '../utils/bedrockAnimation';
 import { toBedrockStructure } from '../utils/bedrockExport';
 import { saveBinaryFile } from '../utils/fileAccess';
 import { toBlockVersion, toMcstructure } from '../utils/mcstructure';
@@ -19,9 +23,23 @@ const MCADDON_TYPE = { description: 'Minecraft add-on', mimeType: 'application/z
 export interface BedrockExportOptions {
   itemName: string;
   icon: ItemIcon;
-  animationMode: AnimationMode;
-  animationSeconds: number;
+  sequence: BuildSequence;
+  seconds: number;
+  // 0 means unlimited
+  uses: number;
 }
+
+// The glow particle takes 0-1 channels. Faces with no texture fall back to the catalog color.
+const FRONT_FACE = 0;
+const parseHexByte = (part: string): number => parseInt(part, 16);
+const toRgb = (blockId: string): Rgb | null => {
+  const css = textureResolver.getFaceColor(blockId, FRONT_FACE) ?? blockRegistry.getBlock(blockId)?.color ?? null;
+  if (!css) return null;
+  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(css);
+  const channels = hex ? hex.slice(1).map(parseHexByte) : css.match(/\d+(\.\d+)?/g)?.slice(0, 3).map(Number);
+  if (!channels || channels.length < 3) return null;
+  return [channels[0] / 255, channels[1] / 255, channels[2] / 255];
+};
 
 export interface SkippedBlock {
   blockId: string;
@@ -91,13 +109,9 @@ class ExportBedrockAddonCommand {
 
     const resolve = (block: BlockData): BlockData => shapeCatalog.resolveBlockState(block.position, model.blocks) ?? block;
     const toJavaId = (blockId: string): string => blockRegistry.getBlock(blockId)?.javaId ?? blockId;
-    const structure = toBedrockStructure(
-      model.dimensions,
-      model.metaBlock,
-      model.blocks.toArray().map(resolve),
-      table,
-      toJavaId,
-    );
+    const blocks = model.blocks.toArray().map(resolve);
+    const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId);
+    const build = toAnimatedBuild(model.metaBlock, blocks, table, toJavaId, toRgb);
 
     const [major, minor, patch] = table.bedrockVersion;
     const addon = await toMcaddon({
@@ -105,8 +119,11 @@ class ExportBedrockAddonCommand {
       projectName,
       itemName: options.itemName.trim() || `${projectName} Wand`,
       icon: options.icon,
-      animationMode: options.animationMode,
-      animationSeconds: options.animationSeconds,
+      sequence: options.sequence,
+      seconds: options.seconds,
+      uses: options.uses,
+      metaFacing: model.metaBlock.direction,
+      build,
       structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
       placements: structure.placements,
       exportedAt: Date.now(),

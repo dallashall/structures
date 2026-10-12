@@ -15,7 +15,8 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
-import type { AnimationMode, ItemIcon } from '../utils/bedrockAddon';
+import type { ItemIcon } from '../utils/bedrockAddon';
+import type { BuildSequence } from '../utils/bedrockAddonScript';
 
 import { withExportState } from '../hocs/withExportState';
 import type { WithExportStateProps } from '../hocs/withExportState';
@@ -30,10 +31,11 @@ import { ITEM_ICONS } from '../utils/bedrockAddon';
 
 const TITLE_ID = 'export-title';
 
-const ANIMATION_LABELS: Record<AnimationMode, string> = {
-  Layers: 'Layer by layer, bottom up',
-  Blocks: 'Block by block, random order',
-  None: 'All at once',
+const SEQUENCE_LABELS: Record<BuildSequence, string> = {
+  rise: 'Rise, layer by layer',
+  rippleOut: 'Ripple out from the anchor',
+  rippleIn: 'Ripple in toward the anchor',
+  instant: 'All at once',
 };
 
 interface ExportDialogOwnProps {
@@ -55,7 +57,7 @@ function ExportDialogComponent({
   onExport,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { itemName, icon, animationMode, animationSeconds } = exportOptions;
+  const { itemName, icon, sequence, seconds, uses } = exportOptions;
   const placeholderName = `${projectName} Wand`;
 
   const handleItemNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -64,11 +66,14 @@ function ExportDialogComponent({
   const handleIconChange = (event: SelectChangeEvent<ItemIcon>): void => {
     onExportOptionsChange({ icon: event.target.value as ItemIcon });
   };
-  const handleAnimationChange = (event: SelectChangeEvent<AnimationMode>): void => {
-    onExportOptionsChange({ animationMode: event.target.value as AnimationMode });
+  const handleSequenceChange = (event: SelectChangeEvent<BuildSequence>): void => {
+    onExportOptionsChange({ sequence: event.target.value as BuildSequence });
   };
-  const handleSecondsChange = (seconds: number): void => {
-    onExportOptionsChange({ animationSeconds: seconds });
+  const handleSecondsChange = (value: number): void => {
+    onExportOptionsChange({ seconds: value });
+  };
+  const handleUsesChange = (value: number): void => {
+    onExportOptionsChange({ uses: value });
   };
   const handleClose = (): void => {
     onExportReset();
@@ -111,21 +116,29 @@ function ExportDialogComponent({
             <Select
               labelId="export-animation-label"
               label="Build animation"
-              value={animationMode}
-              onChange={handleAnimationChange}
+              value={sequence}
+              onChange={handleSequenceChange}
               MenuProps={IN_DIALOG_MENU_PROPS}
             >
-              {Object.entries(ANIMATION_LABELS).map(renderOption)}
+              {Object.entries(SEQUENCE_LABELS).map(renderOption)}
             </Select>
           </FormControl>
 
           <NumberField
             label="Animation seconds"
-            value={animationSeconds}
+            value={seconds}
             onChange={handleSecondsChange}
             minValue={1}
             maxValue={60}
-            disabled={animationMode === 'None'}
+            disabled={sequence === 'instant'}
+          />
+
+          <NumberField
+            label="Uses before it breaks (0 for unlimited)"
+            value={uses}
+            onChange={handleUsesChange}
+            minValue={0}
+            maxValue={1000}
           />
 
           {exportResult && (

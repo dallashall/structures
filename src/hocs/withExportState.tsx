@@ -19,8 +19,9 @@ export interface WithExportStateProps {
 const DEFAULT_OPTIONS: BedrockExportOptions = {
   itemName: '',
   icon: 'blaze_rod',
-  animationMode: 'Layers',
-  animationSeconds: 5,
+  sequence: 'rise',
+  seconds: 6,
+  uses: 0,
 };
 
 const toErrorMessage = (error: unknown): string =>

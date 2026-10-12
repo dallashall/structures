@@ -138,7 +138,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ## Bedrock Export
 
-- [ ] Export in the editor toolbar opens "Export for Bedrock" with item name, icon, animation, and seconds
+- [ ] Export in the editor toolbar opens "Export for Bedrock" with item name, icon, build animation, seconds, and uses
 - [ ] The item name placeholder reads "<project> Wand". Seconds disable for "All at once".
 - [ ] Export saves `<project_slug>.mcaddon` through the save picker or a download
 - [ ] The dialog then shows the file name and the `/give @s structures:<slug>_wand` command
@@ -150,7 +150,11 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] Used in the air, the build appears with the meta block cell at the player's feet, and the player faces the arrow's way
   - [ ] Used on a block, the build anchors in the cell next to the clicked face
   - [ ] Facing each of north, east, south, and west, the build turns with the player
-  - [ ] The chosen animation plays over the chosen seconds
+  - [ ] Rise: blocks land bottom to top in shuffled order within each layer, over the chosen seconds
+  - [ ] Ripple out and ripple in: blocks land in rings from or toward the meta block
+  - [ ] A glow in each block's color appears in each cell just before its block lands
+  - [ ] Stairs, logs, and other directional blocks face the right way for all four player facings
+  - [ ] With uses set to 3, the item shows a wear bar, and the third use builds and then breaks the item
   - [ ] Existing world blocks stay where the design has empty cells
 
 ---

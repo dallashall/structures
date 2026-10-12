@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 
 /**
- * Builds a sample Bedrock add-on through the same code the editor's Export uses, then runs Mojang's
- * validator (@minecraft/creator-tools) on it. Exits 1 when the validator reports an error.
+ * Builds a sample Bedrock add-on through the same code the editor's Export uses, then checks it three ways:
+ * Mojang's validator (@minecraft/creator-tools), a manifest version range check the validator lacks, and a
+ * type check of the generated script against @minecraft/server's definitions. Exits 1 on any error.
  * Warnings and recommendations print but do not fail.
  *
  * Usage: npm run check:addon
@@ -15,6 +16,7 @@ import * as path from 'node:path';
 import type { BlockData } from '../src/types';
 import type { BedrockBlockTable } from '../src/utils/bedrockBlocks';
 import { findBadManifestVersions, toAddonFiles } from '../src/utils/bedrockAddon';
+import { toAnimatedBuild } from '../src/utils/bedrockAnimation';
 import { toBedrockStructure } from '../src/utils/bedrockExport';
 import { toBlockVersion, toMcstructure } from '../src/utils/mcstructure';
 
@@ -41,21 +43,21 @@ const SAMPLE_BLOCKS: BlockData[] = [
 async function writeSampleAddon(): Promise<void> {
   const table = JSON.parse(fs.readFileSync(path.join('public', 'data', 'bedrock-blocks.json'), 'utf-8')) as BedrockBlockTable;
   const toJavaId = (blockId: string): string => blockId;
-  const structure = toBedrockStructure(
-    { width: 4, height: 4, depth: 4 },
-    { position: { x: 2, y: 2, z: 0 }, direction: 'y-' },
-    SAMPLE_BLOCKS,
-    table,
-    toJavaId,
-  );
+  const metaBlock = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
+  const structure = toBedrockStructure({ width: 4, height: 4, depth: 4 }, metaBlock, SAMPLE_BLOCKS, table, toJavaId);
+  const toGray = (): [number, number, number] => [0.6, 0.6, 0.6];
+  const build = toAnimatedBuild(metaBlock, SAMPLE_BLOCKS, table, toJavaId, toGray);
   const [major, minor, patch] = table.bedrockVersion;
   const files = await toAddonFiles({
     projectId: 'addon-check',
     projectName: 'Addon Check',
     itemName: 'Addon Check Wand',
     icon: 'blaze_rod',
-    animationMode: 'Layers',
-    animationSeconds: 5,
+    sequence: 'rise',
+    seconds: 5,
+    uses: 10,
+    metaFacing: metaBlock.direction,
+    build,
     structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
     placements: structure.placements,
     exportedAt: Date.now(),
@@ -109,9 +111,35 @@ function checkManifestVersions(): ValidationItem[] {
   return fs.readdirSync(OUTPUT_DIR).flatMap(toManifestItems);
 }
 
+// The validator does not read scripts. tsc --checkJs catches a wrong Script API name or argument.
+function checkScriptTypes(): ValidationItem[] {
+  const toScriptItems = (folder: string): ValidationItem[] => {
+    const scriptPath = path.join(OUTPUT_DIR, folder, 'scripts', 'main.js');
+    if (!fs.existsSync(scriptPath)) return [];
+    const configPath = path.join(OUTPUT_DIR, `${folder}.tsconfig.json`);
+    fs.writeFileSync(configPath, JSON.stringify({
+      compilerOptions: {
+        allowJs: true, checkJs: true, noEmit: true, strict: false, skipLibCheck: true,
+        module: 'esnext', moduleResolution: 'bundler', target: 'es2022', lib: ['es2022'],
+      },
+      files: [path.join(folder, 'scripts', 'main.js')],
+    }));
+    try {
+      execFileSync(path.join('node_modules', '.bin', 'tsc'), ['-p', configPath], { encoding: 'utf-8' });
+      return [];
+    } catch (error) {
+      const output = (error as { stdout?: string }).stdout ?? String(error);
+      const isErrorLine = (line: string): boolean => line.includes('error TS');
+      const toItem = (line: string): ValidationItem => ({ type: 'error', generatorId: 'SCRIPTTYPES', message: line.trim() });
+      return output.split('\n').filter(isErrorLine).map(toItem);
+    }
+  };
+  return fs.readdirSync(OUTPUT_DIR).flatMap(toScriptItems);
+}
+
 async function main(): Promise<void> {
   await writeSampleAddon();
-  const items = [...checkManifestVersions(), ...runValidator()];
+  const items = [...checkManifestVersions(), ...checkScriptTypes(), ...runValidator()];
   items.filter(isReported).forEach(printItem);
 
   const failures = items.filter(isFailing);
