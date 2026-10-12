@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { InfoOutlined, Save, ViewList } from '@mui/icons-material';
 import type { LayoutMode } from '../types';
-import type { SaveState } from '../core/Storage';
+import type { SaveState } from '../core/SaveTracker';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
 import { UndoRedoButtons } from '../components/UndoRedoButtons';
 

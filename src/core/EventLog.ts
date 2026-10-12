@@ -8,6 +8,7 @@
  */
 
 import { EventEmitter } from './EventEmitter';
+import { saveTracker } from './SaveTracker';
 import { generateUUID } from '../utils/uuid';
 
 const DB_NAME = 'mc-blueprint-events';
@@ -163,36 +164,31 @@ class EventLog extends EventEmitter {
    * Append event to log
    * Returns the event ID
    */
-  async append(type: string, data: unknown, projectId?: string): Promise<number> {
+  append(type: string, data: unknown, projectId?: string): Promise<number> {
+    return saveTracker.track(this.writeEvent({ type, data, timestamp: Date.now(), projectId }));
+  }
+
+  private async writeEvent(event: Event): Promise<number> {
     await this.ensureReady();
 
-    const event: Event = {
-      type,
-      data,
-      timestamp: Date.now(),
-      projectId,
-    };
-
-    return new Promise((resolve, reject) => {
+    const writeOne = (resolve: (eventId: number) => void, reject: (error: unknown) => void): void => {
       const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.add(event);
+      const request = transaction.objectStore(STORE_NAME).add(event);
 
-      request.onsuccess = () => {
+      const handleComplete = (): void => {
         const eventId = request.result as number;
-        const savedEvent = { ...event, id: eventId };
-
-        // Emit event synchronously (projections listen to this)
-        this.emit('event:appended', savedEvent);
-
+        this.emit('event:appended', { ...event, id: eventId });
         resolve(eventId);
       };
-
-      request.onerror = () => {
-        console.error('Failed to append event:', request.error);
-        reject(request.error);
+      const handleError = (): void => {
+        console.error('Failed to append event:', transaction.error);
+        reject(transaction.error);
       };
-    });
+      transaction.oncomplete = handleComplete;
+      transaction.onerror = handleError;
+    };
+
+    return new Promise(writeOne);
   }
 
   /**
@@ -202,8 +198,8 @@ class EventLog extends EventEmitter {
    * IndexedDB serializes readwrite transactions on a store, so the action's IDs are consecutive.
    * event:appended fires for each event only after the commit. Returns the action ID.
    */
-  async appendAction(projectId: string, draft: ActionDraft): Promise<string> {
-    const write = this.writeAction(projectId, draft);
+  appendAction(projectId: string, draft: ActionDraft): Promise<string> {
+    const write = saveTracker.track(this.writeAction(projectId, draft));
     this.pendingActions.add(write);
     const forget = (): void => { this.pendingActions.delete(write); };
     write.then(forget, forget);
@@ -257,7 +253,11 @@ class EventLog extends EventEmitter {
    * Append complete event rows in one transaction, so the log never holds part of the batch.
    * Rows keep their own timestamp, projectId, and actionId. event:appended fires after the commit.
    */
-  async appendBatch(events: Event[]): Promise<void> {
+  appendBatch(events: Event[]): Promise<void> {
+    return saveTracker.track(this.writeBatch(events));
+  }
+
+  private async writeBatch(events: Event[]): Promise<void> {
     await this.ensureReady();
 
     const writeBatch = (resolve: () => void, reject: (error: unknown) => void): void => {

@@ -9,6 +9,8 @@ import { DEFAULT_RENDER_SETTINGS } from '../types';
 
 import type { RenderSettings } from '../types';
 
+import { saveTracker } from './SaveTracker';
+
 const DB_NAME = 'mc-blueprint-render-settings';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
@@ -81,19 +83,23 @@ class RenderSettingsStore {
   /**
    * Save render settings for a project
    */
-  async saveSettings(projectId: string, settings: RenderSettings): Promise<void> {
-    await this.ensureReady();
+  saveSettings(projectId: string, settings: RenderSettings): Promise<void> {
+    return saveTracker.track(this.putSettings({ projectId, settings }));
+  }
 
-    const entry: RenderSettingsEntry = { projectId, settings };
+  private async putSettings(entry: RenderSettingsEntry): Promise<void> {
+    await this.ensureReady();
 
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      tx.objectStore(STORE_NAME).put(entry);
+      const handleComplete = (): void => resolve();
+      const handleError = (): void => reject(tx.error);
+      tx.oncomplete = handleComplete;
+      tx.onerror = handleError;
     });
   }
+
 
   /**
    * Delete render settings for a project

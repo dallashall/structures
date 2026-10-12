@@ -128,6 +128,14 @@ Project browser queries. The project list is derived from the EventLog on every 
 
 **Emits:** `project:deleted`.
 
+### SaveTracker
+
+**File:** `src/core/SaveTracker.ts`
+
+Counts project writes still in flight. EventLog, QuickSelectStore, and RenderSettingsStore pass each write promise to `track()`. A write counts when its transaction commits. `getSaveState()` returns `saving` while any write is in flight, `error` after a failed write until a later write commits, and `saved` otherwise.
+
+**Emits:** `save:started`, `save:completed`, `save:failed`.
+
 ### Other IndexedDB stores
 
 These hold derived or per-project preference data outside the EventLog.
@@ -217,7 +225,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 | `withHistoryToast` | `toasts`, `onExited` | The three `toast:*` notifications |
 | `withMaterialBrowserState` | Open state, search query, tab, results, grid width | `materialbrowser:*`, `blocks:registered` |
 | `withFrameStats` | `stats` | `framestats:sampled` |
-| `withStorageState` | `saveState` | A window `save:state-changed` event |
+| `withSaveState` | `saveState` | `save:started`, `save:completed`, `save:failed` |
 | `withNewProjectFormState` | `newProjectForm`, `onNewProjectFormChange`, `onNewProjectFormReset` | Nothing. It holds local form state. |
 | `withDisclosureState` | `isOpen`, `anchorEl`, `onOpen`, `onClose` | Nothing. It holds local popover state. |
 
@@ -225,7 +233,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 
 - `App` (`src/App.tsx`) is wrapped in `withAtlasStatus(withScreenState(...))`. It picks the screen and renders the app-level dialogs.
 - `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
-- `EditorView` (`src/views/EditorView.tsx`) is wrapped in `withStorageState`, `withBlockRegistry`, `withEditorState`, and `withProjectState`. It renders the `Toolbar`, the `ToolOptionsBar`, the layout view, the material browser, the meta block modal, and history toasts.
+- `EditorView` (`src/views/EditorView.tsx`) is wrapped in `withSaveState`, `withBlockRegistry`, `withEditorState`, and `withProjectState`. It renders the `Toolbar`, the `ToolOptionsBar`, the layout view, the material browser, the meta block modal, and history toasts.
 - `TabbedEditorView` and `QuadEditorView` pair the tool panel and palettes with `TabbedLayout` (one view at a time) or `QuadLayout` (four views at once).
 - `Canvas2DView` (`src/panels/Canvas2DView.tsx`) is a canvas whose ref callback comes from `canvas2DMounter`.
 - `Preview3DView` (`src/panels/Preview3DView.tsx`) hosts the Babylon3D canvas, camera buttons, the frame stats overlay, and the render settings modal.
@@ -238,7 +246,7 @@ App  (withAtlasStatus, withScreenState)
 ├── WelcomeView  (withProjectListState)
 │   ├── TexturesMissingAlert
 │   └── ProjectCard ...
-├── EditorView  (withStorageState, withBlockRegistry, withEditorState, withProjectState)
+├── EditorView  (withSaveState, withBlockRegistry, withEditorState, withProjectState)
 │   ├── Toolbar
 │   │   ├── UndoRedoButtons  (withEditHistory)
 │   │   └── SaveStatusIndicator

@@ -149,7 +149,7 @@ This document records the interaction decisions for Structures and how the app c
 
 **Persistence:**
 - Every edit writes to IndexedDB as it happens. No save dialog appears.
-- The toolbar shows "Unsaved changes", "Saving...", or "Saved".
+- The toolbar shows "Saving..." while a write is in flight, "Saved" once every write has committed, and "Not saved" after a write fails.
 
 **Project files:**
 - Save in the toolbar writes a `.mcblueprint` JSON file. Chromium browsers show a save picker. Other browsers download the file.

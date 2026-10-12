@@ -5,6 +5,8 @@
  * Plus entries for foreground/background indices and active mode
  */
 
+import { saveTracker } from './SaveTracker';
+
 const DB_NAME = 'mc-blueprint-quickselect';
 const DB_VERSION = 1;
 const STORE_NAME = 'presets';
@@ -68,72 +70,53 @@ class QuickSelectStore {
     await this.initPromise;
   }
 
-  /**
-   * Set block for a specific slot (0-8)
-   */
-  async setSlot(projectId: string, slotIndex: number, blockId: string): Promise<void> {
+  private async putEntry(entry: QuickSelectEntry): Promise<void> {
     await this.ensureReady();
-    const id = `${projectId}:slot:${slotIndex}`;
-    const entry: QuickSelectEntry = { id, projectId, value: blockId };
 
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      tx.objectStore(STORE_NAME).put(entry);
+      const handleComplete = (): void => resolve();
+      const handleError = (): void => reject(tx.error);
+      tx.oncomplete = handleComplete;
+      tx.onerror = handleError;
     });
+  }
+
+  /**
+   * Set block for a specific slot (0-8)
+   */
+  setSlot(projectId: string, slotIndex: number, blockId: string): Promise<void> {
+    const id = `${projectId}:slot:${slotIndex}`;
+    const entry: QuickSelectEntry = { id, projectId, value: blockId };
+    return saveTracker.track(this.putEntry(entry));
   }
 
   /**
    * Set foreground index (0-8)
    */
-  async setForeground(projectId: string, index: number): Promise<void> {
-    await this.ensureReady();
+  setForeground(projectId: string, index: number): Promise<void> {
     const id = `${projectId}:foreground`;
     const entry: QuickSelectEntry = { id, projectId, value: String(index) };
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    return saveTracker.track(this.putEntry(entry));
   }
 
   /**
    * Set background index (0-8)
    */
-  async setBackground(projectId: string, index: number): Promise<void> {
-    await this.ensureReady();
+  setBackground(projectId: string, index: number): Promise<void> {
     const id = `${projectId}:background`;
     const entry: QuickSelectEntry = { id, projectId, value: String(index) };
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    return saveTracker.track(this.putEntry(entry));
   }
 
   /**
    * Set active mode
    */
-  async setMode(projectId: string, mode: 'foreground' | 'background'): Promise<void> {
-    await this.ensureReady();
+  setMode(projectId: string, mode: 'foreground' | 'background'): Promise<void> {
     const id = `${projectId}:mode`;
     const entry: QuickSelectEntry = { id, projectId, value: mode };
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.put(entry);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    return saveTracker.track(this.putEntry(entry));
   }
 
   /**

@@ -18,8 +18,6 @@ import { thumbnailStore } from './ThumbnailStore';
 import { replayModel } from '../reducers/modelReducer';
 import type { StorageMetadata } from '../types';
 
-export type SaveState = 'idle' | 'saving' | 'saved' | 'pending' | 'error';
-
 const DB_NAME = 'mc-blueprint-preferences';
 const DB_VERSION = 1;
 const STORE_NAME = 'preferences';
@@ -161,14 +159,6 @@ class Storage extends EventEmitter {
     ]);
 
     this.emit('project:deleted');
-  }
-
-  /**
-   * Get save state (for UI feedback)
-   * TODO: Implement actual save state tracking
-   */
-  getSaveState(): SaveState {
-    return 'saved';
   }
 
   async getLastOpenedProjectId(): Promise<string | null> {

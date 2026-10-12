@@ -1,61 +1,41 @@
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { CheckCircle, Schedule } from '@mui/icons-material';
-import type { SaveState } from '../core/Storage';
+import { CheckCircle, ErrorOutline } from '@mui/icons-material';
+import type { SaveState } from '../core/SaveTracker';
 
 interface SaveStatusIndicatorProps {
   saveState: SaveState;
 }
 
-/**
- * SaveStatusIndicator - Displays current autosave status
- *
- * Shows one of three states:
- * - Saved: Green checkmark with "Saved" text
- * - Pending: Clock icon with "Unsaved changes" text
- * - Saving: Spinner with "Saving..." text
- *
- * Uses MUI components for consistent theming.
- */
-export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
-  const getStatusConfig = (): { icon: React.ReactNode; text: string; color: string } => {
-    switch (saveState) {
-      case 'saved':
-        return {
-          icon: <CheckCircle sx={{ fontSize: 18 }} />,
-          text: 'Saved',
-          color: 'success.main',
-        };
-      case 'pending':
-        return {
-          icon: <Schedule sx={{ fontSize: 18 }} />,
-          text: 'Unsaved changes',
-          color: 'warning.main',
-        };
-      case 'saving':
-        return {
-          icon: <CircularProgress size={18} thickness={5} />,
-          text: 'Saving...',
-          color: 'info.main',
-        };
-      case 'error':
-        return {
-          icon: <Schedule sx={{ fontSize: 18 }} />,
-          text: 'Error',
-          color: 'error.main',
-        };
-      default:
-        return {
-          icon: <Schedule sx={{ fontSize: 18 }} />,
-          text: 'Idle',
-          color: 'text.secondary',
-        };
-    }
-  };
+interface StatusConfig {
+  icon: React.ReactNode;
+  text: string;
+  color: string;
+}
 
-  const config = getStatusConfig();
+const STATUS_CONFIG: Record<SaveState, StatusConfig> = {
+  saved: {
+    icon: <CheckCircle sx={{ fontSize: 18 }} />,
+    text: 'Saved',
+    color: 'success.main',
+  },
+  saving: {
+    icon: <CircularProgress size={18} thickness={5} />,
+    text: 'Saving...',
+    color: 'info.main',
+  },
+  error: {
+    icon: <ErrorOutline sx={{ fontSize: 18 }} />,
+    text: 'Not saved',
+    color: 'error.main',
+  },
+};
+
+export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
+  const config = STATUS_CONFIG[saveState];
 
   return (
     <Box
+      role="status"
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -64,7 +44,8 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
         py: 0.5,
         borderRadius: 1,
         bgcolor: 'action.hover',
-        minWidth: 110, // Fixed min width prevents size changes between states
+        // Holds one width across states so the toolbar does not shift
+        minWidth: 110,
       }}
     >
       <Box
@@ -73,8 +54,8 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
           alignItems: 'center',
           justifyContent: 'center',
           color: config.color,
-          width: 18, // Fixed icon width
-          height: 18, // Fixed icon height - prevents vertical size changes
+          width: 18,
+          height: 18,
         }}
       >
         {config.icon}
@@ -85,7 +66,7 @@ export function SaveStatusIndicator({ saveState }: SaveStatusIndicatorProps) {
           fontWeight: 500,
           color: 'text.secondary',
           lineHeight: 1,
-          whiteSpace: 'nowrap', // Prevent text wrapping
+          whiteSpace: 'nowrap',
         }}
       >
         {config.text}

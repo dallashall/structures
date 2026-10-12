@@ -80,6 +80,8 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 - [ ] **Save indicator**
   - [ ] The toolbar shows the save status next to the project name
+  - [ ] It reads "Saved" after an edit, a quick-select change, or a render settings change
+  - [ ] It reads "Not saved" when browser storage refuses a write (for example, storage full), and "Saved" again after the next successful edit
 
 ---
 

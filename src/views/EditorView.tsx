@@ -13,9 +13,9 @@ import {
   WithBlockRegistryProps,
 } from "../hocs/withBlockRegistry";
 import {
-  withStorageState,
-  WithStorageStateProps,
-} from "../hocs/withStorageState";
+  withSaveState,
+  WithSaveStateProps,
+} from "../hocs/withSaveState";
 
 import { Toolbar } from "../layouts/Toolbar";
 import { ToolOptionsBar } from "../components/ToolOptionsBar";
@@ -45,7 +45,7 @@ interface EditorViewProps
     WithProjectStateProps,
     WithEditorStateProps,
     WithBlockRegistryProps,
-    WithStorageStateProps {
+    WithSaveStateProps {
   onBackToWelcome?: () => void;
 }
 
@@ -274,6 +274,6 @@ function EditorViewComponent(props: EditorViewProps) {
 
 // Export with HOCs - all props are injected by HOCs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const EditorView = withStorageState(
+export const EditorView = withSaveState(
   withBlockRegistry(withEditorState(withProjectState(EditorViewComponent))),
 ) as any;

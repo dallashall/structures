@@ -145,7 +145,7 @@ Directions use axis names such as `x+` and `y-`.
 
 ## Data Persistence
 
-- Every edit appends to the IndexedDB event log as it happens. The toolbar shows "Unsaved changes", "Saving...", or "Saved".
+- Every edit appends to the IndexedDB event log as it happens. The toolbar shows "Saving..." while a write is in flight, "Saved" once every write has committed, and "Not saved" after a write fails.
 - The project list is replayed from the log. A project exists while the log holds its `metadata:created` event.
 - Thumbnails, quick-select slots, render settings, and preferences live in separate IndexedDB databases.
 - The app writes nothing to localStorage.

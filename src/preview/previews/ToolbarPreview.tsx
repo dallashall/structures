@@ -67,7 +67,7 @@ export function ToolbarPreview() {
             </Box>
           </Box>
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>Pending - Unsaved changes (autosave will trigger in 3 seconds)</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Error - A write to browser storage failed</Typography>
             <Box
               sx={{
                 border: 1,
@@ -79,7 +79,7 @@ export function ToolbarPreview() {
               <Toolbar
                 projectName="Project With Changes"
                 layoutMode="tabbed"
-                saveState="pending"
+                saveState="error"
                 onBackToProjects={mockCallbacks.onBackToProjects}
                 onLayoutModeChange={mockCallbacks.onLayoutModeChange}
                 onToggle3D={mockCallbacks.onToggle3D}
@@ -178,7 +178,7 @@ export function ToolbarPreview() {
           <Toolbar
             projectName="My Very Long Project Name For A Complex Minecraft Structure"
             layoutMode="tabbed"
-            saveState="pending"
+            saveState="error"
             onBackToProjects={mockCallbacks.onBackToProjects}
             onLayoutModeChange={mockCallbacks.onLayoutModeChange}
           />
@@ -282,7 +282,7 @@ export function ToolbarPreview() {
             {`interface ToolbarProps {
   projectName: string | null;       // Current project name (null if no project)
   layoutMode: LayoutMode;           // Current layout mode ('tabbed' | 'quad')
-  saveState: SaveState;             // Save status ('saved' | 'pending' | 'saving')
+  saveState: SaveState;             // Save status ('saving' | 'saved' | 'error')
   onBackToProjects: () => void;     // Navigate back to project list
   onLayoutModeChange: (mode: LayoutMode) => void; // View mode selector callback
 }
