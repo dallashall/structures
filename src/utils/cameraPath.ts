@@ -73,6 +73,8 @@ const ORBIT_MIN_LIFT = 2;
 const RISE_START_LIFT = 2;
 const RISE_CLIMB = 0.3;
 const RISE_AIM_CLIMB = 0.4;
+// The orbit aims this share of the build's height above its base point, so the view tilts up slightly
+const ORBIT_AIM_RAISE = 0.08;
 // How far the look-around view tilts up at its highest, in radians
 const LOOK_UP = 0.45;
 
@@ -81,8 +83,8 @@ const LOOK_UP = 0.45;
 // SHAKE_LOCATION blocks.
 const SHAKE_HZ = 1.5;
 const SHAKE_LAG = 0.3;
-const SHAKE_DEGREES = 1.2;
-const SHAKE_LOCATION = 0.12;
+const SHAKE_DEGREES = 1;
+const SHAKE_LOCATION = 0.08;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
@@ -122,6 +124,10 @@ const toShakeTarget = (seconds: number, seed: number): Vec3 => {
   const key = Math.floor(seconds * SHAKE_HZ);
   return { x: toNoise(key, seed) * 2 - 1, y: toNoise(key, seed + 1) * 2 - 1, z: toNoise(key, seed + 2) * 2 - 1 };
 };
+
+// Scale that keeps a shake offset within length 1, so the spring's overshoot and the three axes together
+// never push the shake past SHAKE_DEGREES or SHAKE_LOCATION
+const toCap = ({ x, y, z }: Vec3): number => 1 / Math.max(1, Math.hypot(x, y, z));
 
 /**
  * Seconds a mode's move lasts, for a build whose last block lands after buildSeconds
@@ -164,7 +170,7 @@ function toCameraTarget(mode: CameraMode, scene: CameraScene, seconds: number): 
   const angle = Math.atan2(-forward.z, -forward.x) - 2 * Math.PI * clamp01(seconds / (returnsAt + RETURN_SECONDS));
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = build * build;
-  const aimY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
+  const aimY = (rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y) + (top - bottom) * ORBIT_AIM_RAISE;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
     : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
@@ -207,8 +213,8 @@ export function toCameraKeys(mode: CameraMode, scene: CameraScene): CameraPose[]
       facing.value.y - location.value.y,
       facing.value.z - location.value.z,
     );
-    const turn = reach * Math.tan((SHAKE_DEGREES * Math.PI) / 180) * away;
-    const shift = SHAKE_LOCATION * away;
+    const turn = reach * Math.tan((SHAKE_DEGREES * Math.PI) / 180) * away * toCap(aim.value);
+    const shift = SHAKE_LOCATION * away * toCap(drift.value);
     keys.push({
       location: {
         x: location.value.x + drift.value.x * shift,
