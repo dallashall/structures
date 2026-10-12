@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -8,6 +7,10 @@ import {
   Typography,
   Box,
 } from '@mui/material';
+
+import { ModalDialog } from './ModalDialog';
+
+const TITLE_ID = 'meta-block-title';
 
 interface MetaBlockPlacementModalProps {
   isOpen: boolean;
@@ -25,7 +28,7 @@ interface MetaBlockPlacementModalProps {
  * - Placeholder for image/illustration (future enhancement)
  * - "Got it" button to close and enter placement mode
  *
- * Uses MUI Dialog for consistent theming and accessibility.
+ * A native modal dialog, so focus starts on "Got it" and stays inside until it closes.
  */
 export function MetaBlockPlacementModal({
   isOpen,
@@ -36,8 +39,8 @@ export function MetaBlockPlacementModal({
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleGotIt}>
-      <DialogTitle>Place the Meta Block</DialogTitle>
+    <ModalDialog open={isOpen} onClose={handleGotIt} labelledBy={TITLE_ID}>
+      <DialogTitle id={TITLE_ID}>Place the Meta Block</DialogTitle>
       <Divider />
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -86,10 +89,10 @@ export function MetaBlockPlacementModal({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button variant="contained" onClick={handleGotIt} autoFocus>
+        <Button variant="contained" onClick={handleGotIt} data-autofocus>
           Got it
         </Button>
       </DialogActions>
-    </Dialog>
+    </ModalDialog>
   );
 }

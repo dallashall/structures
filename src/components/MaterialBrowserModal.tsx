@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   TextField,
@@ -22,6 +21,7 @@ import { withMaterialBrowserState } from '../hocs/withMaterialBrowserState';
 import type { WithMaterialBrowserStateProps } from '../hocs/withMaterialBrowserState';
 
 import { MaterialGrid } from './MaterialGrid';
+import { ModalDialog } from './ModalDialog';
 import { MaterialDragOverlay } from './MaterialDragOverlay';
 import { QuickSelectDropBar } from './QuickSelectDropBar';
 
@@ -30,6 +30,7 @@ import type { MaterialCategory } from '../utils/materialCategories';
 
 // A press must travel this far before it becomes a drag, so a plain click still picks
 const DRAG_ACTIVATION_PX = 4;
+const TITLE_ID = 'material-browser-title';
 
 interface MaterialBrowserModalProps {
   // Every block, hidden ones included, so slots show whatever they hold
@@ -78,14 +79,15 @@ function MaterialBrowserModalComponent({
   };
 
   return (
-    <Dialog
+    <ModalDialog
       open={isOpen}
       onClose={onClose}
+      labelledBy={TITLE_ID}
       maxWidth="md"
       fullWidth
-      slotProps={{ paper: { sx: { height: '80vh', maxHeight: 640 } } }}
+      sx={{ height: '80vh', maxHeight: 640 }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
+      <DialogTitle id={TITLE_ID} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, pr: 2 }}>
         Material Browser ({SHORTCUTS.materialBrowser})
         <IconButton onClick={onClose} size="small" aria-label="Close">
           <Close />
@@ -98,12 +100,12 @@ function MaterialBrowserModalComponent({
           <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
             <TextField
               fullWidth
-              autoFocus
               size="small"
               placeholder="Search materials..."
               value={searchQuery}
               onChange={handleSearchChange}
               slotProps={{
+                htmlInput: { 'data-autofocus': true },
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
@@ -129,7 +131,7 @@ function MaterialBrowserModalComponent({
         <QuickSelectDropBar slots={quickSelectSlots} blocks={blocks} />
         <MaterialDragOverlay blocks={blocks} />
       </DndContext>
-    </Dialog>
+    </ModalDialog>
   );
 }
 

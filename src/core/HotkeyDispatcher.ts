@@ -3,6 +3,7 @@ import { modelProjection } from '../projections/ModelProjection';
 import { toolRegistry } from './tools/ToolRegistry';
 import { SHORTCUTS, hasPrimaryModifier, matchesShortcut } from './Shortcuts';
 import { editHistory } from './EditHistory';
+import { isModalOpen, isTypingTarget } from '../utils/keyboardFocus';
 import { blockRegistry } from './BlockRegistry';
 import type { PaintMode } from '../types';
 
@@ -24,6 +25,7 @@ import type { PaintMode } from '../types';
  * - Ctrl/Cmd+Z: Undo. Ctrl/Cmd+Shift+Z: Redo.
  *
  * Any other key held with Ctrl or Cmd passes through to the browser.
+ * While a modal dialog is open, only E (to close the material browser) acts.
  */
 class HotkeyDispatcher {
   private static instance: HotkeyDispatcher;
@@ -64,13 +66,14 @@ class HotkeyDispatcher {
    * Handle keyboard events
    */
   private handleKeyDown = (event: KeyboardEvent): void => {
-    // Ignore if user is typing in an input field
-    const target = event.target as HTMLElement;
-    if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.isContentEditable
-    ) {
+    if (isTypingTarget(event.target)) return;
+
+    // A modal dialog owns the keyboard. E still closes the material browser, as it opened it.
+    if (isModalOpen()) {
+      if (editorState.getMaterialBrowserOpen() && matchesShortcut(event, SHORTCUTS.materialBrowser)) {
+        event.preventDefault();
+        editorState.toggleMaterialBrowser();
+      }
       return;
     }
 

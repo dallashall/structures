@@ -3,6 +3,7 @@ import type { ViewState } from "../canvas2d/ViewState";
 import type { GuideGeometry } from "../painting/strategies/GuideGeometry";
 import { throttled } from "../../utils/throttle";
 import { wheelZoomFactor } from "../../utils/wheelZoom";
+import { isModalOpen } from "../../utils/keyboardFocus";
 
 /**
  * Modifier key state
@@ -262,6 +263,8 @@ export abstract class ToolBase {
 
   private _onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
+    // Space and Alt call preventDefault below, which would stop typing and button presses in a dialog
+    if (isModalOpen()) return;
 
     if (e.code === "Escape") {
       e.preventDefault();

@@ -6,7 +6,6 @@
  */
 
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -22,10 +21,13 @@ import type { SelectChangeEvent } from '@mui/material';
 
 import type { RenderSettings, LightingPreset, BackgroundMode } from '../types';
 
+import { ModalDialog, IN_DIALOG_MENU_PROPS } from './ModalDialog';
 import { SettingRow } from './SettingRow';
 import { SettingsSection } from './SettingsSection';
 import { SliderSetting } from './SliderSetting';
 import { SwitchSetting } from './SwitchSetting';
+
+const TITLE_ID = 'render-settings-title';
 
 interface RenderSettingsModalProps {
   isOpen: boolean;
@@ -64,20 +66,10 @@ export function RenderSettingsModal({
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      slotProps={{
-        paper: {
-          sx: { maxHeight: '80vh' },
-        },
-      }}
-    >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
+    <ModalDialog open={isOpen} onClose={onClose} labelledBy={TITLE_ID} maxWidth="sm" fullWidth sx={{ maxHeight: '80vh' }}>
+        <DialogTitle id={TITLE_ID} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
           <Typography variant="h6" component="div">Render Settings</Typography>
-          <IconButton onClick={onClose} size="small">
+          <IconButton onClick={onClose} size="small" aria-label="Close">
             <Close />
           </IconButton>
         </DialogTitle>
@@ -89,6 +81,7 @@ export function RenderSettingsModal({
           <SwitchSetting label="FXAA" checked={settings.fxaaEnabled} onChange={createToggleHandler('fxaaEnabled')} />
           <SettingRow label="MSAA Samples">
             <Select
+              MenuProps={IN_DIALOG_MENU_PROPS}
               value={settings.msaaSamples}
               onChange={handleSelect('msaaSamples')}
               size="small"
@@ -105,6 +98,7 @@ export function RenderSettingsModal({
         <SettingsSection title="Lighting & Environment">
           <SettingRow label="Lighting Preset">
             <Select
+              MenuProps={IN_DIALOG_MENU_PROPS}
               value={settings.lightingPreset}
               onChange={handlePresetChange}
               size="small"
@@ -117,6 +111,7 @@ export function RenderSettingsModal({
           </SettingRow>
           <SettingRow label="Background">
             <Select
+              MenuProps={IN_DIALOG_MENU_PROPS}
               value={settings.backgroundMode}
               onChange={handleBackgroundChange}
               size="small"
@@ -137,6 +132,7 @@ export function RenderSettingsModal({
           <SwitchSetting label="Enable Shadows" checked={settings.shadowsEnabled} onChange={createToggleHandler('shadowsEnabled')} />
           <SettingRow label="Shadow Quality">
             <Select
+              MenuProps={IN_DIALOG_MENU_PROPS}
               value={settings.shadowMapSize}
               onChange={handleSelect('shadowMapSize')}
               size="small"
@@ -157,6 +153,7 @@ export function RenderSettingsModal({
           <SliderSetting label="Intensity" value={settings.ssaoIntensity} onChange={handleSlider('ssaoIntensity')} min={0.5} max={2} step={0.1} disabled={!settings.ssaoEnabled} />
           <SettingRow label="Samples">
             <Select
+              MenuProps={IN_DIALOG_MENU_PROPS}
               value={settings.ssaoSamples}
               onChange={handleSelect('ssaoSamples')}
               size="small"
@@ -206,6 +203,6 @@ export function RenderSettingsModal({
           Close
         </Button>
       </DialogActions>
-    </Dialog>
+    </ModalDialog>
   );
 }

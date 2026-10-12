@@ -10,6 +10,7 @@ import { SHORTCUTS } from '../Shortcuts';
 import { classifyWheel, wheelZoomFactor } from '../../utils/wheelZoom';
 
 import type { CameraRig } from './CameraRig';
+import { isModalOpen, isTypingTarget } from '../../utils/keyboardFocus';
 
 // A trackpad gesture keeps this classification for this long after its last event.
 // Fast flings report notch-sized deltas, which classifyWheel alone would read as a mouse.
@@ -121,7 +122,7 @@ export class CameraGestures {
   };
 
   private handleKeyDown = (e: KeyboardEvent): void => {
-    if (!this.isPointerOver || isTypingTarget(e.target)) return;
+    if (!this.isPointerOver || isTypingTarget(e.target) || isModalOpen()) return;
 
     if (e.code === 'Space') {
       // Prevents page scroll and activation of a focused button
@@ -156,7 +157,3 @@ export class CameraGestures {
   }
 }
 
-const isTypingTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-};

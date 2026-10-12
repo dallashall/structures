@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -15,6 +14,7 @@ import {
 } from "@mui/material";
 import { Form } from "./Form";
 import { NumberField } from "./NumberField";
+import { ModalDialog, IN_DIALOG_MENU_PROPS } from "./ModalDialog";
 import type { Dimensions } from "../types";
 
 import { withNewProjectFormState } from "../hocs/withNewProjectFormState";
@@ -22,6 +22,8 @@ import type { WithNewProjectFormStateProps } from "../hocs/withNewProjectFormSta
 
 import { isNewProjectFormValid, resolveDimensions } from "../utils/projectPresets";
 import type { ProjectPreset } from "../utils/projectPresets";
+
+const TITLE_ID = "new-project-title";
 
 interface NewProjectDialogOwnProps {
   isOpen: boolean;
@@ -82,8 +84,8 @@ function NewProjectDialogComponent({
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleCancel}>
-      <DialogTitle>New Project</DialogTitle>
+    <ModalDialog open={isOpen} onClose={handleCancel} labelledBy={TITLE_ID} maxWidth="xs" fullWidth>
+      <DialogTitle id={TITLE_ID}>New Project</DialogTitle>
       <Divider />
       <DialogContent>
         <Form>
@@ -92,8 +94,8 @@ function NewProjectDialogComponent({
             value={name}
             onChange={handleNameChange}
             required
-            autoFocus
             fullWidth
+            slotProps={{ htmlInput: { "data-autofocus": true } }}
           />
 
           <FormControl fullWidth>
@@ -103,6 +105,7 @@ function NewProjectDialogComponent({
               value={preset}
               onChange={handlePresetChange}
               label="Dimensions"
+              MenuProps={IN_DIALOG_MENU_PROPS}
             >
               <MenuItem value="small">Small (16 × 16 × 16)</MenuItem>
               <MenuItem value="medium">Medium (32 × 32 × 32)</MenuItem>
@@ -154,7 +157,7 @@ function NewProjectDialogComponent({
           Create
         </Button>
       </DialogActions>
-    </Dialog>
+    </ModalDialog>
   );
 }
 
