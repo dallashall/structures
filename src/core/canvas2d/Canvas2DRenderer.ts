@@ -5,8 +5,8 @@ import type { ViewState } from "./ViewState";
 import type { PreviewData } from "../tools/ToolBase";
 import type { GridBlock } from "./GridBlock";
 import { GuideGeometryRenderer } from "./GuideGeometryRenderer";
-import { drawGrid } from "./drawGrid";
-import { drawPersistentBlocks } from "./drawBlocks";
+import { drawGrid, drawGridOverlay } from "./drawGrid";
+import { drawPersistentBlocks, SOLID_COLOR_BELOW_PX } from "./drawBlocks";
 import { drawCoordinateAxes, drawLayerIndicators, drawMetaBlock } from "./drawOverlays";
 import { drawSharedPreview, drawToolPreview } from "./drawPreview";
 
@@ -78,6 +78,10 @@ export class Canvas2DRenderer {
     drawGrid(this.ctx, gridWidth, gridHeight, cellSize, pan, this.colors);
 
     drawPersistentBlocks(this.ctx, persistentBlocks, cellSize, pan, viewType);
+
+    if (cellSize < SOLID_COLOR_BELOW_PX) {
+      drawGridOverlay(this.ctx, gridWidth, gridHeight, cellSize, pan);
+    }
 
     // The meta block is one cell, so it converts its own position instead of arriving pre-resolved
     drawMetaBlock(

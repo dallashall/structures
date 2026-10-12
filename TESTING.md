@@ -208,7 +208,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
   - [ ] A stroke in one view shows its preview in the other 2D views and in 3D while the drag is in progress
   - [ ] Release makes the blocks solid in every view
 
-- [ ] On a 64 × 64 project in the quad layout, filled areas read as solid colors with no seams, and grass tops stay green
+- [ ] On a 64 × 64 project in the quad layout, filled areas read as solid colors with a faint line at every cell edge, and grass tops stay green
 - [ ] Zooming in past 12px per cell brings the textures back
 ---
 
