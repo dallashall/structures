@@ -186,7 +186,7 @@ This document records the interaction decisions for Structures and how the app c
 
 ## 10. Bedrock Export
 
-**Decision:** Export is one dialog with item name, icon, build animation, seconds, and uses. Defaults: "<project> Wand", Blaze Rod, rise, 6 seconds, unlimited uses.
+**Decision:** Export is one dialog with add-on name, item name, icon, build animation, seconds, and uses. Defaults: the project name, "<add-on name> Wand", Blaze Rod, rise, 6 seconds, unlimited uses. The add-on name names the pack, the file, and the item ID, and the dialog shows the `/give` command as it changes. Exporting again under the same name updates that add-on, and a new name installs a separate one.
 
 **Details:**
 - The icon list holds vanilla item textures only, so the add-on ships no game texture.

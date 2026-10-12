@@ -138,7 +138,10 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ## Bedrock Export
 
-- [ ] Export in the editor toolbar opens "Export for Bedrock" with item name, icon, build animation, seconds, and uses
+- [ ] Export in the editor toolbar opens "Export for Bedrock" with add-on name, item name, icon, build animation, seconds, and uses
+- [ ] The add-on name defaults to the project name, and the helper text shows the matching `/give` command as it changes
+- [ ] Two exports with different add-on names install side by side in game, each with its own item
+- [ ] Using the item on a block builds once, anchored next to the clicked face, never a second copy at the player's feet
 - [ ] The item name placeholder reads "<project> Wand". Seconds disable for "All at once".
 - [ ] Export saves `<project_slug>.mcaddon` through the save picker or a download
 - [ ] The dialog then shows the file name and the `/give @s structures:<slug>_wand` command
