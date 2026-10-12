@@ -1,11 +1,17 @@
 /**
- * Camera paths for the build animation, shared by the add-on script and the editor's preview
+ * Camera moves for the build animation, shared by the add-on script and the editor's preview
  *
  * Both run in Y-up axes where north is -Z: Bedrock world space, and Babylon space through toBabylonVector.
- * A pose is a camera location and a point it looks at. Every path starts and ends at the player's eyes looking
- * forward, so the camera hands the view back without a jump.
+ * A pose is a camera location and a point it looks at.
  *
- * The add-on script embeds a copy of toCameraPose, and a test checks that copy against this one.
+ * A move is a list of key poses, CAMERA_KEYS_PER_SECOND apart. The game eases linearly from key to key, and the
+ * preview does the same, so both show the same motion. Each mode only says where the camera is pointed. A heavy
+ * camera follows that target on a critically damped spring stepped once per key, which is what makes it slow to
+ * start and slow to stop. The handheld shake is random targets on a lighter spring.
+ *
+ * Every move starts at the player's eyes and its last key is exactly the player's eyes, looking forward.
+ *
+ * The add-on script embeds a copy of this file's functions, and a test checks that copy against this one.
  */
 
 export type CameraMode = 'none' | 'orbit' | 'lookAround';
@@ -26,10 +32,8 @@ export interface CameraScene {
   top: number;
   // True when the build rises layer by layer, so the orbit can follow the rising layer
   rising: boolean;
-  // Share of the camera path (0–1) at which the last block lands. toCameraTicks sets the path length.
-  landedAt: number;
-  // Length of the camera path in seconds
-  seconds: number;
+  // Seconds until the last block lands
+  buildSeconds: number;
   eye: Vec3;
   // Horizontal unit vector the player faces
   forward: Vec3;
@@ -40,13 +44,22 @@ export interface CameraPose {
   facing: Vec3;
 }
 
+// The game eases linearly between keys. The spring is stepped once per key.
+export const CAMERA_KEYS_PER_SECOND = 10;
+const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
+
+// Seconds the camera takes to catch up with its target. Larger is heavier.
+const CAMERA_LAG = 0.6;
+// Seconds after the target comes to rest at the eyes, for the spring to settle there
+const SETTLE_SECONDS = 2;
+
 // Distance from the eye to the point the camera looks at in first person
 const LOOK_DISTANCE = 8;
-// Share of the build spent easing out of first person
-const BLEND_IN = 0.12;
-// Ticks the orbit holds on the finished build, then ticks it spends coming back into the player's eyes
-const ORBIT_HOLD_TICKS = 30;
-const ORBIT_RETURN_TICKS = 45;
+// The orbit's target leaves the eyes over PULL_OUT_SECONDS and circles the build while it lands. It keeps
+// circling for HOLD_SECONDS, then closes in on the eyes over RETURN_SECONDS as the circle finishes.
+const PULL_OUT_SECONDS = 1;
+const HOLD_SECONDS = 1.5;
+const RETURN_SECONDS = 2;
 const ORBIT_RADIUS_SCALE = 2.2;
 const ORBIT_MIN_RADIUS = 12;
 // Camera height above the point it looks at, as a share of the orbit radius, with a floor in blocks
@@ -60,28 +73,39 @@ const RISE_CLIMB = 0.3;
 const RISE_AIM_CLIMB = 0.4;
 // How far the look-around view tilts up at its highest, in radians
 const LOOK_UP = 0.45;
-// Camera key frames per second. The game eases linearly between them.
-export const CAMERA_KEYS_PER_SECOND = 10;
+
+// Handheld shake in the manner of After Effects' wiggle(freq, amp): a fresh random target SHAKE_HZ times a
+// second, which a light spring chases. The aim turns by up to SHAKE_DEGREES. The camera drifts by up to
+// SHAKE_LOCATION blocks.
+const SHAKE_HZ = 1.5;
+const SHAKE_LAG = 0.3;
+const SHAKE_DEGREES = 3;
+const SHAKE_LOCATION = 0.3;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
-const smoothstep = (edge0: number, edge1: number, t: number): number => {
-  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
-  return x * x * (3 - 2 * x);
-};
-// Like smoothstep, but acceleration is also zero at both ends, so a heavy camera eases into motion and out of it
-const smootherstep = (edge0: number, edge1: number, t: number): number => {
-  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
-  return x * x * x * (x * (6 * x - 15) + 10);
-};
+const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 
-// Handheld shake in the manner of After Effects' wiggle(freq, amp): a fresh random target WOBBLE_HZ times a
-// second, eased toward, plus a second octave at WOBBLE_OCTAVE_HZ times the rate and half the size.
-// The aim turns by up to WOBBLE_DEGREES. The camera itself drifts by up to WOBBLE_LOCATION blocks.
-const WOBBLE_HZ = 1;
-const WOBBLE_OCTAVE_HZ = 2.3;
-const WOBBLE_DEGREES = 3;
-const WOBBLE_LOCATION = 0.3;
+interface Spring {
+  value: Vec3;
+  velocity: Vec3;
+}
+
+/**
+ * Moves a spring one key toward target, critically damped, so it never overshoots.
+ * Closed-form step from Game Programming Gems 4, section 1.10, which stays stable at any key spacing.
+ */
+function stepSpring(spring: Spring, target: Vec3, lag: number): void {
+  const omega = 2 / lag;
+  const x = omega * KEY_SECONDS;
+  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const change = spring.value[axis] - target[axis];
+    const push = (spring.velocity[axis] + omega * change) * KEY_SECONDS;
+    spring.value[axis] = target[axis] + (change + push) * decay;
+    spring.velocity[axis] = (spring.velocity[axis] - omega * push) * decay;
+  }
+}
 
 // A repeatable 0–1 draw for an integer key, so the game and the preview shake the same way
 const toNoise = (key: number, seed: number): number => {
@@ -89,104 +113,113 @@ const toNoise = (key: number, seed: number): number => {
   return x - Math.floor(x);
 };
 
-const toWiggleLayer = (seconds: number, hz: number, seed: number): number => {
-  const position = seconds * hz;
-  const key = Math.floor(position);
-  return lerp(toNoise(key, seed) * 2 - 1, toNoise(key + 1, seed) * 2 - 1, smoothstep(0, 1, position - key));
-};
-
-// -1 to 1, with the octave offset in time so the two layers never settle on a key together
-const toWiggle = (seconds: number, seed: number): number =>
-  (toWiggleLayer(seconds, WOBBLE_HZ, seed) + 0.5 * toWiggleLayer(seconds + 0.37, WOBBLE_HZ * WOBBLE_OCTAVE_HZ, seed + 7)) / 1.5;
-
-// Adds the shake scaled by fade, which is 0 in first person so the path still starts and ends exactly there
-const withWobble = (pose: CameraPose, seconds: number, fade: number): CameraPose => {
-  const { location, facing } = pose;
-  const reach = Math.hypot(facing.x - location.x, facing.y - location.y, facing.z - location.z);
-  const aim = reach * Math.tan((WOBBLE_DEGREES * Math.PI) / 180) * fade;
-  const drift = WOBBLE_LOCATION * fade;
-  return {
-    location: {
-      x: location.x + drift * toWiggle(seconds, 1),
-      y: location.y + drift * toWiggle(seconds, 2),
-      z: location.z + drift * toWiggle(seconds, 3),
-    },
-    facing: {
-      x: facing.x + aim * toWiggle(seconds, 4),
-      y: facing.y + aim * toWiggle(seconds, 5),
-      z: facing.z + aim * toWiggle(seconds, 6),
-    },
-  };
+const toShakeTarget = (seconds: number, seed: number): Vec3 => {
+  const key = Math.floor(seconds * SHAKE_HZ);
+  return { x: toNoise(key, seed) * 2 - 1, y: toNoise(key, seed + 1) * 2 - 1, z: toNoise(key, seed + 2) * 2 - 1 };
 };
 
 /**
- * Length of the camera path in ticks, for a build whose last block lands after buildTicks
+ * Seconds a mode's move lasts, for a build whose last block lands after buildSeconds
  */
-export function toCameraTicks(mode: CameraMode, buildTicks: number): number {
-  return mode === 'orbit' ? buildTicks + ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS : buildTicks;
+export function toCameraSeconds(mode: CameraMode, buildSeconds: number): number {
+  if (mode === 'orbit') return buildSeconds + HOLD_SECONDS + RETURN_SECONDS + SETTLE_SECONDS;
+  if (mode === 'lookAround') return buildSeconds + SETTLE_SECONDS;
+  return 0;
 }
 
 /**
- * The camera at progress t (0–1) along the mode's path
+ * Where the mode points the camera at a time, and how far it is from first person (0–1), which scales the shake
  */
-export function toCameraPose(mode: CameraMode, scene: CameraScene, t: number): CameraPose {
-  const { center, radius, bottom, top, rising, landedAt, seconds, eye, forward } = scene;
-  const time = t * seconds;
+function toCameraTarget(mode: CameraMode, scene: CameraScene, seconds: number): { pose: CameraPose; away: number } {
+  const { center, radius, bottom, top, rising, buildSeconds, eye, forward } = scene;
   const firstPerson: CameraPose = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
   };
-  if (mode === 'none') return firstPerson;
+  const build = clamp01(seconds / buildSeconds);
 
   if (mode === 'lookAround') {
-    // One full turn, starting and ending on the player's own facing, tilting up while the build rises
-    const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
-    const turn = 2 * Math.PI * eased;
-    const tilt = Math.sin(Math.PI * t) * LOOK_UP;
+    // One full turn from the player's own facing, tilting up while the build rises
+    const turn = 2 * Math.PI * build;
+    const tilt = Math.sin(Math.PI * build) * LOOK_UP;
     const cos = Math.cos(turn);
     const sin = Math.sin(turn);
     const horizontal = Math.cos(tilt) * LOOK_DISTANCE;
-    const look: CameraPose = {
-      location: eye,
-      facing: {
-        x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
-        y: eye.y + Math.sin(tilt) * LOOK_DISTANCE,
-        z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
-      },
+    const facing = {
+      x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
+      y: eye.y + Math.sin(tilt) * LOOK_DISTANCE,
+      z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
     };
-    return withWobble(look, time, Math.sin(Math.PI * t));
+    return { pose: { location: eye, facing }, away: Math.sin(Math.PI * build) };
   }
 
-  // One full revolution over the whole path that eases in and out, so the camera keeps circling through the
-  // hold and is still moving when it turns back into the player's eyes.
-  // The circle starts and ends straight behind the player, aimed along their facing, so the return is a dolly in.
-  // A rising build pulls the camera down to its base first, then it climbs and tilts up with the layers.
-  const build = Math.min(1, t / landedAt);
-  const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
-  const settle = returnsAt < 1 ? smootherstep(returnsAt, 1, t) : 0;
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
-  const startAngle = Math.atan2(-forward.z, -forward.x);
-  const angle = startAngle + 2 * Math.PI * (1 - sweep);
+  // One revolution that starts and ends straight behind the player, aimed along their facing, so the way back
+  // is a dolly in. A rising build pulls the camera down to its base, then it climbs and tilts up with the layers.
+  const returnsAt = buildSeconds + HOLD_SECONDS;
+  const angle = Math.atan2(-forward.z, -forward.x) - 2 * Math.PI * clamp01(seconds / (returnsAt + RETURN_SECONDS));
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = build * build;
-  const focusY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
+  const aimY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
     : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
   const orbit: CameraPose = {
-    location: {
-      x: center.x + Math.cos(angle) * orbitRadius,
-      y: cameraY,
-      z: center.z + Math.sin(angle) * orbitRadius,
-    },
-    facing: { x: center.x, y: focusY, z: center.z },
+    location: { x: center.x + Math.cos(angle) * orbitRadius, y: cameraY, z: center.z + Math.sin(angle) * orbitRadius },
+    facing: { x: center.x, y: aimY, z: center.z },
   };
-  const blend = Math.max(1 - smootherstep(0, BLEND_IN, build), settle);
-  const pose: CameraPose = {
-    location: lerpVec(orbit.location, firstPerson.location, blend),
-    facing: lerpVec(orbit.facing, firstPerson.facing, blend),
+  const away = Math.min(clamp01(seconds / PULL_OUT_SECONDS), 1 - clamp01((seconds - returnsAt) / RETURN_SECONDS));
+  return {
+    pose: { location: lerpVec(firstPerson.location, orbit.location, away), facing: lerpVec(firstPerson.facing, orbit.facing, away) },
+    away,
   };
-  return withWobble(pose, time, 1 - blend);
+}
+
+/**
+ * The key poses of a mode's move, one every 1 / CAMERA_KEYS_PER_SECOND seconds. Empty for 'none'.
+ */
+export function toCameraKeys(mode: CameraMode, scene: CameraScene): CameraPose[] {
+  if (mode === 'none') return [];
+  const keyCount = Math.ceil(toCameraSeconds(mode, scene.buildSeconds) * CAMERA_KEYS_PER_SECOND) + 1;
+  const start = toCameraTarget(mode, scene, 0).pose;
+  const still = (): Vec3 => ({ x: 0, y: 0, z: 0 });
+  const location: Spring = { value: { ...start.location }, velocity: still() };
+  const facing: Spring = { value: { ...start.facing }, velocity: still() };
+  const drift: Spring = { value: still(), velocity: still() };
+  const aim: Spring = { value: still(), velocity: still() };
+
+  const keys: CameraPose[] = [];
+  for (let key = 0; key < keyCount; key++) {
+    const seconds = key * KEY_SECONDS;
+    const { pose, away } = toCameraTarget(mode, scene, seconds);
+    if (key > 0) {
+      stepSpring(location, pose.location, CAMERA_LAG);
+      stepSpring(facing, pose.facing, CAMERA_LAG);
+      stepSpring(drift, toShakeTarget(seconds, 1), SHAKE_LAG);
+      stepSpring(aim, toShakeTarget(seconds, 4), SHAKE_LAG);
+    }
+    const reach = Math.hypot(
+      facing.value.x - location.value.x,
+      facing.value.y - location.value.y,
+      facing.value.z - location.value.z,
+    );
+    const turn = reach * Math.tan((SHAKE_DEGREES * Math.PI) / 180) * away;
+    const shift = SHAKE_LOCATION * away;
+    keys.push({
+      location: {
+        x: location.value.x + drift.value.x * shift,
+        y: location.value.y + drift.value.y * shift,
+        z: location.value.z + drift.value.z * shift,
+      },
+      facing: {
+        x: facing.value.x + aim.value.x * turn,
+        y: facing.value.y + aim.value.y * turn,
+        z: facing.value.z + aim.value.z * turn,
+      },
+    });
+  }
+  // The spring has settled to within a hair of the eyes. The last key lands on them exactly.
+  keys[keys.length - 1] = toCameraTarget(mode, scene, toCameraSeconds(mode, scene.buildSeconds)).pose;
+  return keys;
 }
 
 /**

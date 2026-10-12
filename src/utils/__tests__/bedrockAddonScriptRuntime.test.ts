@@ -142,7 +142,7 @@ describe('the add-on script at runtime', () => {
     const server = await loadScript({ ...OPTIONS, camera: 'orbit' });
     const player = new server.Player();
     server.state.component.onUse({ source: player });
-    for (let tick = 0; tick < 120; tick++) server.advanceTick();
+    for (let tick = 0; tick < 600; tick++) server.advanceTick();
 
     const calls = server.state.cameraCalls;
     expect(calls.length).toBeGreaterThan(3);

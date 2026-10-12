@@ -16,8 +16,8 @@ import type { InstancedMesh, Mesh, Observer, Scene } from '@babylonjs/core';
 
 import type { MetaBlock } from '../../types';
 import type { AnimatedSequence } from '../../utils/buildSequence';
-import type { CameraMode, CameraScene } from '../../utils/cameraPath';
-import { toCameraBounds, toCameraPose, toCameraTicks } from '../../utils/cameraPath';
+import type { CameraMode, CameraPose } from '../../utils/cameraPath';
+import { CAMERA_KEYS_PER_SECOND, toCameraBounds, toCameraKeys } from '../../utils/cameraPath';
 import { directionToOffset } from '../DirectionMath';
 import {
   LEAD_TICKS,
@@ -85,8 +85,7 @@ export class BuildPreview {
   private landCursor = 0;
   private onDone: (() => void) | null = null;
   private camera: PreviewCamera | null = null;
-  private cameraScene: CameraScene | null = null;
-  private cameraTicks = 1;
+  private cameraKeys: CameraPose[] = [];
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -172,7 +171,7 @@ export class BuildPreview {
     this.glowMesh.thinInstanceCount = 0;
     this.camera?.driver.endDrive();
     this.camera = null;
-    this.cameraScene = null;
+    this.cameraKeys = [];
 
     const onDone = this.onDone;
     this.onDone = null;
@@ -202,7 +201,7 @@ export class BuildPreview {
     this.drawGlows(now);
     this.flyCamera(tick);
 
-    const isCameraDone = !this.camera || tick >= this.cameraTicks;
+    const isCameraDone = !this.camera || tick >= this.toKeyTick(this.cameraKeys.length - 1);
     if (this.landCursor >= count && this.glows.length === 0 && isCameraDone) this.stop();
   };
 
@@ -219,25 +218,37 @@ export class BuildPreview {
     });
     const { x, y, z } = metaBlock.position;
     const forward = directionToOffset(metaBlock.direction);
-    const buildTicks = this.durationTicks + LEAD_TICKS;
-    this.cameraTicks = toCameraTicks(camera.mode, buildTicks);
-    this.cameraScene = {
+    this.cameraKeys = toCameraKeys(camera.mode, {
       ...toCameraBounds(this.cells.map(toCorner)),
       rising: this.sequence === 'rise',
-      landedAt: buildTicks / this.cameraTicks,
-      seconds: this.cameraTicks / TICKS_PER_SECOND,
+      buildSeconds: (this.durationTicks + LEAD_TICKS) / TICKS_PER_SECOND,
       eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
       forward: { x: forward.x, y: 0, z: forward.y },
-    };
+    });
     this.camera = camera;
     camera.driver.beginDrive();
   }
 
+  private toKeyTick(index: number): number {
+    return (index * TICKS_PER_SECOND) / CAMERA_KEYS_PER_SECOND;
+  }
+
+  /**
+   * Eases linearly from key to key, the way the game's camera does
+   */
   private flyCamera(tick: number): void {
-    if (!this.camera || !this.cameraScene) return;
-    const t = Math.min(1, tick / this.cameraTicks);
-    const { location, facing } = toCameraPose(this.camera.mode, this.cameraScene, t);
-    this.camera.driver.drive(new Vector3(location.x, location.y, location.z), new Vector3(facing.x, facing.y, facing.z));
+    const keys = this.cameraKeys;
+    if (!this.camera || keys.length === 0) return;
+    const position = Math.min(keys.length - 1, (tick * CAMERA_KEYS_PER_SECOND) / TICKS_PER_SECOND);
+    const index = Math.min(keys.length - 2, Math.floor(position));
+    const from = keys[Math.max(0, index)];
+    const to = keys[Math.max(0, index + 1)] ?? from;
+    const share = position - Math.max(0, index);
+    const mix = (a: number, b: number): number => a + (b - a) * share;
+    this.camera.driver.drive(
+      new Vector3(mix(from.location.x, to.location.x), mix(from.location.y, to.location.y), mix(from.location.z, to.location.z)),
+      new Vector3(mix(from.facing.x, to.facing.x), mix(from.facing.y, to.facing.y), mix(from.facing.z, to.facing.z)),
+    );
   }
 
   private addGlow(cell: PreviewCell, now: number): void {

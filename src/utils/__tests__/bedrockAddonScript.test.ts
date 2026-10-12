@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { AddonScriptOptions, BuildSequence } from '../bedrockAddonScript';
 import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from '../bedrockAddonScript';
 import { JITTER, toSequenceKey } from '../buildSequence';
-import { toCameraBounds, toCameraPose, toCameraTicks } from '../cameraPath';
+import { CAMERA_KEYS_PER_SECOND, toCameraBounds, toCameraKeys, toCameraSeconds } from '../cameraPath';
 import type { CameraMode, CameraScene } from '../cameraPath';
 import type { AnimatedSequence } from '../buildSequence';
 
@@ -75,21 +75,22 @@ describe('the script copy of the camera path', () => {
     const start = script.indexOf('// CAMERA PATH START');
     const end = script.indexOf('// CAMERA PATH END');
     expect(start).toBeGreaterThan(-1);
-    const load = new Function(`${script.slice(start, end)}\nreturn { toCameraPose, toCameraBounds, toCameraTicks };`);
-    const copy = load() as { toCameraPose: typeof toCameraPose; toCameraBounds: typeof toCameraBounds; toCameraTicks: typeof toCameraTicks };
+    // The copy reads CAMERA_KEYS_PER_SECOND from the script's header, above the copied block
+    const load = new Function(
+      `const CAMERA_KEYS_PER_SECOND = ${CAMERA_KEYS_PER_SECOND};\n${script.slice(start, end)}\nreturn { toCameraKeys, toCameraBounds, toCameraSeconds };`,
+    );
+    const copy = load() as { toCameraKeys: typeof toCameraKeys; toCameraBounds: typeof toCameraBounds; toCameraSeconds: typeof toCameraSeconds };
 
     const cells = [{ x: 0, y: 0, z: -8 }, { x: 5, y: 6, z: -2 }];
     expect(copy.toCameraBounds(cells)).toEqual(toCameraBounds(cells));
     const modes: CameraMode[] = ['none', 'orbit', 'lookAround'];
     for (const mode of modes) {
-      expect(copy.toCameraTicks(mode, 136)).toBe(toCameraTicks(mode, 136));
+      expect(copy.toCameraSeconds(mode, 6.8)).toBe(toCameraSeconds(mode, 6.8));
     }
     for (const rising of [false, true]) {
-      const scene: CameraScene = { ...toCameraBounds(cells), rising, landedAt: 0.82, seconds: 9.8, eye: { x: 1.5, y: 65.6, z: 2.5 }, forward: { x: 0.6, y: 0, z: -0.8 } };
+      const scene: CameraScene = { ...toCameraBounds(cells), rising, buildSeconds: 6.8, eye: { x: 1.5, y: 65.6, z: 2.5 }, forward: { x: 0.6, y: 0, z: -0.8 } };
       for (const mode of modes) {
-        for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) {
-          expect(copy.toCameraPose(mode, scene, t)).toEqual(toCameraPose(mode, scene, t));
-        }
+        expect(copy.toCameraKeys(mode, scene)).toEqual(toCameraKeys(mode, scene));
       }
     }
   });

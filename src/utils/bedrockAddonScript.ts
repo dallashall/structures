@@ -125,11 +125,14 @@ function setBlock(dimension, location, permutation) {
   }
 }
 
-// CAMERA PATH START: a copy of toCameraPose and toCameraBounds in src/utils/cameraPath.ts
+// CAMERA PATH START: a copy of the functions in src/utils/cameraPath.ts
+const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
+const CAMERA_LAG = 0.6;
+const SETTLE_SECONDS = 2;
 const LOOK_DISTANCE = 8;
-const BLEND_IN = 0.12;
-const ORBIT_HOLD_TICKS = 30;
-const ORBIT_RETURN_TICKS = 45;
+const PULL_OUT_SECONDS = 1;
+const HOLD_SECONDS = 1.5;
+const RETURN_SECONDS = 2;
 const ORBIT_RADIUS_SCALE = 2.2;
 const ORBIT_MIN_RADIUS = 12;
 const ORBIT_LIFT_SCALE = 0.35;
@@ -138,6 +141,10 @@ const RISE_START_LIFT = 2;
 const RISE_CLIMB = 0.3;
 const RISE_AIM_CLIMB = 0.4;
 const LOOK_UP = 0.45;
+const SHAKE_HZ = 1.5;
+const SHAKE_LAG = 0.3;
+const SHAKE_DEGREES = 3;
+const SHAKE_LOCATION = 0.3;
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
@@ -147,112 +154,123 @@ function lerpVec(a, b, t) {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) };
 }
 
-function smoothstep(edge0, edge1, t) {
-  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
-  return x * x * (3 - 2 * x);
+function clamp01(x) {
+  return Math.min(1, Math.max(0, x));
 }
 
-const WOBBLE_HZ = 1;
-const WOBBLE_OCTAVE_HZ = 2.3;
-const WOBBLE_DEGREES = 3;
-const WOBBLE_LOCATION = 0.3;
+function stepSpring(spring, target, lag) {
+  const omega = 2 / lag;
+  const x = omega * KEY_SECONDS;
+  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  for (const axis of ["x", "y", "z"]) {
+    const change = spring.value[axis] - target[axis];
+    const push = (spring.velocity[axis] + omega * change) * KEY_SECONDS;
+    spring.value[axis] = target[axis] + (change + push) * decay;
+    spring.velocity[axis] = (spring.velocity[axis] - omega * push) * decay;
+  }
+}
 
 function toNoise(key, seed) {
   const x = Math.sin(key * 127.1 + seed * 311.7) * 43758.5453;
   return x - Math.floor(x);
 }
 
-function toWiggleLayer(seconds, hz, seed) {
-  const position = seconds * hz;
-  const key = Math.floor(position);
-  return lerp(toNoise(key, seed) * 2 - 1, toNoise(key + 1, seed) * 2 - 1, smoothstep(0, 1, position - key));
+function toShakeTarget(seconds, seed) {
+  const key = Math.floor(seconds * SHAKE_HZ);
+  return { x: toNoise(key, seed) * 2 - 1, y: toNoise(key, seed + 1) * 2 - 1, z: toNoise(key, seed + 2) * 2 - 1 };
 }
 
-function toWiggle(seconds, seed) {
-  return (toWiggleLayer(seconds, WOBBLE_HZ, seed) + 0.5 * toWiggleLayer(seconds + 0.37, WOBBLE_HZ * WOBBLE_OCTAVE_HZ, seed + 7)) / 1.5;
+function toCameraSeconds(mode, buildSeconds) {
+  if (mode === "orbit") return buildSeconds + HOLD_SECONDS + RETURN_SECONDS + SETTLE_SECONDS;
+  if (mode === "lookAround") return buildSeconds + SETTLE_SECONDS;
+  return 0;
 }
 
-function withWobble(pose, seconds, fade) {
-  const { location, facing } = pose;
-  const reach = Math.hypot(facing.x - location.x, facing.y - location.y, facing.z - location.z);
-  const aim = reach * Math.tan((WOBBLE_DEGREES * Math.PI) / 180) * fade;
-  const drift = WOBBLE_LOCATION * fade;
-  return {
-    location: {
-      x: location.x + drift * toWiggle(seconds, 1),
-      y: location.y + drift * toWiggle(seconds, 2),
-      z: location.z + drift * toWiggle(seconds, 3),
-    },
-    facing: {
-      x: facing.x + aim * toWiggle(seconds, 4),
-      y: facing.y + aim * toWiggle(seconds, 5),
-      z: facing.z + aim * toWiggle(seconds, 6),
-    },
-  };
-}
-
-function smootherstep(edge0, edge1, t) {
-  const x = Math.min(1, Math.max(0, (t - edge0) / (edge1 - edge0)));
-  return x * x * x * (x * (6 * x - 15) + 10);
-}
-
-function toCameraTicks(mode, buildTicks) {
-  return mode === "orbit" ? buildTicks + ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS : buildTicks;
-}
-
-function toCameraPose(mode, scene, t) {
-  const { center, radius, bottom, top, rising, landedAt, seconds, eye, forward } = scene;
-  const time = t * seconds;
+function toCameraTarget(mode, scene, seconds) {
+  const { center, radius, bottom, top, rising, buildSeconds, eye, forward } = scene;
   const firstPerson = {
     location: eye,
     facing: { x: eye.x + forward.x * LOOK_DISTANCE, y: eye.y, z: eye.z + forward.z * LOOK_DISTANCE },
   };
-  if (mode === "none") return firstPerson;
+  const build = clamp01(seconds / buildSeconds);
 
   if (mode === "lookAround") {
-    const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
-    const turn = 2 * Math.PI * eased;
-    const tilt = Math.sin(Math.PI * t) * LOOK_UP;
+    const turn = 2 * Math.PI * build;
+    const tilt = Math.sin(Math.PI * build) * LOOK_UP;
     const cos = Math.cos(turn);
     const sin = Math.sin(turn);
     const horizontal = Math.cos(tilt) * LOOK_DISTANCE;
-    const look = {
-      location: eye,
-      facing: {
-        x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
-        y: eye.y + Math.sin(tilt) * LOOK_DISTANCE,
-        z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
-      },
+    const facing = {
+      x: eye.x + (forward.x * cos - forward.z * sin) * horizontal,
+      y: eye.y + Math.sin(tilt) * LOOK_DISTANCE,
+      z: eye.z + (forward.z * cos + forward.x * sin) * horizontal,
     };
-    return withWobble(look, time, Math.sin(Math.PI * t));
+    return { pose: { location: eye, facing }, away: Math.sin(Math.PI * build) };
   }
 
-  const build = Math.min(1, t / landedAt);
-  const returnsAt = landedAt + ((1 - landedAt) * ORBIT_HOLD_TICKS) / (ORBIT_HOLD_TICKS + ORBIT_RETURN_TICKS);
-  const settle = returnsAt < 1 ? smootherstep(returnsAt, 1, t) : 0;
-  const sweep = 0.5 - 0.5 * Math.cos(Math.PI * t);
-  const startAngle = Math.atan2(-forward.z, -forward.x);
-  const angle = startAngle + 2 * Math.PI * (1 - sweep);
+  const returnsAt = buildSeconds + HOLD_SECONDS;
+  const angle = Math.atan2(-forward.z, -forward.x) - 2 * Math.PI * clamp01(seconds / (returnsAt + RETURN_SECONDS));
   const orbitRadius = Math.max(radius * ORBIT_RADIUS_SCALE, ORBIT_MIN_RADIUS);
   const rise = build * build;
-  const focusY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
+  const aimY = rising ? lerp(bottom, top, rise * RISE_AIM_CLIMB) : center.y;
   const cameraY = rising
     ? bottom + RISE_START_LIFT + (top - bottom) * RISE_CLIMB * rise
     : center.y + Math.max(orbitRadius * ORBIT_LIFT_SCALE, ORBIT_MIN_LIFT);
   const orbit = {
-    location: {
-      x: center.x + Math.cos(angle) * orbitRadius,
-      y: cameraY,
-      z: center.z + Math.sin(angle) * orbitRadius,
-    },
-    facing: { x: center.x, y: focusY, z: center.z },
+    location: { x: center.x + Math.cos(angle) * orbitRadius, y: cameraY, z: center.z + Math.sin(angle) * orbitRadius },
+    facing: { x: center.x, y: aimY, z: center.z },
   };
-  const blend = Math.max(1 - smootherstep(0, BLEND_IN, build), settle);
-  const pose = {
-    location: lerpVec(orbit.location, firstPerson.location, blend),
-    facing: lerpVec(orbit.facing, firstPerson.facing, blend),
+  const away = Math.min(clamp01(seconds / PULL_OUT_SECONDS), 1 - clamp01((seconds - returnsAt) / RETURN_SECONDS));
+  return {
+    pose: { location: lerpVec(firstPerson.location, orbit.location, away), facing: lerpVec(firstPerson.facing, orbit.facing, away) },
+    away,
   };
-  return withWobble(pose, time, 1 - blend);
+}
+
+function toCameraKeys(mode, scene) {
+  if (mode === "none") return [];
+  const keyCount = Math.ceil(toCameraSeconds(mode, scene.buildSeconds) * CAMERA_KEYS_PER_SECOND) + 1;
+  const start = toCameraTarget(mode, scene, 0).pose;
+  function still() {
+    return { x: 0, y: 0, z: 0 };
+  }
+  const location = { value: { ...start.location }, velocity: still() };
+  const facing = { value: { ...start.facing }, velocity: still() };
+  const drift = { value: still(), velocity: still() };
+  const aim = { value: still(), velocity: still() };
+
+  const keys = [];
+  for (let key = 0; key < keyCount; key++) {
+    const seconds = key * KEY_SECONDS;
+    const { pose, away } = toCameraTarget(mode, scene, seconds);
+    if (key > 0) {
+      stepSpring(location, pose.location, CAMERA_LAG);
+      stepSpring(facing, pose.facing, CAMERA_LAG);
+      stepSpring(drift, toShakeTarget(seconds, 1), SHAKE_LAG);
+      stepSpring(aim, toShakeTarget(seconds, 4), SHAKE_LAG);
+    }
+    const reach = Math.hypot(
+      facing.value.x - location.value.x,
+      facing.value.y - location.value.y,
+      facing.value.z - location.value.z,
+    );
+    const turn = reach * Math.tan((SHAKE_DEGREES * Math.PI) / 180) * away;
+    const shift = SHAKE_LOCATION * away;
+    keys.push({
+      location: {
+        x: location.value.x + drift.value.x * shift,
+        y: location.value.y + drift.value.y * shift,
+        z: location.value.z + drift.value.z * shift,
+      },
+      facing: {
+        x: facing.value.x + aim.value.x * turn,
+        y: facing.value.y + aim.value.y * turn,
+        z: facing.value.z + aim.value.z * turn,
+      },
+    });
+  }
+  keys[keys.length - 1] = toCameraTarget(mode, scene, toCameraSeconds(mode, scene.buildSeconds)).pose;
+  return keys;
 }
 
 function toCameraBounds(cells) {
@@ -280,31 +298,28 @@ function toCameraBounds(cells) {
 }
 // CAMERA PATH END
 
-// Flies the camera along the mode's path while the build lands, then hands the view back to the player.
-// Movement and look input stay off for the shot, so the path ends exactly where the player stands.
+// Flies the camera through the mode's keys while the build lands, then hands the view back to the player.
+// Movement and look input stay off for the shot, so the last key is exactly where the player stands.
 /** @param {Player} player @param {Vector3[]} cells @param {number} buildTicks */
 function runCamera(player, cells, buildTicks) {
-  if (CAMERA_MODE === "none") return;
-  const totalTicks = toCameraTicks(CAMERA_MODE, buildTicks);
   const view = player.getViewDirection();
   const length = Math.hypot(view.x, view.z) || 1;
-  const scene = {
+  const poses = toCameraKeys(CAMERA_MODE, {
     ...toCameraBounds(cells),
     rising: SEQUENCE === "rise",
-    landedAt: buildTicks / totalTicks,
-    seconds: totalTicks / 20,
+    buildSeconds: buildTicks / 20,
     eye: player.getHeadLocation(),
     forward: { x: view.x / length, y: 0, z: view.z / length },
-  };
+  });
+  if (poses.length === 0) return;
   const keyTicks = Math.max(1, Math.round(20 / CAMERA_KEYS_PER_SECOND));
-  const keyCount = Math.max(1, Math.ceil(totalTicks / keyTicks));
   const permissions = player.inputPermissions;
   permissions.setPermissionCategory(InputPermissionCategory.Camera, false);
   permissions.setPermissionCategory(InputPermissionCategory.Movement, false);
 
-  /** @param {number} t @param {number} easeSeconds */
-  function setPose(t, easeSeconds) {
-    const pose = toCameraPose(CAMERA_MODE, scene, t);
+  /** @param {number} index @param {number} easeSeconds */
+  function setPose(index, easeSeconds) {
+    const pose = poses[index];
     const options = { location: pose.location, facingLocation: pose.facing };
     if (easeSeconds > 0) options.easeOptions = { easeTime: easeSeconds, easeType: EasingType.Linear };
     player.camera.setCamera("minecraft:free", options);
@@ -317,15 +332,15 @@ function runCamera(player, cells, buildTicks) {
     permissions.setPermissionCategory(InputPermissionCategory.Movement, true);
   }
 
-  let key = 0;
+  let index = 0;
   function nextKey() {
     if (!player.isValid) {
       system.clearRun(keys);
       return;
     }
-    key++;
-    setPose(key / keyCount, keyTicks / 20);
-    if (key >= keyCount) {
+    index++;
+    setPose(index, keyTicks / 20);
+    if (index >= poses.length - 1) {
       system.clearRun(keys);
       system.runTimeout(release, keyTicks);
     }

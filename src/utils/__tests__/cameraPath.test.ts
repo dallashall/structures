@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CameraMode, CameraPose, CameraScene, Vec3 } from '../cameraPath';
-import { toCameraBounds, toCameraPose, toCameraTicks } from '../cameraPath';
+import { CAMERA_KEYS_PER_SECOND, toCameraBounds, toCameraKeys, toCameraSeconds } from '../cameraPath';
 
 const SCENE: CameraScene = {
   center: { x: 0, y: 4, z: -10 },
@@ -8,117 +8,114 @@ const SCENE: CameraScene = {
   bottom: 0,
   top: 8,
   rising: false,
-  landedAt: 0.8,
-  seconds: 10,
+  buildSeconds: 6.8,
   eye: { x: 0, y: 1.62, z: 0 },
   forward: { x: 0, y: 0, z: -1 },
 };
-
 const RISING: CameraScene = { ...SCENE, rising: true };
+// The player stands to one side of the build, still facing north
+const SIDE_ON: CameraScene = { ...SCENE, eye: { x: 10, y: 1.62, z: -6 } };
+const FIRST_PERSON: CameraPose = { location: SCENE.eye, facing: { x: 0, y: 1.62, z: -8 } };
 
-const angleAround = (scene: CameraScene, t: number): number => {
-  const { location } = toCameraPose('orbit', scene, t);
-  return Math.atan2(location.z - scene.center.z, location.x - scene.center.x);
+const distance = (a: Vec3, b: Vec3): number => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const toDirection = ({ location, facing }: CameraPose): Vec3 => {
+  const length = distance(location, facing);
+  return { x: (facing.x - location.x) / length, y: (facing.y - location.y) / length, z: (facing.z - location.z) / length };
 };
-
-// Largest gap between two shaken poses: twice the path's WOBBLE_DEGREES and WOBBLE_LOCATION on each axis.
-// On the look-around's 8-block reach the camera's drift turns the aim by up to about 3.7 degrees more.
-const WOBBLE_BOUND_DEGREES = 2 * (3 + 3.8);
-const WOBBLE_BOUND = 2 * 0.3 * Math.sqrt(3);
-const toAimTurn = (pose: CameraPose, other: CameraPose): number => {
-  const a = { x: pose.facing.x - pose.location.x, y: pose.facing.y - pose.location.y, z: pose.facing.z - pose.location.z };
-  const b = { x: other.facing.x - other.location.x, y: other.facing.y - other.location.y, z: other.facing.z - other.location.z };
-  const cos = (a.x * b.x + a.y * b.y + a.z * b.z) / (Math.hypot(a.x, a.y, a.z) * Math.hypot(b.x, b.y, b.z));
-  return (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
+const toTurnDegrees = (a: CameraPose, b: CameraPose): number => {
+  const u = toDirection(a);
+  const v = toDirection(b);
+  return (Math.acos(Math.min(1, u.x * v.x + u.y * v.y + u.z * v.z)) * 180) / Math.PI;
 };
-const distance3 = (a: Vec3, b: Vec3): number => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+// Blocks per second, or degrees per second, from each key to the next
+const toSpeeds = (keys: CameraPose[]): number[] => {
+  const toSpeed = (key: CameraPose, i: number): number => distance(keys[i].location, key.location) * CAMERA_KEYS_PER_SECOND;
+  return keys.slice(1).map(toSpeed);
+};
+const toTurnRates = (keys: CameraPose[]): number[] => {
+  const toTurnRate = (key: CameraPose, i: number): number => toTurnDegrees(keys[i], key) * CAMERA_KEYS_PER_SECOND;
+  return keys.slice(1).map(toTurnRate);
+};
+const keyAt = (seconds: number): number => Math.round(seconds * CAMERA_KEYS_PER_SECOND);
+// The orbit's target is back at the eyes 1.5 s of circling plus a 2 s return after the last block lands
+const RETURN_ENDS = SCENE.buildSeconds + 3.5;
 
-const distance = (a: { x: number; z: number }, b: { x: number; z: number }): number => Math.hypot(a.x - b.x, a.z - b.z);
+describe('toCameraKeys', () => {
+  it('has no keys when the player keeps control', () => {
+    expect(toCameraKeys('none', SCENE)).toEqual([]);
+  });
 
-describe('toCameraPose', () => {
-  const firstPerson = toCameraPose('none', SCENE, 0.5);
-
-  it.each(['orbit', 'lookAround'] as CameraMode[])('%s starts and ends in the player\'s first-person view', (mode) => {
-    for (const t of [0, 1]) {
-      const pose = toCameraPose(mode, SCENE, t);
-      expect(pose.location.x).toBeCloseTo(firstPerson.location.x, 6);
-      expect(pose.location.y).toBeCloseTo(firstPerson.location.y, 6);
-      expect(pose.location.z).toBeCloseTo(firstPerson.location.z, 6);
-      expect(pose.facing.x).toBeCloseTo(firstPerson.facing.x, 6);
-      expect(pose.facing.z).toBeCloseTo(firstPerson.facing.z, 6);
+  it.each(['orbit', 'lookAround'] as CameraMode[])('%s starts and ends exactly in the player\'s first-person view', (mode) => {
+    const keys = toCameraKeys(mode, SCENE);
+    expect(keys).toHaveLength(Math.ceil(toCameraSeconds(mode, SCENE.buildSeconds) * CAMERA_KEYS_PER_SECOND) + 1);
+    for (const key of [keys[0], keys[keys.length - 1]]) {
+      expect(distance(key.location, FIRST_PERSON.location)).toBeLessThan(1e-9);
+      expect(distance(key.facing, FIRST_PERSON.facing)).toBeLessThan(1e-9);
     }
   });
 
-  it('orbits above the build and looks at its center mid-path', () => {
-    const pose = toCameraPose('orbit', SCENE, 0.5);
-    expect(distance(pose.location, SCENE.center)).toBeCloseTo(13.2, 0);
-    expect(pose.location.y).toBeGreaterThan(SCENE.center.y);
-    expect(distance3(pose.facing, SCENE.center)).toBeLessThan(WOBBLE_BOUND);
+  it('repeats the same keys, shake included, so the game and the preview match', () => {
+    expect(toCameraKeys('orbit', RISING)).toEqual(toCameraKeys('orbit', RISING));
   });
 
-  it.each(['orbit', 'lookAround'] as CameraMode[])('%s wobbles faintly mid-path', (mode) => {
-    const still = toCameraPose(mode, { ...SCENE, seconds: 0 }, 0.5);
-    const moving = toCameraPose(mode, SCENE, 0.5);
-    expect(toAimTurn(moving, still)).toBeGreaterThan(0);
-    expect(toAimTurn(moving, still)).toBeLessThan(WOBBLE_BOUND_DEGREES);
-    expect(distance3(moving.location, still.location)).toBeLessThan(WOBBLE_BOUND);
+  it.each([
+    ['orbit', toSpeeds],
+    ['lookAround', toTurnRates],
+  ] as [CameraMode, (keys: CameraPose[]) => number[]][])('%s is slow to start and slow to stop, like a heavy camera', (mode, toRates) => {
+    const rates = toRates(toCameraKeys(mode, SCENE));
+    const peak = Math.max(...rates);
+    expect(rates[0]).toBeLessThan(0.2 * peak);
+    for (let i = 1; i < 5; i++) expect(rates[i]).toBeGreaterThan(rates[i - 1]);
+    // The last step is the snap onto the eyes, so the settle is measured before it
+    const settle = rates.slice(-12, -1);
+    for (let i = 1; i < settle.length; i++) expect(settle[i]).toBeLessThan(settle[i - 1]);
+    expect(settle[settle.length - 1]).toBeLessThan(0.05 * peak);
   });
 
-  it('keeps circling after the last block lands, then comes back into the player\'s eyes', () => {
-    const angleOf = (t: number): number => angleAround({ ...SCENE, seconds: 0 }, t);
-    const landed = toCameraPose('orbit', { ...SCENE, seconds: 0 }, SCENE.landedAt);
-    expect(distance(landed.location, SCENE.center)).toBeCloseTo(13.2, 0);
-    const holdEnd = SCENE.landedAt + (1 - SCENE.landedAt) * 0.5;
-    expect(Math.abs(angleOf(holdEnd) - angleOf(holdEnd - 0.01))).toBeGreaterThan(0.01);
-    const returning = toCameraPose('orbit', SCENE, SCENE.landedAt + (1 - SCENE.landedAt) * 0.75);
-    expect(distance(returning.location, SCENE.eye)).toBeLessThan(distance(landed.location, SCENE.eye));
+  it('never jolts: speed changes by under a quarter of its peak from one key to the next', () => {
+    const speeds = toSpeeds(toCameraKeys('orbit', RISING)).slice(0, -1);
+    const peak = Math.max(...speeds);
+    for (let i = 1; i < speeds.length; i++) expect(Math.abs(speeds[i] - speeds[i - 1])).toBeLessThan(0.25 * peak);
   });
 
-  it('adds a return to the orbit path only', () => {
-    expect(toCameraTicks('orbit', 136)).toBeGreaterThan(136);
-    expect(toCameraTicks('lookAround', 136)).toBe(136);
+  it('keeps moving from the pull-out until it is back at the eyes', () => {
+    const speeds = toSpeeds(toCameraKeys('orbit', SCENE));
+    const peak = Math.max(...speeds);
+    const moving = speeds.slice(keyAt(1.5), keyAt(RETURN_ENDS - 0.5));
+    expect(Math.min(...moving)).toBeGreaterThan(0.25 * peak);
   });
 
   it('turns the view toward the player\'s facing without a stall and surge on the way back', () => {
-    // The player stands to one side of the build, still facing north
-    const still: CameraScene = { ...SCENE, seconds: 0, eye: { x: 10, y: 1.62, z: -6 } };
-    const returnsAt = SCENE.landedAt + (1 - SCENE.landedAt) * 0.4;
-    const steps = 40;
-    const rates: number[] = [];
-    for (let i = 0; i < steps; i++) {
-      const t = returnsAt + ((1 - returnsAt) * i) / steps;
-      rates.push(toAimTurn(toCameraPose('orbit', still, t), toCameraPose('orbit', still, t + (1 - returnsAt) / steps)));
-    }
-    // A stall is a turn rate near zero followed by a surge back up to the peak
+    const keys = toCameraKeys('orbit', SIDE_ON);
+    const rates = toTurnRates(keys.slice(keyAt(SCENE.buildSeconds + 1.5), -1));
     const peak = Math.max(...rates);
     const beforePeak = rates.slice(0, rates.indexOf(peak));
     expect(Math.min(...beforePeak, peak)).toBeGreaterThan(0.3 * peak);
   });
 
-  it('orbits slower near its ends than in its middle', () => {
-    const turn = (from: number, to: number): number => Math.abs(angleAround(SCENE, to) - angleAround(SCENE, from));
-    expect(turn(0.45, 0.5)).toBeGreaterThan(turn(0.15, 0.2) * 1.5);
+  it('circles the build from well back while it lands', () => {
+    const keys = toCameraKeys('orbit', SCENE);
+    const middle = keys[keyAt(SCENE.buildSeconds / 2)];
+    const horizontal = Math.hypot(middle.location.x - SCENE.center.x, middle.location.z - SCENE.center.z);
+    expect(horizontal).toBeGreaterThan(SCENE.radius * 1.6);
+    expect(middle.location.y).toBeGreaterThan(SCENE.center.y);
   });
 
-  it('starts low on a rising build and climbs with its layers', () => {
-    const atBuild = (share: number): number => share * RISING.landedAt;
-    const early = toCameraPose('orbit', RISING, atBuild(0.15));
-    const middle = toCameraPose('orbit', RISING, atBuild(0.5));
-    const late = toCameraPose('orbit', RISING, atBuild(0.65));
-    const pitch = ({ location, facing }: CameraPose): number =>
-      Math.atan2(facing.y - location.y, Math.hypot(facing.x - location.x, facing.z - location.z));
+  it('starts low on a rising build and tilts up late, keeping its aim below the landed layers', () => {
+    const keys = toCameraKeys('orbit', RISING);
+    const early = keys[keyAt(1.5)];
+    const landed = keys[keyAt(RISING.buildSeconds)];
     expect(early.facing.y).toBeLessThan(RISING.center.y / 2);
-    expect(late.facing.y).toBeGreaterThan(middle.facing.y);
-    expect(late.facing.y).toBeLessThan(RISING.center.y);
-    expect(early.location.y).toBeLessThan(middle.location.y);
-    expect(pitch(middle)).toBeGreaterThan(pitch(early));
-    expect(pitch(late)).toBeGreaterThan(pitch(middle));
+    expect(landed.facing.y).toBeGreaterThan(early.facing.y);
+    expect(landed.facing.y).toBeLessThan(RISING.center.y);
+    expect(early.location.y).toBeLessThan(landed.location.y);
   });
 
-  it('looks around from the eye, tilting up halfway through', () => {
-    const pose = toCameraPose('lookAround', SCENE, 0.5);
-    expect(distance3(pose.location, SCENE.eye)).toBeLessThan(WOBBLE_BOUND);
-    expect(pose.facing.y).toBeGreaterThan(SCENE.eye.y);
+  it('turns the look-around view a full circle from the eyes, tilting up halfway', () => {
+    const keys = toCameraKeys('lookAround', SCENE);
+    const middle = keys[keyAt(SCENE.buildSeconds / 2)];
+    expect(distance(middle.location, SCENE.eye)).toBeLessThan(0.6);
+    expect(middle.facing.y).toBeGreaterThan(SCENE.eye.y);
   });
 });
 
