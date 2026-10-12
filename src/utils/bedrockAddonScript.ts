@@ -128,7 +128,7 @@ function setBlock(dimension, location, permutation) {
 // CAMERA PATH START: a copy of the functions in src/utils/cameraPath.ts
 const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
 const CAMERA_LAG = 0.6;
-const SPRING_DAMPING = 0.7;
+const SPRING_DAMPING = 0.76;
 const SETTLE_SECONDS = 2;
 const LOOK_DISTANCE = 8;
 const PULL_OUT_SECONDS = 1;
@@ -144,8 +144,8 @@ const RISE_AIM_CLIMB = 0.4;
 const LOOK_UP = 0.45;
 const SHAKE_HZ = 1.5;
 const SHAKE_LAG = 0.3;
-const SHAKE_DEGREES = 2.4;
-const SHAKE_LOCATION = 0.24;
+const SHAKE_DEGREES = 1.2;
+const SHAKE_LOCATION = 0.12;
 
 function lerp(a, b, t) {
   return a + (b - a) * t;

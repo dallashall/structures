@@ -50,8 +50,8 @@ const KEY_SECONDS = 1 / CAMERA_KEYS_PER_SECOND;
 
 // Seconds the camera takes to catch up with its target. Larger is heavier.
 const CAMERA_LAG = 0.6;
-// Damping ratio of every spring. 0.7 overshoots a stopped target by about 5%.
-const SPRING_DAMPING = 0.7;
+// Damping ratio of every spring. 0.76 overshoots a stopped target by about 2.5%.
+const SPRING_DAMPING = 0.76;
 // Seconds after the target comes to rest at the eyes, for the spring to settle there
 const SETTLE_SECONDS = 2;
 
@@ -81,8 +81,8 @@ const LOOK_UP = 0.45;
 // SHAKE_LOCATION blocks.
 const SHAKE_HZ = 1.5;
 const SHAKE_LAG = 0.3;
-const SHAKE_DEGREES = 2.4;
-const SHAKE_LOCATION = 0.24;
+const SHAKE_DEGREES = 1.2;
+const SHAKE_LOCATION = 0.12;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const lerpVec = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
