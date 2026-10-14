@@ -143,7 +143,7 @@ function ExportDialogComponent({
             value={addonName}
             placeholder={projectName}
             onChange={handleAddonNameChange}
-            helperText={`In game: ${giveCommand}. A new name installs separately.`}
+            helperText={`In game: ${giveCommand}`}
             fullWidth
             slotProps={{ htmlInput: { 'data-autofocus': true }, inputLabel: { shrink: true } }}
           />
