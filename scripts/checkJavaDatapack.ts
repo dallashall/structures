@@ -7,6 +7,7 @@
  * - the server logs an error while loading the pack, or does not enable it
  * - an armor stand holding the wand runs start, and a block is missing after the last frame
  * - the wand's damage does not count up, or the last use does not break it
+ * - a crafter given the recipe's two items does not drop the wand
  *
  * A headless server has no player to right-click, so the check calls start directly. The armor stand faces
  * north, the same way as the sample's meta block, so the build lands unturned.
@@ -45,6 +46,7 @@ const SAMPLE_BLOCKS: BlockData[] = [
 ];
 const META_BLOCK = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
 const SAMPLE_USES = 2;
+const SAMPLE_ICON = 'blaze_rod' as const;
 
 const sleep = (ms: number): Promise<void> => {
   const wait = (resolve: () => void): void => {
@@ -69,10 +71,11 @@ function writeSamplePack(): { files: Record<string, Uint8Array>; namespace: stri
     projectId: 'datapack-check',
     packName: 'Datapack Check',
     itemName: 'Datapack "Check" Wand',
-    icon: 'blaze_rod' as const,
+    icon: SAMPLE_ICON,
     sequence: 'rise' as const,
     seconds: 2,
     uses: SAMPLE_USES,
+    recipe: 'diamond' as const,
     metaFacing: META_BLOCK.direction,
     build: toAnimatedBuild(META_BLOCK, SAMPLE_BLOCKS, findEntry, toGray),
   };
@@ -165,6 +168,19 @@ async function main(): Promise<void> {
 
     const { x, y, z } = FEET;
     rcon(`forceload add ${x - 16} ${z - 16} ${x + 16} ${z + 16}`);
+
+    // A crafter crafts on a redstone pulse and drops the result in front of it, which faces north here
+    const crafter = { x: x + 8, y, z: z + 8 };
+    rcon(`setblock ${crafter.x} ${crafter.y} ${crafter.z} minecraft:crafter[orientation=north_up]`);
+    rcon(`item replace block ${crafter.x} ${crafter.y} ${crafter.z} container.0 with minecraft:${SAMPLE_ICON}`);
+    rcon(`item replace block ${crafter.x} ${crafter.y} ${crafter.z} container.1 with minecraft:diamond`);
+    rcon(`setblock ${crafter.x} ${crafter.y - 1} ${crafter.z} minecraft:redstone_block`);
+    await sleep(1500);
+    const crafted = rcon(
+      `execute if items entity @e[type=minecraft:item,x=${crafter.x},y=${crafter.y},z=${crafter.z},distance=..8] contents *[minecraft:custom_data~{wand:"${namespace}"}]`,
+    );
+    if (!crafted.includes('passed')) problems.push(`The wand recipe did not craft a wand: ${crafted}`);
+
     rcon(`summon minecraft:armor_stand ${x + 0.5} ${y} ${z + 0.5} {Tags:["check"],Rotation:[180f,0f],NoGravity:1b}`);
     rcon(`item replace entity @e[tag=check,limit=1] weapon.mainhand with ${wandItem}`);
     const stand = '@e[tag=check,limit=1]';

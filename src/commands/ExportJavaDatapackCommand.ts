@@ -39,6 +39,7 @@ class ExportJavaDatapackCommand {
       sequence: options.sequence,
       seconds: options.seconds,
       uses: options.uses,
+      recipe: options.recipe,
       metaFacing: model.metaBlock.direction,
       build,
     });

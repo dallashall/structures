@@ -32,6 +32,7 @@ import { NumberField } from './NumberField';
 
 import { BEDROCK_VERSION, ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
 import { JAVA_VERSION } from '../utils/javaDatapack';
+import type { WandRecipe } from '../utils/javaDatapack';
 
 const TITLE_ID = 'export-title';
 
@@ -52,6 +53,14 @@ const CAMERA_LABELS: Record<CameraMode, string> = {
   none: 'Player keeps control',
   orbit: 'Orbit the build, end at the player',
   lookAround: 'Look around from the player',
+};
+
+// The icon item's name goes in front: "Blaze Rod + Diamond"
+const RECIPE_COSTS: Record<WandRecipe, string | null> = {
+  none: null,
+  gold: 'Gold Ingot',
+  diamond: 'Diamond',
+  netherStar: 'Nether Star',
 };
 
 const SEQUENCE_LABELS: Record<BuildSequence, string> = {
@@ -82,7 +91,7 @@ function ExportDialogComponent({
   onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { edition, addonName, itemName, icon, sequence, seconds, uses, camera } = exportOptions;
+  const { edition, addonName, itemName, icon, sequence, seconds, uses, camera, recipe } = exportOptions;
   const text = EDITION_TEXT[edition];
   const resolvedAddonName = addonName.trim() || projectName;
   const placeholderName = `${resolvedAddonName} Wand`;
@@ -111,6 +120,13 @@ function ExportDialogComponent({
   const handleCameraChange = (event: SelectChangeEvent<CameraMode>): void => {
     onExportOptionsChange({ camera: event.target.value as CameraMode });
   };
+  const handleRecipeChange = (event: SelectChangeEvent<WandRecipe>): void => {
+    onExportOptionsChange({ recipe: event.target.value as WandRecipe });
+  };
+  const toRecipeOption = ([value, cost]: [string, string | null]): [string, string] => [
+    value,
+    cost ? `Craft: ${ITEM_ICONS[icon]} + ${cost}` : 'No recipe',
+  ];
   const handleUsesChange = (value: number): void => {
     onExportOptionsChange({ uses: value });
   };
@@ -198,6 +214,21 @@ function ExportDialogComponent({
                 MenuProps={IN_DIALOG_MENU_PROPS}
               >
                 {Object.entries(CAMERA_LABELS).map(renderOption)}
+              </Select>
+            </FormControl>
+          )}
+
+          {edition === 'java' && (
+            <FormControl fullWidth>
+              <InputLabel id="export-recipe-label">Crafting recipe</InputLabel>
+              <Select
+                labelId="export-recipe-label"
+                label="Crafting recipe"
+                value={recipe}
+                onChange={handleRecipeChange}
+                MenuProps={IN_DIALOG_MENU_PROPS}
+              >
+                {Object.entries(RECIPE_COSTS).map(toRecipeOption).map(renderOption)}
               </Select>
             </FormControl>
           )}

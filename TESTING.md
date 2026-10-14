@@ -24,7 +24,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 `npm run check:addon` builds a sample Bedrock add-on with the export code and validates it with Mojang's `@minecraft/creator-tools` plus a manifest version range check. Run it after any change under `src/utils/bedrock*` or `src/utils/mcstructure.ts`.
 
-`npm run check:datapack` builds a sample Java data pack and loads it in a vanilla 26.3 server in Docker. An armor stand holding the wand runs the build, then the check reads back every block, the wand's damage, and the break on its last use. Run it after any change to `src/utils/javaDatapack.ts` or `src/utils/animatedBuild.ts`. It needs Docker.
+`npm run check:datapack` builds a sample Java data pack and loads it in a vanilla 26.3 server in Docker. An armor stand holding the wand runs the build, then the check reads back every block, the wand's damage, and the break on its last use. A crafter crafts the wand from the recipe's two items. Run it after any change to `src/utils/javaDatapack.ts` or `src/utils/animatedBuild.ts`. It needs Docker.
 ---
 
 ## Setup and Textures
@@ -183,6 +183,9 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 - [ ] Rise, Ripple out, Ripple in, and All at once land as in Bedrock, with colored dust ahead of the blocks
 - [ ] With uses set to 3, the wand shows a durability bar, and the third use builds and then breaks it
 - [ ] A wand from an older export of the same pack still works after the pack is replaced and `/reload` runs
+- [ ] Crafting recipe shows only for Java. "No recipe" adds none, and each other choice reads "Craft: <icon> + <cost>".
+- [ ] With Diamond chosen, holding a diamond adds the wand to the recipe book, and crafting the icon item with a diamond gives a working wand
+- [ ] `/function <namespace>:give` still works when a recipe is chosen
 
 ---
 

@@ -32,6 +32,7 @@ const DEFAULT_OPTIONS: ExportOptions = {
   seconds: 6,
   uses: 0,
   camera: 'none',
+  recipe: 'none',
 };
 
 const toErrorMessage = (error: unknown): string =>

@@ -37,6 +37,7 @@ const OPTIONS: DatapackOptions = {
   sequence: 'rise',
   seconds: 2,
   uses: 3,
+  recipe: 'none',
   metaFacing: 'y-',
   build: BUILD,
   random: alwaysFirst,
@@ -125,6 +126,30 @@ describe('toDatapackFiles', () => {
     expect(read(files, fn(`frames/1/${LEAD_TICKS}`))).toContain('setblock ~2 ~0 ~1 minecraft:oak_stairs[facing=east');
     expect(read(files, fn('frames/0/0'))).toContain('particle minecraft:dust{color:[0.5,0.25,1],scale:1.5} ~1 ~0.5 ~-2');
     expect(read(files, fn(`frames/0/${frameCount - 1}`))).toContain('entity.player.levelup');
+  });
+
+  it('adds no recipe unless one is chosen, and the give function either way', () => {
+    expect(files[`data/${namespace}/recipe/wand.json`]).toBeUndefined();
+    const crafted = toDatapackFiles({ ...OPTIONS, recipe: 'diamond' });
+    expect(crafted[fn('give')]).toBeDefined();
+  });
+
+  it('crafts the same wand that give hands out, from the icon item and the cost', () => {
+    const crafted = toDatapackFiles({ ...OPTIONS, recipe: 'diamond' });
+    const recipe = JSON.parse(read(crafted, `data/${namespace}/recipe/wand.json`)) as {
+      type: string;
+      ingredients: string[];
+      result: { id: string; components: Record<string, unknown> };
+    };
+    expect(recipe.type).toBe('minecraft:crafting_shapeless');
+    expect(recipe.ingredients).toEqual(['minecraft:blaze_rod', 'minecraft:diamond']);
+    expect(recipe.result.id).toBe('minecraft:blaze_rod');
+    expect(recipe.result.components['minecraft:custom_data']).toEqual({ wand: namespace });
+    expect(recipe.result.components['minecraft:item_name']).toBe(OPTIONS.itemName);
+    expect(recipe.result.components['minecraft:max_damage']).toBe(3);
+    expect(recipe.result.components['minecraft:damage']).toBe(0);
+    const unlock = JSON.parse(read(crafted, `data/${namespace}/advancement/recipe.json`)) as { rewards: { recipes: string[] } };
+    expect(unlock.rewards.recipes).toEqual([`${namespace}:wand`]);
   });
 
   it('zips the same files', () => {

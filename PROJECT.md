@@ -198,6 +198,7 @@ The export dialog's Java choice saves a data pack `.zip` for Minecraft Java 26.3
 - With a use limit, the wand carries Java's durability, and its last use builds and then breaks it.
 - Block states come from the same table as Bedrock, whose keys are full Java states. Blocks missing from it are left out, and the export dialog names them.
 - There is no camera move. Plain Java has no camera control.
+- An optional shapeless recipe crafts the wand from the icon item plus a Gold Ingot, a Diamond, or a Nether Star. The crafted wand has the same components as the given one. Data packs cannot add items to the creative inventory, so the recipe and the give function are the only ways to get the wand.
 
 ## User Workflow
 

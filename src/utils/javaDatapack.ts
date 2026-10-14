@@ -41,6 +41,16 @@ const POP_EVERY = 3;
 const FACING_INDEX: Record<HorizontalDirection, number> = { 'y-': 0, 'x+': 1, 'y+': 2, 'x-': 3 };
 const YAW_RANGES = [['135..180', '-180..-135'], ['-135..-45'], ['-45..45'], ['45..135']];
 
+// Shapeless recipes: the icon item plus one cost item. 'none' leaves the wand to /function <namespace>:give.
+export const WAND_RECIPES = {
+  none: null,
+  gold: 'minecraft:gold_ingot',
+  diamond: 'minecraft:diamond',
+  netherStar: 'minecraft:nether_star',
+} as const;
+
+export type WandRecipe = keyof typeof WAND_RECIPES;
+
 export interface DatapackOptions {
   projectId: string;
   // The pack's name. Its slug names the file and the namespace, the same as the Bedrock add-on.
@@ -51,6 +61,7 @@ export interface DatapackOptions {
   seconds: number;
   // 0 means unlimited
   uses: number;
+  recipe: WandRecipe;
   metaFacing: HorizontalDirection;
   // Palette entries are full Java block states, such as minecraft:oak_stairs[facing=east,half=bottom]
   build: AnimatedBuild<string>;
@@ -147,18 +158,44 @@ function toFrameFunction(frame: Frame, tick: number, lastTick: number, turns: nu
   return lines.join('\n');
 }
 
-const toItemComponents = (options: DatapackOptions, namespace: string): string => {
-  const components = [
-    `minecraft:custom_data={wand:${toSnbtString(namespace)}}`,
-    `minecraft:item_name=${toSnbtString(options.itemName)}`,
-    'minecraft:max_stack_size=1',
-    'minecraft:enchantment_glint_override=true',
+type ComponentValue = string | number | boolean | { [key: string]: ComponentValue };
+
+/**
+ * The wand's components, written once and rendered as SNBT for give and as JSON for the recipe, so a crafted
+ * wand and a given wand are the same item
+ */
+const toWandComponents = (options: DatapackOptions, namespace: string): Record<string, ComponentValue> => {
+  const components: Record<string, ComponentValue> = {
+    'minecraft:custom_data': { wand: namespace },
+    'minecraft:item_name': options.itemName,
+    'minecraft:max_stack_size': 1,
+    'minecraft:enchantment_glint_override': true,
     // Any item can start a use with this component. The use never finishes, so the wand is never eaten.
-    'minecraft:consumable={consume_seconds:1000000f,animation:"none",sound:"minecraft:intentionally_empty",has_consume_particles:false}',
-  ];
-  // A blaze rod or stick has no damage component of its own, and the wear lines match on its value
-  if (options.uses > 0) components.push(`minecraft:max_damage=${options.uses}`, 'minecraft:damage=0');
-  return components.join(',');
+    'minecraft:consumable': {
+      consume_seconds: 1000000,
+      animation: 'none',
+      sound: 'minecraft:intentionally_empty',
+      has_consume_particles: false,
+    },
+  };
+  if (options.uses > 0) {
+    components['minecraft:max_damage'] = options.uses;
+    // A blaze rod or stick has no damage component of its own, and the wear lines match on its value
+    components['minecraft:damage'] = 0;
+  }
+  return components;
+};
+
+const toSnbt = (value: ComponentValue): string => {
+  if (typeof value === 'string') return toSnbtString(value);
+  if (typeof value !== 'object') return String(value);
+  const toEntry = ([key, entry]: [string, ComponentValue]): string => `${key}:${toSnbt(entry)}`;
+  return `{${Object.entries(value).map(toEntry).join(',')}}`;
+};
+
+const toItemComponents = (components: Record<string, ComponentValue>): string => {
+  const toAssignment = ([key, value]: [string, ComponentValue]): string => `${key}=${toSnbt(value)}`;
+  return Object.entries(components).map(toAssignment).join(',');
 };
 
 /**
@@ -193,7 +230,31 @@ export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8A
     `scoreboard objectives add ${frameScore} dummy`,
     `scoreboard objectives add ${heldScore} dummy`,
   ].join('\n');
-  text[at('function/give.mcfunction')] = `give @s minecraft:${icon}[${toItemComponents(options, namespace)}]`;
+  const components = toWandComponents(options, namespace);
+  text[at('function/give.mcfunction')] = `give @s minecraft:${icon}[${toItemComponents(components)}]`;
+
+  const cost = WAND_RECIPES[options.recipe];
+  if (cost) {
+    text[at('recipe/wand.json')] = JSON.stringify(
+      {
+        type: 'minecraft:crafting_shapeless',
+        category: 'equipment',
+        ingredients: [`minecraft:${icon}`, cost],
+        result: { id: `minecraft:${icon}`, count: 1, components },
+      },
+      null,
+      2,
+    );
+    // Shows the recipe in the recipe book once the player holds the cost item
+    text[at('advancement/recipe.json')] = JSON.stringify(
+      {
+        criteria: { has_cost: { trigger: 'minecraft:inventory_changed', conditions: { items: [{ items: cost }] } } },
+        rewards: { recipes: [id('wand')] },
+      },
+      null,
+      2,
+    );
+  }
 
   text[at('advancement/use.json')] = JSON.stringify(
     {

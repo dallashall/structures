@@ -198,6 +198,7 @@ This document records the interaction decisions for Structures and how the app c
 - One item handles both triggers: use on a block (the anchor goes next to the clicked face) and use in the air (the anchor goes at the player's feet).
 - After a save, the dialog shows the file name and the `/give` command. Blocks left out of the export show in a warning with their counts.
 - Java saves a data pack `.zip` for one Java release (26.3). The wand is the chosen vanilla item with a glint, given by `/function <namespace>:give`. A right-click starts one build. Holding the button does not start more. The build anchors at the player's feet, since a Java item use reports no clicked block. Uses above 0 give the wand Java's own durability bar, and the use that breaks it still builds. The camera stays with the player.
+- Java exports can add a crafting recipe for the wand: none (the default), or the icon item plus a Gold Ingot, a Diamond, or a Nether Star. The recipe shows in the recipe book once the player holds the cost item. `/function <namespace>:give` works either way, since Java data packs cannot add items to the creative inventory.
 - After a Java save, the dialog gives both install routes: drag the file into a new world's Data Packs screen, or put it in a saved world's `datapacks` folder and run `/reload`.
 
 ---

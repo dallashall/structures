@@ -20,6 +20,7 @@ import type { BuildSequence } from '../utils/bedrockAddonScript';
 import type { Rgb } from '../utils/animatedBuild';
 import type { BedrockBlockTable } from '../utils/bedrockBlocks';
 import type { CameraMode } from '../utils/cameraPath';
+import type { WandRecipe } from '../utils/javaDatapack';
 import { toGlowTint } from '../utils/buildSequence';
 import { cssColorToRgb } from '../utils/cssColor';
 
@@ -40,6 +41,8 @@ export interface ExportOptions {
   uses: number;
   // Bedrock only. Java has no camera control.
   camera: CameraMode;
+  // Java only. The give function works with or without a recipe.
+  recipe: WandRecipe;
 }
 
 export interface SkippedBlock {
