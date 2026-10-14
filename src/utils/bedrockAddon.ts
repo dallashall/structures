@@ -21,6 +21,7 @@ import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from './bedrockAddonS
 // Latest stable @minecraft/server, and the game version that ships it
 export const SCRIPT_API_VERSION = '2.10.0';
 const MIN_ENGINE_VERSION = [1, 26, 50];
+export const BEDROCK_VERSION = MIN_ENGINE_VERSION.join('.');
 const ITEM_FORMAT_VERSION = '1.26.50';
 
 // Vanilla item textures. Resource packs may point at them without shipping a copy.

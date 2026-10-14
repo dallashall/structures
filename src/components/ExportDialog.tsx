@@ -30,14 +30,14 @@ import { Form } from './Form';
 import { ModalDialog, IN_DIALOG_MENU_PROPS } from './ModalDialog';
 import { NumberField } from './NumberField';
 
-import { ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
+import { BEDROCK_VERSION, ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
 import { JAVA_VERSION } from '../utils/javaDatapack';
 
 const TITLE_ID = 'export-title';
 
 const EDITION_TEXT: Record<ExportEdition, { intro: string; name: string; skipped: string }> = {
   bedrock: {
-    intro: 'Saves an add-on with an item that builds this project around the player. Open the file to import it, then turn on its packs in a world\'s settings.',
+    intro: `Saves an add-on with an item that builds this project around the player. Open the file to import it, then turn on its packs in a world's settings. It needs Bedrock ${BEDROCK_VERSION} or newer.`,
     name: 'Add-on name',
     skipped: 'These blocks have no Bedrock version and were left out',
   },
