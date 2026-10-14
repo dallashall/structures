@@ -44,6 +44,10 @@ Export in the editor toolbar saves a `.mcaddon` for Minecraft Bedrock 1.26.50 or
 
 `npm run check:addon` builds a sample add-on with the export code and checks it without the game. It runs Mojang's validator (`@minecraft/creator-tools`), plus a manifest version check the validator lacks.
 
+The same dialog has a Java choice, which saves a data pack `.zip` for Minecraft Java 26.3. Drag it into the Data Packs screen when you create a world, or put it in a saved world's `datapacks` folder and run `/reload`. Then `/function <name>_<code>:give` gives the wand. Right-click with it, and the build animates in around you. Java has no camera control, so the view stays with the player.
+
+`npm run check:datapack` builds a sample data pack and loads it in a vanilla 26.3 server in Docker (`itzg/minecraft-server`). It fails on any load error, a wrong pack format, a missing block after a build, or a wand that does not wear out. The container accepts the Minecraft EULA.
+
 The Java-to-Bedrock block table is `public/data/bedrock-blocks.json`. `npm run build:bedrock-blocks` rebuilds it, and the block catalog checks, from minecraft-data at a pinned commit.
 
 ## Deploying

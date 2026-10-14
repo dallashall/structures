@@ -43,7 +43,8 @@ Commands live in `src/commands/`. Each one validates against projections and app
 | `renameProjectCommand` | `execute(projectId, name)`. Trims the name and throws `RenameProjectError` when it is empty or another project holds it. | `metadata:renamed` |
 | `expandDimensionsCommand` | `execute(direction)` | A `dimension-expand` action |
 | `shrinkDimensionsCommand` | `execute(direction)` | A `dimension-shrink` action. Refuses when blocks would fall outside. |
-| `exportBedrockAddonCommand` | `execute(options)` builds and saves the `.mcaddon` and returns the file name, item ID, and blocks left out | Nothing |
+| `exportBedrockAddonCommand` | `execute(options)` builds and saves the `.mcaddon` and returns the file name, the `/give` command, and blocks left out | Nothing |
+| `exportJavaDatapackCommand` | `execute(options)` builds and saves the data pack `.zip` and returns the file name, the `/function` give command, and blocks left out | Nothing |
 | `setMetaBlockCommand` | `execute(position, direction)` and `turn('left' \| 'right')`. Ignores positions outside the build volume and unchanged placements. | A `metablock-place` action |
 | `saveProjectFileCommand` | `execute()` returns false on cancel | Nothing. Writes the project's events to a file on disk. |
 | `loadProjectFileCommand` | `execute()` opens a picker, `load(text)` returns the new project ID | Every row in the file under a new project ID, in one transaction |
@@ -216,7 +217,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 | HOC | Injects | Subscribes to |
 |---|---|---|
 | `withScreenState` | `screen`, `isNewProjectDialogOpen`, `isCreditsDialogOpen`, `isExportDialogOpen`, `fileError` | ScreenRouter: all six notifications |
-| `withExportState` | `exportOptions`, `projectName`, `isExporting`, `exportResult`, `exportError`, `onExportOptionsChange`, `onExport`, `onExportReset` | None. It calls `exportBedrockAddonCommand` and holds the result. |
+| `withExportState` | `exportOptions`, `projectName`, `isExporting`, `exportResult`, `exportError`, `onExportOptionsChange`, `onExport`, `onExportReset` | None. It calls the export command for the chosen edition and holds the result. |
 | `withAtlasStatus` | `atlasStatus` | TextureResolver: `atlas:ready`, `atlas:error`. It reads the status once more after subscribing, since the load can settle before the subscription. |
 | `withProjectState` | `project` | `model:rebuilt`, `metadata:rebuilt` |
 | `withProjectListState` | `projects`, `isLoadingProjects`, `selectedProjectId`, `isRenaming`, `renameError`, `onSelectProject`, `onDeleteProject`, `onStartRename`, `onCancelRename`, `onRenameProject` | `project:renamed`, `project:deleted`, `thumbnail:saved` |

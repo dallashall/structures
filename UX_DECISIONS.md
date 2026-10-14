@@ -184,9 +184,9 @@ This document records the interaction decisions for Structures and how the app c
 
 ---
 
-## 10. Bedrock Export
+## 10. Export to Minecraft
 
-**Decision:** Export is one dialog with add-on name, item name, icon, build animation, seconds, and uses. Defaults: the project name, "<add-on name> Wand", Blaze Rod, rise, 6 seconds, unlimited uses. The add-on name names the pack, the file, and the item ID, and the dialog shows the `/give` command as it changes. Exporting again under the same name updates that add-on, and a new name installs a separate one.
+**Decision:** Export is one dialog with an edition choice (Bedrock or Java) above add-on name, item name, icon, build animation, seconds, and uses. Both editions share every field except Camera, which is Bedrock only. Defaults: the project name, "<add-on name> Wand", Blaze Rod, rise, 6 seconds, unlimited uses. The add-on name names the pack, the file, and the item ID, and the dialog shows the `/give` command as it changes. Exporting again under the same name updates that add-on, and a new name installs a separate one.
 
 **Details:**
 - The icon list holds vanilla item textures only, so the add-on ships no game texture.
@@ -197,6 +197,8 @@ This document records the interaction decisions for Structures and how the app c
 - Preview steps the dialog aside and plays the chosen animation in the 3D view, switching to the 3D tab in the tabbed layout, then brings the dialog back. Order and timing come from the same module the add-on script embeds, so the preview matches the game's sequence. The glow is an approximation, and sounds do not play.
 - One item handles both triggers: use on a block (the anchor goes next to the clicked face) and use in the air (the anchor goes at the player's feet).
 - After a save, the dialog shows the file name and the `/give` command. Blocks left out of the export show in a warning with their counts.
+- Java saves a data pack `.zip` for one Java release (26.3). The wand is the chosen vanilla item with a glint, given by `/function <namespace>:give`. A right-click starts one build. Holding the button does not start more. The build anchors at the player's feet, since a Java item use reports no clicked block. Uses above 0 give the wand Java's own durability bar, and the use that breaks it still builds. The camera stays with the player.
+- After a Java save, the dialog gives both install routes: drag the file into a new world's Data Packs screen, or put it in a saved world's `datapacks` folder and run `/reload`.
 
 ---
 

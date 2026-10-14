@@ -23,6 +23,8 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 
 `npm run check:addon` builds a sample Bedrock add-on with the export code and validates it with Mojang's `@minecraft/creator-tools` plus a manifest version range check. Run it after any change under `src/utils/bedrock*` or `src/utils/mcstructure.ts`.
+
+`npm run check:datapack` builds a sample Java data pack and loads it in a vanilla 26.3 server in Docker. An armor stand holding the wand runs the build, then the check reads back every block, the wand's damage, and the break on its last use. Run it after any change to `src/utils/javaDatapack.ts` or `src/utils/animatedBuild.ts`. It needs Docker.
 ---
 
 ## Setup and Textures
@@ -138,7 +140,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ## Bedrock Export
 
-- [ ] Export in the editor toolbar opens "Export for Bedrock" with add-on name, item name, icon, build animation, seconds, and uses
+- [ ] Export in the editor toolbar opens "Export to Minecraft" with a Bedrock and Java choice, then add-on name, item name, icon, build animation, seconds, camera, and uses
 - [ ] The add-on name defaults to the project name, and the helper text shows the matching `/give` command as it changes
 - [ ] Two exports with different add-on names install side by side in game, each with its own item
 - [ ] Using the item on a block builds once, anchored next to the clicked face, never a second copy at the player's feet
@@ -168,6 +170,19 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 - [ ] Preview is disabled for "All at once"
 - [ ] An edit during a preview ends it and shows the full model
   - [ ] Existing world blocks stay where the design has empty cells
+
+## Java Export
+
+- [ ] Choosing Java renames the name field "Data pack name", disables Camera, and shows `/function <namespace>:give` in the helper text
+- [ ] Export saves `<project_slug>.zip`, and the dialog shows both install routes and the give command
+- [ ] In Java 26.3, the pack loads from a new world's Data Packs screen, and from a saved world's `datapacks` folder after `/reload`
+- [ ] `/function <namespace>:give` gives the wand with its name, the chosen icon, and a glint
+- [ ] A right-click builds the project with the meta block cell at the player's feet, facing the arrow's way
+- [ ] Holding right-click starts one build. Letting go and pressing again starts another.
+- [ ] Facing each of north, east, south, and west, the build turns with the player
+- [ ] Rise, Ripple out, Ripple in, and All at once land as in Bedrock, with colored dust ahead of the blocks
+- [ ] With uses set to 3, the wand shows a durability bar, and the third use builds and then breaks it
+- [ ] A wand from an older export of the same pack still works after the pack is replaced and `/reload` runs
 
 ---
 

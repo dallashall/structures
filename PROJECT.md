@@ -187,6 +187,18 @@ Every export starts from the project's model. Each block's state goes app → Ja
 
 Known limits: walls load as posts until a neighbor changes, since the editor stores no wall connections. Bedrock's rotation direction for `Rotate90` is assumed clockwise from above and needs an in-game check.
 
+### Java Export
+
+The export dialog's Java choice saves a data pack `.zip` for Minecraft Java 26.3 (data pack format 121.0). It needs no mods.
+
+- `/function <namespace>:give` gives the wand: the chosen vanilla item, named, with a glint and a `consumable` component so a right-click starts a use.
+- A hidden `using_item` advancement runs the build on a fresh press. The build anchors at the player's feet and turns so the player faces the meta block's arrow.
+- A `marker` entity holds each running build. Every tick it runs that tick's frame function, which holds the glow particles and `setblock` lines for that tick. Several builds can run at once.
+- The order and timing match the Bedrock add-on and the preview, from `src/utils/buildSequence.ts`. The order within a layer or ring is fixed when the pack is made.
+- With a use limit, the wand carries Java's durability, and its last use builds and then breaks it.
+- Block states come from the same table as Bedrock, whose keys are full Java states. Blocks missing from it are left out, and the export dialog names them.
+- There is no camera move. Plain Java has no camera control.
+
 ## User Workflow
 
 1. **Create a project**
@@ -206,7 +218,7 @@ Known limits: walls load as posts until a neighbor changes, since the editor sto
 4. **Keep and share**
    - Edits persist in the browser on their own
    - Save writes a project file. Load from File on the welcome screen reads one back.
-   - Export saves a Bedrock add-on whose item builds the project around the player.
+   - Export saves a Bedrock add-on or a Java data pack whose item builds the project around the player.
 
 ## Future Enhancements
 

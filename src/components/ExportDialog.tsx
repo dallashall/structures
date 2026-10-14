@@ -11,6 +11,8 @@ import {
   MenuItem,
   Select,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -22,15 +24,29 @@ import type { CameraMode } from '../utils/cameraPath';
 import { withExportState } from '../hocs/withExportState';
 import type { WithExportStateProps } from '../hocs/withExportState';
 
-import type { SkippedBlock } from '../commands/ExportBedrockAddonCommand';
+import type { ExportEdition, SkippedBlock } from '../commands/exportParts';
 
 import { Form } from './Form';
 import { ModalDialog, IN_DIALOG_MENU_PROPS } from './ModalDialog';
 import { NumberField } from './NumberField';
 
 import { ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
+import { JAVA_VERSION } from '../utils/javaDatapack';
 
 const TITLE_ID = 'export-title';
+
+const EDITION_TEXT: Record<ExportEdition, { intro: string; name: string; skipped: string }> = {
+  bedrock: {
+    intro: 'Saves an add-on with an item that builds this project around the player. Open the file to import it, then turn on its packs in a world\'s settings.',
+    name: 'Add-on name',
+    skipped: 'These blocks have no Bedrock version and were left out',
+  },
+  java: {
+    intro: `Saves a data pack with a wand that builds this project around the player. It needs Java ${JAVA_VERSION}. The camera stays with the player.`,
+    name: 'Data pack name',
+    skipped: 'These blocks have no Java block state and were left out',
+  },
+};
 
 const CAMERA_LABELS: Record<CameraMode, string> = {
   none: 'Player keeps control',
@@ -66,11 +82,17 @@ function ExportDialogComponent({
   onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { addonName, itemName, icon, sequence, seconds, uses, camera } = exportOptions;
+  const { edition, addonName, itemName, icon, sequence, seconds, uses, camera } = exportOptions;
+  const text = EDITION_TEXT[edition];
   const resolvedAddonName = addonName.trim() || projectName;
   const placeholderName = `${resolvedAddonName} Wand`;
-  const { itemId } = toAddonNames(resolvedAddonName, projectId);
+  const { itemId, namespace } = toAddonNames(resolvedAddonName, projectId);
+  const giveCommand = edition === 'java' ? `/function ${namespace}:give` : `/give @s ${itemId}`;
+  const hasCamera = edition === 'bedrock' && sequence !== 'instant';
 
+  const handleEditionChange = (_: React.MouseEvent<HTMLElement>, value: ExportEdition | null): void => {
+    if (value) onExportOptionsChange({ edition: value });
+  };
   const handleAddonNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     onExportOptionsChange({ addonName: event.target.value });
   };
@@ -103,21 +125,25 @@ function ExportDialogComponent({
 
   return (
     <ModalDialog open={isOpen} onClose={handleClose} labelledBy={TITLE_ID} maxWidth="xs" fullWidth>
-      <DialogTitle id={TITLE_ID}>Export for Bedrock</DialogTitle>
+      <DialogTitle id={TITLE_ID}>Export to Minecraft</DialogTitle>
       <Divider />
       <DialogContent>
         <Form>
+          <ToggleButtonGroup value={edition} exclusive fullWidth size="small" onChange={handleEditionChange} aria-label="Minecraft edition">
+            <ToggleButton value="bedrock">Bedrock</ToggleButton>
+            <ToggleButton value="java">Java</ToggleButton>
+          </ToggleButtonGroup>
+
           <Typography variant="body2" color="text.secondary">
-            Saves an add-on with an item that builds this project around the player. Open the file to import it,
-            then turn on its packs in a world's settings.
+            {text.intro}
           </Typography>
 
           <TextField
-            label="Add-on name"
+            label={text.name}
             value={addonName}
             placeholder={projectName}
             onChange={handleAddonNameChange}
-            helperText={`In game: /give @s ${itemId}. A new name installs as a separate add-on.`}
+            helperText={`In game: ${giveCommand}. A new name installs separately.`}
             fullWidth
             slotProps={{ htmlInput: { 'data-autofocus': true }, inputLabel: { shrink: true } }}
           />
@@ -160,12 +186,12 @@ function ExportDialogComponent({
             disabled={sequence === 'instant'}
           />
 
-          <FormControl fullWidth disabled={sequence === 'instant'}>
+          <FormControl fullWidth disabled={!hasCamera}>
             <InputLabel id="export-camera-label">Camera</InputLabel>
             <Select
               labelId="export-camera-label"
               label="Camera"
-              value={sequence === 'instant' ? 'none' : camera}
+              value={hasCamera ? camera : 'none'}
               onChange={handleCameraChange}
               MenuProps={IN_DIALOG_MENU_PROPS}
             >
@@ -181,16 +207,24 @@ function ExportDialogComponent({
             maxValue={1000}
           />
 
-          {exportResult && (
+          {exportResult && edition === 'bedrock' && (
             <Alert severity="success">
               Saved {exportResult.fileName}. In game, find {itemName.trim() || placeholderName} in the creative
-              inventory, or run <code>/give @s {exportResult.itemId}</code>.
+              inventory, or run <code>{exportResult.command}</code>.
+            </Alert>
+          )}
+
+          {exportResult && edition === 'java' && (
+            <Alert severity="success">
+              Saved {exportResult.fileName}. For a new world, drag it into the Data Packs screen. For a saved world,
+              put it in the world's <code>datapacks</code> folder and run <code>/reload</code>. Then run{' '}
+              <code>{exportResult.command}</code> for the wand.
             </Alert>
           )}
 
           {exportResult && exportResult.skipped.length > 0 && (
             <Alert severity="warning">
-              These blocks have no Bedrock version and were left out: {exportResult.skipped.map(toSkippedLabel).join(', ')}.
+              {text.skipped}: {exportResult.skipped.map(toSkippedLabel).join(', ')}.
             </Alert>
           )}
 

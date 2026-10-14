@@ -1,8 +1,9 @@
 import React from 'react';
 
-import type { BedrockExportOptions, BedrockExportResult } from '../commands/ExportBedrockAddonCommand';
+import type { ExportOptions, ExportResult } from '../commands/exportParts';
 
 import { exportBedrockAddonCommand } from '../commands/ExportBedrockAddonCommand';
+import { exportJavaDatapackCommand } from '../commands/ExportJavaDatapackCommand';
 import { metadataProjection } from '../projections/MetadataProjection';
 import { babylon3d } from '../core/Babylon3D';
 import { editorState } from '../core/EditorState';
@@ -10,19 +11,20 @@ import { screenRouter } from '../core/ScreenRouter';
 import type { ViewType } from '../types';
 
 export interface WithExportStateProps {
-  exportOptions: BedrockExportOptions;
+  exportOptions: ExportOptions;
   projectName: string;
   projectId: string;
   isExporting: boolean;
-  exportResult: BedrockExportResult | null;
+  exportResult: ExportResult | null;
   exportError: string | null;
-  onExportOptionsChange: (changes: Partial<BedrockExportOptions>) => void;
+  onExportOptionsChange: (changes: Partial<ExportOptions>) => void;
   onExport: () => void;
   onPreview: () => void;
   onExportReset: () => void;
 }
 
-const DEFAULT_OPTIONS: BedrockExportOptions = {
+const DEFAULT_OPTIONS: ExportOptions = {
+  edition: 'bedrock',
   addonName: '',
   itemName: '',
   icon: 'blaze_rod',
@@ -33,30 +35,30 @@ const DEFAULT_OPTIONS: BedrockExportOptions = {
 };
 
 const toErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : 'The add-on could not be exported.';
+  error instanceof Error ? error.message : 'The export did not finish.';
 
 /**
- * HOC that holds the export form, runs ExportBedrockAddonCommand, plays the 3D preview, and keeps the last
- * export result for the dialog.
+ * HOC that holds the export form, runs the export command for the chosen edition, plays the 3D preview, and
+ * keeps the last export result for the dialog.
  * The options persist between openings. The result and error clear on reset.
  */
 export function withExportState<P extends object>(
   Component: React.ComponentType<P & WithExportStateProps>,
 ) {
   return function WithExportState(props: P) {
-    const [options, setOptions] = React.useState<BedrockExportOptions>(DEFAULT_OPTIONS);
+    const [options, setOptions] = React.useState<ExportOptions>(DEFAULT_OPTIONS);
     const [isExporting, setIsExporting] = React.useState(false);
-    const [result, setResult] = React.useState<BedrockExportResult | null>(null);
+    const [result, setResult] = React.useState<ExportResult | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
-    const handleOptionsChange = (changes: Partial<BedrockExportOptions>): void => {
-      const applyChanges = (current: BedrockExportOptions): BedrockExportOptions => ({ ...current, ...changes });
+    const handleOptionsChange = (changes: Partial<ExportOptions>): void => {
+      const applyChanges = (current: ExportOptions): ExportOptions => ({ ...current, ...changes });
       setOptions(applyChanges);
       setResult(null);
     };
 
     const handleExport = (): void => {
-      const showResult = (exported: BedrockExportResult): void => {
+      const showResult = (exported: ExportResult): void => {
         setResult(exported.isSaved ? exported : null);
         setIsExporting(false);
       };
@@ -67,7 +69,8 @@ export function withExportState<P extends object>(
       setIsExporting(true);
       setResult(null);
       setError(null);
-      exportBedrockAddonCommand.execute(options).then(showResult, showError);
+      const command = options.edition === 'java' ? exportJavaDatapackCommand : exportBedrockAddonCommand;
+      command.execute(options).then(showResult, showError);
     };
 
     // The dialog steps aside while the 3D view plays the animation, then comes back
@@ -76,7 +79,8 @@ export function withExportState<P extends object>(
       screenRouter.closeExportDialog();
       if (editorState.getLayoutMode() === 'tabbed') editorState.setActiveView('3d' as ViewType);
       const reopen = (): void => screenRouter.openExportDialog();
-      babylon3d.playBuildPreview(options.sequence, options.seconds, options.camera).then(reopen, reopen);
+      const camera = options.edition === 'java' ? 'none' : options.camera;
+      babylon3d.playBuildPreview(options.sequence, options.seconds, camera).then(reopen, reopen);
     };
 
     const handleReset = (): void => {
