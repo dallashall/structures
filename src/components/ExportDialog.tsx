@@ -42,7 +42,7 @@ const EDITION_TEXT: Record<ExportEdition, { intro: string; name: string; skipped
     skipped: 'These blocks have no Bedrock version and were left out',
   },
   java: {
-    intro: `Saves a data pack with a wand that builds this project around the player. It needs Java ${JAVA_VERSION}. The camera stays with the player.`,
+    intro: `Saves a data pack with a wand that builds this project around the player. It needs Java ${JAVA_VERSION}.`,
     name: 'Data pack name',
     skipped: 'These blocks have no Java block state and were left out',
   },
@@ -177,27 +177,30 @@ function ExportDialogComponent({
             </Select>
           </FormControl>
 
-          <NumberField
-            label="Animation seconds"
-            value={seconds}
-            onChange={handleSecondsChange}
-            minValue={1}
-            maxValue={60}
-            disabled={sequence === 'instant'}
-          />
+          {sequence !== 'instant' && (
+            <NumberField
+              label="Animation seconds"
+              value={seconds}
+              onChange={handleSecondsChange}
+              minValue={1}
+              maxValue={60}
+            />
+          )}
 
-          <FormControl fullWidth disabled={!hasCamera}>
-            <InputLabel id="export-camera-label">Camera</InputLabel>
-            <Select
-              labelId="export-camera-label"
-              label="Camera"
-              value={hasCamera ? camera : 'none'}
-              onChange={handleCameraChange}
-              MenuProps={IN_DIALOG_MENU_PROPS}
-            >
-              {Object.entries(CAMERA_LABELS).map(renderOption)}
-            </Select>
-          </FormControl>
+          {hasCamera && (
+            <FormControl fullWidth>
+              <InputLabel id="export-camera-label">Camera</InputLabel>
+              <Select
+                labelId="export-camera-label"
+                label="Camera"
+                value={camera}
+                onChange={handleCameraChange}
+                MenuProps={IN_DIALOG_MENU_PROPS}
+              >
+                {Object.entries(CAMERA_LABELS).map(renderOption)}
+              </Select>
+            </FormControl>
+          )}
 
           <NumberField
             label="Uses before it breaks (0 for unlimited)"

@@ -144,7 +144,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 - [ ] The add-on name defaults to the project name, and the helper text shows the matching `/give` command as it changes
 - [ ] Two exports with different add-on names install side by side in game, each with its own item
 - [ ] Using the item on a block builds once, anchored next to the clicked face, never a second copy at the player's feet
-- [ ] The item name placeholder reads "<project> Wand". Seconds disable for "All at once".
+- [ ] The item name placeholder reads "<project> Wand". Seconds and Camera hide for "All at once".
 - [ ] Export saves `<project_slug>.mcaddon` through the save picker or a download
 - [ ] The dialog then shows the file name and the `/give @s structures:<slug>_wand` command
 - [ ] A project holding a block with no Bedrock version lists it in a warning, with its count
@@ -173,7 +173,7 @@ Tests use Vitest with jsdom and `fake-indexeddb`. Setup lives in `src/test/setup
 
 ## Java Export
 
-- [ ] Choosing Java renames the name field "Data pack name", disables Camera, and shows `/function <namespace>:give` in the helper text
+- [ ] Choosing Java renames the name field "Data pack name", hides Camera, and shows `/function <namespace>:give` in the helper text
 - [ ] Export saves `<project_slug>.zip`, and the dialog shows both install routes and the give command
 - [ ] In Java 26.3, the pack loads from a new world's Data Packs screen, and from a saved world's `datapacks` folder after `/reload`
 - [ ] `/function <namespace>:give` gives the wand with its name, the chosen icon, and a glint

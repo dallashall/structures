@@ -186,7 +186,7 @@ This document records the interaction decisions for Structures and how the app c
 
 ## 10. Export to Minecraft
 
-**Decision:** Export is one dialog with an edition choice (Bedrock or Java) above add-on name, item name, icon, build animation, seconds, and uses. Both editions share every field except Camera, which is Bedrock only. Defaults: the project name, "<add-on name> Wand", Blaze Rod, rise, 6 seconds, unlimited uses. The add-on name names the pack, the file, and the item ID, and the dialog shows the `/give` command as it changes. Exporting again under the same name updates that add-on, and a new name installs a separate one.
+**Decision:** Export is one dialog with an edition choice (Bedrock or Java) above add-on name, item name, icon, build animation, seconds, and uses. Both editions share every field except Camera, which is Bedrock only. A field that does not apply to the current choices is hidden: Camera for Java, and Seconds and Camera for "All at once". Defaults: the project name, "<add-on name> Wand", Blaze Rod, rise, 6 seconds, unlimited uses. The add-on name names the pack, the file, and the item ID, and the dialog shows the `/give` command as it changes. Exporting again under the same name updates that add-on, and a new name installs a separate one.
 
 **Details:**
 - The icon list holds vanilla item textures only, so the add-on ships no game texture.
