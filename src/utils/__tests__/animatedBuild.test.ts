@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { BedrockBlockTable } from '../bedrockBlocks';
+import type { BedrockBlockTable, BedrockTableEntry } from '../bedrockBlocks';
 import type { BlockData } from '../../types';
-import { rotateBlockState, toAnimatedBuild } from '../bedrockAnimation';
+import { rotateBlockState, toAnimatedBuild } from '../animatedBuild';
+import { findBedrockBlock } from '../bedrockExport';
 
 const TABLE: BedrockBlockTable = {
   source: 'test',
@@ -17,7 +18,7 @@ const TABLE: BedrockBlockTable = {
   },
 };
 
-const identity = (blockId: string): string => blockId;
+const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null => findBedrockBlock(TABLE, blockId, properties);
 const gray = (): [number, number, number] => [0.5, 0.5, 0.5];
 
 describe('rotateBlockState', () => {
@@ -47,7 +48,7 @@ describe('toAnimatedBuild', () => {
     { position: { x: 0, y: 3, z: 0 }, blockType: 'minecraft:oak_stairs', blockState: { facing: 'y-', half: 'bottom', shape: 'straight_y-' } },
     { position: { x: 1, y: 1, z: 0 }, blockType: 'minecraft:copper_sink' },
   ];
-  const build = toAnimatedBuild(metaBlock, blocks, TABLE, identity, gray);
+  const build = toAnimatedBuild(metaBlock, blocks, findEntry, gray);
 
   it('stores offsets from the meta block in Bedrock axes and leaves out its own cell', () => {
     expect(build.cells).toEqual([1, 2, -2, 0, -2, 0, 0, 1]);

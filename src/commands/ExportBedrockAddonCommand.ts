@@ -8,12 +8,12 @@ import { modelProjection } from '../projections/ModelProjection';
 import type { BlockData } from '../types';
 import type { ItemIcon } from '../utils/bedrockAddon';
 import type { BuildSequence } from '../utils/bedrockAddonScript';
-import type { Rgb } from '../utils/bedrockAnimation';
+import type { Rgb } from '../utils/animatedBuild';
 import type { CameraMode } from '../utils/cameraPath';
-import type { BedrockBlockTable } from '../utils/bedrockBlocks';
+import type { BedrockBlockTable, BedrockTableEntry } from '../utils/bedrockBlocks';
 import { toAddonNames, toMcaddon } from '../utils/bedrockAddon';
-import { toAnimatedBuild } from '../utils/bedrockAnimation';
-import { toBedrockStructure } from '../utils/bedrockExport';
+import { toAnimatedBuild } from '../utils/animatedBuild';
+import { findBedrockBlock, toBedrockStructure } from '../utils/bedrockExport';
 import { toGlowTint } from '../utils/buildSequence';
 import { cssColorToRgb } from '../utils/cssColor';
 import { saveBinaryFile } from '../utils/fileAccess';
@@ -114,7 +114,8 @@ class ExportBedrockAddonCommand {
     const toJavaId = (blockId: string): string => blockRegistry.getBlock(blockId)?.javaId ?? blockId;
     const blocks = model.blocks.toArray().map(resolve);
     const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId);
-    const build = toAnimatedBuild(model.metaBlock, blocks, table, toJavaId, toRgb);
+    const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null => findBedrockBlock(table, toJavaId(blockId), properties);
+    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toRgb);
 
     const [major, minor, patch] = table.bedrockVersion;
     const addon = await toMcaddon({

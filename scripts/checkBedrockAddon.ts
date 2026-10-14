@@ -14,10 +14,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import type { BlockData } from '../src/types';
-import type { BedrockBlockTable } from '../src/utils/bedrockBlocks';
+import type { BedrockBlockTable, BedrockTableEntry } from '../src/utils/bedrockBlocks';
 import { findBadManifestVersions, toAddonFiles } from '../src/utils/bedrockAddon';
-import { toAnimatedBuild } from '../src/utils/bedrockAnimation';
-import { toBedrockStructure } from '../src/utils/bedrockExport';
+import { toAnimatedBuild } from '../src/utils/animatedBuild';
+import { findBedrockBlock, toBedrockStructure } from '../src/utils/bedrockExport';
 import { toBlockVersion, toMcstructure } from '../src/utils/mcstructure';
 
 const CREATOR_TOOLS = '@minecraft/creator-tools@0.20.0';
@@ -46,7 +46,8 @@ async function writeSampleAddon(): Promise<void> {
   const metaBlock = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
   const structure = toBedrockStructure({ width: 4, height: 4, depth: 4 }, metaBlock, SAMPLE_BLOCKS, table, toJavaId);
   const toGray = (): [number, number, number] => [0.6, 0.6, 0.6];
-  const build = toAnimatedBuild(metaBlock, SAMPLE_BLOCKS, table, toJavaId, toGray);
+  const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null => findBedrockBlock(table, toJavaId(blockId), properties);
+  const build = toAnimatedBuild(metaBlock, SAMPLE_BLOCKS, findEntry, toGray);
   const [major, minor, patch] = table.bedrockVersion;
   const files = await toAddonFiles({
     projectId: 'addon-check',

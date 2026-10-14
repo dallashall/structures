@@ -10,7 +10,8 @@
 
 import { strToU8, zipSync } from 'fflate';
 
-import type { AnimatedBuild } from './bedrockAnimation';
+import type { AnimatedBuild } from './animatedBuild';
+import type { BedrockTableEntry } from './bedrockBlocks';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { BuildSequence } from './bedrockAddonScript';
 import type { HorizontalDirection } from '../types';
@@ -50,7 +51,7 @@ export interface AddonOptions {
   structure: Uint8Array;
   placements: Record<PlayerFacing, Placement>;
   // Block list for the animated sequences
-  build: AnimatedBuild;
+  build: AnimatedBuild<BedrockTableEntry>;
   exportedAt: number;
   // The app logo, shown beside both packs in the game's pack list. It is app artwork, not a game texture.
   packIcon: Uint8Array;

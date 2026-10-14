@@ -88,26 +88,32 @@ const parseStateKey = (key: string): Record<string, string> => {
 };
 
 /**
- * The exact Java state when the table has it. Otherwise the first state that agrees with every property
- * the app set, which fills properties the app does not track with a valid value.
+ * The table's key for a Java state: the exact state when the table has it. Otherwise the first state that
+ * agrees with every property the app set, which fills properties the app does not track with a valid value.
+ * The key is a complete, valid Java state, so the Java data pack writes it as is.
  */
+export function findJavaStateKey(table: BedrockBlockTable, javaId: string, properties: Record<string, string>): string | null {
+  const states = table.blocks[javaId];
+  if (!states) return null;
+
+  const exactKey = toJavaStateKey(properties);
+  if (exactKey in states) return exactKey;
+
+  const agreesWith = (key: string): boolean => {
+    const candidate = parseStateKey(key);
+    const agrees = ([name, value]: [string, string]): boolean => !(name in candidate) || candidate[name] === value;
+    return Object.entries(properties).every(agrees);
+  };
+  return Object.keys(states).find(agreesWith) ?? null;
+}
+
 export function findBedrockBlock(
   table: BedrockBlockTable,
   javaId: string,
   properties: Record<string, string>,
 ): BedrockTableEntry | null {
-  const states = table.blocks[javaId];
-  if (!states) return null;
-
-  const exact = states[toJavaStateKey(properties)];
-  if (exact) return exact;
-
-  for (const [key, entry] of Object.entries(states)) {
-    const candidate = parseStateKey(key);
-    const agrees = ([name, value]: [string, string]): boolean => !(name in candidate) || candidate[name] === value;
-    if (Object.entries(properties).every(agrees)) return entry;
-  }
-  return null;
+  const key = findJavaStateKey(table, javaId, properties);
+  return key === null ? null : table.blocks[javaId][key];
 }
 
 /**

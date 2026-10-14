@@ -9,7 +9,8 @@
  * sweeps ahead of the build. "instant" places the whole .mcstructure at once instead.
  */
 
-import type { AnimatedBuild } from './bedrockAnimation';
+import type { AnimatedBuild } from './animatedBuild';
+import type { BedrockTableEntry } from './bedrockBlocks';
 import type { AnimatedSequence } from './buildSequence';
 import { JITTER, LEAD_TICKS, MAX_GLOWS, toDurationTicks } from './buildSequence';
 import type { Placement, PlayerFacing } from './bedrockExport';
@@ -33,10 +34,10 @@ export interface AddonScriptOptions {
   metaFacing: HorizontalDirection;
   camera: CameraMode;
   placements: Record<PlayerFacing, Placement>;
-  build: AnimatedBuild;
+  build: AnimatedBuild<BedrockTableEntry>;
 }
 
-const toPaletteLiteral = ({ rotations, color }: AnimatedBuild['palette'][number]): unknown => [rotations, color];
+const toPaletteLiteral = ({ rotations, color }: AnimatedBuild<BedrockTableEntry>['palette'][number]): unknown => [rotations, color];
 
 export function toAddonScript(options: AddonScriptOptions): string {
   return `import { system, world, BlockPermutation, EasingType, EquipmentSlot, InputPermissionCategory, MolangVariableMap, Player, StructureRotation } from "@minecraft/server";

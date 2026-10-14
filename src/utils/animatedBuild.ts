@@ -1,30 +1,30 @@
 /**
- * The block list behind the add-on's scripted build animation
+ * The block list behind the animated build, shared by the Bedrock add-on and the Java data pack
  *
- * The script places blocks one by one, so Bedrock never rotates their states the way it does for a whole
- * structure. The export therefore stores every palette entry turned four ways, and the script picks the turn
- * that makes the player face the meta block's arrow.
+ * Both games place the blocks one by one, so neither rotates their states the way it does for a whole
+ * structure. The export therefore stores every palette entry turned four ways, and the game picks the turn
+ * that makes the player face the meta block's arrow. Each edition supplies its own lookup from a Java block
+ * state to the entry it stores.
  *
- * Turns run clockwise seen from above (north → east), the same as rotateRight. Cell offsets are in Bedrock
+ * Turns run clockwise seen from above (north → east), the same as rotateRight. Cell offsets are in game
  * axes relative to the meta block: x east, y up, z south.
  */
 
 import type { AxisDirection, BlockData, BlockStateProperties, HorizontalDirection, MetaBlock } from '../types';
-import type { BedrockBlockTable, BedrockTableEntry } from './bedrockBlocks';
-import { findBedrockBlock, toJavaProperties } from './bedrockExport';
+import { toJavaProperties } from './bedrockExport';
 import { rotateRight } from '../core/DirectionMath';
 
 export type Rgb = [number, number, number];
 
-export interface AnimatedPaletteEntry {
+export interface AnimatedPaletteEntry<Entry> {
   // Index = clockwise quarter turns
-  rotations: [BedrockTableEntry, BedrockTableEntry, BedrockTableEntry, BedrockTableEntry];
+  rotations: [Entry, Entry, Entry, Entry];
   // 0–1 channels, for the particle that marks the cell before its block lands
   color: Rgb;
 }
 
-export interface AnimatedBuild {
-  palette: AnimatedPaletteEntry[];
+export interface AnimatedBuild<Entry> {
+  palette: AnimatedPaletteEntry<Entry>[];
   // Flat [dx, dy, dz, paletteIndex] per block
   cells: number[];
   skipped: Map<string, number>;
@@ -32,8 +32,8 @@ export interface AnimatedBuild {
 
 const FALLBACK_COLOR: Rgb = [0.8, 0.8, 0.8];
 const QUARTER_TURNS = [0, 1, 2, 3];
-const NO_BEDROCK_BLOCK = -1;
-const isMissing = (entry: BedrockTableEntry | null): boolean => entry === null;
+const NO_ENTRY = -1;
+const isMissing = (entry: unknown): boolean => entry === null;
 // Minecraft's names for horizontal sides, clockwise from north. Wall heights keep these as keys.
 const CARDINALS = ['north', 'east', 'south', 'west'];
 
@@ -85,28 +85,28 @@ export function rotateBlockState(state: BlockStateProperties, turns: number): Bl
 }
 
 /**
- * Every block except the meta block's own cell, which the script clears to air before anything lands
+ * Every block except the meta block's own cell, which the game clears to air before anything lands.
+ * findEntry looks up an app block ID with Java properties, and returns null when the edition has no such block.
  */
-export function toAnimatedBuild(
+export function toAnimatedBuild<Entry>(
   metaBlock: MetaBlock,
   blocks: BlockData[],
-  table: BedrockBlockTable,
-  toJavaId: (blockId: string) => string,
+  findEntry: (blockId: string, properties: Record<string, string>) => Entry | null,
   toColor: (blockId: string) => Rgb | null,
-): AnimatedBuild {
+): AnimatedBuild<Entry> {
   const anchor = metaBlock.position;
   const paletteIndexes = new Map<string, number>();
-  const palette: AnimatedPaletteEntry[] = [];
+  const palette: AnimatedPaletteEntry<Entry>[] = [];
   const cells: number[] = [];
   const skipped = new Map<string, number>();
 
   const toPaletteIndex = (block: BlockData): number => {
-    const toRotation = (turns: number): BedrockTableEntry | null =>
-      findBedrockBlock(table, toJavaId(block.blockType), toJavaProperties(rotateBlockState(block.blockState ?? {}, turns)));
+    const toRotation = (turns: number): Entry | null =>
+      findEntry(block.blockType, toJavaProperties(rotateBlockState(block.blockState ?? {}, turns)));
     const rotations = QUARTER_TURNS.map(toRotation);
-    if (rotations.some(isMissing)) return NO_BEDROCK_BLOCK;
+    if (rotations.some(isMissing)) return NO_ENTRY;
     palette.push({
-      rotations: rotations as AnimatedPaletteEntry['rotations'],
+      rotations: rotations as AnimatedPaletteEntry<Entry>['rotations'],
       color: toColor(block.blockType) ?? FALLBACK_COLOR,
     });
     return palette.length - 1;
@@ -122,11 +122,11 @@ export function toAnimatedBuild(
       paletteIndex = toPaletteIndex(block);
       paletteIndexes.set(key, paletteIndex);
     }
-    if (paletteIndex === NO_BEDROCK_BLOCK) {
+    if (paletteIndex === NO_ENTRY) {
       skipped.set(block.blockType, (skipped.get(block.blockType) ?? 0) + 1);
       continue;
     }
-    // App (x, y, z) with z up → Bedrock (x, z, y) with y up
+    // App (x, y, z) with z up → game (x, z, y) with y up, the same in Bedrock and Java
     cells.push(x - anchor.x, z - anchor.z, y - anchor.y, paletteIndex);
   }
 
