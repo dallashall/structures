@@ -30,6 +30,7 @@ npm run setup:textures
 - **[ARCHITECTURE_PATTERNS.md](./.claude/skills/ARCHITECTURE_PATTERNS.md)**: the event log, commands, projections, undo history, the tool system, and DraftingService
 - **[MACRO_COMPONENTS.md](./MACRO_COMPONENTS.md)**: singletons, HOCs, views, and components, with data flow
 - **[PROJECT.md](./PROJECT.md)**: project specification and requirements
+- **[FEATURES.md](./FEATURES.md)**: every user-facing feature as the code implements it, with known gaps
 - **[UX_DECISIONS.md](./UX_DECISIONS.md)**: interaction and layout decisions
 - **[TESTING.md](./TESTING.md)**: test plan
 - **[README.md](./README.md)**: quick start, textures, deployment, licensing
