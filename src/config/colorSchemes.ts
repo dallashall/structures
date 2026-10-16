@@ -6,7 +6,7 @@
  * - controlBorder and grid lines: 3:1 or more, because they are the only edge of a control or cell
  * - textDisabled on paper and on disabledFill: 3:1 or more. WCAG exempts disabled controls, but they must stay readable.
  * - divider: none. It separates regions that already differ in content.
- * overlay is translucent, so the targets hold over the canvas color only. Over the 3D sky they hold for the day preset.
+ * overlay is translucent. Its targets are measured over the canvas color only.
  */
 
 export type ColorScheme = 'light' | 'dark';

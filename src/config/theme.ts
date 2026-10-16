@@ -23,13 +23,15 @@ const MONO_FONT = '"Red Hat Mono", "Courier New", monospace';
 
 const HEADING = { fontFamily: HEADING_FONT, fontWeight: 600 };
 
-// MUI draws these edges with translucent colors near 1.3:1. Each one is the only outline of its control, so it gets controlBorder.
+// Overrides for MUI defaults that measure under 3:1 against this palette. Each comment names the default it replaces.
 const toComponents = (colors: UiColors): Components<Theme> => ({
+  // MUI draws the outline at 50% primary, about 2.5:1
   MuiButton: {
     styleOverrides: {
       outlinedPrimary: { borderColor: colors.primary },
     },
   },
+  // MUI draws toggle and input edges, chip fills, and slider rails in translucent grays near 1.3:1
   MuiToggleButton: {
     styleOverrides: {
       root: {

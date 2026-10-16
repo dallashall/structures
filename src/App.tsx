@@ -1,25 +1,31 @@
 import { ThemeProvider, CssBaseline } from "@mui/material";
+
 import type { Theme } from "@mui/material";
-import { WelcomeView } from "./views/WelcomeView";
-import { EditorView } from "./views/EditorView";
-import { NewProjectDialog } from "./components/NewProjectDialog";
-import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
-import { CreditsDialog } from "./components/CreditsDialog";
-import { ExportDialog } from "./components/ExportDialog";
-import { ComponentPreview } from "./preview/ComponentPreview";
+import type { ColorScheme } from "./config/colorSchemes";
+import type { Dimensions } from "./types";
+
+import { createAppTheme } from "./config/theme";
+
 import { createProjectCommand } from "./commands/CreateProjectCommand";
-import { openProjectCommand } from "./commands/OpenProjectCommand";
 import { loadProjectFileCommand } from "./commands/LoadProjectFileCommand";
+import { openProjectCommand } from "./commands/OpenProjectCommand";
 import { screenRouter } from "./core/ScreenRouter";
-import { withScreenState } from "./hocs/withScreenState";
-import type { WithScreenStateProps } from "./hocs/withScreenState";
+
 import { withAtlasStatus } from "./hocs/withAtlasStatus";
 import type { WithAtlasStatusProps } from "./hocs/withAtlasStatus";
-import type { Dimensions } from "./types";
-import type { ColorScheme } from "./config/colorSchemes";
-import { createAppTheme } from "./config/theme";
+import { withScreenState } from "./hocs/withScreenState";
+import type { WithScreenStateProps } from "./hocs/withScreenState";
 import { withThemePreference } from "./hocs/withThemePreference";
 import type { WithThemePreferenceProps } from "./hocs/withThemePreference";
+
+import { CreditsDialog } from "./components/CreditsDialog";
+import { ExportDialog } from "./components/ExportDialog";
+import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
+import { NewProjectDialog } from "./components/NewProjectDialog";
+import { ComponentPreview } from "./preview/ComponentPreview";
+import { EditorView } from "./views/EditorView";
+import { WelcomeView } from "./views/WelcomeView";
+
 import { toFileErrorMessage } from "./utils/projectFile";
 
 // Both themes build once at load. A scheme switch picks the other object.

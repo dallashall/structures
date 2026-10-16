@@ -9,7 +9,7 @@ interface FakeDarkQuery {
   listener: (() => void) | null;
 }
 
-// Node 25 defines a global localStorage that shadows jsdom's and lacks most methods, so each test installs this one
+// The global localStorage in this test environment has no clear(), so each test installs this one
 class MemoryStorage {
   private values = new Map<string, string>();
   failWrites = false;
