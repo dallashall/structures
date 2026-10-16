@@ -4,6 +4,7 @@
  * Contrast targets (WCAG 2.2 AA), measured against paper, default, overlay, and canvas:
  * - text, secondary, and every accent used as text: 4.5:1 or more
  * - controlBorder and grid lines: 3:1 or more, because they are the only edge of a control or cell
+ * - textDisabled on paper and on disabledFill: 3:1 or more. WCAG exempts disabled controls, but they must stay readable.
  * - divider: none. It separates regions that already differ in content.
  * overlay is translucent, so the targets hold over the canvas color only. Over the 3D sky they hold for the day preset.
  */
@@ -38,6 +39,8 @@ export interface UiColors {
   controlBorder: string;
   divider: string;
   chipFill: string;
+  // Fill of a disabled contained button
+  disabledFill: string;
   axis: AxisColors;
 }
 
@@ -80,6 +83,7 @@ export const UI_COLORS: Record<ColorScheme, UiColors> = {
     controlBorder: '#7c838e',
     divider: '#464c55',
     chipFill: '#3a3f47',
+    disabledFill: '#2a2e35',
     axis: DARK_AXIS,
   },
   light: {
@@ -102,6 +106,7 @@ export const UI_COLORS: Record<ColorScheme, UiColors> = {
     controlBorder: '#7a818c',
     divider: '#c9cdd3',
     chipFill: '#dde1e6',
+    disabledFill: '#e4e7eb',
     axis: LIGHT_AXIS,
   },
 };

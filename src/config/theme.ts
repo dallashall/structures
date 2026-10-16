@@ -62,9 +62,31 @@ const toComponents = (colors: UiColors): Components<Theme> => ({
       rail: { backgroundColor: colors.controlBorder, opacity: 1 },
     },
   },
+  // MUI's checked track is primary at 50% opacity, about 2.2:1. A solid track with a paper thumb keeps each part at 3:1.
   MuiSwitch: {
     styleOverrides: {
+      switchBase: {
+        color: '#ffffff',
+        '&.Mui-checked': { color: colors.paper },
+        '&.Mui-checked + .MuiSwitch-track': { backgroundColor: colors.primary, opacity: 1 },
+      },
       track: { backgroundColor: colors.controlBorder, opacity: 1 },
+    },
+  },
+  // A placeholder can carry a default value, as in the export dialog, so it gets readable text instead of MUI's 42% opacity
+  MuiInputBase: {
+    styleOverrides: {
+      input: {
+        '&::placeholder': { color: colors.textSecondary, opacity: 1 },
+      },
+    },
+  },
+  // MUI marks the selected item with a tint near 1.3:1. A primary bar on the leading edge marks it at 3:1 or more.
+  MuiMenuItem: {
+    styleOverrides: {
+      root: {
+        '&.Mui-selected': { boxShadow: `inset 3px 0 0 ${colors.primary}`, fontWeight: 600 },
+      },
     },
   },
   MuiTextField: {
@@ -90,6 +112,7 @@ export function createAppTheme(scheme: ColorScheme): Theme {
       success: { main: colors.success },
       background: { default: colors.background, paper: colors.paper },
       divider: colors.divider,
+      action: { disabled: colors.textDisabled, disabledBackground: colors.disabledFill },
       text: { primary: colors.textPrimary, secondary: colors.textSecondary, disabled: colors.textDisabled },
       chrome: {
         overlay: colors.overlay,
