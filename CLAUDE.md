@@ -471,6 +471,7 @@ src/
 │   ├── DraftingService.ts    # ephemeral preview, commits paint actions
 │   ├── EditorState.ts        # UI state: layers, tools, materials
 │   ├── ScreenRouter.ts       # visible screen, app-level dialogs
+│   ├── ThemePreference.ts    # light, dark, or system color scheme
 │   ├── Storage.ts            # project list, last opened project
 │   ├── BlockRegistry.ts      # block catalog
 │   ├── TextureResolver.ts    # texture atlas
@@ -487,7 +488,7 @@ src/
 ├── layouts/           # Toolbar, TabbedLayout, QuadLayout
 ├── panels/            # Canvas2DView, Preview3DView
 ├── views/             # WelcomeView, EditorView, TabbedEditorView, QuadEditorView
-├── config/            # Static configuration (credits)
+├── config/            # Static configuration (credits, color schemes, MUI theme)
 ├── types/             # Shared TypeScript types
 ├── utils/             # Pure helpers
 ├── test/              # Test setup and fixtures

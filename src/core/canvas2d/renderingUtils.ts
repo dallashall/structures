@@ -1,18 +1,13 @@
-// The same axis colors appear in Preview3DView and SlicePlaneVisualizer
-const AXIS_COLORS = {
-  X: '#e74c3c',
-  Y: '#3498db',
-  Z: '#27ae60',
-} as const;
+import type { AxisColors } from '../../config/colorSchemes';
 
-export function getColorForAxis(axis: string): string {
+export function getColorForAxis(axis: string, colors: AxisColors): string {
   switch (axis) {
     case 'X':
-      return AXIS_COLORS.X;
+      return colors.x;
     case 'Y':
-      return AXIS_COLORS.Y;
+      return colors.y;
     case 'Z':
-      return AXIS_COLORS.Z;
+      return colors.z;
     default:
       return '#000000';
   }

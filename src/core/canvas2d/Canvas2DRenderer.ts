@@ -1,4 +1,6 @@
 import type { Dimensions } from "../../types";
+import type { CanvasColors, ColorScheme } from "../../config/colorSchemes";
+import { CANVAS_COLORS } from "../../config/colorSchemes";
 import { projectView } from "../../projections/ProjectView";
 import { editorState } from "../EditorState";
 import type { ViewState } from "./ViewState";
@@ -10,32 +12,6 @@ import { drawPersistentBlocks, SOLID_COLOR_BELOW_PX } from "./drawBlocks";
 import { drawCoordinateAxes, drawLayerIndicators, drawMetaBlock } from "./drawOverlays";
 import { drawSharedPreview, drawToolPreview } from "./drawPreview";
 
-export interface Canvas2DColorConfig {
-  grid: string;
-  axisX: string;
-  axisY: string;
-  axisZ: string;
-  axisLabel: string;
-  metaBlockBorder: string;
-  metaBlockFill: string;
-  metaBlockArrow: string;
-  layerIndicator: string;
-  textSecondary: string;
-}
-
-const DARK_MODE_COLORS: Canvas2DColorConfig = {
-  grid: "#444444",
-  axisX: "#e74c3c",
-  axisY: "#3498db",
-  axisZ: "#27ae60",
-  axisLabel: "#a0a0a0",
-  metaBlockBorder: "#4CAF50",
-  metaBlockFill: "#e0e0e0",
-  metaBlockArrow: "#1a1a1a",
-  layerIndicator: "#666666",
-  textSecondary: "#888888",
-};
-
 /**
  * Canvas2DRenderer - Draws one frame of a 2D view
  *
@@ -43,16 +19,18 @@ const DARK_MODE_COLORS: Canvas2DColorConfig = {
  * The draw order is the stacking order: later phases paint over earlier ones.
  */
 export class Canvas2DRenderer {
-  private colors: Canvas2DColorConfig = DARK_MODE_COLORS;
+  private colors: CanvasColors;
 
   constructor(
     private ctx: CanvasRenderingContext2D,
     private canvas: HTMLCanvasElement,
-    colors?: Canvas2DColorConfig,
+    scheme: ColorScheme,
   ) {
-    if (colors) {
-      this.colors = colors;
-    }
+    this.colors = CANVAS_COLORS[scheme];
+  }
+
+  setColorScheme(scheme: ColorScheme): void {
+    this.colors = CANVAS_COLORS[scheme];
   }
 
   render(
@@ -97,7 +75,7 @@ export class Canvas2DRenderer {
 
     drawCoordinateAxes(this.ctx, viewState, height, this.colors);
 
-    drawLayerIndicators(this.ctx, viewState, dimensions, activeLayers);
+    drawLayerIndicators(this.ctx, viewState, dimensions, activeLayers, this.colors);
 
     if (previewData?.guide) {
       GuideGeometryRenderer.draw(
@@ -107,6 +85,7 @@ export class Canvas2DRenderer {
         dimensions,
         cellSize,
         pan,
+        this.colors,
       );
     }
 

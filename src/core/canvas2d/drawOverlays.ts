@@ -1,6 +1,6 @@
 import type { Dimensions, LayerState, MetaBlock } from "../../types";
 import { addOffset, directionToOffset } from "../DirectionMath";
-import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
+import type { CanvasColors } from "../../config/colorSchemes";
 import type { ViewState } from "./ViewState";
 import { getColorForAxis, getLayerForAxis } from "./renderingUtils";
 
@@ -8,7 +8,7 @@ export function drawCoordinateAxes(
   ctx: CanvasRenderingContext2D,
   viewState: ViewState,
   canvasHeight: number,
-  colors: Canvas2DColorConfig,
+  colors: CanvasColors,
 ): void {
   const padding = 20;
   const arrowLength = 40;
@@ -22,7 +22,7 @@ export function drawCoordinateAxes(
   ctx.lineWidth = 2;
   ctx.font = "bold 14px sans-serif";
 
-  const hColor = getColorForAxis(axes.horizontal);
+  const hColor = getColorForAxis(axes.horizontal, colors.axis);
   ctx.strokeStyle = hColor;
   ctx.fillStyle = hColor;
   ctx.beginPath();
@@ -45,7 +45,7 @@ export function drawCoordinateAxes(
 
   ctx.fillText(axes.horizontal, originX + arrowLength + 8, originY + 5);
 
-  const vColor = getColorForAxis(axes.vertical);
+  const vColor = getColorForAxis(axes.vertical, colors.axis);
   ctx.strokeStyle = vColor;
   ctx.fillStyle = vColor;
   ctx.beginPath();
@@ -70,7 +70,7 @@ export function drawCoordinateAxes(
 
   const depthX = originX + arrowLength + 60;
   const depthY = originY;
-  const dColor = getColorForAxis(axes.depth);
+  const dColor = getColorForAxis(axes.depth, colors.axis);
   ctx.strokeStyle = dColor;
   ctx.fillStyle = dColor;
   ctx.beginPath();
@@ -89,6 +89,7 @@ export function drawLayerIndicators(
   viewState: ViewState,
   dimensions: Dimensions,
   activeLayers: LayerState,
+  colors: CanvasColors,
 ): void {
   const { gridWidth, gridHeight } = viewState.getGridDimensions(dimensions);
   const cellSize = viewState.getCellSize();
@@ -101,7 +102,7 @@ export function drawLayerIndicators(
   if (axes.vertical !== axes.depth) {
     const axisName = axes.vertical;
     const layerValue = getLayerForAxis(axisName, activeLayers);
-    const color = getColorForAxis(axisName);
+    const color = getColorForAxis(axisName, colors.axis);
     const gridPos = viewState.getGridPositionForLayer(
       axisName,
       layerValue,
@@ -145,7 +146,7 @@ export function drawLayerIndicators(
   if (axes.horizontal !== axes.depth) {
     const axisName = axes.horizontal;
     const layerValue = getLayerForAxis(axisName, activeLayers);
-    const color = getColorForAxis(axisName);
+    const color = getColorForAxis(axisName, colors.axis);
     const gridPos = viewState.getGridPositionForLayer(
       axisName,
       layerValue,
@@ -195,7 +196,7 @@ export function drawMetaBlock(
   activeLayers: LayerState,
   cellSize: number,
   pan: { x: number; y: number },
-  colors: Canvas2DColorConfig,
+  colors: CanvasColors,
 ): void {
   if (!metaBlock) return;
 

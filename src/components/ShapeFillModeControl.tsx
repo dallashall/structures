@@ -72,7 +72,7 @@ export function ShapeFillModeControl({
             px: isHorizontal ? 1 : 1.5,
             fontSize: isHorizontal ? "0.7rem" : "0.75rem",
             border: 1,
-            borderColor: "divider",
+            borderColor: "chrome.controlBorder",
             "&.Mui-selected": {
               bgcolor: "secondary.main",
               color: "secondary.contrastText",

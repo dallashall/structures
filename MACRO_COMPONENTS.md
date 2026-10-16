@@ -121,11 +121,19 @@ Which top-level screen shows (`welcome`, `editor`, or the `#/preview` component 
 
 **Emits:** `screen:shown`, `newprojectdialog:toggled`, `creditsdialog:toggled`, `exportdialog:toggled`, `file-error:shown`, `file-error:dismissed`.
 
+### ThemePreference
+
+**File:** `src/core/ThemePreference.ts`
+
+The light, dark, or system theme choice and the color scheme it resolves to. The choice lives in localStorage under `mc-blueprint-theme` and defaults to `system`. While the choice is `system`, the scheme follows the `prefers-color-scheme` media query. `getChoice()`, `getScheme()`, `selectChoice(choice)`. `src/config/colorSchemes.ts` holds the colors for both schemes. `src/config/theme.ts` builds the MUI theme from them, and `Canvas2DRenderer` reads the canvas colors.
+
+**Emits:** `themechoice:selected` (choice), and `colorscheme:switched` (scheme) when the resolved scheme flips.
+
 ### Storage
 
 **File:** `src/core/Storage.ts`
 
-Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. The app writes nothing to localStorage.
+Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. Project data never goes to localStorage.
 
 **Emits:** `project:renamed` ({ projectId, newName }) when a `metadata:renamed` row commits, and `project:deleted`.
 
@@ -218,6 +226,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 |---|---|---|
 | `withScreenState` | `screen`, `isNewProjectDialogOpen`, `isCreditsDialogOpen`, `isExportDialogOpen`, `fileError` | ScreenRouter: all six notifications |
 | `withExportState` | `exportOptions`, `projectName`, `isExporting`, `exportResult`, `exportError`, `onExportOptionsChange`, `onExport`, `onExportReset` | None. It calls the export command for the chosen edition and holds the result. |
+| `withThemePreference` | `themeChoice`, `colorScheme`, `onThemeChoiceSelect` | ThemePreference: `themechoice:selected`, `colorscheme:switched` |
 | `withAtlasStatus` | `atlasStatus` | TextureResolver: `atlas:ready`, `atlas:error`. It reads the status once more after subscribing, since the load can settle before the subscription. |
 | `withProjectState` | `project` | `model:rebuilt`, `metadata:rebuilt` |
 | `withProjectListState` | `projects`, `isLoadingProjects`, `selectedProjectId`, `isRenaming`, `renameError`, `onSelectProject`, `onDeleteProject`, `onStartRename`, `onCancelRename`, `onRenameProject` | `project:renamed`, `project:deleted`, `thumbnail:saved` |
@@ -233,8 +242,8 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 
 ## Views, layouts, and panels
 
-- `App` (`src/App.tsx`) is wrapped in `withAtlasStatus(withScreenState(...))`. It picks the screen and renders the app-level dialogs.
-- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
+- `App` (`src/App.tsx`) is wrapped in `withThemePreference(withAtlasStatus(withScreenState(...)))`. It picks the MUI theme for the color scheme, picks the screen, and renders the app-level dialogs.
+- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, the theme menu, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
 - `EditorView` (`src/views/EditorView.tsx`) is wrapped in `withSaveState`, `withBlockRegistry`, `withEditorState`, and `withProjectState`. It renders the `Toolbar`, the `ToolOptionsBar`, the layout view, the material browser, the meta block modal, and history toasts.
 - `TabbedEditorView` and `QuadEditorView` pair the tool panel and palettes with `TabbedLayout` (one view at a time) or `QuadLayout` (four views at once).
 - `Canvas2DView` (`src/panels/Canvas2DView.tsx`) is a canvas whose ref callback comes from `canvas2DMounter`.
@@ -243,7 +252,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 ## Component tree
 
 ```
-App  (withAtlasStatus, withScreenState)
+App  (withThemePreference, withAtlasStatus, withScreenState)
 ├── ComponentPreview                 when the URL hash is #/preview
 ├── WelcomeView  (withProjectListState)
 │   ├── TexturesMissingAlert

@@ -9,6 +9,7 @@ import type { WithProjectListStateProps } from "../hocs/withProjectListState";
 import { ProjectCard } from "../components/ProjectCard";
 import { ProjectDetails } from "../components/ProjectDetails";
 import { TexturesMissingAlert } from "../components/TexturesMissingAlert";
+import { ThemeChoiceMenu } from "../components/ThemeChoiceMenu";
 
 interface WelcomeViewOwnProps {
   onNewProject: () => void;
@@ -112,6 +113,7 @@ function WelcomeViewComponent({
             Load from File
           </Button>
           <Box sx={{ flex: 1 }} />
+          <ThemeChoiceMenu />
           <Button
             variant="text"
             onClick={onShowCredits}

@@ -61,7 +61,7 @@ export function ToolPanel({ paintMode, onPaintModeChange }: ToolPanelProps) {
             width: 40,
             height: 40,
             border: 1,
-            borderColor: "divider",
+            borderColor: "chrome.controlBorder",
             borderRadius: 1,
             "&.Mui-selected": {
               bgcolor: "primary.main",

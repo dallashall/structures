@@ -81,7 +81,7 @@ export function TabbedLayout({
                 variant="body2"
                 sx={{
                   color: "text.primary",
-                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                  bgcolor: "chrome.overlay",
                   px: 1,
                   py: 0.5,
                   borderRadius: 1,

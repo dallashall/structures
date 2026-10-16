@@ -95,7 +95,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',
@@ -138,7 +138,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',
@@ -176,7 +176,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',

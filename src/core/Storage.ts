@@ -3,7 +3,7 @@
  *
  * The list is replayed from the EventLog on every read and keeps no record of its own,
  * so it cannot disagree with the events. A project exists exactly when the log holds its metadata:created row.
- * The last opened project ID lives in its own IndexedDB database. The app writes nothing to localStorage.
+ * The last opened project ID lives in its own IndexedDB database. Project data never goes to localStorage.
  *
  * Events:
  * - project:renamed ({ projectId, newName }) - a metadata:renamed event committed

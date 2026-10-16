@@ -60,7 +60,7 @@ export function QuickSelectPalette({
           width: 40,
           height: 40,
           border: 1,
-          borderColor: "divider",
+          borderColor: "chrome.controlBorder",
           borderRadius: 1,
           p: 0,
           display: "flex",
@@ -127,7 +127,7 @@ export function QuickSelectPalette({
               width: 40,
               height: 40,
               border: 1,
-              borderColor: "divider",
+              borderColor: "chrome.controlBorder",
               borderRadius: 1,
               bgcolor: "background.paper",
               "&:hover": {

@@ -16,6 +16,7 @@ import type { LayoutMode } from '../types';
 import type { SaveState } from '../core/SaveTracker';
 import { SaveStatusIndicator } from '../components/SaveStatusIndicator';
 import { UndoRedoButtons } from '../components/UndoRedoButtons';
+import { ThemeChoiceMenu } from '../components/ThemeChoiceMenu';
 
 interface ToolbarProps {
   projectName: string | null;
@@ -134,6 +135,8 @@ export function Toolbar({
               <MenuItem value="quad">Quad Layout</MenuItem>
             </Select>
           </FormControl>
+
+          <ThemeChoiceMenu />
 
           {onShowCredits && (
             <IconButton onClick={onShowCredits} aria-label="Credits">

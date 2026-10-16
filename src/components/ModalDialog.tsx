@@ -80,7 +80,6 @@ export function ModalDialog({ open, onClose, labelledBy, maxWidth = 'sm', fullWi
           border: 'none',
           borderRadius: 1,
           bgcolor: 'background.paper',
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16))',
           color: 'text.primary',
           boxShadow: 24,
           width: fullWidth ? `calc(100% - 64px)` : 'auto',

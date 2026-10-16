@@ -31,7 +31,7 @@ export function QuadLayout({
     >
       <Box
         sx={{
-          bgcolor: "grey.50",
+          bgcolor: "chrome.canvas",
           border: 1,
           borderColor: "primary.light",
           borderRadius: 0,
@@ -54,7 +54,7 @@ export function QuadLayout({
             left: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -63,7 +63,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "primary.main",
+              color: "axis.y",
               fontWeight: "medium",
             }}
           >
@@ -77,7 +77,7 @@ export function QuadLayout({
             right: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -86,7 +86,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "primary.main",
+              color: "axis.y",
               fontWeight: "bold",
             }}
           >
@@ -103,7 +103,7 @@ export function QuadLayout({
 
       <Box
         sx={{
-          bgcolor: "grey.50",
+          bgcolor: "chrome.canvas",
           border: 1,
           borderColor: "error.light",
           borderRadius: 0,
@@ -126,7 +126,7 @@ export function QuadLayout({
             left: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -135,7 +135,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "error.main",
+              color: "axis.x",
               fontWeight: "medium",
             }}
           >
@@ -149,7 +149,7 @@ export function QuadLayout({
             right: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -158,7 +158,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "error.main",
+              color: "axis.x",
               fontWeight: "bold",
             }}
           >
@@ -175,7 +175,7 @@ export function QuadLayout({
 
       <Box
         sx={{
-          bgcolor: "grey.50",
+          bgcolor: "chrome.canvas",
           border: 1,
           borderColor: "success.light",
           borderRadius: 0,
@@ -198,7 +198,7 @@ export function QuadLayout({
             left: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -207,7 +207,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "success.main",
+              color: "axis.z",
               fontWeight: "medium",
             }}
           >
@@ -221,7 +221,7 @@ export function QuadLayout({
             right: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -230,7 +230,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "success.main",
+              color: "axis.z",
               fontWeight: "bold",
             }}
           >
@@ -247,7 +247,7 @@ export function QuadLayout({
 
       <Box
         sx={{
-          bgcolor: "grey.50",
+          bgcolor: "chrome.canvas",
           border: 1,
           borderColor: "grey.500",
           borderRadius: 0,
@@ -270,7 +270,7 @@ export function QuadLayout({
             left: 8,
             zIndex: 10,
             pointerEvents: "none",
-            bgcolor: "rgba(0, 0, 0, 0.5)",
+            bgcolor: "chrome.overlay",
             px: 1,
             py: 0.5,
             borderRadius: 1,
@@ -279,7 +279,7 @@ export function QuadLayout({
           <Typography
             variant="body2"
             sx={{
-              color: "grey.100",
+              color: "text.primary",
               fontWeight: "medium",
             }}
           >

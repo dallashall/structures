@@ -264,8 +264,8 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   contrast: 1.1,
   exposure: 1.0,
   layerHighlightEnabled: false,
-  lightingPreset: "night",
-  backgroundMode: "skybox",
+  lightingPreset: "day",
+  backgroundMode: "ground",
   showFrameStats: false,
 };
 
