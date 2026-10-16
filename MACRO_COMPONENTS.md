@@ -243,7 +243,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 ## Views, layouts, and panels
 
 - `App` (`src/App.tsx`) is wrapped in `withThemePreference(withAtlasStatus(withScreenState(...)))`. It picks the MUI theme for the color scheme, picks the screen, and renders the app-level dialogs.
-- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, the theme menu, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
+- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, the light, dark, and system theme toggle, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
 - `EditorView` (`src/views/EditorView.tsx`) is wrapped in `withSaveState`, `withBlockRegistry`, `withEditorState`, and `withProjectState`. It renders the `Toolbar`, the `ToolOptionsBar`, the layout view, the material browser, the meta block modal, and history toasts.
 - `TabbedEditorView` and `QuadEditorView` pair the tool panel and palettes with `TabbedLayout` (one view at a time) or `QuadLayout` (four views at once).
 - `Canvas2DView` (`src/panels/Canvas2DView.tsx`) is a canvas whose ref callback comes from `canvas2DMounter`.
