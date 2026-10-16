@@ -49,8 +49,11 @@ const toComponents = (colors: UiColors): Components<Theme> => ({
   },
   MuiChip: {
     styleOverrides: {
-      root: { border: `1px solid ${colors.controlBorder}` },
-      filled: { backgroundColor: colors.chipFill },
+      // A colored chip keeps MUI's fill and text pair. Overriding its fill here would break that pair.
+      colorDefault: {
+        border: `1px solid ${colors.controlBorder}`,
+        '&.MuiChip-filled': { backgroundColor: colors.chipFill },
+      },
       label: { fontFamily: MONO_FONT, fontWeight: 500 },
     },
   },
