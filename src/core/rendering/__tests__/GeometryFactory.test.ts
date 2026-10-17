@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { NullEngine, Scene, VertexBuffer } from '@babylonjs/core';
-import { createSlabMesh } from '../GeometryFactory';
+import { NullEngine, Scene, VertexBuffer, MeshBuilder, Vector4 } from '@babylonjs/core';
+import type { Mesh } from '@babylonjs/core';
+import { createSlabMesh, createBoxModelMesh } from '../GeometryFactory';
 
 // Each face samples its own tile in a row of 0.1-wide tiles.
 // Face 1 (-Z) holds a V-reversed rect, as the atlas builder writes it for the back slot.
@@ -94,3 +95,68 @@ describe('createSlabMesh side faces', () => {
     }
   });
 });
+
+interface Vertex {
+  position: number[];
+  normal: number[];
+  uv: number[];
+}
+
+function readVertices(mesh: Mesh): Vertex[] {
+  const positions = mesh.getVerticesData(VertexBuffer.PositionKind)!;
+  const normals = mesh.getVerticesData(VertexBuffer.NormalKind)!;
+  const uvs = mesh.getVerticesData(VertexBuffer.UVKind)!;
+  const vertices: Vertex[] = [];
+  for (let i = 0; i < positions.length / 3; i++) {
+    vertices.push({
+      position: Array.from(positions.slice(i * 3, i * 3 + 3)).map(round),
+      normal: Array.from(normals.slice(i * 3, i * 3 + 3)).map(round),
+      uv: Array.from(uvs.slice(i * 2, i * 2 + 2)).map(roundFine),
+    });
+  }
+  return vertices;
+}
+
+const roundFine = (value: number): number => Math.round(value * 10000) / 10000;
+const vertexKey = (vertex: Vertex): string => `${vertex.position}|${vertex.normal}`;
+const isPlusZFace = (vertex: Vertex): boolean => vertex.normal[2] === 1;
+const isAlongBabylonZ = (vertex: Vertex): boolean => Math.abs(vertex.position[2]) === 0.5;
+
+describe('createBoxModelMesh', () => {
+  it('gives a full-cell box the same UVs as a textured cube', () => {
+    const toVector4 = (uv: { u0: number; v0: number; u1: number; v1: number }): Vector4 =>
+      new Vector4(uv.u0, uv.v0, uv.u1, uv.v1);
+    const cube = MeshBuilder.CreateBox('cube', { size: 1, faceUV: FACE_UVS.map(toVector4) }, scene);
+    const model = createBoxModelMesh(scene, 'model', [{ from: [0, 0, 0], to: [16, 16, 16] }], FACE_UVS);
+    const expected = new Map(readVertices(cube).map(toKeyedUV));
+    for (const vertex of readVertices(model)) {
+      expect(vertex.uv).toEqual(expected.get(vertexKey(vertex)));
+    }
+    cube.dispose();
+    model.dispose();
+  });
+
+  it('shows the matching part of the face texture on a box smaller than the cell', () => {
+    // A 4-wide post through the cell center shows the middle quarter of the +Z face's tile
+    const post = createBoxModelMesh(scene, 'post', [{ from: [6, 6, 0], to: [10, 10, 16] }], FACE_UVS);
+    const frontUs = readVertices(post).filter(isPlusZFace).map(toLocalFaceU(0));
+    expect(Math.min(...frontUs)).toBeCloseTo(6 / 16, 3);
+    expect(Math.max(...frontUs)).toBeCloseTo(10 / 16, 3);
+    post.dispose();
+  });
+
+  it('turns a box about a model axis', () => {
+    // A bar along model x, turned 90° about model z, lies along model y, which is Babylon z
+    const bar = createBoxModelMesh(scene, 'bar', [{
+      from: [0, 7, 7], to: [16, 9, 9],
+      rotation: { axis: 'z', angle: Math.PI / 2, origin: [8, 8, 8] },
+    }]);
+    expect(readVertices(bar).some(isAlongBabylonZ)).toBe(true);
+    expect(Math.max(...readVertices(bar).map(toBabylonX))).toBeCloseTo(1 / 16, 2);
+    bar.dispose();
+  });
+});
+
+const toKeyedUV = (vertex: Vertex): [string, number[]] => [vertexKey(vertex), vertex.uv];
+const toLocalFaceU = (face: number) => (vertex: Vertex): number => (vertex.uv[0] - face * TILE) / TILE;
+const toBabylonX = (vertex: Vertex): number => vertex.position[0];

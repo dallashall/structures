@@ -49,19 +49,19 @@ class SlabShapeImpl implements BlockShape {
 
     if (blockState.type === 'bottom') {
       // Canvas y grows downward, so the lower half starts at py + half
-      return [
+      return [[
         { x: px, y: py + half },
         { x: right, y: py + half },
         { x: right, y: bottom },
         { x: px, y: bottom },
-      ];
+      ]];
     }
-    return [
+    return [[
       { x: px, y: py },
       { x: right, y: py },
       { x: right, y: py + half },
       { x: px, y: py + half },
-    ];
+    ]];
   }
 
   deriveState(

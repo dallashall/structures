@@ -3,6 +3,7 @@ import type { GridBlock } from "./GridBlock";
 import { blockRegistry } from "../BlockRegistry";
 import { textureResolver } from "../TextureResolver";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
+import { traceClipPath } from "./renderingUtils";
 
 /**
  * The atlas face each view shows. Face indexes follow Babylon's box order in Babylon axes:
@@ -46,10 +47,7 @@ export function drawPersistentBlocks(
     const clip = blockShape.get2DClip(gridBlock.blockState ?? {}, viewType, px, py, cellSize);
     if (clip) {
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(clip[0].x, clip[0].y);
-      for (let i = 1; i < clip.length; i++) ctx.lineTo(clip[i].x, clip[i].y);
-      ctx.closePath();
+      traceClipPath(ctx, clip);
       ctx.clip();
     }
 

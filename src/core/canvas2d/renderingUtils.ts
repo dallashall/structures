@@ -1,4 +1,5 @@
 import type { AxisColors } from '../../config/colorSchemes';
+import type { ClipPath } from '../shapes/BlockShape';
 
 export function getColorForAxis(axis: string, colors: AxisColors): string {
   switch (axis) {
@@ -36,5 +37,17 @@ export function getLayerForAxis(
       return activeLayers.z;
     default:
       return 0;
+  }
+}
+
+/**
+ * Adds each clip polygon as a subpath. The polygons share one winding, so clip() keeps their union.
+ */
+export function traceClipPath(ctx: CanvasRenderingContext2D, clip: ClipPath): void {
+  ctx.beginPath();
+  for (const polygon of clip) {
+    ctx.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i++) ctx.lineTo(polygon[i].x, polygon[i].y);
+    ctx.closePath();
   }
 }

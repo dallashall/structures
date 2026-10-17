@@ -166,7 +166,8 @@ class StairShapeImpl implements BlockShape {
   ): ClipPath | null {
     const facing = (blockState?.facing ?? "x+") as HorizontalDirection;
     const half = (blockState?.half ?? "bottom") as "top" | "bottom";
-    return computeStairClip(facing, half, viewType, px, py, cellSize);
+    const path = computeStairClip(facing, half, viewType, px, py, cellSize);
+    return path ? [path] : null;
   }
 
   deriveState(

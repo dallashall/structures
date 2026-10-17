@@ -8,7 +8,10 @@ import type { Scene, Mesh } from '@babylonjs/core';
 import type { BlockStateProperties, ViewType, Vector3D } from '../../types';
 import type { BlockIndexReader } from '../BlockIndex';
 
-export type ClipPath = { x: number; y: number }[];
+export type ClipPolygon = { x: number; y: number }[];
+
+// One or more polygons. Their union is the visible part of the cell.
+export type ClipPath = ClipPolygon[];
 
 export type FaceUVData = Array<{ u0: number; v0: number; u1: number; v1: number }>;
 
@@ -35,7 +38,7 @@ export interface BlockShape {
   getRotation(blockState?: BlockStateProperties): number;
 
   /**
-   * Polygon in canvas pixels that the 2D views clip the cell to. Null for the full cell.
+   * Polygons in canvas pixels that the 2D views clip the cell to. Null for the full cell.
    */
   get2DClip(
     blockState: BlockStateProperties,
