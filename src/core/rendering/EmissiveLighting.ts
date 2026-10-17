@@ -1,22 +1,19 @@
 /**
  * EmissiveLighting - A point light at each luminous block, colored from the block's registry color
  *
- * Babylon's PointLight.range decides both which meshes a light affects (canAffectMesh) and its falloff.
- * Babylon picks lights per base mesh, not per instance, so a short range drops a light from a base whose
- * nearest instances sit right beside it. INCLUSION_RANGE is large so every base includes every light,
- * and the glTF 1/r² falloff handles attenuation.
+ * Each light fades linearly to zero at the block's Minecraft light level, as Minecraft light drops one level per block.
+ * Babylon adds overlapping lights where Minecraft takes the brightest. An inverse-square falloff turns that sum
+ * into a blowout on a block ringed by wall torches half a block away, and linear falloff keeps it bounded.
  */
 
-import { PointLight, Color3, Scene } from '@babylonjs/core';
+import { Light, PointLight, Color3, Scene } from '@babylonjs/core';
 import { blockRegistry } from '../BlockRegistry';
-import { isLuminousBlock } from './PBRCategoryMap';
+import { isLuminousBlock, getLightLevel } from './PBRCategoryMap';
 import { toBabylonVector, centerInCell, positionKey, hexToColor3 } from './babylonUtils';
 
 import type { BlockData } from '../../types';
 
 const DEFAULT_LIGHT_COLOR = new Color3(1, 0.9, 0.7);
-
-const INCLUSION_RANGE = 50;
 
 export class EmissiveLighting {
   private scene: Scene;
@@ -46,9 +43,8 @@ export class EmissiveLighting {
       const light = new PointLight(`emissive_${key}`, babylonPos, this.scene);
       light.diffuse = color;
       light.intensity = this.intensity;
-      light.range = INCLUSION_RANGE;
-      // Light.FALLOFF_GLTF: 1/r² with a smooth cutoff at range
-      light.falloffType = 2;
+      light.range = getLightLevel(blockData.blockType);
+      light.falloffType = Light.FALLOFF_STANDARD;
       this.lights.set(key, light);
     }
 

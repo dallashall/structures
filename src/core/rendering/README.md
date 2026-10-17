@@ -27,7 +27,7 @@ The Babylon.js modules behind the 3D view. `Babylon3D` (`src/core/Babylon3D.ts`)
 | `EnvironmentSetup.ts` | functions | Loads the baked environment texture for a preset (`public/environment/<preset>.env`). PBR metals render black without it. |
 | `BackdropRenderer.ts` | class | Background mode: plain color, skybox, or ground-projected sky. |
 | `ShadowSetup.ts` | functions | Shadow generator on the directional light and a shadow-receiving ground plane. |
-| `EmissiveLighting.ts` | class | Point lights at luminous blocks. |
+| `EmissiveLighting.ts` | class | Point lights at luminous blocks. Each fades linearly to zero at the block's Minecraft light level, so overlapping lights stay bounded. |
 | `PBRCategoryMap.ts` | functions | Classifies blocks by name into metallic and roughness presets. |
 | `PostProcessingSetup.ts` | functions | SSAO, bloom, and tone mapping pipelines. |
 | `ThumbnailCapture.ts` | class | Poses the view camera at a fixed framing, renders one frame, and crops it to a small JPEG for the project card. It never switches `scene.activeCamera`, because that breaks the SSAO prepass. Needs the engine's `preserveDrawingBuffer`. |

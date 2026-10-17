@@ -100,3 +100,17 @@ export function isLuminousBlock(blockName: string): boolean {
   const matchesPattern = (pattern: string) => name.includes(pattern);
   return LUMINOUS_PATTERNS.some(matchesPattern);
 }
+
+// Minecraft light levels. A level is also the light's reach in blocks, since light drops one level per block.
+// Earlier entries win, so the soul and redstone variants sit before the plain names they contain.
+const LIGHT_LEVELS: [string, number][] = [
+  ['soul_', 10], ['redstone_torch', 7], ['redstone_lamp', 15], ['magma_block', 3], ['crying_obsidian', 10],
+  ['torch', 14], ['end_rod', 14],
+];
+const DEFAULT_LIGHT_LEVEL = 15;
+
+export function getLightLevel(blockName: string): number {
+  const name = blockName.toLowerCase().replace('minecraft:', '');
+  const matchesName = ([pattern]: [string, number]): boolean => name.includes(pattern);
+  return LIGHT_LEVELS.find(matchesName)?.[1] ?? DEFAULT_LIGHT_LEVEL;
+}
