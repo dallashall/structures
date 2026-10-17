@@ -513,24 +513,23 @@ class EditorState extends EventEmitter {
     this.emit('blockstate:applied', { ...this.activeBlockState });
   }
 
-  // Slabs carry their half in 'type', stairs and doors in 'half'
+  // Slabs carry their half in 'type', stairs in 'half'. Door halves come from the paint pipeline.
   flipHalf = (): void => {
     if (this.activeBlockState.type !== undefined) {
       // A double slab flips to bottom
       const next = this.activeBlockState.type === 'bottom' ? 'top' : 'bottom';
       this.activeBlockState = { ...this.activeBlockState, type: next };
-    } else if (this.activeBlockState.half !== undefined) {
-      const half = this.activeBlockState.half;
-      if (half === 'bottom') {
-        this.activeBlockState = { ...this.activeBlockState, half: 'top' };
-      } else if (half === 'top') {
-        this.activeBlockState = { ...this.activeBlockState, half: 'bottom' };
-      } else if (half === 'lower') {
-        this.activeBlockState = { ...this.activeBlockState, half: 'upper' };
-      } else {
-        this.activeBlockState = { ...this.activeBlockState, half: 'lower' };
-      }
+    } else if (this.activeBlockState.half === 'bottom' || this.activeBlockState.half === 'top') {
+      const next = this.activeBlockState.half === 'bottom' ? 'top' : 'bottom';
+      this.activeBlockState = { ...this.activeBlockState, half: next };
     }
+    this.emit('blockstate:applied', { ...this.activeBlockState });
+  }
+
+  // Doors only. The hinge side the neighbors pick is swapped on blocks placed while this is set.
+  flipHinge = (): void => {
+    if (this.activeBlockState.hingeFlipped === undefined) return;
+    this.activeBlockState = { ...this.activeBlockState, hingeFlipped: !this.activeBlockState.hingeFlipped };
     this.emit('blockstate:applied', { ...this.activeBlockState });
   }
 

@@ -1,5 +1,5 @@
 /**
- * BlockShape - All shape-specific logic for one kind of block (cube, slab, stair, fence, wall, torch)
+ * BlockShape - All shape-specific logic for one kind of block (cube, slab, stair, fence, wall, torch, door)
  *
  * Renderers and the paint pipeline ask the shape instead of branching on block type.
  */
@@ -61,6 +61,11 @@ export interface BlockShape {
    * The block ID export writes, from the derived state. Minecraft splits some blocks into two IDs, such as torch and wall_torch.
    */
   getExportBlockId(blockId: string, blockState: BlockStateProperties): string;
+
+  /**
+   * The catalog entry whose textures the block shows, from the derived state. A door's upper half shows its own entry.
+   */
+  getTextureBlockId(blockId: string, blockState: BlockStateProperties): string;
 
   matchesBlock(blockId: string): boolean;
 }

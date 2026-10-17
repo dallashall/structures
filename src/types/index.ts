@@ -97,6 +97,8 @@ export interface BlockStateProperties {
   type?: 'top' | 'bottom' | 'double';
 
   hinge?: 'left' | 'right';
+  // Doors: swaps the hinge side the neighbors pick. Derived state replaces it with hinge.
+  hingeFlipped?: boolean;
 }
 
 // Face names follow Minecraft, so the axis notes use Minecraft's Y-up axes

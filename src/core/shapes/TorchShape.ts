@@ -105,6 +105,10 @@ class TorchShapeImpl implements BlockShape {
     return blockId.replace(/torch$/, 'wall_torch');
   }
 
+  getTextureBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     const name = bareId(blockId);
     return name === 'torch' || name.endsWith('_torch');

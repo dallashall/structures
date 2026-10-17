@@ -36,14 +36,12 @@ export function drawPersistentBlocks(
     const px = pan.x + gridBlock.gridX * cellSize;
     const py = pan.y + gridBlock.gridY * cellSize;
 
-    const { block } = blockRegistry.getBlockWithState(
-      gridBlock.blockType,
-      gridBlock.blockState,
-    );
+    const blockShape = shapeCatalog.resolve(gridBlock.blockType);
+    const textureBlockId = blockShape.getTextureBlockId(gridBlock.blockType, gridBlock.blockState ?? {});
+    const { block } = blockRegistry.getBlockWithState(textureBlockId, gridBlock.blockState);
     if (!block) continue;
 
     // Non-cube shapes clip the cell, so a slab fills half of it
-    const blockShape = shapeCatalog.resolve(gridBlock.blockType);
     const clip = blockShape.get2DClip(gridBlock.blockState ?? {}, viewType, px, py, cellSize);
     if (clip) {
       ctx.save();

@@ -4,16 +4,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "acacia_door3d_side",
-      "north": "acacia_door3d_bottom",
-      "south": "acacia_door3d_bottom_flip"
+      "side": "acacia_door_side",
+      "north": "acacia_door_bottom",
+      "south": "acacia_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -252,16 +251,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "bamboo_door3d_side",
-      "north": "bamboo_door3d_bottom",
-      "south": "bamboo_door3d_bottom_flip"
+      "side": "bamboo_door_side",
+      "north": "bamboo_door_bottom",
+      "south": "bamboo_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -420,16 +418,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "birch_door3d_side",
-      "north": "birch_door3d_bottom",
-      "south": "birch_door3d_bottom_flip"
+      "side": "birch_door_side",
+      "north": "birch_door_bottom",
+      "south": "birch_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -898,16 +895,15 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "side": "cherry_door3d_side",
-      "north": "cherry_door3d_bottom",
-      "south": "cherry_door3d_bottom_flip"
+      "side": "cherry_door_side",
+      "north": "cherry_door_bottom",
+      "south": "cherry_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -1201,16 +1197,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "copper_door3d_side",
-      "north": "copper_door3d_bottom",
-      "south": "copper_door3d_bottom_flip"
+      "side": "copper_door_side",
+      "north": "copper_door_bottom",
+      "south": "copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -1317,16 +1312,15 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "side": "crimson_door3d_side",
-      "north": "crimson_door3d_bottom",
-      "south": "crimson_door3d_bottom_flip"
+      "side": "crimson_door_side",
+      "north": "crimson_door_bottom",
+      "south": "crimson_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -1560,16 +1554,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "dark_oak_door3d_side",
-      "north": "dark_oak_door3d_bottom",
-      "south": "dark_oak_door3d_bottom_flip"
+      "side": "dark_oak_door_side",
+      "north": "dark_oak_door_bottom",
+      "south": "dark_oak_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -1943,16 +1936,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "exposed_copper_door3d_side",
-      "north": "exposed_copper_door3d_bottom",
-      "south": "exposed_copper_door3d_bottom_flip"
+      "side": "exposed_copper_door_side",
+      "north": "exposed_copper_door_bottom",
+      "south": "exposed_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -2352,16 +2344,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "iron_door3d_side",
-      "north": "iron_door3d_bottom",
-      "south": "iron_door3d_bottom_flip"
+      "side": "iron_door_side",
+      "north": "iron_door_bottom",
+      "south": "iron_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -2479,16 +2470,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "jungle_door3d_side",
-      "north": "jungle_door3d_bottom",
-      "south": "jungle_door3d_bottom_flip"
+      "side": "jungle_door_side",
+      "north": "jungle_door_bottom",
+      "south": "jungle_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -2806,16 +2796,15 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "side": "mangrove_door3d_side",
-      "north": "mangrove_door3d_bottom",
-      "south": "mangrove_door3d_bottom_flip"
+      "side": "mangrove_door_side",
+      "north": "mangrove_door_bottom",
+      "south": "mangrove_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -3234,16 +3223,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "oak_door3d_side",
-      "north": "oak_door3d_bottom",
-      "south": "oak_door3d_bottom_flip"
+      "side": "oak_door_side",
+      "north": "oak_door_bottom",
+      "south": "oak_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -3435,16 +3423,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "oxidized_copper_door3d_side",
-      "north": "oxidized_copper_door3d_bottom",
-      "south": "oxidized_copper_door3d_bottom_flip"
+      "side": "oxidized_copper_door_side",
+      "north": "oxidized_copper_door_bottom",
+      "south": "oxidized_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -3505,16 +3492,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "pale_oak_door3d_side",
-      "north": "pale_oak_door3d_bottom",
-      "south": "pale_oak_door3d_bottom_flip"
+      "side": "pale_oak_door_side",
+      "north": "pale_oak_door_bottom",
+      "south": "pale_oak_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -4513,16 +4499,15 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "side": "spruce_door3d_side",
-      "north": "spruce_door3d_bottom",
-      "south": "spruce_door3d_bottom_flip"
+      "side": "spruce_door_side",
+      "north": "spruce_door_bottom",
+      "south": "spruce_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -4876,16 +4861,15 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "side": "warped_door3d_side",
-      "north": "warped_door3d_bottom",
-      "south": "warped_door3d_bottom_flip"
+      "side": "warped_door_side",
+      "north": "warped_door_bottom",
+      "south": "warped_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -5049,16 +5033,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "copper_door3d_side",
-      "north": "copper_door3d_bottom",
-      "south": "copper_door3d_bottom_flip"
+      "side": "copper_door_side",
+      "north": "copper_door_bottom",
+      "south": "copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -5119,16 +5102,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "exposed_copper_door3d_side",
-      "north": "exposed_copper_door3d_bottom",
-      "south": "exposed_copper_door3d_bottom_flip"
+      "side": "exposed_copper_door_side",
+      "north": "exposed_copper_door_bottom",
+      "south": "exposed_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -5189,16 +5171,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "oxidized_copper_door3d_side",
-      "north": "oxidized_copper_door3d_bottom",
-      "south": "oxidized_copper_door3d_bottom_flip"
+      "side": "oxidized_copper_door_side",
+      "north": "oxidized_copper_door_bottom",
+      "south": "oxidized_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -5259,16 +5240,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "weathered_copper_door3d_side",
-      "north": "weathered_copper_door3d_bottom",
-      "south": "weathered_copper_door3d_bottom_flip"
+      "side": "weathered_copper_door_side",
+      "north": "weathered_copper_door_bottom",
+      "south": "weathered_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -5329,16 +5309,15 @@
     "category": "ore",
     "color": "#8f8f8f",
     "textures": {
-      "side": "weathered_copper_door3d_side",
-      "north": "weathered_copper_door3d_bottom",
-      "south": "weathered_copper_door3d_bottom_flip"
+      "side": "weathered_copper_door_side",
+      "north": "weathered_copper_door_bottom",
+      "south": "weathered_copper_door_bottom"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "half": "lower",
-      "hinge": "left",
-      "open": "false"
+      "open": "false",
+      "hingeFlipped": false
     },
     "isCube": true,
     "isTransparent": false
@@ -31796,6 +31775,300 @@
       "facing": "north"
     },
     "javaId": "minecraft:copper_wall_torch",
+    "hidden": true
+  },
+  "minecraft:acacia_door_upper": {
+    "displayName": "Acacia Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "acacia_door_side",
+      "north": "acacia_door_top",
+      "south": "acacia_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:bamboo_door_upper": {
+    "displayName": "Bamboo Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "bamboo_door_side",
+      "north": "bamboo_door_top",
+      "south": "bamboo_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:birch_door_upper": {
+    "displayName": "Birch Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "birch_door_side",
+      "north": "birch_door_top",
+      "south": "birch_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:cherry_door_upper": {
+    "displayName": "Cherry Door Upper Half",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "side": "cherry_door_side",
+      "north": "cherry_door_top",
+      "south": "cherry_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:copper_door_upper": {
+    "displayName": "Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "copper_door_side",
+      "north": "copper_door_top",
+      "south": "copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:crimson_door_upper": {
+    "displayName": "Crimson Door Upper Half",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "side": "crimson_door_side",
+      "north": "crimson_door_top",
+      "south": "crimson_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:dark_oak_door_upper": {
+    "displayName": "Dark Oak Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "dark_oak_door_side",
+      "north": "dark_oak_door_top",
+      "south": "dark_oak_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:exposed_copper_door_upper": {
+    "displayName": "Exposed Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "exposed_copper_door_side",
+      "north": "exposed_copper_door_top",
+      "south": "exposed_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:iron_door_upper": {
+    "displayName": "Iron Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "iron_door_side",
+      "north": "iron_door_top",
+      "south": "iron_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:jungle_door_upper": {
+    "displayName": "Jungle Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "jungle_door_side",
+      "north": "jungle_door_top",
+      "south": "jungle_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:mangrove_door_upper": {
+    "displayName": "Mangrove Door Upper Half",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "side": "mangrove_door_side",
+      "north": "mangrove_door_top",
+      "south": "mangrove_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:oak_door_upper": {
+    "displayName": "Oak Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "oak_door_side",
+      "north": "oak_door_top",
+      "south": "oak_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:oxidized_copper_door_upper": {
+    "displayName": "Oxidized Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "oxidized_copper_door_side",
+      "north": "oxidized_copper_door_top",
+      "south": "oxidized_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:pale_oak_door_upper": {
+    "displayName": "Pale Oak Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "pale_oak_door_side",
+      "north": "pale_oak_door_top",
+      "south": "pale_oak_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:spruce_door_upper": {
+    "displayName": "Spruce Door Upper Half",
+    "category": "wood",
+    "color": "#9c7f4e",
+    "textures": {
+      "side": "spruce_door_side",
+      "north": "spruce_door_top",
+      "south": "spruce_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:warped_door_upper": {
+    "displayName": "Warped Door Upper Half",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "side": "warped_door_side",
+      "north": "warped_door_top",
+      "south": "warped_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:waxed_copper_door_upper": {
+    "displayName": "Waxed Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "copper_door_side",
+      "north": "copper_door_top",
+      "south": "copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:waxed_exposed_copper_door_upper": {
+    "displayName": "Waxed Exposed Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "exposed_copper_door_side",
+      "north": "exposed_copper_door_top",
+      "south": "exposed_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:waxed_oxidized_copper_door_upper": {
+    "displayName": "Waxed Oxidized Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "oxidized_copper_door_side",
+      "north": "oxidized_copper_door_top",
+      "south": "oxidized_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:waxed_weathered_copper_door_upper": {
+    "displayName": "Waxed Weathered Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "weathered_copper_door_side",
+      "north": "weathered_copper_door_top",
+      "south": "weathered_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
+    "hidden": true
+  },
+  "minecraft:weathered_copper_door_upper": {
+    "displayName": "Weathered Copper Door Upper Half",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "side": "weathered_copper_door_side",
+      "north": "weathered_copper_door_top",
+      "south": "weathered_copper_door_top"
+    },
+    "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false,
     "hidden": true
   }
 }

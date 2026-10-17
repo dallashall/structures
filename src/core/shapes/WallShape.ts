@@ -73,6 +73,10 @@ class WallShapeImpl implements BlockShape {
     return blockId;
   }
 
+  getTextureBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     return isWallBlock(blockId);
   }

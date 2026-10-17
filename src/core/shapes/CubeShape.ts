@@ -48,6 +48,10 @@ class CubeShapeImpl implements BlockShape {
     return blockId;
   }
 
+  getTextureBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(_blockId: string): boolean {
     return true;
   }
