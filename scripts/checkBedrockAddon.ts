@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * Builds a sample Bedrock add-on through the same code the editor's Export uses, then checks it three ways:
+ * Builds a sample Bedrock add-on for each activator through the same code the editor's Export uses, then checks it three ways:
  * Mojang's validator (@minecraft/creator-tools), a manifest version range check the validator lacks, and a
  * type check of the generated script against @minecraft/server's definitions. Exits 1 on any error.
  * Warnings and recommendations print but do not fail.
@@ -11,9 +11,11 @@
 
 import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import type { BlockData } from '../src/types';
+import type { Activator } from '../src/utils/bedrockAddon';
 import type { BedrockBlockTable, BedrockTableEntry } from '../src/utils/bedrockBlocks';
 import { findBadManifestVersions, toAddonFiles } from '../src/utils/bedrockAddon';
 import { toAnimatedBuild } from '../src/utils/animatedBuild';
@@ -22,6 +24,7 @@ import { toBlockVersion, toMcstructure } from '../src/utils/mcstructure';
 
 const CREATOR_TOOLS = '@minecraft/creator-tools@0.20.0';
 const OUTPUT_DIR = path.join('.cache', 'addon-check');
+const ACTIVATORS: Activator[] = ['wand', 'bow', 'snowball'];
 const FAILING_TYPES = new Set(['error', 'testFail']);
 const REPORTED_TYPES = new Set(['error', 'testFail', 'warning', 'recommendation']);
 
@@ -40,7 +43,7 @@ const SAMPLE_BLOCKS: BlockData[] = [
   { position: { x: 3, y: 1, z: 0 }, blockType: 'minecraft:oak_slab', blockState: { type: 'top' } },
 ];
 
-async function writeSampleAddon(): Promise<void> {
+async function writeSampleAddon(activator: Activator, root: string): Promise<void> {
   const table = JSON.parse(fs.readFileSync(path.join('public', 'data', 'bedrock-blocks.json'), 'utf-8')) as BedrockBlockTable;
   const toJavaId = (blockId: string): string => blockId;
   const metaBlock = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
@@ -51,9 +54,10 @@ async function writeSampleAddon(): Promise<void> {
   const [major, minor, patch] = table.bedrockVersion;
   const files = await toAddonFiles({
     projectId: 'addon-check',
-    projectName: 'Addon Check',
+    projectName: activator === 'wand' ? 'Addon Check' : `Addon Check ${activator}`,
     itemName: 'Addon Check Wand',
     icon: 'blaze_rod',
+    activator,
     sequence: 'rise',
     seconds: 5,
     uses: 10,
@@ -66,24 +70,31 @@ async function writeSampleAddon(): Promise<void> {
     packIcon: new Uint8Array(fs.readFileSync(path.join('public', 'logo-256.png'))),
   });
 
-  fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
   for (const [file, bytes] of Object.entries(files)) {
-    const target = path.join(OUTPUT_DIR, file);
+    const target = path.join(root, file);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, bytes);
   }
 }
 
-function runValidator(): ValidationItem[] {
+// The validator writes reports to out/ under its working folder and can carry files over from an earlier
+// report of the same folder name. It runs in a fresh temporary folder on a copy of the packs.
+function runValidator(root: string): ValidationItem[] {
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'addon-check-'));
+  const copy = path.join(workDir, 'packs');
+  fs.cpSync(root, copy, { recursive: true });
   let output: string;
   try {
-    output = execFileSync('npx', ['-y', CREATOR_TOOLS, 'validate', 'all', '-i', OUTPUT_DIR, '--json'], {
+    output = execFileSync('npx', ['-y', CREATOR_TOOLS, 'validate', 'all', '-i', copy, '--json'], {
+      cwd: workDir,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
   } catch (error) {
     // The validator exits non-zero when it finds errors. Its report is still on stdout.
     output = (error as { stdout?: string }).stdout ?? '';
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
   }
   const report = JSON.parse(output.slice(output.indexOf('{'))) as { projects: Array<{ items: ValidationItem[] }> };
   const toItems = (project: { items: ValidationItem[] }): ValidationItem[] => project.items;
@@ -98,9 +109,9 @@ const printItem = ({ type, generatorId, message, data, path: itemPath }: Validat
 };
 
 // Bedrock reads version parts as 16-bit numbers, which Mojang's validator does not check
-function checkManifestVersions(): ValidationItem[] {
+function checkManifestVersions(root: string): ValidationItem[] {
   const toManifestItems = (folder: string): ValidationItem[] => {
-    const manifestPath = path.join(OUTPUT_DIR, folder, 'manifest.json');
+    const manifestPath = path.join(root, folder, 'manifest.json');
     if (!fs.existsSync(manifestPath)) return [];
     const toItem = (problem: string): ValidationItem => ({
       type: 'error',
@@ -110,21 +121,22 @@ function checkManifestVersions(): ValidationItem[] {
     });
     return findBadManifestVersions(JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))).map(toItem);
   };
-  return fs.readdirSync(OUTPUT_DIR).flatMap(toManifestItems);
+  return fs.readdirSync(root).flatMap(toManifestItems);
 }
 
 // The validator does not read scripts. tsc --checkJs catches a wrong Script API name or argument.
-function checkScriptTypes(): ValidationItem[] {
+function checkScriptTypes(root: string): ValidationItem[] {
   const toScriptItems = (folder: string): ValidationItem[] => {
-    const scriptPath = path.join(OUTPUT_DIR, folder, 'scripts', 'main.js');
+    const scriptPath = path.join(root, folder, 'scripts', 'main.js');
     if (!fs.existsSync(scriptPath)) return [];
-    const configPath = path.join(OUTPUT_DIR, `${folder}.tsconfig.json`);
+    // Beside the activator's folder, not in it, so the validator never reads it as pack content
+    const configPath = path.join(path.dirname(root), `${path.basename(root)}-${folder}.tsconfig.json`);
     fs.writeFileSync(configPath, JSON.stringify({
       compilerOptions: {
         allowJs: true, checkJs: true, noEmit: true, strict: false, skipLibCheck: true,
         module: 'esnext', moduleResolution: 'bundler', target: 'es2022', lib: ['es2022'],
       },
-      files: [path.join(folder, 'scripts', 'main.js')],
+      files: [path.join(path.basename(root), folder, 'scripts', 'main.js')],
     }));
     try {
       execFileSync(path.join('node_modules', '.bin', 'tsc'), ['-p', configPath], { encoding: 'utf-8' });
@@ -136,20 +148,27 @@ function checkScriptTypes(): ValidationItem[] {
       return output.split('\n').filter(isErrorLine).map(toItem);
     }
   };
-  return fs.readdirSync(OUTPUT_DIR).flatMap(toScriptItems);
+  return fs.readdirSync(root).flatMap(toScriptItems);
 }
 
 async function main(): Promise<void> {
-  await writeSampleAddon();
-  const items = [...checkManifestVersions(), ...checkScriptTypes(), ...runValidator()];
-  items.filter(isReported).forEach(printItem);
+  fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+  // The validator reads one behavior and resource pack pair per folder, so each activator gets its own
+  let failureCount = 0;
+  for (const activator of ACTIVATORS) {
+    const root = path.join(OUTPUT_DIR, activator);
+    await writeSampleAddon(activator, root);
+    const items = [...checkManifestVersions(root), ...checkScriptTypes(root), ...runValidator(root)];
+    console.log(`${activator}:`);
+    items.filter(isReported).forEach(printItem);
+    failureCount += items.filter(isFailing).length;
+  }
 
-  const failures = items.filter(isFailing);
-  if (failures.length > 0) {
-    console.error(`${failures.length} validation errors in ${OUTPUT_DIR}`);
+  if (failureCount > 0) {
+    console.error(`${failureCount} validation errors in ${OUTPUT_DIR}`);
     process.exit(1);
   }
-  console.log(`The sample add-on in ${OUTPUT_DIR} passes validation.`);
+  console.log(`The sample add-ons in ${OUTPUT_DIR} pass validation.`);
 }
 
 const exitWithError = (error: unknown): void => {

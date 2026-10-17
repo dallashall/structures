@@ -279,13 +279,16 @@ Render settings, quick-select slots, and the theme are not part of undo history.
 | Option | Bedrock | Java | Default |
 |---|---|---|---|
 | Add-on or data pack name | yes | yes | the project name |
-| Item name | yes | yes | "<name> Wand" |
-| Item icon: Blaze Rod, Breeze Rod, Stick, Trial Key, Amethyst Shard, Nether Star | yes | yes | Blaze Rod |
+| Starts the build: use a wand, shoot a bow, or throw snowballs | yes | yes | wand |
+| Item name | yes | yes | "<name> Wand", "<name> Bow", or "<name> Snowball" |
+| Item icon (wand only): Blaze Rod, Breeze Rod, Stick, Trial Key, Amethyst Shard, Nether Star | yes | yes | Blaze Rod |
 | Build animation: Rise layer by layer, Ripple out from the anchor, Ripple in toward the anchor, Pop into place, All at once | yes | yes | Rise |
 | Animation seconds, 1 to 60 | yes | yes | 6 |
 | Camera: Player keeps control, Orbit the build, Look around from the player | yes | no | Player keeps control |
-| Crafting recipe: none, or the icon plus a Gold Ingot, Diamond, or Nether Star | no | yes | none |
-| Uses before it breaks, 0 to 1000, 0 for unlimited | yes | yes | 0 |
+| Crafting recipe: none, or the item plus a Gold Ingot, Diamond, or Nether Star | no | yes | none |
+| Uses before it breaks, 0 to 1000, 0 for unlimited. For snowballs, the stack size, 0 to 16, 0 for 16 | yes | yes | 0 |
+
+A wand builds around the player who uses it. A bow builds where each arrow it fires lands, and a snowball builds where it lands. Any vanilla arrow works in the bow. A block hit puts the meta block in the open cell in front of the struck face. A mob hit puts it at the mob's feet. The build turns so the shooter faces the meta block's arrow, so a bridge with its meta block at the far end, arrow pointing along the bridge, reaches back toward the shooter. The bow wears one use per shot. Each snowball builds once.
 
 "Pop into place" glows every cell at once, then lands every block together 0.8 seconds later. Animation seconds and Camera hide for "Pop into place" and "All at once". The dialog remembers your choices until the page reloads.
 

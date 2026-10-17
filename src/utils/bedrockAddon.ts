@@ -36,15 +36,37 @@ export const ITEM_ICONS = {
 
 export type ItemIcon = keyof typeof ITEM_ICONS;
 
+// What starts a build: using the wand, an arrow from the export's bow, or a throw from the export's snowballs
+export type Activator = 'wand' | 'bow' | 'snowball';
+
+/**
+ * The item name an export uses when none is given, such as "Castle Bow"
+ */
+export function toDefaultItemName(addonName: string, activator: Activator): string {
+  const word = activator === 'bow' ? 'Bow' : activator === 'snowball' ? 'Snowball' : 'Wand';
+  return `${addonName} ${word}`;
+}
+
+// Vanilla's snowball stack size. Each marked snowball builds once.
+export const SNOWBALL_STACK = 16;
+
+/**
+ * The marked snowballs one give or craft hands out. 0 uses gives a full stack.
+ */
+export function toSnowballCount(uses: number): number {
+  return uses > 0 ? Math.min(uses, SNOWBALL_STACK) : SNOWBALL_STACK;
+}
+
 export interface AddonOptions {
   projectId: string;
   // The add-on's name in the game's pack list. Its slug names the file, the structure, and the item.
   projectName: string;
   itemName: string;
   icon: ItemIcon;
+  activator: Activator;
   sequence: BuildSequence;
   seconds: number;
-  // Uses before the item breaks. 0 means unlimited.
+  // Uses before the item breaks, or the snowball count. 0 means unlimited, or a full stack of snowballs.
   uses: number;
   metaFacing: HorizontalDirection;
   camera: CameraMode;
@@ -153,6 +175,41 @@ async function toStableUuid(seed: string): Promise<string> {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+// Vanilla item textures for the bow and snowball activators. The wand uses the chosen icon.
+const ACTIVATOR_TEXTURES: Partial<Record<Activator, string>> = { bow: 'bow_standby', snowball: 'snowball' };
+
+/**
+ * The item components that make the item a wand, a bow that fires vanilla arrows, or a stack of throwable snowballs.
+ * The script wears the bow, since a custom shooter takes no damage of its own.
+ */
+function toActivatorComponents(options: AddonOptions, componentId: string): Record<string, unknown> {
+  const durability = options.uses > 0 ? { 'minecraft:durability': { max_durability: options.uses } } : {};
+  if (options.activator === 'bow') {
+    return {
+      'minecraft:max_stack_size': 1,
+      'minecraft:glint': true,
+      'minecraft:use_animation': 'bow',
+      'minecraft:use_modifiers': { use_duration: 3600, movement_modifier: 0.35 },
+      'minecraft:shooter': {
+        ammunition: [{ item: 'minecraft:arrow', use_offhand: true, search_inventory: true, use_in_creative: true }],
+        max_draw_duration: 1,
+        scale_power_by_draw_duration: true,
+        charge_on_draw: false,
+      },
+      ...durability,
+    };
+  }
+  if (options.activator === 'snowball') {
+    return {
+      'minecraft:max_stack_size': SNOWBALL_STACK,
+      'minecraft:glint': true,
+      'minecraft:throwable': { do_swing_animation: true },
+      'minecraft:projectile': { projectile_entity: 'minecraft:snowball' },
+    };
+  }
+  return { 'minecraft:max_stack_size': 1, ...durability, [componentId]: {} };
+}
+
 const toJson = (value: unknown): Uint8Array => strToU8(`${JSON.stringify(value, null, 2)}\n`);
 
 /**
@@ -204,15 +261,15 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
         components: {
           'minecraft:icon': iconKey,
           'minecraft:display_name': { value: options.itemName },
-          'minecraft:max_stack_size': 1,
-          ...(options.uses > 0 ? { 'minecraft:durability': { max_durability: options.uses } } : {}),
-          [names.componentId]: {},
+          ...toActivatorComponents(options, names.componentId),
         },
       },
     }),
     [`${behaviorRoot}/scripts/main.js`]: strToU8(toAddonScript({
       structureId: names.structureId,
       componentId: names.componentId,
+      itemId: names.itemId,
+      activator: options.activator,
       sequence: options.sequence,
       seconds: options.seconds,
       uses: options.uses,
@@ -237,7 +294,7 @@ export async function toAddonFiles(options: AddonOptions): Promise<Record<string
     [`${resourceRoot}/textures/item_texture.json`]: toJson({
       resource_pack_name: options.projectName,
       texture_name: 'atlas.items',
-      texture_data: { [iconKey]: { textures: [`textures/items/${options.icon}`] } },
+      texture_data: { [iconKey]: { textures: [`textures/items/${ACTIVATOR_TEXTURES[options.activator] ?? options.icon}`] } },
     }),
   };
 }

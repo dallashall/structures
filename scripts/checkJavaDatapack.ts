@@ -8,7 +8,11 @@
  * - an armor stand holding the wand runs start, and a block is missing after the last frame
  * - the wand's damage does not count up, or the last use does not break it
  * - a crafter given the recipe's two items does not drop the wand
+ * - a marked snowball dropped on the ground, a marked arrow that sticks in it, or a marked snowball that strikes a
+ *   mob does not build at the right cell
  *
+ * The projectile checks summon each projectile with the item data a real throw or shot gives it. With no owner,
+ * the build faces south, so it lands turned twice.
  * A headless server has no player to right-click, so the check calls start directly. The armor stand faces
  * north, the same way as the sample's meta block, so the build lands unturned.
  *
@@ -26,6 +30,7 @@ import { strFromU8, unzipSync, zipSync } from 'fflate';
 import type { BlockData } from '../src/types';
 import type { AnimatedBuild } from '../src/utils/animatedBuild';
 import type { BedrockBlockTable } from '../src/utils/bedrockBlocks';
+import type { Activator } from '../src/utils/bedrockAddon';
 import { toAnimatedBuild } from '../src/utils/animatedBuild';
 import { toAddonNames } from '../src/utils/bedrockAddon';
 import { DATA_PACK_FORMAT, JAVA_VERSION, findJavaBlockState, toDatapackFiles } from '../src/utils/javaDatapack';
@@ -63,15 +68,23 @@ const fail = (message: string): never => {
   throw new Error(message);
 };
 
-function writeSamplePack(): { files: Record<string, Uint8Array>; namespace: string; build: AnimatedBuild<string> } {
+interface SamplePack {
+  files: Record<string, Uint8Array>;
+  namespace: string;
+  build: AnimatedBuild<string>;
+  fileName: string;
+}
+
+function writeSamplePack(activator: Activator): SamplePack {
   const table = JSON.parse(fs.readFileSync(path.join('public', 'data', 'bedrock-blocks.json'), 'utf-8')) as BedrockBlockTable;
   const findEntry = (blockId: string, properties: Record<string, string>): string | null => findJavaBlockState(table, blockId, properties);
   const toGray = (): [number, number, number] => [0.6, 0.6, 0.6];
   const options = {
     projectId: 'datapack-check',
-    packName: 'Datapack Check',
+    packName: activator === 'wand' ? 'Datapack Check' : `Datapack Check ${activator}`,
     itemName: 'Datapack "Check" Wand',
     icon: SAMPLE_ICON,
+    activator,
     sequence: 'rise' as const,
     seconds: 2,
     uses: SAMPLE_USES,
@@ -80,10 +93,34 @@ function writeSamplePack(): { files: Record<string, Uint8Array>; namespace: stri
     build: toAnimatedBuild(META_BLOCK, SAMPLE_BLOCKS, findEntry, toGray),
   };
   const files = toDatapackFiles(options);
-  fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  fs.writeFileSync(path.join(OUTPUT_DIR, PACK_FILE), zipSync(files));
-  return { files, namespace: toAddonNames(options.packName, options.projectId).namespace, build: options.build };
+  const fileName = activator === 'wand' ? PACK_FILE : `${activator}-${PACK_FILE}`;
+  fs.writeFileSync(path.join(OUTPUT_DIR, fileName), zipSync(files));
+  return { files, namespace: toAddonNames(options.packName, options.projectId).namespace, build: options.build, fileName };
+}
+
+// Clockwise seen from above, as the pack turns a build
+const turnOffset = (dx: number, dz: number, turns: number): [number, number] => {
+  switch (turns) {
+    case 1: return [-dz, dx];
+    case 2: return [-dx, -dz];
+    case 3: return [dz, -dx];
+    default: return [dx, dz];
+  }
+};
+
+/**
+ * Every block the build should have placed with its meta block at `anchor`, turned clockwise by `turns`
+ */
+function findMissingBlocks(build: AnimatedBuild<string>, anchor: { x: number; y: number; z: number }, turns: number): string[] {
+  const missing: string[] = [];
+  for (let cell = 0; cell < build.cells.length / 4; cell++) {
+    const [x, dy, z, paletteIndex] = build.cells.slice(cell * 4, cell * 4 + 4);
+    const [dx, dz] = turnOffset(x, z, turns);
+    const state = build.palette[paletteIndex].rotations[turns];
+    const result = rcon(`execute if block ${anchor.x + dx} ${anchor.y + dy} ${anchor.z + dz} ${state}`);
+    if (!result.includes('passed')) missing.push(`No ${state} at ${anchor.x + dx} ${anchor.y + dy} ${anchor.z + dz}: ${result}`);
+  }
+  return missing;
 }
 
 async function waitForStart(): Promise<void> {
@@ -109,12 +146,20 @@ function readServerPackFormat(): [number, number] {
   return [major ?? data ?? -1, minor ?? 0];
 }
 
+const toMountedPath = (packFile: string): string => `/packs/${packFile}`;
+const toProblem = (label: string) => (missing: string): string => `${label}: ${missing}`;
+
 function isVersionFile(file: { name: string }): boolean {
   return file.name === 'version.json';
 }
 
 async function main(): Promise<void> {
-  const { files, namespace, build } = writeSamplePack();
+  fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  const { files, namespace, build } = writeSamplePack('wand');
+  const bowPack = writeSamplePack('bow');
+  const snowballPack = writeSamplePack('snowball');
+  const packFiles = [PACK_FILE, bowPack.fileName, snowballPack.fileName];
 
   const giveLine = strFromU8(files[`data/${namespace}/function/give.mcfunction`]);
   const wandItem = giveLine.replace(/^give @s /, '');
@@ -137,7 +182,7 @@ async function main(): Promise<void> {
     '-e', 'ENABLE_RCON=true',
     '-e', 'RCON_PASSWORD=datapack-check',
     '-e', 'PAUSE_WHEN_EMPTY_SECONDS=0',
-    '-e', `DATAPACKS=/packs/${PACK_FILE}`,
+    '-e', `DATAPACKS=${packFiles.map(toMountedPath).join(',')}`,
     '-v', `${OUTPUT_DIR}:/packs:ro`,
     IMAGE,
   );
@@ -154,7 +199,7 @@ async function main(): Promise<void> {
     // An error line and the cause lines under it, up to the next timestamped line
     const lines = readLogs().split('\n');
     const isPackError = (line: string): boolean =>
-      /\/(ERROR|WARN)\]/.test(line) && (line.includes(namespace) || /data ?pack|function|advancement|pack\.mcmeta/i.test(line));
+      /\/(ERROR|WARN)\]/.test(line) && (line.includes('datapack_check') || /data ?pack|function|advancement|pack\.mcmeta/i.test(line));
     lines.forEach(function addPackError(line: string, index: number): void {
       if (!isPackError(line)) return;
       const isTimestamped = (next: string): boolean => /^\[\d\d:\d\d:\d\d\]/.test(next);
@@ -164,10 +209,13 @@ async function main(): Promise<void> {
     });
 
     const enabled = rcon('datapack list enabled');
-    if (!enabled.includes(PACK_FILE)) problems.push(`The pack is not enabled: ${enabled}`);
+    for (const packFile of packFiles) {
+      if (!enabled.includes(packFile)) problems.push(`The pack ${packFile} is not enabled: ${enabled}`);
+    }
 
     const { x, y, z } = FEET;
-    rcon(`forceload add ${x - 16} ${z - 16} ${x + 16} ${z + 16}`);
+    // Covers the wand build and the projectile spots east of it
+    rcon(`forceload add ${x - 16} ${z - 16} ${x + 80} ${z + 16}`);
 
     // A crafter crafts on a redstone pulse and drops the result in front of it, which faces north here
     const crafter = { x: x + 8, y, z: z + 8 };
@@ -204,6 +252,23 @@ async function main(): Promise<void> {
     if (!emptied.includes('passed')) problems.push(`The last use did not break the wand: ${emptied}`);
     const markers = rcon(`execute if entity @e[type=minecraft:marker,tag=${namespace}.build]`);
     if (!markers.includes('passed')) problems.push('The last use did not start a build.');
+
+    // Each projectile flies at its own spot along x, clear of the wand build
+    const marked = (pack: SamplePack): string => `components:{"minecraft:custom_data":{wand:"${pack.namespace}"}}`;
+    const ground = { x: x + 20, y, z };
+    rcon(`summon minecraft:snowball ${ground.x + 0.5} ${y + 4} ${z + 0.5} {Item:{id:"minecraft:snowball",count:1,${marked(snowballPack)}},Motion:[0.0,-0.5,0.0]}`);
+    const stuck = { x: x + 40, y, z };
+    rcon(`summon minecraft:arrow ${stuck.x + 0.5} ${y + 4} ${z + 0.5} {weapon:{id:"minecraft:bow",count:1,${marked(bowPack)}},Motion:[0.0,-1.0,0.0]}`);
+    // The snowball flies east at a mob that hangs in the air, so a missed mob would build beyond it, higher up
+    const mob = { x: x + 66, y, z };
+    rcon(`summon minecraft:zombie ${mob.x + 0.5} ${y} ${z + 0.5} {NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b}`);
+    rcon(`summon minecraft:snowball ${x + 60.5} ${y + 1.5} ${z + 0.5} {Item:{id:"minecraft:snowball",count:1,${marked(snowballPack)}},Motion:[1.5,0.0,0.0]}`);
+    await sleep(6000);
+    problems.push(...findMissingBlocks(snowballPack.build, ground, 2).map(toProblem('A snowball on the ground')));
+    problems.push(...findMissingBlocks(bowPack.build, stuck, 2).map(toProblem('An arrow stuck in the ground')));
+    problems.push(...findMissingBlocks(snowballPack.build, mob, 2).map(toProblem('A snowball that struck a mob')));
+    const followers = rcon(`execute if entity @e[type=minecraft:marker,tag=${snowballPack.namespace}.follow]`);
+    if (followers.includes('passed')) problems.push('A snowball follower outlived its snowball.');
   } finally {
     try {
       docker('rm', '-f', CONTAINER);

@@ -34,6 +34,7 @@ const OPTIONS: DatapackOptions = {
   packName: 'Castle',
   itemName: 'Castle "Wand"',
   icon: 'blaze_rod',
+  activator: 'wand',
   sequence: 'rise',
   seconds: 2,
   uses: 3,
@@ -161,6 +162,37 @@ describe('toDatapackFiles', () => {
 
   it('zips the same files', () => {
     expect(Object.keys(unzipSync(toDatapackZip(OPTIONS))).sort()).toEqual(Object.keys(files).sort());
+  });
+});
+
+describe('toDatapackFiles with a projectile activator', () => {
+  it('gives a bow that wears through vanilla durability, and tracks the arrows it fires', () => {
+    const files = toDatapackFiles({ ...OPTIONS, activator: 'bow' });
+    expect(read(files, fn('give'))).toMatch(/^give @s minecraft:bow\[.*minecraft:max_damage=3,minecraft:damage=0\]$/);
+    expect(files[`data/${namespace}/advancement/use.json`]).toBeUndefined();
+    expect(files[fn('wear')]).toBeUndefined();
+    expect(read(files, fn('tick'))).toContain(`function ${namespace}:track`);
+    expect(read(files, fn('track'))).toContain(`@e[type=#minecraft:arrows,tag=!${namespace}.seen,nbt={weapon:{components:`);
+  });
+
+  it('gives an unbreakable bow when uses are unlimited', () => {
+    const files = toDatapackFiles({ ...OPTIONS, activator: 'bow', uses: 0 });
+    expect(read(files, fn('give'))).toContain('minecraft:unbreakable={}');
+  });
+
+  it('gives a stack of marked snowballs, one per use, and tracks each throw', () => {
+    expect(read(toDatapackFiles({ ...OPTIONS, activator: 'snowball' }), fn('give'))).toMatch(/^give @s minecraft:snowball\[.*\] 3$/);
+    const files = toDatapackFiles({ ...OPTIONS, activator: 'snowball', uses: 0 });
+    expect(read(files, fn('give'))).toMatch(/ 16$/);
+    expect(read(files, fn('track'))).toContain('@e[type=minecraft:snowball');
+    expect(read(files, fn('track'))).toContain('nbt={Item:{components:');
+  });
+
+  it('anchors where the follower\'s search meets a mob or a solid block, as the follower', () => {
+    const ray = read(toDatapackFiles({ ...OPTIONS, activator: 'snowball' }), fn('ray')).split('\n');
+    expect(ray[0]).toContain('at @e[dx=0,dy=0,dz=0,type=!minecraft:marker');
+    expect(ray[0]).toMatch(/align xyz positioned ~0\.5 ~ ~0\.5 run return run function .*:anchor$/);
+    expect(ray[2]).toMatch(/^\$execute .* if block ~ ~ ~ #minecraft:replaceable run return run function/);
   });
 });
 
