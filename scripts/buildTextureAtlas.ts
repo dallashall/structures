@@ -269,6 +269,21 @@ function calculateAtlasDimensions(textureCount: number): number {
 }
 
 /**
+ * An animated texture stacks its frames in a vertical strip. Composited whole, the strip would paint over the
+ * atlas cells below its own, so only the top square, the first frame, enters the atlas.
+ */
+async function openFirstFrame(texturePath: string): Promise<sharp.Sharp> {
+  const { width = TEXTURE_SIZE, height = TEXTURE_SIZE } = await sharp(texturePath).metadata();
+  if (width === TEXTURE_SIZE && height === TEXTURE_SIZE) return sharp(texturePath);
+  const frame = await sharp(texturePath)
+    .extract({ left: 0, top: 0, width, height: Math.min(width, height) })
+    .resize(TEXTURE_SIZE, TEXTURE_SIZE, { kernel: 'nearest' })
+    .png()
+    .toBuffer();
+  return sharp(frame);
+}
+
+/**
  * Base texture with a tinted overlay on top, as on grass_block sides (dirt under tinted grass)
  */
 async function compositeOverlayTexture(
@@ -278,7 +293,7 @@ async function compositeOverlayTexture(
 ): Promise<sharp.Sharp> {
   const GRASS_TINT = '#91BD59'; // Minecraft's default plains grass color
 
-  let baseImage = sharp(basePath).ensureAlpha();
+  let baseImage = (await openFirstFrame(basePath)).ensureAlpha();
 
   switch (transform) {
     case 'hflip':
@@ -295,7 +310,7 @@ async function compositeOverlayTexture(
   const baseBuffer = await baseImage.toFormat('png').toBuffer();
 
   // The overlay takes the base's transform, or the two layers misalign
-  let overlayImage = sharp(overlayPath).ensureAlpha();
+  let overlayImage = (await openFirstFrame(overlayPath)).ensureAlpha();
 
   switch (transform) {
     case 'hflip':
@@ -353,7 +368,7 @@ async function applyBiomeTint(
   tintColor: string,
   transform: 'none' | 'hflip' | 'rotate' | 'rotate_vflip' = 'none'
 ): Promise<sharp.Sharp> {
-  let image = sharp(texturePath).ensureAlpha();
+  let image = (await openFirstFrame(texturePath)).ensureAlpha();
 
   switch (transform) {
     case 'hflip':
@@ -447,7 +462,7 @@ async function loadTexture(
       const GRASS_TINT = '#91BD59'; // Minecraft's default plains grass color
       image = await applyBiomeTint(texturePath, GRASS_TINT, transform);
     } else {
-      image = sharp(texturePath);
+      image = await openFirstFrame(texturePath);
 
       // Indexed-color PNGs lose transparency without an explicit alpha channel
       image = image.ensureAlpha();
