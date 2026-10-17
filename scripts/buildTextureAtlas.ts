@@ -260,6 +260,10 @@ function collectUniqueTextures(
   return textureSet;
 }
 
+function reverseV(uv: { u0: number; v0: number; u1: number; v1: number }): { u0: number; v0: number; u1: number; v1: number } {
+  return { u0: uv.u0, v0: uv.v1, u1: uv.u1, v1: uv.v0 };
+}
+
 function calculateAtlasDimensions(textureCount: number): number {
   return Math.ceil(Math.sqrt(textureCount));
 }
@@ -625,11 +629,12 @@ async function buildAtlas(options: BuildOptions): Promise<void> {
     };
 
     // CreateBox orients each face's UVs its own way, and the right and left slots take each other's texture.
+    // The back slot reverses its V range instead of using a vertically flipped tile.
     // src/core/rendering/README.md has the face table.
     blockFaceUV3D[blockId] = {
       faceUV: [
         getUV(frontTex + '_hflip'),
-        getUV(backTex),
+        reverseV(getUV(backTex)),
         getUV(leftTex + '_rotated90ccw_vflip'),
         getUV(rightTex + '_rotated90ccw_vflip'),
         getUV(topTex + '_rotated90ccw'),

@@ -1,18 +1,14 @@
-// The same axis colors appear in Preview3DView and SlicePlaneVisualizer
-const AXIS_COLORS = {
-  X: '#e74c3c',
-  Y: '#3498db',
-  Z: '#27ae60',
-} as const;
+import type { AxisColors } from '../../config/colorSchemes';
+import type { ClipPath } from '../shapes/BlockShape';
 
-export function getColorForAxis(axis: string): string {
+export function getColorForAxis(axis: string, colors: AxisColors): string {
   switch (axis) {
     case 'X':
-      return AXIS_COLORS.X;
+      return colors.x;
     case 'Y':
-      return AXIS_COLORS.Y;
+      return colors.y;
     case 'Z':
-      return AXIS_COLORS.Z;
+      return colors.z;
     default:
       return '#000000';
   }
@@ -41,5 +37,17 @@ export function getLayerForAxis(
       return activeLayers.z;
     default:
       return 0;
+  }
+}
+
+/**
+ * Adds each clip polygon as a subpath. The polygons share one winding, so clip() keeps their union.
+ */
+export function traceClipPath(ctx: CanvasRenderingContext2D, clip: ClipPath): void {
+  ctx.beginPath();
+  for (const polygon of clip) {
+    ctx.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i++) ctx.lineTo(polygon[i].x, polygon[i].y);
+    ctx.closePath();
   }
 }

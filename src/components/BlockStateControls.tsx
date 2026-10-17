@@ -24,10 +24,11 @@ export function BlockStateControls({
   if (!hasBlockState) return null;
 
   const showSlabControls = activeBlockState.type !== undefined;
-  const showHalfControls = activeBlockState.half !== undefined;
+  const showHalfControls = activeBlockState.half === 'bottom' || activeBlockState.half === 'top';
   const showFacingControls = activeBlockState.facing !== undefined;
+  const showHingeControl = activeBlockState.hingeFlipped !== undefined;
 
-  if (!showSlabControls && !showHalfControls && !showFacingControls) return null;
+  if (!showSlabControls && !showHalfControls && !showFacingControls && !showHingeControl) return null;
 
   const handleSlabTypeChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -54,6 +55,10 @@ export function BlockStateControls({
     if (newFacing !== null) {
       onSetBlockState({ ...activeBlockState, facing: newFacing });
     }
+  };
+
+  const handleHingeToggle = () => {
+    onSetBlockState({ ...activeBlockState, hingeFlipped: !activeBlockState.hingeFlipped });
   };
 
   return (
@@ -95,7 +100,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',
@@ -138,7 +143,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',
@@ -176,7 +181,7 @@ export function BlockStateControls({
               fontSize: '0.6rem',
               lineHeight: 1.2,
               border: 1,
-              borderColor: 'divider',
+              borderColor: 'chrome.controlBorder',
               '&.Mui-selected': {
                 bgcolor: 'info.main',
                 color: 'info.contrastText',
@@ -208,6 +213,36 @@ export function BlockStateControls({
             </ShortcutTooltip>
           </ToggleButton>
         </ToggleButtonGroup>
+      )}
+
+      {showHingeControl && (
+        <ToggleButton
+          value="hingeFlipped"
+          selected={activeBlockState.hingeFlipped === true}
+          onChange={handleHingeToggle}
+          size="small"
+          fullWidth
+          aria-label="Flip hinge"
+          sx={{
+            py: 0.5,
+            px: 0.5,
+            fontSize: '0.6rem',
+            lineHeight: 1.2,
+            border: 1,
+            borderColor: 'chrome.controlBorder',
+            '&.Mui-selected': {
+              bgcolor: 'info.main',
+              color: 'info.contrastText',
+              '&:hover': {
+                bgcolor: 'info.dark',
+              },
+            },
+          }}
+        >
+          <ShortcutTooltip title="Flip the hinge side the neighbors pick" shortcut={SHORTCUTS.flipHinge} shortcutHint="flips" placement="top">
+            <Box>Flip hinge</Box>
+          </ShortcutTooltip>
+        </ToggleButton>
       )}
     </Box>
   );

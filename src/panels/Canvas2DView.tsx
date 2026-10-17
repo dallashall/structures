@@ -18,7 +18,7 @@ interface Canvas2DViewProps {
  */
 export function Canvas2DView({ viewType }: Canvas2DViewProps) {
   return (
-    <Box sx={{ width: "100%", height: "100%", bgcolor: "#1a1a1a" }}>
+    <Box sx={{ width: "100%", height: "100%", bgcolor: "chrome.canvas" }}>
       <Box
         component="canvas"
         key={viewType}

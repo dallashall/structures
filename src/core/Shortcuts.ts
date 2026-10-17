@@ -11,6 +11,7 @@ export const SHORTCUTS = {
   swapMaterialSlot: 'F',
   rotateFacing: 'T',
   flipHalf: 'Y',
+  flipHinge: 'H',
   layerZUp: 'W',
   layerZDown: 'S',
   layerXUp: 'D',

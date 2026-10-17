@@ -3,6 +3,7 @@ import type { GridBlock } from "./GridBlock";
 import { blockRegistry } from "../BlockRegistry";
 import { textureResolver } from "../TextureResolver";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
+import { traceClipPath } from "./renderingUtils";
 
 /**
  * The atlas face each view shows. Face indexes follow Babylon's box order in Babylon axes:
@@ -35,21 +36,16 @@ export function drawPersistentBlocks(
     const px = pan.x + gridBlock.gridX * cellSize;
     const py = pan.y + gridBlock.gridY * cellSize;
 
-    const { block } = blockRegistry.getBlockWithState(
-      gridBlock.blockType,
-      gridBlock.blockState,
-    );
+    const blockShape = shapeCatalog.resolve(gridBlock.blockType);
+    const textureBlockId = blockShape.getTextureBlockId(gridBlock.blockType, gridBlock.blockState ?? {});
+    const { block } = blockRegistry.getBlockWithState(textureBlockId, gridBlock.blockState);
     if (!block) continue;
 
     // Non-cube shapes clip the cell, so a slab fills half of it
-    const blockShape = shapeCatalog.resolve(gridBlock.blockType);
     const clip = blockShape.get2DClip(gridBlock.blockState ?? {}, viewType, px, py, cellSize);
     if (clip) {
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(clip[0].x, clip[0].y);
-      for (let i = 1; i < clip.length; i++) ctx.lineTo(clip[i].x, clip[i].y);
-      ctx.closePath();
+      traceClipPath(ctx, clip);
       ctx.clip();
     }
 

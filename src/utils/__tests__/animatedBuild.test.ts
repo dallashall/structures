@@ -37,6 +37,7 @@ describe('rotateBlockState', () => {
   it('turns wall sides and connections', () => {
     expect(rotateBlockState({ connections: { 'y-': true, 'x-': false } }, 1)).toEqual({ connections: { 'x+': true, 'y-': false } });
     expect(rotateBlockState({ north: 'low' } as never, 1)).toEqual({ east: 'low' });
+    expect(rotateBlockState({ wallSides: { 'y-': 'tall', 'x+': 'none' } }, 1)).toEqual({ wallSides: { 'x+': 'tall', 'y+': 'none' } });
   });
 });
 

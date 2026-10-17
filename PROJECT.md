@@ -156,7 +156,7 @@ Directions use axis names such as `x+` and `y-`.
 - Every edit appends to the IndexedDB event log as it happens. The toolbar shows "Saving..." while a write is in flight, "Saved" once every write has committed, and "Not saved" after a write fails.
 - The project list is replayed from the log. A project exists while the log holds its `metadata:created` event.
 - Thumbnails, quick-select slots, render settings, and preferences live in separate IndexedDB databases.
-- The app writes nothing to localStorage.
+- The light, dark, or system theme choice lives in localStorage under `mc-blueprint-theme`. No project data goes there.
 - The browser may evict IndexedDB under storage pressure, so the app asks for persistent storage.
 
 ### Project Files

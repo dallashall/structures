@@ -6,6 +6,8 @@ import {
   Typography,
   useTheme,
   Button,
+  alpha,
+  darken,
   ButtonGroup,
 } from "@mui/material";
 import {
@@ -24,11 +26,17 @@ import { withEditorState } from "../hocs/withEditorState";
 import type { WithEditorStateProps } from "../hocs/withEditorState";
 import type { RenderSettings } from "../types";
 
-const AXIS_COLORS = {
-  x: { main: "#e74c3c", hover: "#c0392b", bg: "rgba(231, 76, 60, 0.1)" },
-  y: { main: "#3498db", hover: "#2980b9", bg: "rgba(52, 152, 219, 0.1)" },
-  z: { main: "#27ae60", hover: "#229954", bg: "rgba(39, 174, 96, 0.1)" },
-};
+interface AxisButtonColors {
+  main: string;
+  hover: string;
+  bg: string;
+}
+
+const toAxisButtonColors = (main: string): AxisButtonColors => ({
+  main,
+  hover: darken(main, 0.15),
+  bg: alpha(main, 0.15),
+});
 
 type Preview3DViewProps = WithEditorStateProps;
 
@@ -41,6 +49,11 @@ function Preview3DViewInner({
   renderSettingsModalOpen,
 }: Preview3DViewProps) {
   const theme = useTheme();
+  const axisColors = {
+    x: toAxisButtonColors(theme.palette.axis.x),
+    y: toAxisButtonColors(theme.palette.axis.y),
+    z: toAxisButtonColors(theme.palette.axis.z),
+  };
 
   const handleToggleX = (): void => { editorState.toggleSliceGuide('x'); };
   const handleToggleY = (): void => { editorState.toggleSliceGuide('y'); };
@@ -68,7 +81,7 @@ function Preview3DViewInner({
         width: "100%",
         height: "100%",
         position: "relative",
-        bgcolor: "#1a1a1a",
+        bgcolor: "chrome.canvas",
       }}
     >
       {/* babylon3d.mountCanvas attaches on mount and pauses on unmount. The engine follows the canvas size. */}
@@ -89,15 +102,15 @@ function Preview3DViewInner({
         <Stack
           direction="row"
           spacing={0.5}
-          sx={{ bgcolor: "rgba(0, 0, 0, 0.5)", borderRadius: 1, p: 0.5 }}
+          sx={{ bgcolor: "chrome.overlay", borderRadius: 1, p: 0.5 }}
         >
           <Tooltip title="Render Settings">
             <IconButton
               onClick={handleOpenSettings}
               size="small"
               sx={{
-                color: "#aaa",
-                "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+                color: "text.secondary",
+                "&:hover": { color: "text.primary", bgcolor: "action.hover" },
                 minWidth: 24,
                 width: 24,
                 height: 24,
@@ -111,14 +124,14 @@ function Preview3DViewInner({
               onClick={handleToggleX}
               size="small"
               sx={{
-                bgcolor: sliceGuideVisibility.x ? AXIS_COLORS.x.main : "transparent",
+                bgcolor: sliceGuideVisibility.x ? axisColors.x.main : "transparent",
                 color: sliceGuideVisibility.x
-                  ? theme.palette.getContrastText(AXIS_COLORS.x.main)
-                  : AXIS_COLORS.x.main,
+                  ? theme.palette.getContrastText(axisColors.x.main)
+                  : axisColors.x.main,
                 border: 1,
-                borderColor: AXIS_COLORS.x.main,
+                borderColor: axisColors.x.main,
                 "&:hover": {
-                  bgcolor: sliceGuideVisibility.x ? AXIS_COLORS.x.hover : AXIS_COLORS.x.bg,
+                  bgcolor: sliceGuideVisibility.x ? axisColors.x.hover : axisColors.x.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -141,14 +154,14 @@ function Preview3DViewInner({
               onClick={handleToggleY}
               size="small"
               sx={{
-                bgcolor: sliceGuideVisibility.y ? AXIS_COLORS.y.main : "transparent",
+                bgcolor: sliceGuideVisibility.y ? axisColors.y.main : "transparent",
                 color: sliceGuideVisibility.y
-                  ? theme.palette.getContrastText(AXIS_COLORS.y.main)
-                  : AXIS_COLORS.y.main,
+                  ? theme.palette.getContrastText(axisColors.y.main)
+                  : axisColors.y.main,
                 border: 1,
-                borderColor: AXIS_COLORS.y.main,
+                borderColor: axisColors.y.main,
                 "&:hover": {
-                  bgcolor: sliceGuideVisibility.y ? AXIS_COLORS.y.hover : AXIS_COLORS.y.bg,
+                  bgcolor: sliceGuideVisibility.y ? axisColors.y.hover : axisColors.y.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -171,14 +184,14 @@ function Preview3DViewInner({
               onClick={handleToggleZ}
               size="small"
               sx={{
-                bgcolor: sliceGuideVisibility.z ? AXIS_COLORS.z.main : "transparent",
+                bgcolor: sliceGuideVisibility.z ? axisColors.z.main : "transparent",
                 color: sliceGuideVisibility.z
-                  ? theme.palette.getContrastText(AXIS_COLORS.z.main)
-                  : AXIS_COLORS.z.main,
+                  ? theme.palette.getContrastText(axisColors.z.main)
+                  : axisColors.z.main,
                 border: 1,
-                borderColor: AXIS_COLORS.z.main,
+                borderColor: axisColors.z.main,
                 "&:hover": {
-                  bgcolor: sliceGuideVisibility.z ? AXIS_COLORS.z.hover : AXIS_COLORS.z.bg,
+                  bgcolor: sliceGuideVisibility.z ? axisColors.z.hover : axisColors.z.bg,
                 },
                 minWidth: 24,
                 width: 24,
@@ -204,14 +217,14 @@ function Preview3DViewInner({
           bottom: 8,
           left: 8,
           zIndex: 10,
-          bgcolor: "rgba(0, 0, 0, 0.7)",
+          bgcolor: "chrome.overlay",
           borderRadius: 1,
           p: 1,
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center">
           <Stack direction="row" spacing={0.5} alignItems="center">
-            <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", mr: 0.5 }}>
               Camera:
             </Typography>
             <Button size="small" variant="outlined" onClick={handleCameraFront} sx={{ minWidth: 45, fontSize: "0.7rem" }}>
@@ -235,7 +248,7 @@ function Preview3DViewInner({
           </Stack>
 
           <Stack direction="row" spacing={0.5} alignItems="center">
-            <Typography variant="caption" sx={{ color: "#aaa", mr: 0.5 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", mr: 0.5 }}>
               Zoom:
             </Typography>
             <ButtonGroup size="small" variant="outlined">

@@ -121,11 +121,19 @@ Which top-level screen shows (`welcome`, `editor`, or the `#/preview` component 
 
 **Emits:** `screen:shown`, `newprojectdialog:toggled`, `creditsdialog:toggled`, `exportdialog:toggled`, `file-error:shown`, `file-error:dismissed`.
 
+### ThemePreference
+
+**File:** `src/core/ThemePreference.ts`
+
+The light, dark, or system theme choice and the color scheme it resolves to. The choice lives in localStorage under `mc-blueprint-theme` and defaults to `system`. While the choice is `system`, the scheme follows the `prefers-color-scheme` media query. `getChoice()`, `getScheme()`, `selectChoice(choice)`. `src/config/colorSchemes.ts` holds the colors for both schemes. `src/config/theme.ts` builds the MUI theme from them, and `Canvas2DRenderer` reads the canvas colors.
+
+**Emits:** `themechoice:selected` (choice), and `colorscheme:switched` (scheme) when the resolved scheme flips.
+
 ### Storage
 
 **File:** `src/core/Storage.ts`
 
-Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. The app writes nothing to localStorage.
+Project browser queries. The project list is derived from the EventLog on every read. A project exists exactly when the log holds its `metadata:created` event. `listProjects()`, `getProject(id)`, `deleteProject(id)`, `getLastOpenedProjectId()`, `setLastOpenedProjectId(id)`. Deleting a project removes its events, thumbnail, quick-select slots, render settings, and last-opened entry. The last opened project ID lives in a separate IndexedDB database. Project data never goes to localStorage.
 
 **Emits:** `project:renamed` ({ projectId, newName }) when a `metadata:renamed` row commits, and `project:deleted`.
 
@@ -174,7 +182,7 @@ Paints a block's front texture onto small swatch canvases. `refFor(blockId, pixe
 Global keyboard shortcuts, set up once in `src/main.tsx`. Key bindings live in `src/core/Shortcuts.ts`.
 
 - 1 to 9 pick a quick-select slot. F swaps the foreground and background slot.
-- T rotates facing and Y flips a slab half, when the selected block has state.
+- T rotates facing and Y flips a slab or stair half, when the selected block has state. H flips a door's hinge.
 - W/S, A/D, and X/C step the Z, X, and Y layers.
 - E toggles the material browser.
 - B, R, O, G, and V pick the point, outline, circle, arch, and curve tools.
@@ -204,11 +212,11 @@ The 2D views live in `src/core/canvas2d/`, with tools in `src/core/tools/` and p
 - `ToolBase` handles pan (Space+drag or middle mouse), wheel zoom, modifier tracking, and pointer to grid to model resolution. Concrete tools never convert coordinates.
 - `ClickDragReleaseTool` is the base for point, outline, circle, and fill. `MultiClickTool` is the base for arch (three clicks) and curve (four clicks).
 - `toolRegistry` (`src/core/tools/ToolRegistry.ts`) registers each tool by name and hotkey. Canvas2D creates tools through it.
-- A tool computes operations with a paint strategy (`src/core/painting/strategies/`). It then runs them through `PaintPipeline`: `applyDepth`, then `applyBehavior` (normal, only-replace, selective-replace), then `applyDeleteModifier`. It hands the result to DraftingService.
+- A tool computes operations with a paint strategy (`src/core/painting/strategies/`). It then runs them through `PaintPipeline`: `applyDepth`, then `applyBehavior` (normal, only-replace, selective-replace), then `applyDeleteModifier`, then `attachBlockState`, then `pairDoorHalves`. It hands the result to DraftingService.
 - `Canvas2D` converts model positions to `GridBlock` records when data changes, not on every frame. The renderer receives only `GridBlock` arrays.
 - `canvas2DMounter` (`src/core/canvas2d/Canvas2DMounter.ts`) hands out one stable ref callback per view type. React calls it with the canvas on mount and with null on unmount, which creates and destroys one `Canvas2D` without effects.
 
-Block shapes live in `src/core/shapes/`. `shapeCatalog.resolve(blockId)` returns a `CubeShape`, `SlabShape`, or `StairShape`. Renderers and the pipeline ask the shape instead of branching on block type. `StairShapeResolver.ts` computes stair joins.
+Block shapes live in `src/core/shapes/`. `shapeCatalog.resolve(blockId)` returns a `CubeShape`, `SlabShape`, `StairShape`, `FenceShape`, `WallShape`, `TorchShape`, or `DoorShape`. Renderers, export, and the pipeline ask the shape instead of branching on block type. `StairShapeResolver.ts` computes stair joins, and `ConnectionResolver.ts` computes fence and wall joins. Fence, wall, torch, and door geometry is a list of boxes in `BoxModel.ts`, which builds both the 3D mesh and the 2D clip.
 
 ## Higher-order components
 
@@ -218,6 +226,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 |---|---|---|
 | `withScreenState` | `screen`, `isNewProjectDialogOpen`, `isCreditsDialogOpen`, `isExportDialogOpen`, `fileError` | ScreenRouter: all six notifications |
 | `withExportState` | `exportOptions`, `projectName`, `isExporting`, `exportResult`, `exportError`, `onExportOptionsChange`, `onExport`, `onExportReset` | None. It calls the export command for the chosen edition and holds the result. |
+| `withThemePreference` | `themeChoice`, `colorScheme`, `onThemeChoiceSelect` | ThemePreference: `themechoice:selected`, `colorscheme:switched` |
 | `withAtlasStatus` | `atlasStatus` | TextureResolver: `atlas:ready`, `atlas:error`. It reads the status once more after subscribing, since the load can settle before the subscription. |
 | `withProjectState` | `project` | `model:rebuilt`, `metadata:rebuilt` |
 | `withProjectListState` | `projects`, `isLoadingProjects`, `selectedProjectId`, `isRenaming`, `renameError`, `onSelectProject`, `onDeleteProject`, `onStartRename`, `onCancelRename`, `onRenameProject` | `project:renamed`, `project:deleted`, `thumbnail:saved` |
@@ -233,8 +242,8 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 
 ## Views, layouts, and panels
 
-- `App` (`src/App.tsx`) is wrapped in `withAtlasStatus(withScreenState(...))`. It picks the screen and renders the app-level dialogs.
-- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
+- `App` (`src/App.tsx`) is wrapped in `withThemePreference(withAtlasStatus(withScreenState(...)))`. It picks the MUI theme for the color scheme, picks the screen, and renders the app-level dialogs.
+- `WelcomeView` (`src/views/WelcomeView.tsx`) lists projects as `ProjectCard`s with thumbnails. It offers New Project, Load from File, the light, dark, and system theme toggle, and Credits, and shows `TexturesMissingAlert` when the atlas is missing.
 - `EditorView` (`src/views/EditorView.tsx`) is wrapped in `withSaveState`, `withBlockRegistry`, `withEditorState`, and `withProjectState`. It renders the `Toolbar`, the `ToolOptionsBar`, the layout view, the material browser, the meta block modal, and history toasts.
 - `TabbedEditorView` and `QuadEditorView` pair the tool panel and palettes with `TabbedLayout` (one view at a time) or `QuadLayout` (four views at once).
 - `Canvas2DView` (`src/panels/Canvas2DView.tsx`) is a canvas whose ref callback comes from `canvas2DMounter`.
@@ -243,7 +252,7 @@ HOCs live in `src/hocs/`. Each subscribes to singleton notifications and injects
 ## Component tree
 
 ```
-App  (withAtlasStatus, withScreenState)
+App  (withThemePreference, withAtlasStatus, withScreenState)
 ├── ComponentPreview                 when the URL hash is #/preview
 ├── WelcomeView  (withProjectListState)
 │   ├── TexturesMissingAlert

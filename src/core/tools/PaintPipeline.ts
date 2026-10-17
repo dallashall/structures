@@ -11,15 +11,17 @@ import type { PaintBehavior } from "../painting/behaviors/PaintBehavior";
 import { NormalBehavior } from "../painting/behaviors/NormalBehavior";
 import { OnlyReplaceBehavior } from "../painting/behaviors/OnlyReplaceBehavior";
 import { SelectiveReplaceBehavior } from "../painting/behaviors/SelectiveReplaceBehavior";
+import type { BlockIndexReader } from "../BlockIndex";
 import { blockProjection } from "../../projections/BlockProjection";
 import { blockRegistry } from "../BlockRegistry";
 import { editorState } from "../EditorState";
+import { isDoorBlock } from "../shapes/DoorShape";
 
 /**
  * PaintPipeline - Turns a strategy's cells into the operations a tool hands to DraftingService
  *
- * Order: applyDepth → applyBehavior → applyDeleteModifier → attachBlockState. process() runs all four
- * with the settings in EditorState.
+ * Order: applyDepth → applyBehavior → applyDeleteModifier → attachBlockState → pairDoorHalves.
+ * process() runs all five with the settings in EditorState.
  */
 export class PaintPipeline {
   /**
@@ -183,7 +185,61 @@ export class PaintPipeline {
     );
     const afterBehavior = PaintPipeline.applyBehavior(afterDepth, behavior);
     const afterDelete = PaintPipeline.applyDeleteModifier(afterBehavior);
-    return PaintPipeline.attachBlockState(afterDelete);
+    const withState = PaintPipeline.attachBlockState(afterDelete);
+    return PaintPipeline.pairDoorHalves(
+      withState,
+      blockProjection.getCached(),
+      dimensions,
+      editorState.getDeleteMode(),
+    );
+  }
+
+  /**
+   * Keeps the two halves of a door together:
+   * - A door placement becomes a lower half plus an upper half in the cell above. The door is dropped when that
+   *   cell is outside the model, holds a block that is not a door, or is another operation's target.
+   * - Removing or replacing either half of a placed door also removes the other half.
+   * In delete mode every operation is a removal, so the added removal carries the partner's block for the preview.
+   */
+  static pairDoorHalves(
+    operations: PaintOperation[],
+    blocks: BlockIndexReader,
+    dimensions: Dimensions,
+    deleteMode: boolean,
+  ): PaintOperation[] {
+    const keyOf = (position: Vector3D): string => `${position.x},${position.y},${position.z}`;
+    const targeted = new Set(operations.map(toPosition).map(keyOf));
+
+    const paired: PaintOperation[] = [];
+    for (const operation of operations) {
+      if (deleteMode || !operation.blockType || !isDoorBlock(operation.blockType)) {
+        paired.push(operation);
+        continue;
+      }
+      const above = { ...operation.position, z: operation.position.z + 1 };
+      const blockAbove = blocks.get(above);
+      if (above.z >= dimensions.depth) continue;
+      if (blockAbove && !isDoorBlock(blockAbove.blockType)) continue;
+      if (targeted.has(keyOf(above))) continue;
+      paired.push({ ...operation, blockState: { ...operation.blockState, half: "lower" } });
+      paired.push({ position: above, blockType: operation.blockType, blockState: { ...operation.blockState, half: "upper" } });
+    }
+
+    const written = new Set(paired.map(toPosition).map(keyOf));
+    const partnerRemovals: PaintOperation[] = [];
+    for (const operation of paired) {
+      const door = blocks.get(operation.position);
+      if (!door || !isDoorBlock(door.blockType)) continue;
+      const offset = door.blockState?.half === "upper" ? -1 : 1;
+      const partnerPosition = { ...operation.position, z: operation.position.z + offset };
+      const partner = blocks.get(partnerPosition);
+      if (!partner || partner.blockType !== door.blockType || written.has(keyOf(partnerPosition))) continue;
+      written.add(keyOf(partnerPosition));
+      partnerRemovals.push(deleteMode
+        ? { position: partnerPosition, blockType: partner.blockType, blockState: partner.blockState }
+        : { position: partnerPosition, blockType: null });
+    }
+    return paired.concat(partnerRemovals);
   }
 
   /**
@@ -243,3 +299,5 @@ export class PaintPipeline {
     }
   }
 }
+
+const toPosition = (operation: PaintOperation): Vector3D => operation.position;

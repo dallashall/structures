@@ -8,15 +8,17 @@ import type { BlockData } from '../../types';
 import { cubeShape } from './CubeShape';
 import { slabShape } from './SlabShape';
 import { stairShape } from './StairShape';
+import { fenceShape } from './FenceShape';
+import { wallShape } from './WallShape';
+import { torchShape } from './TorchShape';
+import { doorShape } from './DoorShape';
 
 class ShapeCatalogImpl {
   private static instance: ShapeCatalogImpl;
 
   // First match wins. resolve() falls back to CubeShape when none match.
-  private readonly shapes: BlockShape[] = [
-    stairShape,
-    slabShape,
-  ];
+  // Built on first use: some shapes import this module, so their bindings are not ready while it loads.
+  private shapes: BlockShape[] | null = null;
 
   private readonly cache = new Map<string, BlockShape>();
 
@@ -46,6 +48,7 @@ class ShapeCatalogImpl {
     const cached = this.cache.get(blockId);
     if (cached) return cached;
 
+    this.shapes ??= [stairShape, slabShape, fenceShape, wallShape, torchShape, doorShape];
     for (const shape of this.shapes) {
       if (shape.matchesBlock(blockId)) {
         this.cache.set(blockId, shape);

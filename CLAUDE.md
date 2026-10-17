@@ -30,6 +30,7 @@ npm run setup:textures
 - **[ARCHITECTURE_PATTERNS.md](./.claude/skills/ARCHITECTURE_PATTERNS.md)**: the event log, commands, projections, undo history, the tool system, and DraftingService
 - **[MACRO_COMPONENTS.md](./MACRO_COMPONENTS.md)**: singletons, HOCs, views, and components, with data flow
 - **[PROJECT.md](./PROJECT.md)**: project specification and requirements
+- **[FEATURES.md](./FEATURES.md)**: every user-facing feature as the code implements it, with known gaps
 - **[UX_DECISIONS.md](./UX_DECISIONS.md)**: interaction and layout decisions
 - **[TESTING.md](./TESTING.md)**: test plan
 - **[README.md](./README.md)**: quick start, textures, deployment, licensing
@@ -471,6 +472,7 @@ src/
 │   ├── DraftingService.ts    # ephemeral preview, commits paint actions
 │   ├── EditorState.ts        # UI state: layers, tools, materials
 │   ├── ScreenRouter.ts       # visible screen, app-level dialogs
+│   ├── ThemePreference.ts    # light, dark, or system color scheme
 │   ├── Storage.ts            # project list, last opened project
 │   ├── BlockRegistry.ts      # block catalog
 │   ├── TextureResolver.ts    # texture atlas
@@ -487,7 +489,7 @@ src/
 ├── layouts/           # Toolbar, TabbedLayout, QuadLayout
 ├── panels/            # Canvas2DView, Preview3DView
 ├── views/             # WelcomeView, EditorView, TabbedEditorView, QuadEditorView
-├── config/            # Static configuration (credits)
+├── config/            # Static configuration (credits, color schemes, MUI theme)
 ├── types/             # Shared TypeScript types
 ├── utils/             # Pure helpers
 ├── test/              # Test setup and fixtures

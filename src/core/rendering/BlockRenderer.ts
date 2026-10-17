@@ -253,7 +253,8 @@ export class BlockRenderer {
     if (!block) return null;
 
     const usesTintedTexture = isTintedTextureBlock(blockType);
-    const faceUVData = !usesTintedTexture ? textureResolver.getBlockFaceUV3D(blockType) : null;
+    const textureBlockId = blockShape.getTextureBlockId(blockType, blockState ?? {});
+    const faceUVData = !usesTintedTexture ? textureResolver.getBlockFaceUV3D(textureBlockId) : null;
 
     let base: Mesh;
 

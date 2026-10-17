@@ -119,6 +119,11 @@ class HotkeyDispatcher {
       }
     }
 
+    if (matchesShortcut(event, SHORTCUTS.flipHinge) && editorState.getActiveBlockState().hingeFlipped !== undefined) {
+      event.preventDefault();
+      editorState.flipHinge();
+    }
+
     const model = modelProjection.getCached();
     const activeLayers = editorState.getActiveLayers();
 

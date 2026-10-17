@@ -1,10 +1,12 @@
 import type { ViewType, BlockData } from "../../types";
+import type { ColorScheme } from "../../config/colorSchemes";
 import { blockProjection } from "../../projections/BlockProjection";
 import { modelProjection } from "../../projections/ModelProjection";
 import { projectView } from "../../projections/ProjectView";
 import { draftingService } from "../DraftingService";
 import { editorState } from "../EditorState";
 import { renderLoop } from "../RenderLoop";
+import { themePreference } from "../ThemePreference";
 import { shapeCatalog } from "../shapes/ShapeCatalog";
 
 import { ViewState } from "./ViewState";
@@ -59,6 +61,11 @@ export class Canvas2D {
   };
 
   private handleRequestRender = (): void => {
+    this.needsRender = true;
+  };
+
+  private handleColorSchemeSwitched = (scheme: ColorScheme): void => {
+    this.renderer.setColorScheme(scheme);
     this.needsRender = true;
   };
 
@@ -150,7 +157,7 @@ export class Canvas2D {
     if (!ctx) throw new Error("Failed to get 2D context");
 
     this.viewState = new ViewState(viewType, canvas.width, canvas.height);
-    this.renderer = new Canvas2DRenderer(ctx, canvas);
+    this.renderer = new Canvas2DRenderer(ctx, canvas, themePreference.getScheme());
 
     // The canvas fills its container with CSS. Its drawing buffer follows that size 1:1.
     this.resizeObserver = new ResizeObserver(this.handleResizeObserved);
@@ -205,6 +212,8 @@ export class Canvas2D {
     editorState.on("paintbehavior:selected", this.handleRequestRender);
 
     editorState.on("paintmode:selected", this.handleToolChange);
+
+    themePreference.on("colorscheme:switched", this.handleColorSchemeSwitched);
   }
 
   private unsubscribeFromEvents(): void {
@@ -225,5 +234,7 @@ export class Canvas2D {
     editorState.off("paintbehavior:selected", this.handleRequestRender);
 
     editorState.off("paintmode:selected", this.handleToolChange);
+
+    themePreference.off("colorscheme:switched", this.handleColorSchemeSwitched);
   }
 }

@@ -166,7 +166,8 @@ class StairShapeImpl implements BlockShape {
   ): ClipPath | null {
     const facing = (blockState?.facing ?? "x+") as HorizontalDirection;
     const half = (blockState?.half ?? "bottom") as "top" | "bottom";
-    return computeStairClip(facing, half, viewType, px, py, cellSize);
+    const path = computeStairClip(facing, half, viewType, px, py, cellSize);
+    return path ? [path] : null;
   }
 
   deriveState(
@@ -178,6 +179,14 @@ class StairShapeImpl implements BlockShape {
     const half = (baseState.half ?? "bottom") as "top" | "bottom";
     const shape = calculateStairShape(position, facing, half, blockIndex);
     return { ...baseState, shape };
+  }
+
+  getExportBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
+  getTextureBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
   }
 
   matchesBlock(blockId: string): boolean {

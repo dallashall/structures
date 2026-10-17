@@ -112,7 +112,7 @@ export function ForegroundBackgroundSelector({
             height: 20,
             bgcolor: 'background.paper',
             border: 1,
-            borderColor: 'divider',
+            borderColor: 'chrome.controlBorder',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',

@@ -5,6 +5,7 @@ import type {
 } from "../painting/strategies/GuideGeometry";
 import type { ViewState } from "./ViewState";
 import type { Dimensions } from "../../types";
+import type { CanvasColors } from "../../config/colorSchemes";
 
 /**
  * GuideGeometryRenderer - Draws the arch and curve tools' control handles and guide lines
@@ -13,11 +14,6 @@ import type { Dimensions } from "../../types";
  * unlike blocks, because a guide changes on every pointer move.
  */
 export class GuideGeometryRenderer {
-  private static readonly HANDLE_PLACED_COLOR = "#FFD700";
-  private static readonly HANDLE_CURSOR_COLOR = "#87CEEB";
-  private static readonly BASELINE_COLOR = "#FFD700";
-  private static readonly CONTROL_LINE_COLOR = "#FF69B4";
-  private static readonly TANGENT_LINE_COLOR = "#87CEEB";
   private static readonly HANDLE_RADIUS = 5;
   private static readonly LABEL_FONT = "bold 10px sans-serif";
 
@@ -28,16 +24,17 @@ export class GuideGeometryRenderer {
     dimensions: Dimensions,
     cellSize: number,
     pan: { x: number; y: number },
+    colors: CanvasColors,
   ): void {
     ctx.save();
 
     // Lines first, so handles draw over them
     for (const line of geometry.lines) {
-      this.drawLine(ctx, line, viewState, dimensions, cellSize, pan);
+      this.drawLine(ctx, line, viewState, dimensions, cellSize, pan, colors);
     }
 
     for (const handle of geometry.handles) {
-      this.drawHandle(ctx, handle, viewState, dimensions, cellSize, pan);
+      this.drawHandle(ctx, handle, viewState, dimensions, cellSize, pan, colors);
     }
 
     ctx.restore();
@@ -64,6 +61,7 @@ export class GuideGeometryRenderer {
     dimensions: Dimensions,
     cellSize: number,
     pan: { x: number; y: number },
+    colors: CanvasColors,
   ): void {
     const from = this.toPixelCenter(
       line.from,
@@ -80,15 +78,15 @@ export class GuideGeometryRenderer {
 
     switch (line.style) {
       case "baseline":
-        ctx.strokeStyle = this.BASELINE_COLOR;
+        ctx.strokeStyle = colors.guidePlaced;
         ctx.setLineDash([]);
         break;
       case "control":
-        ctx.strokeStyle = this.CONTROL_LINE_COLOR;
+        ctx.strokeStyle = colors.guideControl;
         ctx.setLineDash([6, 4]);
         break;
       case "tangent":
-        ctx.strokeStyle = this.TANGENT_LINE_COLOR;
+        ctx.strokeStyle = colors.guideCursor;
         ctx.setLineDash([2, 3]);
         ctx.globalAlpha = 0.5;
         break;
@@ -107,6 +105,7 @@ export class GuideGeometryRenderer {
     dimensions: Dimensions,
     cellSize: number,
     pan: { x: number; y: number },
+    colors: CanvasColors,
   ): void {
     const { px, py } = this.toPixelCenter(
       handle.position,
@@ -120,8 +119,8 @@ export class GuideGeometryRenderer {
     ctx.globalAlpha = 0.9;
 
     if (handle.style === "placed") {
-      ctx.fillStyle = this.HANDLE_PLACED_COLOR;
-      ctx.strokeStyle = "#000000";
+      ctx.fillStyle = colors.guidePlaced;
+      ctx.strokeStyle = colors.guideOutline;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(px, py - r);
@@ -132,15 +131,15 @@ export class GuideGeometryRenderer {
       ctx.fill();
       ctx.stroke();
     } else {
-      ctx.strokeStyle = this.HANDLE_CURSOR_COLOR;
+      ctx.strokeStyle = colors.guideCursor;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#000000";
+    ctx.fillStyle = colors.guideLabel;
+    ctx.strokeStyle = colors.guideOutline;
     ctx.lineWidth = 2;
     ctx.font = this.LABEL_FONT;
     ctx.textAlign = "center";

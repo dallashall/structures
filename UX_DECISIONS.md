@@ -134,6 +134,8 @@ This document records the interaction decisions for Structures and how the app c
 **Block state:**
 - Slabs show bottom, top, and double. Y flips the half.
 - Stairs show facing and half. T rotates the facing.
+- Fences, walls, torches, and doors take their shape from their neighbours, so they need no controls beyond facing.
+- Doors show a Flip hinge toggle. H flips it. The hinge comes from the neighbours, and the toggle swaps it, so a double door needs no setting.
 
 ---
 

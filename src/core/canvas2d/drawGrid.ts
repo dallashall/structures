@@ -1,4 +1,4 @@
-import type { Canvas2DColorConfig } from "./Canvas2DRenderer";
+import type { CanvasColors } from "../../config/colorSchemes";
 
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
@@ -6,7 +6,7 @@ export function drawGrid(
   gridHeight: number,
   cellSize: number,
   pan: { x: number; y: number },
-  colors: Canvas2DColorConfig,
+  colors: CanvasColors,
 ): void {
   ctx.strokeStyle = colors.grid;
   ctx.lineWidth = 1;

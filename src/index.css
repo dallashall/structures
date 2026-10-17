@@ -4,14 +4,6 @@
  * Ensures the app takes full viewport height without scrolling
  */
 
-:root {
-  /* Dark theme colors for professional graphic tool aesthetic */
-  --canvas-bg-dark: #1a1a1a;
-  --grid-color-dark: #3a3a3a;
-  --panel-bg-dark: #2a2a2a;
-  --divider-dark: #3a3a3a;
-}
-
 html,
 body,
 #root {

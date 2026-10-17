@@ -1,152 +1,38 @@
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
-import { WelcomeView } from "./views/WelcomeView";
-import { EditorView } from "./views/EditorView";
-import { NewProjectDialog } from "./components/NewProjectDialog";
-import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
-import { CreditsDialog } from "./components/CreditsDialog";
-import { ExportDialog } from "./components/ExportDialog";
-import { ComponentPreview } from "./preview/ComponentPreview";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+
+import type { Theme } from "@mui/material";
+import type { ColorScheme } from "./config/colorSchemes";
+import type { Dimensions } from "./types";
+
+import { createAppTheme } from "./config/theme";
+
 import { createProjectCommand } from "./commands/CreateProjectCommand";
-import { openProjectCommand } from "./commands/OpenProjectCommand";
 import { loadProjectFileCommand } from "./commands/LoadProjectFileCommand";
+import { openProjectCommand } from "./commands/OpenProjectCommand";
 import { screenRouter } from "./core/ScreenRouter";
-import { withScreenState } from "./hocs/withScreenState";
-import type { WithScreenStateProps } from "./hocs/withScreenState";
+
 import { withAtlasStatus } from "./hocs/withAtlasStatus";
 import type { WithAtlasStatusProps } from "./hocs/withAtlasStatus";
-import type { Dimensions } from "./types";
+import { withScreenState } from "./hocs/withScreenState";
+import type { WithScreenStateProps } from "./hocs/withScreenState";
+import { withThemePreference } from "./hocs/withThemePreference";
+import type { WithThemePreferenceProps } from "./hocs/withThemePreference";
+
+import { CreditsDialog } from "./components/CreditsDialog";
+import { ExportDialog } from "./components/ExportDialog";
+import { FileErrorSnackbar } from "./components/FileErrorSnackbar";
+import { NewProjectDialog } from "./components/NewProjectDialog";
+import { ComponentPreview } from "./preview/ComponentPreview";
+import { EditorView } from "./views/EditorView";
+import { WelcomeView } from "./views/WelcomeView";
+
 import { toFileErrorMessage } from "./utils/projectFile";
 
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-    primary: {
-      main: "#4a9eff",
-      dark: "#3d8ae5",
-    },
-    secondary: {
-      main: "#ff9f40",
-      dark: "#e68a2e",
-    },
-    background: {
-      default: "#1a1a1a",
-      paper: "#2a2a2a",
-    },
-    divider: "#3a3a3a",
-    text: {
-      primary: "#e0e0e0",
-      secondary: "#a0a0a0",
-    },
-  },
-  spacing: 8,
-  shape: {
-    borderRadius: 4,
-  },
-  typography: {
-    fontFamily:
-      '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-
-    h1: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-    h2: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-    h3: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-    h4: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-    h5: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-    h6: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-    },
-
-    subtitle1: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-    subtitle2: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-
-    body1: {
-      fontFamily:
-        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-    body2: {
-      fontFamily:
-        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-
-    button: {
-      fontFamily:
-        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontWeight: 600,
-      textTransform: "none",
-    },
-
-    caption: {
-      fontFamily:
-        '"Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-
-    overline: {
-      fontFamily:
-        '"Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      letterSpacing: "0.08em",
-    },
-  },
-  components: {
-    MuiToggleButton: {
-      styleOverrides: {
-        root: {
-          "&.Mui-selected": {
-            backgroundColor: "#4a9eff",
-            color: "#ffffff",
-            "&:hover": {
-              backgroundColor: "#3d8ae5",
-            },
-          },
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          "& input": {
-            fontFamily: '"Red Hat Mono", "Courier New", monospace',
-            fontWeight: 500,
-          },
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        label: {
-          fontFamily: '"Red Hat Mono", "Courier New", monospace',
-          fontWeight: 500,
-        },
-      },
-    },
-  },
-});
+// Both themes build once at load. A scheme switch picks the other object.
+const THEMES: Record<ColorScheme, Theme> = {
+  light: createAppTheme("light"),
+  dark: createAppTheme("dark"),
+};
 
 /**
  * Renders the screen ScreenRouter chose: WelcomeView, EditorView, or the preview gallery (#/preview).
@@ -159,7 +45,10 @@ function AppComponent({
   isExportDialogOpen,
   fileError,
   atlasStatus,
-}: WithScreenStateProps & WithAtlasStatusProps) {
+  colorScheme,
+}: WithScreenStateProps & WithAtlasStatusProps & WithThemePreferenceProps) {
+  const theme = THEMES[colorScheme];
+
   const handleCreateProject = async (name: string, dimensions: Dimensions) => {
     await createProjectCommand.execute(name, dimensions);
     screenRouter.closeNewProjectDialog();
@@ -185,16 +74,16 @@ function AppComponent({
 
   if (screen === "preview") {
     return (
-      <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
+      <ThemeProvider theme={theme}>
+        <CssBaseline enableColorScheme />
         <ComponentPreview />
       </ThemeProvider>
     );
   }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    <ThemeProvider theme={theme}>
+      <CssBaseline enableColorScheme />
       {screen === "welcome" ? (
         <WelcomeView
           onNewProject={screenRouter.openNewProjectDialog}
@@ -221,4 +110,4 @@ function AppComponent({
   );
 }
 
-export const App = withAtlasStatus(withScreenState(AppComponent));
+export const App = withThemePreference(withAtlasStatus(withScreenState(AppComponent)));
