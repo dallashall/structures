@@ -9,6 +9,9 @@ import { findBlockById } from '../utils/blockUtils';
 import { BlockTextureSwatch } from './BlockTextureSwatch';
 import { ShortcutTooltip } from './ShortcutTooltip';
 
+const toSlotTitle = (slot: string, block: Block | undefined | null): string =>
+  `${slot} material: ${block?.name ?? 'none'} (click to activate)`;
+
 interface ForegroundBackgroundSelectorProps {
   foregroundBlockId: string | null;
   backgroundBlockId: string | null;
@@ -40,7 +43,7 @@ export function ForegroundBackgroundSelector({
         mx: 'auto',
       }}
     >
-      <Tooltip title="Background material (click to activate)">
+      <Tooltip title={toSlotTitle('Background', backgroundBlock)}>
         <Box
           onClick={onClickBackground}
           sx={{
@@ -70,7 +73,7 @@ export function ForegroundBackgroundSelector({
         </Box>
       </Tooltip>
 
-      <Tooltip title="Foreground material (click to activate)">
+      <Tooltip title={toSlotTitle('Foreground', foregroundBlock)}>
         <Box
           onClick={onClickForeground}
           sx={{
