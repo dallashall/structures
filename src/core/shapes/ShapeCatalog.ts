@@ -8,6 +8,8 @@ import type { BlockData } from '../../types';
 import { cubeShape } from './CubeShape';
 import { slabShape } from './SlabShape';
 import { stairShape } from './StairShape';
+import { fenceShape } from './FenceShape';
+import { wallShape } from './WallShape';
 
 class ShapeCatalogImpl {
   private static instance: ShapeCatalogImpl;
@@ -16,6 +18,8 @@ class ShapeCatalogImpl {
   private readonly shapes: BlockShape[] = [
     stairShape,
     slabShape,
+    fenceShape,
+    wallShape,
   ];
 
   private readonly cache = new Map<string, BlockShape>();

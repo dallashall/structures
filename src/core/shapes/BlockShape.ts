@@ -1,5 +1,5 @@
 /**
- * BlockShape - All shape-specific logic for one kind of block (cube, slab, stair)
+ * BlockShape - All shape-specific logic for one kind of block (cube, slab, stair, fence, wall)
  *
  * Renderers and the paint pipeline ask the shape instead of branching on block type.
  */

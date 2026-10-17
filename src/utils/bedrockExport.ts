@@ -66,9 +66,9 @@ export function toJavaProperties(state: BlockStateProperties): Record<string, st
       properties.facing = JAVA_DIRECTIONS[value as AxisDirection] ?? String(value);
     } else if (key === 'shape' && typeof value === 'string' && value.includes('_')) {
       properties.shape = toJavaStairShape(value);
-    } else if (key === 'connections') {
-      for (const [direction, isConnected] of Object.entries(value as Record<AxisDirection, boolean>)) {
-        properties[JAVA_DIRECTIONS[direction as AxisDirection]] = String(isConnected);
+    } else if (key === 'connections' || key === 'wallSides') {
+      for (const [direction, side] of Object.entries(value as Record<AxisDirection, boolean | string>)) {
+        properties[JAVA_DIRECTIONS[direction as AxisDirection]] = String(side);
       }
     } else if (key !== 'variant') {
       properties[key] = String(value);

@@ -44,7 +44,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "acacia"
+      "all": "acacia_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -55,7 +55,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "acacia"
+      "all": "acacia_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -292,7 +292,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "bamboo"
+      "all": "bamboo_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -303,7 +303,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "bamboo"
+      "all": "bamboo_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -460,7 +460,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "birch"
+      "all": "birch_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -471,7 +471,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "birch"
+      "all": "birch_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -938,7 +938,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "cherry"
+      "all": "cherry_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -949,7 +949,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "cherry"
+      "all": "cherry_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -1357,7 +1357,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "crimson"
+      "all": "crimson_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -1368,7 +1368,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "crimson"
+      "all": "crimson_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -1600,7 +1600,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "dark_oak"
+      "all": "dark_oak_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -1611,7 +1611,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "dark_oak"
+      "all": "dark_oak_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -2519,7 +2519,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "jungle"
+      "all": "jungle_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -2530,7 +2530,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "jungle"
+      "all": "jungle_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -2846,7 +2846,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "mangrove"
+      "all": "mangrove_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -2857,7 +2857,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "mangrove"
+      "all": "mangrove_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -3274,7 +3274,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "oak"
+      "all": "oak_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -3285,7 +3285,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "oak"
+      "all": "oak_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -3545,7 +3545,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "pale_oak"
+      "all": "pale_oak_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -3556,7 +3556,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "pale_oak"
+      "all": "pale_oak_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -4206,7 +4206,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "red_nether_brick"
+      "all": "red_nether_bricks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -4290,7 +4290,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "resin_brick"
+      "all": "resin_bricks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -4553,7 +4553,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "spruce"
+      "all": "spruce_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -4564,7 +4564,7 @@
     "category": "wood",
     "color": "#9c7f4e",
     "textures": {
-      "all": "spruce"
+      "all": "spruce_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -4916,7 +4916,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "warped"
+      "all": "warped_planks"
     },
     "hasBlockState": true,
     "isCube": true,
@@ -4927,7 +4927,7 @@
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "warped"
+      "all": "warped_planks"
     },
     "hasBlockState": true,
     "defaultState": {
@@ -31576,6 +31576,149 @@
       "side": "verdant_froglight_side"
     },
     "hasBlockState": false,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:cobblestone_wall": {
+    "displayName": "Cobblestone Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "cobblestone"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:mossy_cobblestone_wall": {
+    "displayName": "Mossy Cobblestone Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "mossy_cobblestone"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:prismarine_wall": {
+    "displayName": "Prismarine Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "prismarine"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:mossy_stone_brick_wall": {
+    "displayName": "Mossy Stone Brick Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "mossy_stone_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:stone_brick_wall": {
+    "displayName": "Stone Brick Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "stone_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:mud_brick_wall": {
+    "displayName": "Mud Brick Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "mud_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:end_stone_brick_wall": {
+    "displayName": "End Stone Brick Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "end_stone_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:polished_blackstone_brick_wall": {
+    "displayName": "Polished Blackstone Brick Wall",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "polished_blackstone_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:tuff_wall": {
+    "displayName": "Tuff Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "tuff"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:tuff_brick_wall": {
+    "displayName": "Tuff Brick Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "tuff_bricks"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:cobbled_deepslate_wall": {
+    "displayName": "Cobbled Deepslate Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "cobbled_deepslate"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:deepslate_tile_wall": {
+    "displayName": "Deepslate Tile Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "deepslate_tiles"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false
+  },
+  "minecraft:deepslate_brick_wall": {
+    "displayName": "Deepslate Brick Wall",
+    "category": "stone",
+    "color": "#808080",
+    "textures": {
+      "all": "deepslate_bricks"
+    },
+    "hasBlockState": true,
     "isCube": true,
     "isTransparent": false
   }

@@ -16,6 +16,8 @@ export interface Dimensions {
 export type AxisDirection = `${'x' | 'y' | 'z'}${'+' | '-'}`;
 export type HorizontalDirection = `${'x' | 'y'}${'+' | '-'}`;
 
+export type WallSide = 'none' | 'low' | 'tall';
+
 export type LayoutMode = "tabbed" | "quad";
 
 export type ViewType = "front" | "back" | "left" | "right" | "top" | "bottom";
@@ -76,8 +78,9 @@ export interface BlockStateProperties {
   // such as "straight_x+", "outer_y+_x-", "inner_y-_x+"
   shape?: string;
 
-  // Fences, walls, and glass panes
+  // Fences and glass panes join on their horizontal sides. A wall's z+ entry is its post.
   connections?: Partial<Record<AxisDirection, boolean>>;
+  wallSides?: Partial<Record<HorizontalDirection, WallSide>>;
 
   waterlogged?: boolean;
   lit?: boolean;

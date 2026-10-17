@@ -69,12 +69,12 @@ export function rotateBlockState(state: BlockStateProperties, turns: number): Bl
     } else if (key === 'shape' && typeof value === 'string') {
       const toTurnedPart = (part: string): string => turnDirection(part, quarter);
       rotated.shape = value.split('_').map(toTurnedPart).join('_');
-    } else if (key === 'connections' && value) {
-      const connections: Partial<Record<AxisDirection, boolean>> = {};
-      for (const [direction, isConnected] of Object.entries(value as Record<string, boolean>)) {
-        connections[turnDirection(direction, quarter) as AxisDirection] = isConnected;
+    } else if ((key === 'connections' || key === 'wallSides') && value) {
+      const sides: Partial<Record<AxisDirection, unknown>> = {};
+      for (const [direction, side] of Object.entries(value as Record<string, unknown>)) {
+        sides[turnDirection(direction, quarter) as AxisDirection] = side;
       }
-      rotated.connections = connections;
+      rotated[key] = sides;
     } else if (key === 'rotation' && typeof value === 'number') {
       rotated.rotation = (value + quarter * 4) % 16;
     } else {

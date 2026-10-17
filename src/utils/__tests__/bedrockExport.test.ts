@@ -20,6 +20,11 @@ const TABLE: BedrockBlockTable = {
 const identity = (blockId: string): string => blockId;
 
 describe('toJavaProperties', () => {
+  it('writes wall sides and the wall post with cardinal names', () => {
+    expect(toJavaProperties({ wallSides: { 'y-': 'low', 'x+': 'tall', 'y+': 'none', 'x-': 'none' }, connections: { 'z+': true } }))
+      .toEqual({ north: 'low', east: 'tall', south: 'none', west: 'none', up: 'true' });
+  });
+
   it('names axis directions the way Java does and turns values into strings', () => {
     expect(toJavaProperties({ facing: 'y-', half: 'bottom', open: true })).toEqual({ facing: 'north', half: 'bottom', open: 'true' });
   });
