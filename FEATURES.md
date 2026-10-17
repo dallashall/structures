@@ -164,7 +164,7 @@ Search and tab reset each time the browser opens.
 
 ## Block state and shapes
 
-Blocks have one of three shapes: stair, slab, or full cube. The 2D views clip a slab or stair to the part of the cell it fills.
+Blocks have one of seven shapes: stair, slab, fence, wall, torch, door, or full cube. The 2D views clip each shape to the part of the cell it fills, and the 3D view builds it from Minecraft's model proportions.
 
 When the selected block has an orientation, the side panel shows **Orientation** controls:
 
@@ -172,11 +172,18 @@ When the selected block has an orientation, the side panel shows **Orientation**
 |---|---|---|
 | Slab | Bottom, Top, Double | Y flips bottom and top |
 | Stair | Bottom, Top half | Y flips the half |
-| Stair and other facing blocks | Facing -Y, +X, +Y, -X | T rotates the facing |
+| Stairs, torches, doors, and other facing blocks | Facing -Y, +X, +Y, -X | T rotates the facing |
+| Door | Flip hinge | H flips the hinge |
 
 Picking a new block resets its orientation to the default.
 
-**Stair corners**: the app shapes stair corners from their neighbours. A stair with another stair at a right angle in front of it becomes an inner corner. A stair with one at a right angle behind it becomes an outer corner. Only stairs with the same half join. Previews show the corner a stair will form once placed.
+The app shapes these blocks from their neighbours on every change, so placing or removing a neighbour reshapes them. Previews show the shape a block will have once placed.
+
+- **Stair corners**: a stair with another stair at a right angle in front of it becomes an inner corner. A stair with one at a right angle behind it becomes an outer corner. Only stairs with the same half join.
+- **Fences** join fences of the same family (wooden fences together, nether brick fences together), fence gates along the gate's width, and full blocks.
+- **Walls** join walls, fence gates, and full blocks. A wall side rises to full height under a full block. A wall shows its post at ends, corners, and junctions, and on a straight run only when a torch or lantern sits on it.
+- **Torches** stand on a full block, fence, or wall below. Otherwise a torch hangs on a full block beside it, tilted away from the wall. The facing picks the wall when several are free. A torch with nothing to hold it stands on the floor.
+- **Doors** are two blocks tall. Painting a door places both halves, and erasing or replacing either half removes both. A door is skipped where the cell above it is outside the build or holds a block. The hinge follows Minecraft's rule: a door of the same type beside it makes a double door, and otherwise the side with more full blocks holds the hinge. Flip hinge swaps that choice on doors painted while it is on. A closed door sits on the cell edge opposite its facing.
 
 ## Meta block
 
@@ -306,7 +313,8 @@ Shortcuts do nothing while you type in a field. While a dialog is open only E wo
 | F | Switch the active material square |
 | T | Rotate the facing. With the Meta Block tool, turn the meta block right. |
 | Shift+T | Turn the meta block left (Meta Block tool) |
-| Y | Flip the half (slabs, stairs, doors) |
+| Y | Flip the half (slabs, stairs) |
+| H | Flip the hinge (doors) |
 | A, D | X layer down, up |
 | X, C | Y layer down, up |
 | S, W | Z layer down, up |
@@ -331,3 +339,6 @@ Shortcuts do nothing while you type in a field. While a dialog is open only E wo
 - **Erase with "Until Hit" depth** stops each column at its first block before erasing, so it may remove nothing.
 - **Fill with Erase** does nothing when the clicked block matches the selected material.
 - **Resizing a project**: the code can expand and shrink a project one side at a time, but the UI has no control for it.
+- **Fence gates, trapdoors, and lanterns** draw as full cubes. Fences and walls still join fence gates.
+- **Open doors** draw open when a loaded project stores them open, but the UI has no control to open a door.
+- **Fill and resize with doors**: Fill compares block types one cell at a time, and shrinking a project can cut a door in half.

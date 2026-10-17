@@ -2,7 +2,7 @@
  * DoorShape - A 3-thick panel in each of two stacked cells
  *
  * The paint pipeline stores the lower half with half 'lower' and the upper half above it with half 'upper'
- * (see DoorPairing). The upper half copies its facing, hinge, and open state from the lower half.
+ * (see PaintPipeline.pairDoorHalves). The upper half copies its facing, hinge, and open state from the lower half.
  *
  * The hinge follows Minecraft's placement rule, read from the neighbors on every derive:
  * - A door of the same type on the left makes a double door, so the hinge goes right. One on the right puts it left.

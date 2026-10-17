@@ -182,7 +182,7 @@ Paints a block's front texture onto small swatch canvases. `refFor(blockId, pixe
 Global keyboard shortcuts, set up once in `src/main.tsx`. Key bindings live in `src/core/Shortcuts.ts`.
 
 - 1 to 9 pick a quick-select slot. F swaps the foreground and background slot.
-- T rotates facing and Y flips a slab half, when the selected block has state.
+- T rotates facing and Y flips a slab or stair half, when the selected block has state. H flips a door's hinge.
 - W/S, A/D, and X/C step the Z, X, and Y layers.
 - E toggles the material browser.
 - B, R, O, G, and V pick the point, outline, circle, arch, and curve tools.
@@ -212,11 +212,11 @@ The 2D views live in `src/core/canvas2d/`, with tools in `src/core/tools/` and p
 - `ToolBase` handles pan (Space+drag or middle mouse), wheel zoom, modifier tracking, and pointer to grid to model resolution. Concrete tools never convert coordinates.
 - `ClickDragReleaseTool` is the base for point, outline, circle, and fill. `MultiClickTool` is the base for arch (three clicks) and curve (four clicks).
 - `toolRegistry` (`src/core/tools/ToolRegistry.ts`) registers each tool by name and hotkey. Canvas2D creates tools through it.
-- A tool computes operations with a paint strategy (`src/core/painting/strategies/`). It then runs them through `PaintPipeline`: `applyDepth`, then `applyBehavior` (normal, only-replace, selective-replace), then `applyDeleteModifier`. It hands the result to DraftingService.
+- A tool computes operations with a paint strategy (`src/core/painting/strategies/`). It then runs them through `PaintPipeline`: `applyDepth`, then `applyBehavior` (normal, only-replace, selective-replace), then `applyDeleteModifier`, then `attachBlockState`, then `pairDoorHalves`. It hands the result to DraftingService.
 - `Canvas2D` converts model positions to `GridBlock` records when data changes, not on every frame. The renderer receives only `GridBlock` arrays.
 - `canvas2DMounter` (`src/core/canvas2d/Canvas2DMounter.ts`) hands out one stable ref callback per view type. React calls it with the canvas on mount and with null on unmount, which creates and destroys one `Canvas2D` without effects.
 
-Block shapes live in `src/core/shapes/`. `shapeCatalog.resolve(blockId)` returns a `CubeShape`, `SlabShape`, or `StairShape`. Renderers and the pipeline ask the shape instead of branching on block type. `StairShapeResolver.ts` computes stair joins.
+Block shapes live in `src/core/shapes/`. `shapeCatalog.resolve(blockId)` returns a `CubeShape`, `SlabShape`, `StairShape`, `FenceShape`, `WallShape`, `TorchShape`, or `DoorShape`. Renderers, export, and the pipeline ask the shape instead of branching on block type. `StairShapeResolver.ts` computes stair joins, and `ConnectionResolver.ts` computes fence and wall joins. Fence, wall, torch, and door geometry is a list of boxes in `BoxModel.ts`, which builds both the 3D mesh and the 2D clip.
 
 ## Higher-order components
 
