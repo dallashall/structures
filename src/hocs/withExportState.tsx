@@ -28,6 +28,7 @@ const DEFAULT_OPTIONS: ExportOptions = {
   addonName: '',
   itemName: '',
   icon: 'blaze_rod',
+  activator: 'wand',
   sequence: 'rise',
   seconds: 6,
   uses: 0,

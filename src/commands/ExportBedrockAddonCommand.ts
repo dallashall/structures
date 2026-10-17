@@ -1,7 +1,7 @@
 import type { ExportOptions, ExportResult } from './exportParts';
 import type { BedrockTableEntry } from '../utils/bedrockBlocks';
 import { loadExportProject, toGlowRgb, toJavaId, toSkippedBlocks } from './exportParts';
-import { toAddonNames, toMcaddon } from '../utils/bedrockAddon';
+import { toAddonNames, toDefaultItemName, toMcaddon, toSnowballCount } from '../utils/bedrockAddon';
 import { toAnimatedBuild } from '../utils/animatedBuild';
 import { findBedrockBlock, toBedrockStructure } from '../utils/bedrockExport';
 import { saveBinaryFile } from '../utils/fileAccess';
@@ -38,17 +38,20 @@ class ExportBedrockAddonCommand {
       loadExportProject(options.addonName),
       loadPackIcon(),
     ]);
-    const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId);
+    // A projectile build fills the meta block's cell. A wand leaves it open for the player standing there.
+    const keepAnchor = options.activator !== 'wand';
+    const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId, keepAnchor);
     const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null =>
       findBedrockBlock(table, toJavaId(blockId), properties);
-    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb);
+    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb, keepAnchor);
 
     const [major, minor, patch] = table.bedrockVersion;
     const addon = await toMcaddon({
       projectId,
       projectName: name,
-      itemName: options.itemName.trim() || `${name} Wand`,
+      itemName: options.itemName.trim() || toDefaultItemName(name, options.activator),
       icon: options.icon,
+      activator: options.activator,
       sequence: options.sequence,
       seconds: options.seconds,
       uses: options.uses,
@@ -64,7 +67,8 @@ class ExportBedrockAddonCommand {
     const names = toAddonNames(name, projectId);
     const fileName = `${names.slug}.mcaddon`;
     const isSaved = await saveBinaryFile(fileName, addon, MCADDON_TYPE);
-    return { isSaved, fileName, command: `/give @s ${names.itemId}`, skipped: toSkippedBlocks(structure.skipped) };
+    const count = options.activator === 'snowball' ? ` ${toSnowballCount(options.uses)}` : '';
+    return { isSaved, fileName, command: `/give @s ${names.itemId}${count}`, skipped: toSkippedBlocks(structure.skipped) };
   }
 }
 

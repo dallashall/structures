@@ -1,6 +1,6 @@
 import type { ExportOptions, ExportResult } from './exportParts';
 import { loadExportProject, toGlowRgb, toJavaId, toSkippedBlocks } from './exportParts';
-import { toAddonNames } from '../utils/bedrockAddon';
+import { toAddonNames, toDefaultItemName } from '../utils/bedrockAddon';
 import { toAnimatedBuild } from '../utils/animatedBuild';
 import { saveBinaryFile } from '../utils/fileAccess';
 import { findJavaBlockState, toDatapackZip } from '../utils/javaDatapack';
@@ -29,13 +29,15 @@ class ExportJavaDatapackCommand {
     const { projectId, name, model, blocks, table } = await loadExportProject(options.addonName);
     const findEntry = (blockId: string, properties: Record<string, string>): string | null =>
       findJavaBlockState(table, toJavaId(blockId), properties);
-    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb);
+    // A projectile build fills the meta block's cell. A wand leaves it open for the player standing there.
+    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb, options.activator !== 'wand');
 
     const pack = toDatapackZip({
       projectId,
       packName: name,
-      itemName: options.itemName.trim() || `${name} Wand`,
+      itemName: options.itemName.trim() || toDefaultItemName(name, options.activator),
       icon: options.icon,
+      activator: options.activator,
       sequence: options.sequence,
       seconds: options.seconds,
       uses: options.uses,

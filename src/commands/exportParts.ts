@@ -15,7 +15,7 @@ import { metadataProjection } from '../projections/MetadataProjection';
 import { modelProjection } from '../projections/ModelProjection';
 import type { Model } from '../reducers/modelReducer';
 import type { BlockData } from '../types';
-import type { ItemIcon } from '../utils/bedrockAddon';
+import type { Activator, ItemIcon } from '../utils/bedrockAddon';
 import type { BuildSequence } from '../utils/bedrockAddonScript';
 import type { Rgb } from '../utils/animatedBuild';
 import type { BedrockBlockTable } from '../utils/bedrockBlocks';
@@ -32,9 +32,10 @@ export interface ExportOptions {
   edition: ExportEdition;
   // Empty means the project name
   addonName: string;
-  // Empty means "<add-on name> Wand"
+  // Empty means toDefaultItemName, such as "<add-on name> Wand"
   itemName: string;
   icon: ItemIcon;
+  activator: Activator;
   sequence: BuildSequence;
   seconds: number;
   // 0 means unlimited

@@ -11,6 +11,7 @@ const OPTIONS: AddonOptions = {
   projectName: 'Castle Keep!',
   itemName: 'Castle Key',
   icon: 'trial_key',
+  activator: 'wand',
   sequence: 'rise',
   seconds: 6,
   uses: 0,
@@ -81,6 +82,19 @@ describe('toAddonFiles', () => {
     ]);
   });
 
+  it('makes a bow that fires vanilla arrows, or a stack of throwable snowballs, with no wand component', async () => {
+    const item = (files: Record<string, Uint8Array>): { components: Record<string, unknown> } =>
+      (readJson(files, 'castle_keep_BP/items/castle_keep_wand.json') as { 'minecraft:item': { components: Record<string, unknown> } })['minecraft:item'];
+    const bow = item(await toAddonFiles({ ...OPTIONS, activator: 'bow' })).components;
+    expect(bow['minecraft:shooter']).toMatchObject({ ammunition: [{ item: 'minecraft:arrow' }] });
+    expect(Object.keys(bow).some(isNamespacedComponent)).toBe(false);
+    const snowball = item(await toAddonFiles({ ...OPTIONS, activator: 'snowball' })).components;
+    expect(snowball['minecraft:max_stack_size']).toBe(16);
+    expect(snowball['minecraft:projectile']).toEqual({ projectile_entity: 'minecraft:snowball' });
+    const texture = readJson(await toAddonFiles({ ...OPTIONS, activator: 'snowball' }), 'castle_keep_RP/textures/item_texture.json');
+    expect(JSON.stringify(texture)).toContain('textures/items/snowball');
+  });
+
   it('links the packs to each other and pins the script API', async () => {
     const files = await toAddonFiles(OPTIONS);
     const behavior = readJson(files, 'castle_keep_BP/manifest.json');
@@ -134,3 +148,5 @@ describe('toMcaddon', () => {
     expect(unzipped[`castle_keep_BP/structures/${NAMES.namespace}/build.mcstructure`]).toEqual(OPTIONS.structure);
   });
 });
+
+const isNamespacedComponent = (key: string): boolean => !key.startsWith('minecraft:');

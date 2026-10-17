@@ -12,6 +12,7 @@
 import type { AnimatedBuild } from './animatedBuild';
 import type { BedrockTableEntry } from './bedrockBlocks';
 import type { AnimatedSequence } from './buildSequence';
+import type { Activator } from './bedrockAddon';
 import { JITTER, LEAD_TICKS, MAX_GLOWS, POP_BLOCKS_PER_TICK, toDurationTicks } from './buildSequence';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { HorizontalDirection } from '../types';
@@ -27,6 +28,8 @@ const FACING_INDEX: Record<HorizontalDirection, number> = { 'y-': 0, 'x+': 1, 'y
 export interface AddonScriptOptions {
   structureId: string;
   componentId: string;
+  itemId: string;
+  activator: Activator;
   sequence: BuildSequence;
   seconds: number;
   // 0 means unlimited
@@ -43,6 +46,9 @@ export function toAddonScript(options: AddonScriptOptions): string {
   return `import { system, world, BlockPermutation, EasingType, EquipmentSlot, InputPermissionCategory, MolangVariableMap, Player, StructureRotation } from "@minecraft/server";
 
 const STRUCTURE_ID = ${JSON.stringify(options.structureId)};
+const ITEM_ID = ${JSON.stringify(options.itemId)};
+/** @type {string} */
+const ACTIVATOR = ${JSON.stringify(options.activator)};
 /** @type {string} */
 const CAMERA_MODE = ${JSON.stringify(options.camera)};
 const CAMERA_KEYS_PER_SECOND = ${CAMERA_KEYS_PER_SECOND};
@@ -527,7 +533,101 @@ function registerComponent(startup) {
   });
 }
 
-system.beforeEvents.startup.subscribe(registerComponent);
+// A bow or snowball marks the projectile it launches, and the build lands where that projectile hits
+const PROJECTILE_TYPE = ACTIVATOR === "bow" ? "minecraft:arrow" : "minecraft:snowball";
+// A projectile spawns in the tick its item fires, or the next
+const ARM_TICKS = 2;
+// Marks on projectiles that never hit are dropped after this long
+const SHOT_LIFETIME_TICKS = 1200;
+// Player ID -> tick the player last fired or threw the item
+const armedTicks = new Map();
+// Projectile ID -> tick it was marked
+const markedShots = new Map();
+
+/** @param {Player} player */
+function arm(player) {
+  armedTicks.set(player.id, system.currentTick);
+}
+
+/** @param {import("@minecraft/server").ItemReleaseUseAfterEvent} event */
+function handleRelease(event) {
+  if (event.itemStack?.typeId !== ITEM_ID) return;
+  arm(event.source);
+  wearItem(event.source);
+}
+
+/** @param {import("@minecraft/server").ItemUseAfterEvent} event */
+function handleThrow(event) {
+  if (event.itemStack?.typeId === ITEM_ID) arm(event.source);
+}
+
+/** @param {import("@minecraft/server").EntitySpawnAfterEvent} event */
+function handleSpawn(event) {
+  const entity = event.entity;
+  if (!entity.isValid || entity.typeId !== PROJECTILE_TYPE) return;
+  const owner = entity.getComponent("minecraft:projectile")?.owner;
+  if (!owner) return;
+  const armedTick = armedTicks.get(owner.id);
+  if (armedTick === undefined || system.currentTick - armedTick > ARM_TICKS) return;
+  armedTicks.delete(owner.id);
+  for (const [id, tick] of markedShots) {
+    if (system.currentTick - tick > SHOT_LIFETIME_TICKS) markedShots.delete(id);
+  }
+  markedShots.set(entity.id, system.currentTick);
+}
+
+// A snowball is gone by the time its hit event runs, but its ID still reads
+/** @param {import("@minecraft/server").Entity} projectile */
+function takeShot(projectile) {
+  let id;
+  try {
+    id = projectile.id;
+  } catch {
+    return false;
+  }
+  const isMarked = markedShots.has(id);
+  markedShots.delete(id);
+  return isMarked;
+}
+
+/** @param {Player} player @param {Vector3} anchor */
+function buildFromShot(player, anchor) {
+  function run() {
+    if (!player.isValid) return;
+    if (SEQUENCE === "instant") placeInstantly(player, anchor);
+    else animateBuild(player, anchor);
+  }
+  system.run(run);
+}
+
+/** @param {import("@minecraft/server").ProjectileHitBlockAfterEvent} event */
+function handleHitBlock(event) {
+  if (!takeShot(event.projectile) || !(event.source instanceof Player)) return;
+  const hit = event.getBlockHit();
+  const offset = FACE_OFFSETS[hit.face] ?? FACE_OFFSETS.Up;
+  const { x, y, z } = hit.block.location;
+  buildFromShot(event.source, { x: x + offset[0], y: y + offset[1], z: z + offset[2] });
+}
+
+// A hit mob anchors the build at its feet
+/** @param {import("@minecraft/server").ProjectileHitEntityAfterEvent} event */
+function handleHitEntity(event) {
+  if (!takeShot(event.projectile) || !(event.source instanceof Player)) return;
+  const entity = event.getEntityHit()?.entity;
+  if (!entity?.isValid) return;
+  const { x, y, z } = entity.location;
+  buildFromShot(event.source, { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) });
+}
+
+if (ACTIVATOR === "wand") {
+  system.beforeEvents.startup.subscribe(registerComponent);
+} else {
+  if (ACTIVATOR === "bow") world.afterEvents.itemReleaseUse.subscribe(handleRelease);
+  else world.afterEvents.itemUse.subscribe(handleThrow);
+  world.afterEvents.entitySpawn.subscribe(handleSpawn);
+  world.afterEvents.projectileHitBlock.subscribe(handleHitBlock);
+  world.afterEvents.projectileHitEntity.subscribe(handleHitEntity);
+}
 `;
 }
 

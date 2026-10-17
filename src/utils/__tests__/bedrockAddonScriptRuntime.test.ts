@@ -13,7 +13,7 @@ import { toAddonScript } from '../bedrockAddonScript';
  */
 const FAKE_SERVER = `
 export const state = { intervalTicks: [],
-   tick: 0, queue: [], intervals: [], timeouts: [], placed: [], component: null, cameraCalls: [], clears: 0, permissions: [] };
+   tick: 0, queue: [], intervals: [], timeouts: [], placed: [], component: null, cameraCalls: [], clears: 0, permissions: [], events: {} };
 export const system = {
   get currentTick() { return state.tick; },
   run(callback) { state.queue.push(callback); },
@@ -31,7 +31,14 @@ export function advanceTick() {
   state.timeouts = state.timeouts.filter((timeout) => timeout.at > state.tick);
   for (const timeout of due) timeout.callback();
 }
-export const world = { structureManager: { place() {} } };
+const afterEvent = (name) => ({ subscribe(callback) { state.events[name] = callback; } });
+export const world = {
+  structureManager: { place() {} },
+  afterEvents: {
+    itemReleaseUse: afterEvent('itemReleaseUse'), itemUse: afterEvent('itemUse'), entitySpawn: afterEvent('entitySpawn'),
+    projectileHitBlock: afterEvent('projectileHitBlock'), projectileHitEntity: afterEvent('projectileHitEntity'),
+  },
+};
 export class BlockPermutation { static resolve(name) { return { name }; } }
 export class MolangVariableMap { setColorRGB() {} }
 export const EquipmentSlot = { Mainhand: 'Mainhand' };
@@ -59,6 +66,8 @@ const PLACEMENT = { rotation: 'None' as const, offset: { x: 0, y: 0, z: 0 } };
 const OPTIONS: AddonScriptOptions = {
   structureId: 'structures:test',
   componentId: 'structures:build_test',
+  itemId: 'structures:wand',
+  activator: 'wand',
   sequence: 'rise',
   seconds: 1,
   uses: 0,
@@ -81,6 +90,7 @@ interface FakeServer {
   state: {
     placed: Array<{ x: number; y: number; z: number; name: string }>;
     component: Record<string, (event: unknown) => void>;
+    events: Record<string, (event: unknown) => void>;
     cameraCalls: CameraCall[];
     clears: number;
     permissions: Array<[number, boolean]>;
@@ -162,5 +172,56 @@ describe('the add-on script at runtime', () => {
     for (let tick = 0; tick < 60; tick++) server.advanceTick();
     expect(server.state.cameraCalls).toEqual([]);
     expect(server.state.permissions).toEqual([]);
+  });
+});
+
+describe('the add-on script with a projectile activator', () => {
+  const toProjectile = (typeId: string, owner: unknown): unknown => {
+    const getComponent = (): unknown => ({ owner });
+    return { id: `${typeId}-1`, typeId, isValid: true, getComponent };
+  };
+  const BLOCK_HIT = { block: { location: { x: 3, y: 63, z: 7 } }, face: 'Up' };
+  const getBlockHit = (): unknown => BLOCK_HIT;
+
+  it('builds on the struck face when a marked arrow hits a block', async () => {
+    const server = await loadScript({ ...OPTIONS, activator: 'bow' });
+    const player = new server.Player();
+    const arrow = toProjectile('minecraft:arrow', player);
+    server.state.events.itemReleaseUse({ itemStack: { typeId: 'structures:wand' }, source: player });
+    server.state.events.entitySpawn({ entity: arrow });
+    for (let tick = 0; tick < 20; tick++) server.advanceTick();
+    server.state.events.projectileHitBlock({ projectile: arrow, source: player, getBlockHit });
+    for (let tick = 0; tick < 60; tick++) server.advanceTick();
+
+    const stone = server.state.placed.filter(isStone).map(toPosition);
+    expect(stone).toContainEqual({ x: 4, y: 64, z: 7 });
+    expect(stone).toContainEqual({ x: 3, y: 65, z: 7 });
+  });
+
+  it('ignores an arrow the export\'s bow did not fire', async () => {
+    const server = await loadScript({ ...OPTIONS, activator: 'bow' });
+    const player = new server.Player();
+    const arrow = toProjectile('minecraft:arrow', player);
+    server.state.events.entitySpawn({ entity: arrow });
+    server.state.events.projectileHitBlock({ projectile: arrow, source: player, getBlockHit });
+    for (let tick = 0; tick < 60; tick++) server.advanceTick();
+
+    expect(server.state.placed.filter(isStone)).toEqual([]);
+  });
+
+  it('builds at a hit mob\'s feet when a marked snowball strikes it', async () => {
+    const server = await loadScript({ ...OPTIONS, activator: 'snowball' });
+    const player = new server.Player();
+    const snowball = toProjectile('minecraft:snowball', player);
+    server.state.events.itemUse({ itemStack: { typeId: 'structures:wand' }, source: player });
+    server.state.events.entitySpawn({ entity: snowball });
+    const mob = { isValid: true, location: { x: 5.7, y: 64, z: 8.2 } };
+    const getEntityHit = (): unknown => ({ entity: mob });
+    server.state.events.projectileHitEntity({ projectile: snowball, source: player, getEntityHit });
+    for (let tick = 0; tick < 60; tick++) server.advanceTick();
+
+    const stone = server.state.placed.filter(isStone).map(toPosition);
+    expect(stone).toContainEqual({ x: 6, y: 64, z: 8 });
+    expect(stone).toContainEqual({ x: 5, y: 65, z: 8 });
   });
 });

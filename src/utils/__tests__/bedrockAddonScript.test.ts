@@ -15,6 +15,8 @@ const PLACEMENT = { rotation: 'None' as const, offset: { x: 0, y: 0, z: 0 } };
 const OPTIONS: AddonScriptOptions = {
   structureId: 'structures:castle',
   componentId: 'structures:build_castle',
+  itemId: 'structures:wand',
+  activator: 'wand',
   sequence: 'rise',
   seconds: 4,
   uses: 5,

@@ -148,6 +148,7 @@ export function toBedrockStructure(
   blocks: BlockData[],
   table: BedrockBlockTable,
   toJavaId: (blockId: string) => string,
+  keepAnchor = false,
 ): BedrockStructure {
   const size = { x: dimensions.width, y: dimensions.depth, z: dimensions.height };
   const anchor = { x: metaBlock.position.x, y: metaBlock.position.z, z: metaBlock.position.y };
@@ -157,7 +158,7 @@ export function toBedrockStructure(
   for (const block of blocks) {
     const { x, y, z } = block.position;
     const isAnchor = x === metaBlock.position.x && y === metaBlock.position.y && z === metaBlock.position.z;
-    if (isAnchor) continue;
+    if (isAnchor && !keepAnchor) continue;
 
     const entry = findBedrockBlock(table, toJavaId(block.blockType), toJavaProperties(block.blockState ?? {}));
     if (!entry) {
@@ -168,8 +169,9 @@ export function toBedrockStructure(
     cells.push({ x, y: z, z: y, block: { name, states } });
   }
 
-  // The anchor clears to air, so the player is never buried
-  cells.push({ ...anchor, block: AIR });
+  // Without keepAnchor the anchor clears to air, so the player is never buried
+  const isAnchorCell = (cell: StructureCell): boolean => cell.x === anchor.x && cell.y === anchor.y && cell.z === anchor.z;
+  if (!cells.some(isAnchorCell)) cells.push({ ...anchor, block: AIR });
 
   return { size, cells, skipped, placements: toPlacements(anchor, size, metaBlock.direction) };
 }

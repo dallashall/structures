@@ -13,6 +13,15 @@
  *    and setblock lines for that tick, at offsets from the marker. The marker removes itself after the last frame.
  * 4. A wand with limited uses carries Java's own durability. Each use adds one damage, and the last use breaks it.
  *
+ * A bow or snowball activator replaces steps 1 and 2. Java has no projectile hit event, so:
+ * 1. tick checks each new arrow or snowball once for the export's custom data, on the bow it came from or on the
+ *    snowball's own item. A match gets a follower marker, turned to the yaw its shooter faced when it flew.
+ * 2. Each tick the follower moves to its projectile. When the projectile is gone or an arrow sticks, the follower
+ *    steps along the projectile's last motion from its last position. The build anchors at the feet of the first
+ *    mob it meets, or in the last open cell before a solid block.
+ * The bow wears through vanilla durability, or through the pack's wear function for a creative shooter. Each
+ * snowball is used up by its throw outside creative mode. A projectile build fills the meta block's cell.
+ *
  * Offsets are in game axes relative to the meta block: x east, y up, z south.
  */
 
@@ -20,10 +29,10 @@ import { strToU8, zipSync } from 'fflate';
 
 import type { HorizontalDirection } from '../types';
 import type { AnimatedBuild } from './animatedBuild';
-import type { ItemIcon } from './bedrockAddon';
+import type { Activator, ItemIcon } from './bedrockAddon';
 import type { BuildSequence } from './bedrockAddonScript';
 import type { BedrockBlockTable } from './bedrockBlocks';
-import { toAddonNames } from './bedrockAddon';
+import { toAddonNames, toSnowballCount } from './bedrockAddon';
 import { findJavaStateKey } from './bedrockExport';
 import { POP_BLOCKS_PER_TICK, toBuildTicks, toDurationTicks, toGlowEvery, toGlowTick, toLandTick, toSequenceKey } from './buildSequence';
 
@@ -54,6 +63,7 @@ export interface DatapackOptions {
   packName: string;
   itemName: string;
   icon: ItemIcon;
+  activator: Activator;
   sequence: BuildSequence;
   seconds: number;
   // 0 means unlimited
@@ -182,6 +192,33 @@ const toWandComponents = (options: DatapackOptions, namespace: string): Record<s
   return components;
 };
 
+/**
+ * The bow's components. Vanilla durability wears it one per shot outside creative mode.
+ */
+const toBowComponents = (options: DatapackOptions, namespace: string): Record<string, ComponentValue> => ({
+  'minecraft:custom_data': { wand: namespace },
+  'minecraft:item_name': options.itemName,
+  'minecraft:enchantment_glint_override': true,
+  ...(options.uses > 0 ? { 'minecraft:max_damage': options.uses, 'minecraft:damage': 0 } : { 'minecraft:unbreakable': {} }),
+});
+
+const toSnowballComponents = (options: DatapackOptions, namespace: string): Record<string, ComponentValue> => ({
+  'minecraft:custom_data': { wand: namespace },
+  'minecraft:item_name': options.itemName,
+  'minecraft:enchantment_glint_override': true,
+});
+
+/**
+ * The item the export hands out, with its count and components
+ */
+const toActivatorItem = (options: DatapackOptions, namespace: string): { id: string; count: number; components: Record<string, ComponentValue> } => {
+  if (options.activator === 'bow') return { id: 'minecraft:bow', count: 1, components: toBowComponents(options, namespace) };
+  if (options.activator === 'snowball') {
+    return { id: 'minecraft:snowball', count: toSnowballCount(options.uses), components: toSnowballComponents(options, namespace) };
+  }
+  return { id: `minecraft:${options.icon}`, count: 1, components: toWandComponents(options, namespace) };
+};
+
 const toSnbt = (value: ComponentValue): string => {
   if (typeof value === 'string') return toSnbtString(value);
   if (typeof value !== 'object') return String(value);
@@ -194,63 +231,13 @@ const toItemComponents = (components: Record<string, ComponentValue>): string =>
   return Object.entries(components).map(toAssignment).join(',');
 };
 
-/**
- * Every file in the data pack, keyed by its path inside the zip
- */
-export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8Array> {
-  const { namespace } = toAddonNames(options.packName, options.projectId);
-  const { build, uses, icon } = options;
+// The using_item advancement and the functions behind it, for the wand activator
+function writeWandUse(text: Record<string, string>, options: DatapackOptions, namespace: string): void {
+  const { uses, icon } = options;
   const at = (path: string): string => `data/${namespace}/${path}`;
   const id = (path: string): string => `${namespace}:${path}`;
-  const frameScore = `${namespace}.frame`;
   const heldScore = `${namespace}.held`;
-  const tag = `${namespace}.build`;
   const wand = `*[minecraft:custom_data~{wand:${toSnbtString(namespace)}}]`;
-  const text: Record<string, string> = {};
-
-  text['pack.mcmeta'] = JSON.stringify(
-    {
-      pack: {
-        description: `${options.packName}: /function ${id('give')}`,
-        min_format: DATA_PACK_FORMAT,
-        max_format: DATA_PACK_FORMAT,
-      },
-    },
-    null,
-    2,
-  );
-  text['data/minecraft/tags/function/load.json'] = JSON.stringify({ values: [id('load')] });
-  text['data/minecraft/tags/function/tick.json'] = JSON.stringify({ values: [id('tick')] });
-
-  text[at('function/load.mcfunction')] = [
-    `scoreboard objectives add ${frameScore} dummy`,
-    `scoreboard objectives add ${heldScore} dummy`,
-  ].join('\n');
-  const components = toWandComponents(options, namespace);
-  text[at('function/give.mcfunction')] = `give @s minecraft:${icon}[${toItemComponents(components)}]`;
-
-  const cost = WAND_RECIPES[options.recipe];
-  if (cost) {
-    text[at('recipe/wand.json')] = JSON.stringify(
-      {
-        type: 'minecraft:crafting_shapeless',
-        category: 'equipment',
-        ingredients: [`minecraft:${icon}`, cost],
-        result: { id: `minecraft:${icon}`, count: 1, components },
-      },
-      null,
-      2,
-    );
-    // Shows the recipe in the recipe book once the player holds the cost item
-    text[at('advancement/recipe.json')] = JSON.stringify(
-      {
-        criteria: { has_cost: { trigger: 'minecraft:inventory_changed', conditions: { items: [{ items: cost }] } } },
-        rewards: { recipes: [id('wand')] },
-      },
-      null,
-      2,
-    );
-  }
 
   text[at('advancement/use.json')] = JSON.stringify(
     {
@@ -279,7 +266,193 @@ export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8A
   if (uses > 0) start.push(`function ${id('wear')}`);
   text[at('function/start.mcfunction')] = start.join('\n');
 
-  // Turns the build so the player faces the meta block's arrow. Each line returns, so one marker is summoned.
+  if (uses <= 0) return;
+  // Each line matches one damage value and returns, so a use adds exactly one damage
+  const toWearLine = (_: unknown, damage: number): string => {
+    const match = `execute if items entity @s weapon.mainhand *[minecraft:damage=${damage}] run return run`;
+    if (damage === uses - 1) return `${match} function ${id('break')}`;
+    return `${match} item modify entity @s weapon.mainhand {type:"minecraft:set_components",components:{"minecraft:damage":${damage + 1}}}`;
+  };
+  text[at('function/wear.mcfunction')] = Array.from({ length: uses }, toWearLine).join('\n');
+  text[at('function/break.mcfunction')] = [
+    'item replace entity @s weapon.mainhand with minecraft:air',
+    'playsound minecraft:entity.item.break player @a ~ ~ ~',
+    `particle minecraft:item{item:"minecraft:${icon}"} ~ ~1 ~ 0.2 0.2 0.2 0.05 12`,
+  ].join('\n');
+}
+
+// Sub-steps per tick of motion when a follower looks for what its projectile hit, and how many ticks of
+// motion it searches. A snowball moves up to about 1.5 blocks a tick and a full-draw arrow about 3.
+const RAY_STEPS_PER_TICK = 8;
+const RAY_TICKS = 2;
+// Entities a follower's search passes through, as they are not what a projectile hits
+const RAY_IGNORED_TYPES = [
+  'minecraft:marker',
+  '#minecraft:impact_projectiles',
+  'minecraft:item',
+  'minecraft:experience_orb',
+  'minecraft:area_effect_cloud',
+];
+
+// The functions that find marked projectiles, follow them, and build where they stop
+function writeProjectileTracking(text: Record<string, string>, activator: Exclude<Activator, 'wand'>, namespace: string, uses: number): void {
+  const at = (path: string): string => `data/${namespace}/${path}`;
+  const id = (path: string): string => `${namespace}:${path}`;
+  const idScore = `${namespace}.id`;
+  const seen = `${namespace}.seen`;
+  const shot = `${namespace}.shot`;
+  const follow = `${namespace}.follow`;
+  const match = `${namespace}.match`;
+  const fresh = `${namespace}.new`;
+  const ray = id('ray');
+  const marked = `{"minecraft:custom_data":{wand:${toSnbtString(namespace)}}}`;
+  // An arrow keeps the bow that fired it in "weapon". A snowball keeps its own item in "Item".
+  const [types, nbt] = activator === 'bow'
+    ? ['#minecraft:arrows', `{weapon:{components:${marked}}}`]
+    : ['minecraft:snowball', `{Item:{components:${marked}}}`];
+  const ignored = RAY_IGNORED_TYPES.map(toTypeExclusion).join(',');
+
+  // Each projectile's NBT is read once, on the first tick it exists
+  text[at('function/track.mcfunction')] = [
+    `execute as @e[type=${types},tag=!${seen},nbt=${nbt}] at @s run function ${id('shot')}`,
+    `tag @e[type=${types},tag=!${seen}] add ${seen}`,
+    `execute as @e[type=minecraft:marker,tag=${follow}] at @s run function ${id('follow')}`,
+  ].join('\n');
+  const shotLines = [
+    `tag @s add ${shot}`,
+    `scoreboard players add #next ${idScore} 1`,
+    `scoreboard players operation @s ${idScore} = #next ${idScore}`,
+    `summon minecraft:marker ~ ~ ~ {Tags:["${follow}","${fresh}"]}`,
+    `scoreboard players operation @e[type=minecraft:marker,tag=${fresh}] ${idScore} = #next ${idScore}`,
+    `data modify entity @e[type=minecraft:marker,tag=${fresh},limit=1] data.motion set from entity @s Motion`,
+    // The follower takes the yaw its shooter faces now. Java names a projectile's shooter "origin", not "owner".
+    // A projectile with no shooter leaves it facing south.
+    `execute on origin rotated as @s as @e[type=minecraft:marker,tag=${fresh}] run tp @s ~ ~ ~ ~ 0`,
+    `tag @e[type=minecraft:marker,tag=${fresh}] remove ${fresh}`,
+  ];
+  // Vanilla durability skips creative mode, so a creative shooter's bow wears here instead
+  if (activator === 'bow' && uses > 0) {
+    shotLines.push(`execute on origin if entity @s[gamemode=creative] run function ${id('wear')}`);
+    writeCreativeBowWear(text, namespace, uses);
+  }
+  text[at('function/shot.mcfunction')] = shotLines.join('\n');
+  text[at('function/follow.mcfunction')] = [
+    `scoreboard players operation #id ${idScore} = @s ${idScore}`,
+    `execute as @e[tag=${shot}] if score @s ${idScore} = #id ${idScore} run tag @s add ${match}`,
+    `execute unless entity @e[tag=${match}] run return run function ${id('land')}`,
+    `execute if entity @e[tag=${match},nbt={inGround:1b}] run return run function ${id('stick')}`,
+    `execute at @e[tag=${match},limit=1] run tp @s ~ ~ ~`,
+    `data modify entity @s data.motion set from entity @e[tag=${match},limit=1] Motion`,
+    `tag @e[tag=${match}] remove ${match}`,
+  ].join('\n');
+  // An arrow that sticks stays a normal arrow, untracked
+  text[at('function/stick.mcfunction')] = [
+    `tag @e[tag=${match}] remove ${shot}`,
+    `tag @e[tag=${match}] remove ${match}`,
+    `function ${id('land')}`,
+  ].join('\n');
+  // Motion is in blocks per tick. Scaling by 1000 keeps three decimals through the integer score.
+  const toStepLine = (axis: string, index: number): string =>
+    `execute store result storage ${id('ray')} ${axis} double ${1 / (1000 * RAY_STEPS_PER_TICK)} run data get entity @s data.motion[${index}] 1000`;
+  text[at('function/land.mcfunction')] = [
+    ...['dx', 'dy', 'dz'].map(toStepLine),
+    `scoreboard players set #steps ${idScore} ${RAY_STEPS_PER_TICK * RAY_TICKS}`,
+    `function ${ray} with storage ${id('ray')}`,
+    'kill @s',
+  ].join('\n');
+  // Runs as the follower, so anchor reads its yaw. Each exit anchors once and returns.
+  text[at('function/ray.mcfunction')] = [
+    `execute positioned ~-0.5 ~-0.5 ~-0.5 at @e[dx=0,dy=0,dz=0,${ignored},sort=nearest,limit=1] align xyz positioned ~0.5 ~ ~0.5 run return run function ${id('anchor')}`,
+    `scoreboard players remove #steps ${idScore} 1`,
+    `$execute if score #steps ${idScore} matches 1.. positioned ~$(dx) ~$(dy) ~$(dz) if block ~ ~ ~ #minecraft:replaceable run return run function ${ray} with storage ${id('ray')}`,
+    `execute align xyz positioned ~0.5 ~ ~0.5 run function ${id('anchor')}`,
+  ].join('\n');
+}
+
+// Wears the marked bow in whichever hand holds it, one damage per shot, and breaks it on the last use
+function writeCreativeBowWear(text: Record<string, string>, namespace: string, uses: number): void {
+  const at = (path: string): string => `data/${namespace}/${path}`;
+  const id = (path: string): string => `${namespace}:${path}`;
+  const bow = `minecraft:bow[minecraft:custom_data~{wand:${toSnbtString(namespace)}}]`;
+  text[at('function/wear.mcfunction')] = [
+    `execute if items entity @s weapon.mainhand ${bow} run return run function ${id('wear_slot')} {slot:"weapon.mainhand"}`,
+    `execute if items entity @s weapon.offhand ${bow} run function ${id('wear_slot')} {slot:"weapon.offhand"}`,
+  ].join('\n');
+  // Each line matches one damage value and returns, so a shot adds exactly one damage
+  const toWearLine = (_: unknown, damage: number): string =>
+    `$execute if items entity @s $(slot) *[minecraft:damage=${damage}] run return run item modify entity @s $(slot) {type:"minecraft:set_components",components:{"minecraft:damage":${damage + 1}}}`;
+  const last = `$execute if items entity @s $(slot) *[minecraft:damage=${uses - 1}]`;
+  text[at('function/wear_slot.mcfunction')] = [
+    `${last} run playsound minecraft:entity.item.break player @a ~ ~ ~`,
+    `${last} run return run item replace entity @s $(slot) with minecraft:air`,
+    ...Array.from({ length: uses - 1 }, toWearLine),
+  ].join('\n');
+}
+
+const toTypeExclusion = (type: string): string => `type=!${type}`;
+
+/**
+ * Every file in the data pack, keyed by its path inside the zip
+ */
+export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8Array> {
+  const { namespace } = toAddonNames(options.packName, options.projectId);
+  const { build, activator } = options;
+  const at = (path: string): string => `data/${namespace}/${path}`;
+  const id = (path: string): string => `${namespace}:${path}`;
+  const frameScore = `${namespace}.frame`;
+  const heldScore = `${namespace}.held`;
+  const tag = `${namespace}.build`;
+  const text: Record<string, string> = {};
+
+  text['pack.mcmeta'] = JSON.stringify(
+    {
+      pack: {
+        description: `${options.packName}: /function ${id('give')}`,
+        min_format: DATA_PACK_FORMAT,
+        max_format: DATA_PACK_FORMAT,
+      },
+    },
+    null,
+    2,
+  );
+  text['data/minecraft/tags/function/load.json'] = JSON.stringify({ values: [id('load')] });
+  text['data/minecraft/tags/function/tick.json'] = JSON.stringify({ values: [id('tick')] });
+
+  text[at('function/load.mcfunction')] = [
+    `scoreboard objectives add ${frameScore} dummy`,
+    `scoreboard objectives add ${activator === 'wand' ? heldScore : `${namespace}.id`} dummy`,
+  ].join('\n');
+  const item = toActivatorItem(options, namespace);
+  const countSuffix = item.count > 1 ? ` ${item.count}` : '';
+  text[at('function/give.mcfunction')] = `give @s ${item.id}[${toItemComponents(item.components)}]${countSuffix}`;
+
+  const cost = WAND_RECIPES[options.recipe];
+  if (cost) {
+    text[at('recipe/wand.json')] = JSON.stringify(
+      {
+        type: 'minecraft:crafting_shapeless',
+        category: 'equipment',
+        ingredients: [item.id, cost],
+        result: { id: item.id, count: item.count, components: item.components },
+      },
+      null,
+      2,
+    );
+    // Shows the recipe in the recipe book once the player holds the cost item
+    text[at('advancement/recipe.json')] = JSON.stringify(
+      {
+        criteria: { has_cost: { trigger: 'minecraft:inventory_changed', conditions: { items: [{ items: cost }] } } },
+        rewards: { recipes: [id('wand')] },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (activator === 'wand') writeWandUse(text, options, namespace);
+  else writeProjectileTracking(text, activator, namespace, options.uses);
+
+  // Turns the build so the executor faces the meta block's arrow. Each line returns, so one marker is summoned.
   const metaIndex = FACING_INDEX[options.metaFacing];
   const toAnchorLines = (ranges: string[], playerIndex: number): string[] => {
     const turns = (playerIndex - metaIndex + 4) % 4;
@@ -291,10 +464,10 @@ export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8A
 
   const frames = toFrames(options);
   const lastTick = frames.length - 1;
-  text[at('function/tick.mcfunction')] = [
-    `scoreboard players remove @a[scores={${heldScore}=1..}] ${heldScore} 1`,
-    `execute as @e[type=minecraft:marker,tag=${tag}] at @s run function ${id('step')}`,
-  ].join('\n');
+  const tickLines = [`execute as @e[type=minecraft:marker,tag=${tag}] at @s run function ${id('step')}`];
+  if (activator === 'wand') tickLines.unshift(`scoreboard players remove @a[scores={${heldScore}=1..}] ${heldScore} 1`);
+  else tickLines.unshift(`function ${id('track')}`);
+  text[at('function/tick.mcfunction')] = tickLines.join('\n');
   text[at('function/step.mcfunction')] = [
     `scoreboard players add @s ${frameScore} 0`,
     `execute store result entity @s data.frame int 1 run scoreboard players get @s ${frameScore}`,
@@ -308,21 +481,6 @@ export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8A
       text[at(`function/frames/${turns}/${tick}.mcfunction`)] = toFrameFunction(frame, tick, lastTick, turns, build);
     };
     frames.forEach(writeFrame);
-  }
-
-  if (uses > 0) {
-    // Each line matches one damage value and returns, so a use adds exactly one damage
-    const toWearLine = (_: unknown, damage: number): string => {
-      const match = `execute if items entity @s weapon.mainhand *[minecraft:damage=${damage}] run return run`;
-      if (damage === uses - 1) return `${match} function ${id('break')}`;
-      return `${match} item modify entity @s weapon.mainhand {type:"minecraft:set_components",components:{"minecraft:damage":${damage + 1}}}`;
-    };
-    text[at('function/wear.mcfunction')] = Array.from({ length: uses }, toWearLine).join('\n');
-    text[at('function/break.mcfunction')] = [
-      'item replace entity @s weapon.mainhand with minecraft:air',
-      'playsound minecraft:entity.item.break player @a ~ ~ ~',
-      `particle minecraft:item{item:"minecraft:${icon}"} ~ ~1 ~ 0.2 0.2 0.2 0.05 12`,
-    ].join('\n');
   }
 
   const files: Record<string, Uint8Array> = {};

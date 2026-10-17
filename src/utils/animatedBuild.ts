@@ -85,7 +85,8 @@ export function rotateBlockState(state: BlockStateProperties, turns: number): Bl
 }
 
 /**
- * Every block except the meta block's own cell, which the game clears to air before anything lands.
+ * Every block, except the meta block's own cell unless keepAnchor is set. The game clears that cell to air before
+ * anything lands, so a wand never buries the player who stands there.
  * findEntry looks up an app block ID with Java properties, and returns null when the edition has no such block.
  */
 export function toAnimatedBuild<Entry>(
@@ -93,6 +94,7 @@ export function toAnimatedBuild<Entry>(
   blocks: BlockData[],
   findEntry: (blockId: string, properties: Record<string, string>) => Entry | null,
   toColor: (blockId: string) => Rgb | null,
+  keepAnchor = false,
 ): AnimatedBuild<Entry> {
   const anchor = metaBlock.position;
   const paletteIndexes = new Map<string, number>();
@@ -114,7 +116,7 @@ export function toAnimatedBuild<Entry>(
 
   for (const block of blocks) {
     const { x, y, z } = block.position;
-    if (x === anchor.x && y === anchor.y && z === anchor.z) continue;
+    if (!keepAnchor && x === anchor.x && y === anchor.y && z === anchor.z) continue;
 
     const key = `${block.blockType}${JSON.stringify(block.blockState ?? {})}`;
     let paletteIndex = paletteIndexes.get(key);

@@ -55,6 +55,10 @@ describe('toAnimatedBuild', () => {
     expect(build.cells).toEqual([1, 2, -2, 0, -2, 0, 0, 1]);
   });
 
+  it('keeps the meta block\'s own cell when asked', () => {
+    expect(toAnimatedBuild(metaBlock, blocks, findEntry, gray, true).cells).toEqual([1, 2, -2, 0, 0, 0, 0, 0, -2, 0, 0, 1]);
+  });
+
   it('stores each palette entry turned four ways', () => {
     const toDirection = ([, states]: [string, Record<string, unknown>]): unknown => states.weirdo_direction;
     expect(build.palette[1].rotations.map(toDirection)).toEqual([3, 0, 2, 1]);

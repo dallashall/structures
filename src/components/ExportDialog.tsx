@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
-import type { ItemIcon } from '../utils/bedrockAddon';
+import type { Activator, ItemIcon } from '../utils/bedrockAddon';
 import type { BuildSequence } from '../utils/bedrockAddonScript';
 import type { CameraMode } from '../utils/cameraPath';
 
@@ -30,7 +30,7 @@ import { Form } from './Form';
 import { ModalDialog, IN_DIALOG_MENU_PROPS } from './ModalDialog';
 import { NumberField } from './NumberField';
 
-import { BEDROCK_VERSION, ITEM_ICONS, toAddonNames } from '../utils/bedrockAddon';
+import { BEDROCK_VERSION, ITEM_ICONS, SNOWBALL_STACK, toAddonNames, toDefaultItemName, toSnowballCount } from '../utils/bedrockAddon';
 import { JAVA_VERSION } from '../utils/javaDatapack';
 import type { WandRecipe } from '../utils/javaDatapack';
 
@@ -38,16 +38,25 @@ const TITLE_ID = 'export-title';
 
 const EDITION_TEXT: Record<ExportEdition, { intro: string; name: string; skipped: string }> = {
   bedrock: {
-    intro: `Saves an add-on with an item that builds this project around the player. Open the file to import it, then turn on its packs in a world's settings. It needs Bedrock ${BEDROCK_VERSION} or newer.`,
+    intro: `Saves an add-on with an item that builds this project. Open the file to import it, then turn on its packs in a world's settings. It needs Bedrock ${BEDROCK_VERSION} or newer.`,
     name: 'Add-on name',
     skipped: 'These blocks have no Bedrock version and were left out',
   },
   java: {
-    intro: `Saves a data pack with a wand that builds this project around the player. It needs Java ${JAVA_VERSION}.`,
+    intro: `Saves a data pack with an item that builds this project. It needs Java ${JAVA_VERSION}.`,
     name: 'Data pack name',
     skipped: 'These blocks have no Java block state and were left out',
   },
 };
+
+const ACTIVATOR_LABELS: Record<Activator, string> = {
+  wand: 'Use a wand: builds around the player',
+  bow: 'Shoot a bow: builds where the arrow lands',
+  snowball: 'Throw snowballs: builds where each one lands',
+};
+
+// The recipe's first ingredient, for activators that do not use the icon item
+const ACTIVATOR_ITEM_NAMES: Record<Exclude<Activator, 'wand'>, string> = { bow: 'Bow', snowball: 'Snowball' };
 
 const CAMERA_LABELS: Record<CameraMode, string> = {
   none: 'Player keeps control',
@@ -92,12 +101,14 @@ function ExportDialogComponent({
   onPreview,
   onExportReset,
 }: ExportDialogOwnProps & WithExportStateProps) {
-  const { edition, addonName, itemName, icon, sequence, seconds, uses, camera, recipe } = exportOptions;
+  const { edition, addonName, itemName, icon, activator, sequence, seconds, uses, camera, recipe } = exportOptions;
   const text = EDITION_TEXT[edition];
   const resolvedAddonName = addonName.trim() || projectName;
-  const placeholderName = `${resolvedAddonName} Wand`;
+  const placeholderName = toDefaultItemName(resolvedAddonName, activator);
+  const recipeItemName = activator === 'wand' ? ITEM_ICONS[icon] : ACTIVATOR_ITEM_NAMES[activator];
   const { itemId, namespace } = toAddonNames(resolvedAddonName, projectId);
-  const giveCommand = edition === 'java' ? `/function ${namespace}:give` : `/give @s ${itemId}`;
+  const giveCount = activator === 'snowball' ? ` ${toSnowballCount(uses)}` : '';
+  const giveCommand = edition === 'java' ? `/function ${namespace}:give` : `/give @s ${itemId}${giveCount}`;
   // "pop" and "instant" land the whole build at once, so they have no length or camera shot
   const isTimed = sequence !== 'instant' && sequence !== 'pop';
   const hasCamera = edition === 'bedrock' && isTimed;
@@ -114,6 +125,9 @@ function ExportDialogComponent({
   const handleIconChange = (event: SelectChangeEvent<ItemIcon>): void => {
     onExportOptionsChange({ icon: event.target.value as ItemIcon });
   };
+  const handleActivatorChange = (event: SelectChangeEvent<Activator>): void => {
+    onExportOptionsChange({ activator: event.target.value as Activator });
+  };
   const handleSequenceChange = (event: SelectChangeEvent<BuildSequence>): void => {
     onExportOptionsChange({ sequence: event.target.value as BuildSequence });
   };
@@ -128,7 +142,7 @@ function ExportDialogComponent({
   };
   const toRecipeOption = ([value, cost]: [string, string | null]): [string, string] => [
     value,
-    cost ? `Craft: ${ITEM_ICONS[icon]} + ${cost}` : 'No recipe',
+    cost ? `Craft: ${recipeItemName} + ${cost}` : 'No recipe',
   ];
   const handleUsesChange = (value: number): void => {
     onExportOptionsChange({ uses: value });
@@ -167,6 +181,19 @@ function ExportDialogComponent({
             slotProps={{ htmlInput: { 'data-autofocus': true }, inputLabel: { shrink: true } }}
           />
 
+          <FormControl fullWidth>
+            <InputLabel id="export-activator-label">Starts the build</InputLabel>
+            <Select
+              labelId="export-activator-label"
+              label="Starts the build"
+              value={activator}
+              onChange={handleActivatorChange}
+              MenuProps={IN_DIALOG_MENU_PROPS}
+            >
+              {Object.entries(ACTIVATOR_LABELS).map(renderOption)}
+            </Select>
+          </FormControl>
+
           <TextField
             label="Item name"
             value={itemName}
@@ -176,12 +203,14 @@ function ExportDialogComponent({
             slotProps={{ inputLabel: { shrink: true } }}
           />
 
-          <FormControl fullWidth>
-            <InputLabel id="export-icon-label">Item icon</InputLabel>
-            <Select labelId="export-icon-label" label="Item icon" value={icon} onChange={handleIconChange} MenuProps={IN_DIALOG_MENU_PROPS}>
-              {Object.entries(ITEM_ICONS).map(renderOption)}
-            </Select>
-          </FormControl>
+          {activator === 'wand' && (
+            <FormControl fullWidth>
+              <InputLabel id="export-icon-label">Item icon</InputLabel>
+              <Select labelId="export-icon-label" label="Item icon" value={icon} onChange={handleIconChange} MenuProps={IN_DIALOG_MENU_PROPS}>
+                {Object.entries(ITEM_ICONS).map(renderOption)}
+              </Select>
+            </FormControl>
+          )}
 
           <FormControl fullWidth>
             <InputLabel id="export-animation-label">Build animation</InputLabel>
@@ -236,13 +265,23 @@ function ExportDialogComponent({
             </FormControl>
           )}
 
-          <NumberField
-            label="Uses before it breaks (0 for unlimited)"
-            value={uses}
-            onChange={handleUsesChange}
-            minValue={0}
-            maxValue={1000}
-          />
+          {activator === 'snowball' ? (
+            <NumberField
+              label={`Snowballs, one build each (0 for ${SNOWBALL_STACK})`}
+              value={Math.min(uses, SNOWBALL_STACK)}
+              onChange={handleUsesChange}
+              minValue={0}
+              maxValue={SNOWBALL_STACK}
+            />
+          ) : (
+            <NumberField
+              label="Uses before it breaks (0 for unlimited)"
+              value={uses}
+              onChange={handleUsesChange}
+              minValue={0}
+              maxValue={1000}
+            />
+          )}
 
           {exportResult && edition === 'bedrock' && (
             <Alert severity="success">
@@ -255,7 +294,7 @@ function ExportDialogComponent({
             <Alert severity="success">
               Saved {exportResult.fileName}. For a new world, drag it into the Data Packs screen. For a saved world,
               put it in the world's <code>datapacks</code> folder and run <code>/reload</code>. Then run{' '}
-              <code>{exportResult.command}</code> for the wand.
+              <code>{exportResult.command}</code> for the item.
             </Alert>
           )}
 
