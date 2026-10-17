@@ -69,6 +69,10 @@ class WallShapeImpl implements BlockShape {
     return { ...baseState, wallSides: sides, connections: { 'z+': post } };
   }
 
+  getExportBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     return isWallBlock(blockId);
   }

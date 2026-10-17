@@ -69,6 +69,10 @@ class FenceShapeImpl implements BlockShape {
     return { ...baseState, connections };
   }
 
+  getExportBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     return isFenceBlock(blockId);
   }

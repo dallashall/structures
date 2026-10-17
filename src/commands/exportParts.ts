@@ -97,7 +97,11 @@ export async function loadExportProject(nameOption: string): Promise<ExportProje
     modelProjection.getModel(),
     metadataProjection.getMetadata(),
   ]);
-  const resolve = (block: BlockData): BlockData => shapeCatalog.resolveBlockState(block.position, model.blocks) ?? block;
+  const resolve = (block: BlockData): BlockData => {
+    const resolved = shapeCatalog.resolveBlockState(block.position, model.blocks) ?? block;
+    const blockType = shapeCatalog.resolve(resolved.blockType).getExportBlockId(resolved.blockType, resolved.blockState ?? {});
+    return { ...resolved, blockType };
+  };
   return {
     projectId,
     name: nameOption.trim() || metadata?.name || 'Build',

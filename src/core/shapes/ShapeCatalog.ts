@@ -10,6 +10,7 @@ import { slabShape } from './SlabShape';
 import { stairShape } from './StairShape';
 import { fenceShape } from './FenceShape';
 import { wallShape } from './WallShape';
+import { torchShape } from './TorchShape';
 
 class ShapeCatalogImpl {
   private static instance: ShapeCatalogImpl;
@@ -20,6 +21,7 @@ class ShapeCatalogImpl {
     slabShape,
     fenceShape,
     wallShape,
+    torchShape,
   ];
 
   private readonly cache = new Map<string, BlockShape>();

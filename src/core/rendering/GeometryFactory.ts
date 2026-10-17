@@ -266,9 +266,13 @@ function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector): M
 
   const positions = mesh.getVerticesData(VertexBuffer.PositionKind)!;
   const normals = mesh.getVerticesData(VertexBuffer.NormalKind)!;
+  // The shift is in model axes and 1/16 units. Babylon swaps y and z.
+  const [shiftX, shiftY, shiftZ] = box.uvShift ?? [0, 0, 0];
+  const shift = [shiftX / 16, shiftZ / 16, shiftY / 16];
   const uvs: number[] = [];
   for (let i = 0; i < positions.length / 3; i++) {
-    uvs.push(...project(positions.slice(i * 3, i * 3 + 3), normals.slice(i * 3, i * 3 + 3)));
+    const shifted = [0, 1, 2].map(toShiftedCoordinate(positions, i, shift));
+    uvs.push(...project(shifted, normals.slice(i * 3, i * 3 + 3)));
   }
   mesh.setVerticesData(VertexBuffer.UVKind, uvs);
 
@@ -288,6 +292,9 @@ function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector): M
   }
   return mesh;
 }
+
+const toShiftedCoordinate = (positions: ArrayLike<number>, vertex: number, shift: number[]) =>
+  (axis: number): number => positions[vertex * 3 + axis] + shift[axis];
 
 // Babylon cell coordinates center on the origin. Model coordinates start at the cell corner.
 const shiftToCorner = (value: number): number => value + 8;

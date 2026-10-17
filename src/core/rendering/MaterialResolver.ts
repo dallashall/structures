@@ -218,6 +218,7 @@ export class MaterialResolver {
     const needsAlphaCutout =
       blockName.includes('vine') ||
       blockName.includes('fence') ||
+      blockName.includes('torch') ||
       blockName.includes('door') ||
       blockName.includes('trapdoor');
 
@@ -317,6 +318,7 @@ export class MaterialResolver {
     const needsAlphaCutout =
       blockName.includes('vine') ||
       blockName.includes('fence') ||
+      blockName.includes('torch') ||
       blockName.includes('door') ||
       blockName.includes('trapdoor');
 

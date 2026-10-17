@@ -11689,9 +11689,12 @@
     "textures": {
       "all": "copper_torch"
     },
-    "hasBlockState": false,
+    "hasBlockState": true,
     "isCube": true,
-    "isTransparent": false
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    }
   },
   "minecraft:copper_trapdoor3d": {
     "displayName": "Copper Trapdoor3d",
@@ -25326,9 +25329,12 @@
     "textures": {
       "all": "redstone_torch"
     },
-    "hasBlockState": false,
+    "hasBlockState": true,
     "isCube": true,
-    "isTransparent": false
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    }
   },
   "minecraft:redstone_torch_off": {
     "displayName": "Redstone Torch Off",
@@ -27333,9 +27339,12 @@
     "textures": {
       "all": "soul_torch"
     },
-    "hasBlockState": false,
+    "hasBlockState": true,
     "isCube": true,
-    "isTransparent": false
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    }
   },
   "minecraft:spawner": {
     "displayName": "Spawner",
@@ -28905,9 +28914,12 @@
     "textures": {
       "all": "torch"
     },
-    "hasBlockState": false,
+    "hasBlockState": true,
     "isCube": true,
-    "isTransparent": false
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    }
   },
   "minecraft:torchflower": {
     "displayName": "Torchflower",
@@ -31721,5 +31733,69 @@
     "hasBlockState": true,
     "isCube": true,
     "isTransparent": false
+  },
+  "minecraft:wall_torch": {
+    "displayName": "Wall Torch",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "all": "torch"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    },
+    "javaId": "minecraft:wall_torch",
+    "hidden": true
+  },
+  "minecraft:soul_wall_torch": {
+    "displayName": "Soul Wall Torch",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "all": "soul_torch"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    },
+    "javaId": "minecraft:soul_wall_torch",
+    "hidden": true
+  },
+  "minecraft:redstone_wall_torch": {
+    "displayName": "Redstone Wall Torch",
+    "category": "stone",
+    "color": "#7f7f7f",
+    "textures": {
+      "all": "redstone_torch"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    },
+    "javaId": "minecraft:redstone_wall_torch",
+    "hidden": true
+  },
+  "minecraft:copper_wall_torch": {
+    "displayName": "Copper Wall Torch",
+    "category": "ore",
+    "color": "#8f8f8f",
+    "textures": {
+      "all": "copper_torch"
+    },
+    "hasBlockState": true,
+    "isCube": true,
+    "isTransparent": false,
+    "defaultState": {
+      "facing": "north"
+    },
+    "javaId": "minecraft:copper_wall_torch",
+    "hidden": true
   }
 }

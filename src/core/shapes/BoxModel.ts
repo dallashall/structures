@@ -22,6 +22,8 @@ export interface ModelBox {
   to: Vec3;
   // Applied after UVs are set, so a turned box keeps the texture region of its unturned position
   rotation?: BoxRotation;
+  // Moves the texture region: faces show the texture as if the box sat this far away
+  uvShift?: Vec3;
 }
 
 /**
@@ -118,4 +120,37 @@ function convexHull(points: { x: number; y: number }[]): ClipPolygon {
   lower.pop();
   upper.pop();
   return lower.concat(upper);
+}
+
+// One counterclockwise quarter turn about the cell's vertical center line, seen from above
+const turnPoint = (point: Vec3): Vec3 => [16 - point[1], point[0], point[2]];
+const turnVector = (vector: Vec3): Vec3 => [-vector[1], vector[0], vector[2]];
+
+function turnRotation(rotation: BoxRotation): BoxRotation {
+  const origin = turnPoint(rotation.origin);
+  if (rotation.axis === 'x') return { axis: 'y', angle: rotation.angle, origin };
+  // +y turns to -x, and a turn about -x is the opposite turn about +x
+  if (rotation.axis === 'y') return { axis: 'x', angle: -rotation.angle, origin };
+  return { ...rotation, origin };
+}
+
+function turnBoxOnce(box: ModelBox): ModelBox {
+  const a = turnPoint(box.from);
+  const b = turnPoint(box.to);
+  return {
+    from: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2])],
+    to: [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])],
+    ...(box.rotation ? { rotation: turnRotation(box.rotation) } : {}),
+    ...(box.uvShift ? { uvShift: turnVector(box.uvShift) } : {}),
+  };
+}
+
+/**
+ * Turns boxes counterclockwise about the cell's vertical center line, seen from above, by quarter turns.
+ * One turn takes a box facing x+ to y+.
+ */
+export function turnBoxesAboutZ(boxes: ModelBox[], quarterTurns: number): ModelBox[] {
+  let turned = boxes;
+  for (let i = 0; i < ((quarterTurns % 4) + 4) % 4; i++) turned = turned.map(turnBoxOnce);
+  return turned;
 }

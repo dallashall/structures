@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { project2D, rotateModelPoint } from '../BoxModel';
+import { project2D, rotateModelPoint, turnBoxesAboutZ, boxCorners } from '../BoxModel';
 import type { ModelBox } from '../BoxModel';
 
 const POST: ModelBox = { from: [6, 4, 0], to: [10, 12, 16] };
@@ -50,5 +50,27 @@ describe('rotateModelPoint', () => {
   it('turns +z toward +x about y', () => {
     const turned = rotateModelPoint([0, 0, 1], { axis: 'y', angle: Math.PI / 2, origin: [0, 0, 0] });
     expect(turned[0]).toBeCloseTo(1);
+  });
+});
+
+describe('turnBoxesAboutZ', () => {
+  const TILTED: ModelBox = {
+    from: [-1, 7, 3.5],
+    to: [1, 9, 13.5],
+    rotation: { axis: 'y', angle: Math.PI / 8, origin: [0, 8, 3.5] },
+  };
+  const turnCorner = (corner: number[]): number[] => [16 - corner[1], corner[0], corner[2]];
+  const toKey = (corner: number[]): string => corner.map(roundCoordinate).join(',');
+  const roundCoordinate = (value: number): number => Math.round(value * 1000) / 1000;
+
+  it('turns a tilted box the same as turning its corners', () => {
+    const [turned] = turnBoxesAboutZ([TILTED], 1);
+    const expected = boxCorners(TILTED).map(turnCorner).map(toKey).sort();
+    expect(boxCorners(turned).map(toKey).sort()).toEqual(expected);
+  });
+
+  it('returns to the start after four turns', () => {
+    const [turned] = turnBoxesAboutZ([TILTED], 4);
+    expect(boxCorners(turned).map(toKey).sort()).toEqual(boxCorners(TILTED).map(toKey).sort());
   });
 });

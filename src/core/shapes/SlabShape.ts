@@ -72,6 +72,10 @@ class SlabShapeImpl implements BlockShape {
     return baseState;
   }
 
+  getExportBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     return blockId.replace('minecraft:', '').includes('slab');
   }

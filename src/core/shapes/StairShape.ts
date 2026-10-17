@@ -181,6 +181,10 @@ class StairShapeImpl implements BlockShape {
     return { ...baseState, shape };
   }
 
+  getExportBlockId(blockId: string, _blockState: BlockStateProperties): string {
+    return blockId;
+  }
+
   matchesBlock(blockId: string): boolean {
     return blockId.replace("minecraft:", "").includes("stair");
   }
