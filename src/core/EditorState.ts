@@ -163,12 +163,19 @@ class EditorState extends EventEmitter {
         ? this.foregroundSlotIndex
         : this.backgroundSlotIndex;
 
-      if (blockId) {
-        this.setQuickSelectSlot(slotIndex, blockId);
-      }
-
-      this.emit('block:selected', blockId);
+      // Filling the active slot announces the selection itself
+      if (blockId) this.setQuickSelectSlot(slotIndex, blockId);
+      else this.emit('block:selected', null);
     }
+  }
+
+  /**
+   * Emits block:selected when a slot change moved the selected block, so the block state resets to the new
+   * block's defaults and its state controls show
+   */
+  private announceSelectionMove(previousBlock: string | null): void {
+    const selectedBlock = this.getSelectedBlock();
+    if (selectedBlock !== previousBlock) this.emit('block:selected', selectedBlock);
   }
 
   getSelectedBlock(): string | null {
@@ -187,8 +194,10 @@ class EditorState extends EventEmitter {
 
   setActiveMaterialSlot = (slot: 'foreground' | 'background'): void => {
     if (this.activeMaterialSlot !== slot) {
+      const previousBlock = this.getSelectedBlock();
       this.activeMaterialSlot = slot;
       this.emit('materialslot:toggled', slot);
+      this.announceSelectionMove(previousBlock);
 
       const projectId = this.currentProjectId;
       if (projectId) {
@@ -335,8 +344,10 @@ class EditorState extends EventEmitter {
     }
 
     if (this.quickSelectSlots[index] !== blockId) {
+      const previousBlock = this.getSelectedBlock();
       this.quickSelectSlots[index] = blockId;
       this.emit('quickselect:assigned', [...this.quickSelectSlots]);
+      this.announceSelectionMove(previousBlock);
 
       const projectId = this.currentProjectId;
       if (projectId && blockId) {
