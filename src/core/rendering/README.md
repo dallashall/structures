@@ -64,7 +64,7 @@ The atlas builder adds three variants of each texture for the 3D table:
 | 3D face | Texture | Variant |
 |---|---|---|
 | 0 front (+Z) | front | `_hflip` |
-| 1 back (-Z) | back | none |
+| 1 back (-Z) | back | none, with the V range reversed |
 | 2 right (+X) | left | `_rotated90ccw_vflip` |
 | 3 left (-X) | right | `_rotated90ccw_vflip` |
 | 4 top (+Y) | top | `_rotated90ccw` |

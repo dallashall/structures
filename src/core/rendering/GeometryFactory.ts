@@ -169,18 +169,24 @@ function uvToVector4(uv: { u0: number; v0: number; u1: number; v1: number }): Ve
 }
 
 /**
- * Halves the V range of the four side faces (indexes 0-3). Top and bottom (4, 5) keep the full face.
+ * The faceUV field CreateBox puts on each side face's upper edge, in face order +Z, -Z, +X, -X.
+ * The opposite field (v1, v0, u0, u0) sits on the lower edge. On ±X faces U runs vertically.
+ */
+const SIDE_FACE_TOP_FIELD = ['v0', 'v1', 'u1', 'u1'] as const;
+const OPPOSITE_FIELD = { u0: 'u1', u1: 'u0', v0: 'v1', v1: 'v0' } as const;
+
+/**
+ * Keeps the half of each side face's range (indexes 0-3) that matches the slab half. Top and bottom (4, 5) keep the full face.
  */
 function adjustSideFaceUV(slabType: 'top' | 'bottom') {
   const adjustUV = (uv: { u0: number; v0: number; u1: number; v1: number }, index: number) => {
     if (index >= 4) return uv;
 
-    const vMid = (uv.v0 + uv.v1) / 2;
-    if (slabType === 'bottom') {
-      // The texture's bottom half has the higher V values
-      return { u0: uv.u0, v0: vMid, u1: uv.u1, v1: uv.v1 };
-    }
-    return { u0: uv.u0, v0: uv.v0, u1: uv.u1, v1: vMid };
+    const topField = SIDE_FACE_TOP_FIELD[index];
+    const bottomField = OPPOSITE_FIELD[topField];
+    const mid = (uv[topField] + uv[bottomField]) / 2;
+    // A bottom slab moves its upper edge to the middle of the texture. A top slab moves its lower edge.
+    return { ...uv, [slabType === 'bottom' ? topField : bottomField]: mid };
   };
   return adjustUV;
 }
