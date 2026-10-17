@@ -67,6 +67,7 @@ const SEQUENCE_LABELS: Record<BuildSequence, string> = {
   rise: 'Rise, layer by layer',
   rippleOut: 'Ripple out from the anchor',
   rippleIn: 'Ripple in toward the anchor',
+  pop: 'Pop into place, glowing first',
   instant: 'All at once',
 };
 
@@ -97,7 +98,9 @@ function ExportDialogComponent({
   const placeholderName = `${resolvedAddonName} Wand`;
   const { itemId, namespace } = toAddonNames(resolvedAddonName, projectId);
   const giveCommand = edition === 'java' ? `/function ${namespace}:give` : `/give @s ${itemId}`;
-  const hasCamera = edition === 'bedrock' && sequence !== 'instant';
+  // "pop" and "instant" land the whole build at once, so they have no length or camera shot
+  const isTimed = sequence !== 'instant' && sequence !== 'pop';
+  const hasCamera = edition === 'bedrock' && isTimed;
 
   const handleEditionChange = (_: React.MouseEvent<HTMLElement>, value: ExportEdition | null): void => {
     if (value) onExportOptionsChange({ edition: value });
@@ -193,7 +196,7 @@ function ExportDialogComponent({
             </Select>
           </FormControl>
 
-          {sequence !== 'instant' && (
+          {isTimed && (
             <NumberField
               label="Animation seconds"
               value={seconds}

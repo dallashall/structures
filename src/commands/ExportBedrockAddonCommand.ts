@@ -53,7 +53,7 @@ class ExportBedrockAddonCommand {
       seconds: options.seconds,
       uses: options.uses,
       metaFacing: model.metaBlock.direction,
-      camera: options.sequence === 'instant' ? 'none' : options.camera,
+      camera: options.sequence === 'instant' || options.sequence === 'pop' ? 'none' : options.camera,
       build,
       structure: toMcstructure(structure.size, structure.cells, toBlockVersion(major, minor, patch)),
       placements: structure.placements,

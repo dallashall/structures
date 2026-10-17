@@ -20,11 +20,12 @@ import type { CameraMode, CameraPose } from '../../utils/cameraPath';
 import { CAMERA_KEYS_PER_SECOND, toCameraBounds, toCameraKeys } from '../../utils/cameraPath';
 import { directionToOffset } from '../DirectionMath';
 import {
-  LEAD_TICKS,
   TICKS_PER_SECOND,
+  toBuildTicks,
   toDurationTicks,
   toGlowEvery,
-  toMarkTick,
+  toGlowTick,
+  toLandTick,
   toSequenceKey,
 } from '../../utils/buildSequence';
 
@@ -189,11 +190,11 @@ export class BuildPreview {
     const tick = (now - this.startMs) / MS_PER_TICK;
     const count = this.cells.length;
 
-    while (this.glowCursor < count && toMarkTick(this.glowCursor, count, this.durationTicks) <= tick) {
+    while (this.glowCursor < count && toGlowTick(this.sequence, this.glowCursor, count, this.durationTicks) <= tick) {
       if (this.glowCursor % this.glowEvery === 0) this.addGlow(this.cells[this.glowCursor], now);
       this.glowCursor++;
     }
-    while (this.landCursor < count && toMarkTick(this.landCursor, count, this.durationTicks) + LEAD_TICKS <= tick) {
+    while (this.landCursor < count && toLandTick(this.sequence, this.landCursor, count, this.durationTicks) <= tick) {
       this.cells[this.landCursor].mesh.setEnabled(true);
       this.landCursor++;
     }
@@ -221,7 +222,7 @@ export class BuildPreview {
     this.cameraKeys = toCameraKeys(camera.mode, {
       ...toCameraBounds(this.cells.map(toCorner)),
       rising: this.sequence === 'rise',
-      buildSeconds: (this.durationTicks + LEAD_TICKS) / TICKS_PER_SECOND,
+      buildSeconds: toBuildTicks(this.sequence, this.cells.length, this.durationTicks) / TICKS_PER_SECOND,
       eye: { x: x + 0.5, y: z + EYE_HEIGHT, z: y + 0.5 },
       forward: { x: forward.x, y: 0, z: forward.y },
     });
