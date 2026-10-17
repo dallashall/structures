@@ -369,6 +369,8 @@ class Babylon3D {
       this.scene,
       getEmissiveLightIntensity(settings.lightingPreset),
     );
+    // The first updateScene runs during the environment load above, before this module exists
+    this.emissiveLighting.syncLights(blockProjection.getCached().toArray());
 
     this.blockRenderer.setLayerHighlightEnabled(settings.layerHighlightEnabled);
 

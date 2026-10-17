@@ -45,7 +45,7 @@ const PRESETS: Record<LightingPreset, LightingPresetConfig> = {
     clearColor: new Color4(0.02, 0.02, 0.05, 1.0),
     environmentIntensity: 0.6,
     emissiveScale: 0.9,
-    emissiveLightIntensity: 12.0,
+    emissiveLightIntensity: 3.0,
   },
   cloudy: {
     hemisphericIntensity: 0.5,
@@ -54,7 +54,7 @@ const PRESETS: Record<LightingPreset, LightingPresetConfig> = {
     clearColor: new Color4(0.12, 0.15, 0.15, 1.0),
     environmentIntensity: 0.5,
     emissiveScale: 0.1,
-    emissiveLightIntensity: 0.5,
+    emissiveLightIntensity: 0.4,
   },
 };
 

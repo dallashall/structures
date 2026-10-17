@@ -258,7 +258,7 @@ export class BlockRenderer {
 
     let base: Mesh;
 
-    const customMesh = blockShape.createMesh(this.scene, blockState ?? {}, faceUVData ?? undefined);
+    const customMesh = blockShape.createMesh(this.scene, blockState ?? {}, faceUVData ?? undefined, textureBlockId);
     if (customMesh) {
       base = customMesh;
       base.name = `base_${compositeKey}`;

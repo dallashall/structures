@@ -4462,17 +4462,33 @@
     "isCube": true,
     "isTransparent": false
   },
+  "minecraft:campfire": {
+    "displayName": "Campfire",
+    "category": "misc",
+    "color": "#808080",
+    "textures": {
+      "all": "campfire_log"
+    },
+    "hasBlockState": true,
+    "defaultState": {
+      "facing": "east",
+      "lit": "true"
+    },
+    "isCube": true,
+    "isTransparent": false,
+    "parentModel": "minecraft:block/template_campfire"
+  },
   "minecraft:soul_campfire": {
     "displayName": "Soul Campfire",
     "category": "misc",
     "color": "#808080",
     "textures": {
-      "all": "soul_campfire"
+      "all": "campfire_log"
     },
     "hasBlockState": true,
     "defaultState": {
       "facing": "east",
-      "lit": "false"
+      "lit": "true"
     },
     "isCube": true,
     "isTransparent": false,

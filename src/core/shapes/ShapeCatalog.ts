@@ -12,6 +12,7 @@ import { fenceShape } from './FenceShape';
 import { wallShape } from './WallShape';
 import { torchShape } from './TorchShape';
 import { doorShape } from './DoorShape';
+import { campfireShape } from './CampfireShape';
 
 class ShapeCatalogImpl {
   private static instance: ShapeCatalogImpl;
@@ -48,7 +49,7 @@ class ShapeCatalogImpl {
     const cached = this.cache.get(blockId);
     if (cached) return cached;
 
-    this.shapes ??= [stairShape, slabShape, fenceShape, wallShape, torchShape, doorShape];
+    this.shapes ??= [stairShape, slabShape, fenceShape, wallShape, torchShape, doorShape, campfireShape];
     for (const shape of this.shapes) {
       if (shape.matchesBlock(blockId)) {
         this.cache.set(blockId, shape);

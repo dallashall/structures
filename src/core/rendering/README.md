@@ -16,7 +16,7 @@ The Babylon.js modules behind the 3D view. `Babylon3D` (`src/core/Babylon3D.ts`)
 | `BlockRenderer.ts` | class | Committed blocks as instanced meshes. One hidden base mesh per block type and geometry key. Per-instance color buffers dim blocks outside the active layer. |
 | `PreviewRenderer.ts` | class | Translucent preview meshes from EditorState hover previews and DraftingService drafts. Diffs against the previous frame. Delete mode tints previews red. |
 | `MaterialResolver.ts` | class | Picks a material per block: tinted texture, then atlas texture, then flat color. Caches standard, PBR, ghost, and delete variants. |
-| `GeometryFactory.ts` | functions | Slab, stair, and box-model meshes with transforms baked into vertices, so they work as instance bases. A box model (`src/core/shapes/BoxModel.ts`) projects each face's UVs from the full cube, so a box smaller than the cell shows the matching part of the texture. |
+| `GeometryFactory.ts` | functions | Slab, stair, and box-model meshes with transforms baked into vertices, so they work as instance bases. A box model (`src/core/shapes/BoxModel.ts`) projects each face's UVs from the full cube, so a box smaller than the cell shows the matching part of the texture. A box with `faces` instead maps each listed face to its own texture region, as a Minecraft model element does, and drops unlisted faces. |
 | `GrowAnimator.ts` | class | Scales block instances in and out on a stagger. One `onBeforeRender` observer drives every tween. |
 | `CameraRig.ts` | class | Turntable camera: frame, orbit, pan, zoom, preset views. The only code path that moves the camera. |
 | `CameraGestures.ts` | class | Maps pointer, wheel, and key input on the 3D canvas to CameraRig moves. |
@@ -27,7 +27,7 @@ The Babylon.js modules behind the 3D view. `Babylon3D` (`src/core/Babylon3D.ts`)
 | `EnvironmentSetup.ts` | functions | Loads the baked environment texture for a preset (`public/environment/<preset>.env`). PBR metals render black without it. |
 | `BackdropRenderer.ts` | class | Background mode: plain color, skybox, or ground-projected sky. |
 | `ShadowSetup.ts` | functions | Shadow generator on the directional light and a shadow-receiving ground plane. |
-| `EmissiveLighting.ts` | class | Point lights at luminous blocks. |
+| `EmissiveLighting.ts` | class | Point lights at luminous blocks. Each fades linearly to zero at the block's Minecraft light level, so overlapping lights stay bounded. |
 | `PBRCategoryMap.ts` | functions | Classifies blocks by name into metallic and roughness presets. |
 | `PostProcessingSetup.ts` | functions | SSAO, bloom, and tone mapping pipelines. |
 | `ThumbnailCapture.ts` | class | Poses the view camera at a fixed framing, renders one frame, and crops it to a small JPEG for the project card. It never switches `scene.activeCamera`, because that breaks the SSAO prepass. Needs the engine's `preserveDrawingBuffer`. |
