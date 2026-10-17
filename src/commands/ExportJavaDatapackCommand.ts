@@ -29,7 +29,8 @@ class ExportJavaDatapackCommand {
     const { projectId, name, model, blocks, table } = await loadExportProject(options.addonName);
     const findEntry = (blockId: string, properties: Record<string, string>): string | null =>
       findJavaBlockState(table, toJavaId(blockId), properties);
-    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb);
+    // A projectile build fills the meta block's cell. A wand leaves it open for the player standing there.
+    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb, options.activator !== 'wand');
 
     const pack = toDatapackZip({
       projectId,

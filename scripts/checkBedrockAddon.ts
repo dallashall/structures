@@ -41,16 +41,18 @@ const SAMPLE_BLOCKS: BlockData[] = [
   { position: { x: 1, y: 0, z: 0 }, blockType: 'minecraft:oak_stairs', blockState: { facing: 'y-', half: 'bottom', shape: 'straight_y-' } },
   { position: { x: 2, y: 0, z: 1 }, blockType: 'minecraft:oak_log', blockState: { axis: 'z' } },
   { position: { x: 3, y: 1, z: 0 }, blockType: 'minecraft:oak_slab', blockState: { type: 'top' } },
+  { position: { x: 2, y: 2, z: 0 }, blockType: 'minecraft:cobblestone' },
 ];
 
 async function writeSampleAddon(activator: Activator, root: string): Promise<void> {
   const table = JSON.parse(fs.readFileSync(path.join('public', 'data', 'bedrock-blocks.json'), 'utf-8')) as BedrockBlockTable;
   const toJavaId = (blockId: string): string => blockId;
   const metaBlock = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
-  const structure = toBedrockStructure({ width: 4, height: 4, depth: 4 }, metaBlock, SAMPLE_BLOCKS, table, toJavaId);
+  const keepAnchor = activator !== 'wand';
+  const structure = toBedrockStructure({ width: 4, height: 4, depth: 4 }, metaBlock, SAMPLE_BLOCKS, table, toJavaId, keepAnchor);
   const toGray = (): [number, number, number] => [0.6, 0.6, 0.6];
   const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null => findBedrockBlock(table, toJavaId(blockId), properties);
-  const build = toAnimatedBuild(metaBlock, SAMPLE_BLOCKS, findEntry, toGray);
+  const build = toAnimatedBuild(metaBlock, SAMPLE_BLOCKS, findEntry, toGray, keepAnchor);
   const [major, minor, patch] = table.bedrockVersion;
   const files = await toAddonFiles({
     projectId: 'addon-check',

@@ -170,14 +170,28 @@ describe('toDatapackFiles with a projectile activator', () => {
     const files = toDatapackFiles({ ...OPTIONS, activator: 'bow' });
     expect(read(files, fn('give'))).toMatch(/^give @s minecraft:bow\[.*minecraft:max_damage=3,minecraft:damage=0\]$/);
     expect(files[`data/${namespace}/advancement/use.json`]).toBeUndefined();
-    expect(files[fn('wear')]).toBeUndefined();
     expect(read(files, fn('tick'))).toContain(`function ${namespace}:track`);
     expect(read(files, fn('track'))).toContain(`@e[type=#minecraft:arrows,tag=!${namespace}.seen,nbt={weapon:{components:`);
+  });
+
+  it('wears a creative shooter\'s bow in either hand, and breaks it on the last use', () => {
+    const files = toDatapackFiles({ ...OPTIONS, activator: 'bow' });
+    expect(read(files, fn('shot'))).toContain(`execute on origin if entity @s[gamemode=creative] run function ${namespace}:wear`);
+    expect(read(files, fn('wear'))).toContain('{slot:"weapon.offhand"}');
+    const wearSlot = read(files, fn('wear_slot')).split('\n');
+    expect(wearSlot[1]).toBe('$execute if items entity @s $(slot) *[minecraft:damage=2] run return run item replace entity @s $(slot) with minecraft:air');
+    expect(wearSlot).toHaveLength(4);
+  });
+
+  it('turns the follower to the yaw of the projectile\'s shooter', () => {
+    const shot = read(toDatapackFiles({ ...OPTIONS, activator: 'snowball' }), fn('shot'));
+    expect(shot).toContain(`execute on origin rotated as @s as @e[type=minecraft:marker,tag=${namespace}.new] run tp @s ~ ~ ~ ~ 0`);
   });
 
   it('gives an unbreakable bow when uses are unlimited', () => {
     const files = toDatapackFiles({ ...OPTIONS, activator: 'bow', uses: 0 });
     expect(read(files, fn('give'))).toContain('minecraft:unbreakable={}');
+    expect(files[fn('wear')]).toBeUndefined();
   });
 
   it('gives a stack of marked snowballs, one per use, and tracks each throw', () => {

@@ -11,8 +11,9 @@
  * - a marked snowball dropped on the ground, a marked arrow that sticks in it, or a marked snowball that strikes a
  *   mob does not build at the right cell
  *
- * The projectile checks summon each projectile with the item data a real throw or shot gives it. With no owner,
- * the build faces south, so it lands turned twice.
+ * The projectile checks summon each projectile with the item data a real throw or shot gives it. With no shooter,
+ * the build faces south, so it lands turned twice. Two snowballs name an armor stand as their shooter, so their
+ * builds turn to the stand's facing.
  * A headless server has no player to right-click, so the check calls start directly. The armor stand faces
  * north, the same way as the sample's meta block, so the build lands unturned.
  *
@@ -48,6 +49,8 @@ const SAMPLE_BLOCKS: BlockData[] = [
   { position: { x: 1, y: 0, z: 0 }, blockType: 'minecraft:oak_stairs', blockState: { facing: 'y-', half: 'bottom', shape: 'straight_y-' } },
   { position: { x: 2, y: 0, z: 1 }, blockType: 'minecraft:oak_log', blockState: { axis: 'z' } },
   { position: { x: 3, y: 1, z: 0 }, blockType: 'minecraft:oak_slab', blockState: { type: 'top' } },
+  // In the meta block's cell: a wand build leaves it out, a projectile build places it
+  { position: { x: 2, y: 2, z: 0 }, blockType: 'minecraft:cobblestone' },
 ];
 const META_BLOCK = { position: { x: 2, y: 2, z: 0 }, direction: 'y-' as const };
 const SAMPLE_USES = 2;
@@ -90,7 +93,7 @@ function writeSamplePack(activator: Activator): SamplePack {
     uses: SAMPLE_USES,
     recipe: 'diamond' as const,
     metaFacing: META_BLOCK.direction,
-    build: toAnimatedBuild(META_BLOCK, SAMPLE_BLOCKS, findEntry, toGray),
+    build: toAnimatedBuild(META_BLOCK, SAMPLE_BLOCKS, findEntry, toGray, activator !== 'wand'),
   };
   const files = toDatapackFiles(options);
   const fileName = activator === 'wand' ? PACK_FILE : `${activator}-${PACK_FILE}`;
@@ -215,7 +218,7 @@ async function main(): Promise<void> {
 
     const { x, y, z } = FEET;
     // Covers the wand build and the projectile spots east of it
-    rcon(`forceload add ${x - 16} ${z - 16} ${x + 80} ${z + 16}`);
+    rcon(`forceload add ${x - 16} ${z - 16} ${x + 120} ${z + 16}`);
 
     // A crafter crafts on a redstone pulse and drops the result in front of it, which faces north here
     const crafter = { x: x + 8, y, z: z + 8 };
@@ -263,7 +266,29 @@ async function main(): Promise<void> {
     const mob = { x: x + 66, y, z };
     rcon(`summon minecraft:zombie ${mob.x + 0.5} ${y} ${z + 0.5} {NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b}`);
     rcon(`summon minecraft:snowball ${x + 60.5} ${y + 1.5} ${z + 0.5} {Item:{id:"minecraft:snowball",count:1,${marked(snowballPack)}},Motion:[1.5,0.0,0.0]}`);
+    // Owned snowballs: an armor stand stands in for the thrower, so the build turns to the stand's facing
+    const owned = [{ yaw: -90, at: { x: x + 80, y, z }, turns: 1, uuid: '[I;1,2,3,4]' }, { yaw: 90, at: { x: x + 100, y, z }, turns: 3, uuid: '[I;5,6,7,8]' }];
+    for (const thrown of owned) {
+      rcon(`summon minecraft:armor_stand ${thrown.at.x + 0.5} ${y} ${z + 3.5} {UUID:${thrown.uuid},Rotation:[${thrown.yaw}f,0f],NoGravity:1b}`);
+      rcon(`summon minecraft:snowball ${thrown.at.x + 0.5} ${y + 4} ${z + 0.5} {Owner:${thrown.uuid},Item:{id:"minecraft:snowball",count:1,${marked(snowballPack)}},Motion:[0.0,-0.5,0.0]}`);
+    }
+    // A creative shooter's bow wears through the pack. A headless server has no player, so a stand runs the wear.
+    const bowGive = strFromU8(bowPack.files[`data/${bowPack.namespace}/function/give.mcfunction`]).replace(/^give @s /, '');
+    rcon(`summon minecraft:armor_stand ${x + 0.5} ${y} ${z + 6.5} {Tags:["bow"],NoGravity:1b}`);
+    rcon(`item replace entity @e[tag=bow,limit=1] weapon.offhand with ${bowGive}`);
+    const bowStand = '@e[tag=bow,limit=1]';
+    rcon(`execute as ${bowStand} run function ${bowPack.namespace}:wear`);
+    if (!rcon(`execute if items entity ${bowStand} weapon.offhand *[minecraft:damage=1]`).includes('passed')) {
+      problems.push('The bow wear did not add one damage to a bow in the off hand.');
+    }
+    rcon(`execute as ${bowStand} run function ${bowPack.namespace}:wear`);
+    if (!rcon(`execute unless items entity ${bowStand} weapon.offhand *`).includes('passed')) {
+      problems.push('The last bow wear did not break the bow.');
+    }
     await sleep(6000);
+    for (const thrown of owned) {
+      problems.push(...findMissingBlocks(snowballPack.build, thrown.at, thrown.turns).map(toProblem(`A snowball thrown by a stand at yaw ${thrown.yaw}`)));
+    }
     problems.push(...findMissingBlocks(snowballPack.build, ground, 2).map(toProblem('A snowball on the ground')));
     problems.push(...findMissingBlocks(bowPack.build, stuck, 2).map(toProblem('An arrow stuck in the ground')));
     problems.push(...findMissingBlocks(snowballPack.build, mob, 2).map(toProblem('A snowball that struck a mob')));

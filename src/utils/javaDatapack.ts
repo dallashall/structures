@@ -15,11 +15,12 @@
  *
  * A bow or snowball activator replaces steps 1 and 2. Java has no projectile hit event, so:
  * 1. tick checks each new arrow or snowball once for the export's custom data, on the bow it came from or on the
- *    snowball's own item. A match gets a follower marker, turned to the yaw its owner faced when it flew.
+ *    snowball's own item. A match gets a follower marker, turned to the yaw its shooter faced when it flew.
  * 2. Each tick the follower moves to its projectile. When the projectile is gone or an arrow sticks, the follower
  *    steps along the projectile's last motion from its last position. The build anchors at the feet of the first
  *    mob it meets, or in the last open cell before a solid block.
- * The bow wears through vanilla durability, and each snowball is used up by its throw.
+ * The bow wears through vanilla durability, or through the pack's wear function for a creative shooter. Each
+ * snowball is used up by its throw outside creative mode. A projectile build fills the meta block's cell.
  *
  * Offsets are in game axes relative to the meta block: x east, y up, z south.
  */
@@ -192,7 +193,7 @@ const toWandComponents = (options: DatapackOptions, namespace: string): Record<s
 };
 
 /**
- * The bow's components. Vanilla durability wears it one per shot, so limited uses need no wear function.
+ * The bow's components. Vanilla durability wears it one per shot outside creative mode.
  */
 const toBowComponents = (options: DatapackOptions, namespace: string): Record<string, ComponentValue> => ({
   'minecraft:custom_data': { wand: namespace },
@@ -294,7 +295,7 @@ const RAY_IGNORED_TYPES = [
 ];
 
 // The functions that find marked projectiles, follow them, and build where they stop
-function writeProjectileTracking(text: Record<string, string>, activator: Exclude<Activator, 'wand'>, namespace: string): void {
+function writeProjectileTracking(text: Record<string, string>, activator: Exclude<Activator, 'wand'>, namespace: string, uses: number): void {
   const at = (path: string): string => `data/${namespace}/${path}`;
   const id = (path: string): string => `${namespace}:${path}`;
   const idScore = `${namespace}.id`;
@@ -317,17 +318,24 @@ function writeProjectileTracking(text: Record<string, string>, activator: Exclud
     `tag @e[type=${types},tag=!${seen}] add ${seen}`,
     `execute as @e[type=minecraft:marker,tag=${follow}] at @s run function ${id('follow')}`,
   ].join('\n');
-  text[at('function/shot.mcfunction')] = [
+  const shotLines = [
     `tag @s add ${shot}`,
     `scoreboard players add #next ${idScore} 1`,
     `scoreboard players operation @s ${idScore} = #next ${idScore}`,
     `summon minecraft:marker ~ ~ ~ {Tags:["${follow}","${fresh}"]}`,
     `scoreboard players operation @e[type=minecraft:marker,tag=${fresh}] ${idScore} = #next ${idScore}`,
     `data modify entity @e[type=minecraft:marker,tag=${fresh},limit=1] data.motion set from entity @s Motion`,
-    // The follower takes the yaw its owner faces now. A projectile with no owner leaves it facing south.
-    `execute on owner rotated as @s as @e[type=minecraft:marker,tag=${fresh}] run tp @s ~ ~ ~ ~ 0`,
+    // The follower takes the yaw its shooter faces now. Java names a projectile's shooter "origin", not "owner".
+    // A projectile with no shooter leaves it facing south.
+    `execute on origin rotated as @s as @e[type=minecraft:marker,tag=${fresh}] run tp @s ~ ~ ~ ~ 0`,
     `tag @e[type=minecraft:marker,tag=${fresh}] remove ${fresh}`,
-  ].join('\n');
+  ];
+  // Vanilla durability skips creative mode, so a creative shooter's bow wears here instead
+  if (activator === 'bow' && uses > 0) {
+    shotLines.push(`execute on origin if entity @s[gamemode=creative] run function ${id('wear')}`);
+    writeCreativeBowWear(text, namespace, uses);
+  }
+  text[at('function/shot.mcfunction')] = shotLines.join('\n');
   text[at('function/follow.mcfunction')] = [
     `scoreboard players operation #id ${idScore} = @s ${idScore}`,
     `execute as @e[tag=${shot}] if score @s ${idScore} = #id ${idScore} run tag @s add ${match}`,
@@ -358,6 +366,26 @@ function writeProjectileTracking(text: Record<string, string>, activator: Exclud
     `scoreboard players remove #steps ${idScore} 1`,
     `$execute if score #steps ${idScore} matches 1.. positioned ~$(dx) ~$(dy) ~$(dz) if block ~ ~ ~ #minecraft:replaceable run return run function ${ray} with storage ${id('ray')}`,
     `execute align xyz positioned ~0.5 ~ ~0.5 run function ${id('anchor')}`,
+  ].join('\n');
+}
+
+// Wears the marked bow in whichever hand holds it, one damage per shot, and breaks it on the last use
+function writeCreativeBowWear(text: Record<string, string>, namespace: string, uses: number): void {
+  const at = (path: string): string => `data/${namespace}/${path}`;
+  const id = (path: string): string => `${namespace}:${path}`;
+  const bow = `minecraft:bow[minecraft:custom_data~{wand:${toSnbtString(namespace)}}]`;
+  text[at('function/wear.mcfunction')] = [
+    `execute if items entity @s weapon.mainhand ${bow} run return run function ${id('wear_slot')} {slot:"weapon.mainhand"}`,
+    `execute if items entity @s weapon.offhand ${bow} run function ${id('wear_slot')} {slot:"weapon.offhand"}`,
+  ].join('\n');
+  // Each line matches one damage value and returns, so a shot adds exactly one damage
+  const toWearLine = (_: unknown, damage: number): string =>
+    `$execute if items entity @s $(slot) *[minecraft:damage=${damage}] run return run item modify entity @s $(slot) {type:"minecraft:set_components",components:{"minecraft:damage":${damage + 1}}}`;
+  const last = `$execute if items entity @s $(slot) *[minecraft:damage=${uses - 1}]`;
+  text[at('function/wear_slot.mcfunction')] = [
+    `${last} run playsound minecraft:entity.item.break player @a ~ ~ ~`,
+    `${last} run return run item replace entity @s $(slot) with minecraft:air`,
+    ...Array.from({ length: uses - 1 }, toWearLine),
   ].join('\n');
 }
 
@@ -422,7 +450,7 @@ export function toDatapackFiles(options: DatapackOptions): Record<string, Uint8A
   }
 
   if (activator === 'wand') writeWandUse(text, options, namespace);
-  else writeProjectileTracking(text, activator, namespace);
+  else writeProjectileTracking(text, activator, namespace, options.uses);
 
   // Turns the build so the executor faces the meta block's arrow. Each line returns, so one marker is summoned.
   const metaIndex = FACING_INDEX[options.metaFacing];

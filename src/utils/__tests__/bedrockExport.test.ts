@@ -96,6 +96,14 @@ describe('toBedrockStructure', () => {
     expect(anchorCells[0].block.name).toBe('minecraft:air');
   });
 
+  it('keeps the painted anchor block when asked', () => {
+    const kept = toBedrockStructure({ width: 3, height: 4, depth: 2 }, metaBlock, blocks, TABLE, identity, true);
+    const isAnchorCell = (cell: { x: number; y: number; z: number }): boolean => cell.x === 1 && cell.y === 0 && cell.z === 2;
+    const anchorCells = kept.cells.filter(isAnchorCell);
+    expect(anchorCells).toHaveLength(1);
+    expect(anchorCells[0].block.name).toBe('minecraft:stone');
+  });
+
   it('counts blocks it cannot export', () => {
     expect(structure.skipped.get('minecraft:copper_sink')).toBe(2);
   });

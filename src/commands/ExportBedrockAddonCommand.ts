@@ -38,10 +38,12 @@ class ExportBedrockAddonCommand {
       loadExportProject(options.addonName),
       loadPackIcon(),
     ]);
-    const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId);
+    // A projectile build fills the meta block's cell. A wand leaves it open for the player standing there.
+    const keepAnchor = options.activator !== 'wand';
+    const structure = toBedrockStructure(model.dimensions, model.metaBlock, blocks, table, toJavaId, keepAnchor);
     const findEntry = (blockId: string, properties: Record<string, string>): BedrockTableEntry | null =>
       findBedrockBlock(table, toJavaId(blockId), properties);
-    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb);
+    const build = toAnimatedBuild(model.metaBlock, blocks, findEntry, toGlowRgb, keepAnchor);
 
     const [major, minor, patch] = table.bedrockVersion;
     const addon = await toMcaddon({

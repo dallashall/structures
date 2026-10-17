@@ -197,7 +197,7 @@ The meta block marks where the build appears in game and which way the player fa
 
 Moving or turning the meta block is one undo step, labelled "Meta block".
 
-**On export** the meta block's cell stays empty, and every block's position is measured from it. In Bedrock, using the wand on a block anchors the build next to the face you clicked. Using it in the air anchors the build at your feet. The build turns so you face the way the arrow points.
+**On export** a wand build leaves the meta block's cell empty, so the player is never buried. A bow or snowball build fills it. Every block's position is measured from it. In Bedrock, using the wand on a block anchors the build next to the face you clicked. Using it in the air anchors the build at your feet. The build turns so you face the way the arrow points.
 
 ## 3D preview
 
@@ -288,7 +288,7 @@ Render settings, quick-select slots, and the theme are not part of undo history.
 | Crafting recipe: none, or the item plus a Gold Ingot, Diamond, or Nether Star | no | yes | none |
 | Uses before it breaks, 0 to 1000, 0 for unlimited. For snowballs, the stack size, 0 to 16, 0 for 16 | yes | yes | 0 |
 
-A wand builds around the player who uses it. A bow builds where each arrow it fires lands, and a snowball builds where it lands. Any vanilla arrow works in the bow. A block hit puts the meta block in the open cell in front of the struck face. A mob hit puts it at the mob's feet. The build turns so the shooter faces the meta block's arrow, so a bridge with its meta block at the far end, arrow pointing along the bridge, reaches back toward the shooter. The bow wears one use per shot. Each snowball builds once.
+A wand builds around the player who uses it. A bow builds where each arrow it fires lands, and a snowball builds where it lands. Any vanilla arrow works in the bow. A block hit puts the meta block in the open cell in front of the struck face. A mob hit puts it at the mob's feet. The build turns so the shooter faces the meta block's arrow, so a bridge with its meta block at the far end, arrow pointing along the bridge, reaches back toward the shooter. The bow wears one use per shot, in creative mode too. Each snowball builds once.
 
 "Pop into place" glows every cell at once, then lands every block together 0.8 seconds later. Animation seconds and Camera hide for "Pop into place" and "All at once". The dialog remembers your choices until the page reloads.
 
