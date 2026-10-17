@@ -281,13 +281,13 @@ Render settings, quick-select slots, and the theme are not part of undo history.
 | Add-on or data pack name | yes | yes | the project name |
 | Item name | yes | yes | "<name> Wand" |
 | Item icon: Blaze Rod, Breeze Rod, Stick, Trial Key, Amethyst Shard, Nether Star | yes | yes | Blaze Rod |
-| Build animation: Rise layer by layer, Ripple out from the anchor, Ripple in toward the anchor, All at once | yes | yes | Rise |
+| Build animation: Rise layer by layer, Ripple out from the anchor, Ripple in toward the anchor, Pop into place, All at once | yes | yes | Rise |
 | Animation seconds, 1 to 60 | yes | yes | 6 |
 | Camera: Player keeps control, Orbit the build, Look around from the player | yes | no | Player keeps control |
 | Crafting recipe: none, or the icon plus a Gold Ingot, Diamond, or Nether Star | no | yes | none |
 | Uses before it breaks, 0 to 1000, 0 for unlimited | yes | yes | 0 |
 
-Animation seconds and Camera hide for "All at once". The dialog remembers your choices until the page reloads.
+"Pop into place" glows every cell at once, then lands every block together 0.8 seconds later. Animation seconds and Camera hide for "Pop into place" and "All at once". The dialog remembers your choices until the page reloads.
 
 - **Preview** closes the dialog, plays the build animation in the 3D view, then reopens the dialog. It is disabled for "All at once".
 - **Export** saves the file and shows the in-game command. A warning lists any blocks the export skipped, with counts.

@@ -25,15 +25,12 @@ import type { BuildSequence } from './bedrockAddonScript';
 import type { BedrockBlockTable } from './bedrockBlocks';
 import { toAddonNames } from './bedrockAddon';
 import { findJavaStateKey } from './bedrockExport';
-import { LEAD_TICKS, toDurationTicks, toGlowEvery, toMarkTick, toSequenceKey } from './buildSequence';
+import { POP_BLOCKS_PER_TICK, toBuildTicks, toDurationTicks, toGlowEvery, toGlowTick, toLandTick, toSequenceKey } from './buildSequence';
 
 export const JAVA_VERSION = '26.3';
 // [major, minor] data pack format of JAVA_VERSION. npm run check:datapack reads the server's own value.
 export const DATA_PACK_FORMAT: [number, number] = [121, 0];
 
-// "All at once" lands this many blocks per tick, which keeps a large build under Java's default limit of
-// 65,536 commands per tick
-const INSTANT_BLOCKS_PER_TICK = 4096;
 // A landing sound plays at most once every this many ticks
 const POP_EVERY = 3;
 
@@ -112,7 +109,7 @@ export function toFrames(options: Pick<DatapackOptions, 'sequence' | 'seconds' |
 
   if (sequence === 'instant') {
     frameAt(0);
-    for (let cell = 0; cell < count; cell++) frameAt(Math.floor(cell / INSTANT_BLOCKS_PER_TICK)).lands.push(cell);
+    for (let cell = 0; cell < count; cell++) frameAt(Math.floor(cell / POP_BLOCKS_PER_TICK)).lands.push(cell);
     return frames;
   }
 
@@ -124,11 +121,10 @@ export function toFrames(options: Pick<DatapackOptions, 'sequence' | 'seconds' |
   const order = Array.from({ length: count }, toKeyed).sort(byKey);
   const durationTicks = toDurationTicks(seconds);
   const glowEvery = toGlowEvery(count);
-  frameAt(durationTicks + LEAD_TICKS);
+  frameAt(toBuildTicks(sequence, count, durationTicks));
   const addCell = ({ cell }: { cell: number }, rank: number): void => {
-    const markTick = toMarkTick(rank, count, durationTicks);
-    if (rank % glowEvery === 0) frameAt(markTick).glows.push(cell);
-    frameAt(markTick + LEAD_TICKS).lands.push(cell);
+    if (rank % glowEvery === 0) frameAt(toGlowTick(sequence, rank, count, durationTicks)).glows.push(cell);
+    frameAt(toLandTick(sequence, rank, count, durationTicks)).lands.push(cell);
   };
   order.forEach(addCell);
   return frames;

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddonScriptOptions, BuildSequence } from '../bedrockAddonScript';
 import { GLOW_PARTICLE_ID, toAddonScript, toGlowParticle } from '../bedrockAddonScript';
-import { JITTER, toSequenceKey } from '../buildSequence';
+import { JITTER, LEAD_TICKS, POP_BLOCKS_PER_TICK, toBuildTicks, toGlowTick, toLandTick, toSequenceKey } from '../buildSequence';
 import { CAMERA_KEYS_PER_SECOND, toCameraBounds, toCameraKeys, toCameraSeconds } from '../cameraPath';
 import type { CameraMode, CameraScene } from '../cameraPath';
 import type { AnimatedSequence } from '../buildSequence';
@@ -58,12 +58,35 @@ describe('the script copy of toSequenceKey', () => {
     const script = toAddonScript(OPTIONS);
     const source = /function toSequenceKey[\s\S]*?\n}\n/.exec(script)?.[0];
     expect(source).toBeDefined();
-    const sequences: AnimatedSequence[] = ['rise', 'rippleOut', 'rippleIn'];
+    const sequences: AnimatedSequence[] = ['rise', 'rippleOut', 'rippleIn', 'pop'];
     for (const sequence of sequences) {
       const scriptKey = new Function('SEQUENCE', 'JITTER', `${source}\nreturn toSequenceKey;`)(sequence, JITTER) as
         (dx: number, dy: number, dz: number, random: number) => number;
       for (const [dx, dy, dz, random] of [[0, 0, 0, 0], [3, 1, -2, 0.5], [-4, 6, 7, 0.9]]) {
         expect(scriptKey(dx, dy, dz, random)).toBeCloseTo(toSequenceKey(sequence, dx, dy, dz, random), 10);
+      }
+    }
+  });
+});
+
+describe('the script copy of the build timing', () => {
+  it('matches the shared glow, land, and length formulas', () => {
+    const script = toAddonScript(OPTIONS);
+    const source = /function toMarkTick[\s\S]*?function toBuildTicks[\s\S]*?\n}\n/.exec(script)?.[0];
+    expect(source).toBeDefined();
+    const sequences: AnimatedSequence[] = ['rise', 'rippleOut', 'rippleIn', 'pop'];
+    for (const sequence of sequences) {
+      const copy = new Function('SEQUENCE', 'LEAD_TICKS', 'POP_BLOCKS_PER_TICK', `${source}\nreturn { toGlowTick, toLandTick, toBuildTicks };`)(
+        sequence, LEAD_TICKS, POP_BLOCKS_PER_TICK,
+      ) as {
+        toGlowTick: (rank: number, count: number, durationTicks: number) => number;
+        toLandTick: (rank: number, count: number, durationTicks: number) => number;
+        toBuildTicks: (count: number, durationTicks: number) => number;
+      };
+      for (const [rank, count] of [[0, 1], [5, 10], [5000, 9000]]) {
+        expect(copy.toGlowTick(rank, count, 120)).toBe(toGlowTick(sequence, rank, count, 120));
+        expect(copy.toLandTick(rank, count, 120)).toBe(toLandTick(sequence, rank, count, 120));
+        expect(copy.toBuildTicks(count, 120)).toBe(toBuildTicks(sequence, count, 120));
       }
     }
   });

@@ -57,6 +57,13 @@ describe('toFrames', () => {
     expect(frames[LEAD_TICKS].lands).toEqual([0]);
   });
 
+  it('glows every cell on the first tick and lands them together on a pop', () => {
+    const frames = toFrames({ ...OPTIONS, sequence: 'pop' });
+    expect(frames).toHaveLength(LEAD_TICKS + 1);
+    expect(frames[0].glows).toEqual([0, 1]);
+    expect(frames[LEAD_TICKS].lands).toHaveLength(2);
+  });
+
   it('lands "all at once" in the first tick, with no glow', () => {
     const frames = toFrames({ ...OPTIONS, sequence: 'instant' });
     expect(frames).toEqual([{ glows: [], lands: [0, 1] }]);

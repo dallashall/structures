@@ -80,7 +80,7 @@ export function withExportState<P extends object>(
       screenRouter.closeExportDialog();
       if (editorState.getLayoutMode() === 'tabbed') editorState.setActiveView('3d' as ViewType);
       const reopen = (): void => screenRouter.openExportDialog();
-      const camera = options.edition === 'java' ? 'none' : options.camera;
+      const camera = options.edition === 'java' || options.sequence === 'pop' ? 'none' : options.camera;
       babylon3d.playBuildPreview(options.sequence, options.seconds, camera).then(reopen, reopen);
     };
 

@@ -12,7 +12,7 @@
 import type { AnimatedBuild } from './animatedBuild';
 import type { BedrockTableEntry } from './bedrockBlocks';
 import type { AnimatedSequence } from './buildSequence';
-import { JITTER, LEAD_TICKS, MAX_GLOWS, toDurationTicks } from './buildSequence';
+import { JITTER, LEAD_TICKS, MAX_GLOWS, POP_BLOCKS_PER_TICK, toDurationTicks } from './buildSequence';
 import type { Placement, PlayerFacing } from './bedrockExport';
 import type { HorizontalDirection } from '../types';
 import type { CameraMode } from './cameraPath';
@@ -56,6 +56,7 @@ const GLOW_PARTICLE = ${JSON.stringify(GLOW_PARTICLE_ID)};
 const LEAD_TICKS = ${LEAD_TICKS};
 const MAX_GLOWS = ${MAX_GLOWS};
 const JITTER = ${JITTER};
+const POP_BLOCKS_PER_TICK = ${POP_BLOCKS_PER_TICK};
 // Rotation and minimum-corner offset of the whole structure, for "instant"
 const PLACEMENTS = ${JSON.stringify(options.placements)};
 // Per palette entry: [[name, states] for 0-3 clockwise quarter turns, [r, g, b]]
@@ -97,9 +98,29 @@ function turnOffset(dx, dz, turns) {
 // The same formula as toSequenceKey in src/utils/buildSequence.ts
 function toSequenceKey(dx, dy, dz, random) {
   const jitter = random * JITTER;
+  if (SEQUENCE === "pop") return random;
   if (SEQUENCE === "rise") return dy + jitter;
   const distance = Math.sqrt(dx * dx + dz * dz) + Math.abs(dy) * 0.5;
   return SEQUENCE === "rippleIn" ? -distance + jitter : distance + jitter;
+}
+
+// The same formulas as toGlowTick, toLandTick, and toBuildTicks in src/utils/buildSequence.ts
+function toMarkTick(rank, count, durationTicks) {
+  return Math.floor((rank * durationTicks) / Math.max(1, count));
+}
+
+function toGlowTick(rank, count, durationTicks) {
+  return SEQUENCE === "pop" ? 0 : toMarkTick(rank, count, durationTicks);
+}
+
+function toLandTick(rank, count, durationTicks) {
+  if (SEQUENCE === "pop") return LEAD_TICKS + Math.floor(rank / POP_BLOCKS_PER_TICK);
+  return toMarkTick(rank, count, durationTicks) + LEAD_TICKS;
+}
+
+function toBuildTicks(count, durationTicks) {
+  if (SEQUENCE === "pop") return toLandTick(Math.max(0, count - 1), count, durationTicks);
+  return durationTicks + LEAD_TICKS;
 }
 
 /** @param {Player} player @param {Vector3} anchor */
@@ -390,14 +411,11 @@ function animateBuild(player, anchor) {
   }
   order.sort(byKey);
 
-  setBlock(dimension, anchor, BlockPermutation.resolve("minecraft:air"));
-  runCamera(player, order, DURATION_TICKS + LEAD_TICKS);
-
   const count = order.length;
+  setBlock(dimension, anchor, BlockPermutation.resolve("minecraft:air"));
+  runCamera(player, order, toBuildTicks(count, DURATION_TICKS));
+
   const glowEvery = Math.max(1, Math.ceil(count / MAX_GLOWS));
-  function markTick(rank) {
-    return Math.floor((rank * DURATION_TICKS) / Math.max(1, count));
-  }
   let tick = 0;
   let glowCursor = 0;
   let blockCursor = 0;
@@ -419,12 +437,12 @@ function animateBuild(player, anchor) {
   }
 
   function step() {
-    while (glowCursor < count && markTick(glowCursor) <= tick) {
+    while (glowCursor < count && toGlowTick(glowCursor, count, DURATION_TICKS) <= tick) {
       if (glowCursor % glowEvery === 0) glow(order[glowCursor]);
       glowCursor++;
     }
     let landed = 0;
-    while (blockCursor < count && markTick(blockCursor) + LEAD_TICKS <= tick) {
+    while (blockCursor < count && toLandTick(blockCursor, count, DURATION_TICKS) <= tick) {
       land(order[blockCursor]);
       blockCursor++;
       landed++;
