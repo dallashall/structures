@@ -164,7 +164,7 @@ Search and tab reset each time the browser opens.
 
 ## Block state and shapes
 
-Blocks have one of seven shapes: stair, slab, fence, wall, torch, door, or full cube. The 2D views clip each shape to the part of the cell it fills, and the 3D view builds it from Minecraft's model proportions.
+Blocks have one of eight shapes: stair, slab, fence, wall, torch, door, campfire, or full cube. The 2D views clip each shape to the part of the cell it fills, and the 3D view builds it from Minecraft's model proportions.
 
 When the selected block has an orientation, the side panel shows **Orientation** controls:
 
@@ -172,7 +172,7 @@ When the selected block has an orientation, the side panel shows **Orientation**
 |---|---|---|
 | Slab | Bottom, Top, Double | Y flips bottom and top |
 | Stair | Bottom, Top half | Y flips the half |
-| Stairs, torches, doors, and other facing blocks | Facing -Y, +X, +Y, -X | T rotates the facing |
+| Stairs, torches, doors, campfires, and other facing blocks | Facing -Y, +X, +Y, -X | T rotates the facing |
 | Door | Flip hinge | H flips the hinge |
 
 Picking a new block resets its orientation to the default.
@@ -184,6 +184,7 @@ The app shapes these blocks from their neighbours on every change, so placing or
 - **Walls** join walls, fence gates, and full blocks. A wall side rises to full height under a full block. A wall shows its post at ends, corners, and junctions, and on a straight run only when a torch or lantern sits on it.
 - **Torches** stand on a full block, fence, or wall below. Otherwise a torch hangs on a full block beside it, tilted away from the wall. The facing picks the wall when several are free. A torch with nothing to hold it stands on the floor.
 - **Doors** are two blocks tall. Painting a door places both halves, and erasing or replacing either half removes both. A door is skipped where the cell above it is outside the build or holds a block. The hinge follows Minecraft's rule: a door of the same type beside it makes a double door, and otherwise the side with more full blocks holds the hinge. Flip hinge swaps that choice on doors painted while it is on. A closed door sits on the cell edge opposite its facing.
+- **Campfires** use Minecraft's campfire model: four crossed logs on an ember bed, with crossed fire when lit. The soul campfire has blue embers and fire. New campfires are lit.
 
 ## Meta block
 
@@ -201,6 +202,8 @@ Moving or turning the meta block is one undo step, labelled "Meta block".
 ## 3D preview
 
 The 3D preview renders the build with textures, lighting, shadows, and a sky. Blocks grow in and shrink out as you paint.
+
+On the Night and Cloudy presets, light-emitting blocks such as torches, lit campfires, lanterns, and froglights light the blocks around them. Each light fades out at the block's Minecraft light level, for example 14 blocks for a torch and 7 for a redstone torch. Overlapping lights add together, where Minecraft takes the brightest. An unlit campfire gives no light. Animated textures show their first frame.
 
 **Mouse and trackpad**
 

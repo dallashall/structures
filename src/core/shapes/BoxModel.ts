@@ -17,6 +17,20 @@ export interface BoxRotation {
   origin: Vec3;
 }
 
+export type BoxFace = 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
+
+/**
+ * One face's texture, as in a Minecraft model element face
+ */
+export interface BoxFaceTexture {
+  // The block ID whose untransformed atlas texture the face shows
+  texture: string;
+  // u0, v0, u1, v1 in texture pixels, with v growing downward. u0 > u1 mirrors the region.
+  uv: [number, number, number, number];
+  // Clockwise turn of the texture on the face
+  rotation?: 0 | 90 | 180 | 270;
+}
+
 export interface ModelBox {
   from: Vec3;
   to: Vec3;
@@ -24,6 +38,9 @@ export interface ModelBox {
   rotation?: BoxRotation;
   // Moves the texture region: faces show the texture as if the box sat this far away
   uvShift?: Vec3;
+  // Each listed face shows its own texture region, and unlisted faces are not drawn.
+  // Without it, every face shows the block's face textures projected from the full cube.
+  faces?: Partial<Record<BoxFace, BoxFaceTexture>>;
 }
 
 /**
@@ -147,7 +164,7 @@ function turnBoxOnce(box: ModelBox): ModelBox {
 
 /**
  * Turns boxes counterclockwise about the cell's vertical center line, seen from above, by quarter turns.
- * One turn takes a box facing x+ to y+.
+ * One turn takes a box facing x+ to y+. Face textures do not carry over, so a box with faces turns only for its outline.
  */
 export function turnBoxesAboutZ(boxes: ModelBox[], quarterTurns: number): ModelBox[] {
   let turned = boxes;

@@ -30,6 +30,8 @@ export class EmissiveLighting {
 
     for (const blockData of allBlocks) {
       if (!isLuminousBlock(blockData.blockType)) continue;
+      // An unlit campfire gives no light
+      if (blockData.blockState?.lit === false || (blockData.blockState?.lit as unknown) === 'false') continue;
 
       const key = positionKey(blockData.position);
       luminousKeys.add(key);

@@ -13,7 +13,7 @@ import {
   VertexBuffer,
 } from '@babylonjs/core';
 import { rotateModelPoint } from '../shapes/BoxModel';
-import type { ModelBox, Vec3 } from '../shapes/BoxModel';
+import type { BoxFace, BoxFaceTexture, ModelBox, Vec3 } from '../shapes/BoxModel';
 
 type FaceUV = { u0: number; v0: number; u1: number; v1: number };
 
@@ -257,7 +257,7 @@ function createCellUVProjector(scene: Scene, faceUVData?: FaceUV[]): CellUVProje
 const babylonToModel = (b: ArrayLike<number>, offset: number, scale: number): Vec3 =>
   [b[offset] * scale, b[offset + 2] * scale, b[offset + 1] * scale];
 
-function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector): Mesh {
+function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector, textureRects: Record<string, FaceUV>): Mesh {
   const size = (axis: number): number => Math.max(box.to[axis] - box.from[axis], 0.001) / 16;
   const center = (axis: number): number => (box.from[axis] + box.to[axis]) / 32 - 0.5;
   const mesh = MeshBuilder.CreateBox('model_box', { width: size(0), height: size(2), depth: size(1) }, scene);
@@ -271,10 +271,19 @@ function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector): M
   const shift = [shiftX / 16, shiftZ / 16, shiftY / 16];
   const uvs: number[] = [];
   for (let i = 0; i < positions.length / 3; i++) {
-    const shifted = [0, 1, 2].map(toShiftedCoordinate(positions, i, shift));
-    uvs.push(...project(shifted, normals.slice(i * 3, i * 3 + 3)));
+    const normal = normals.slice(i * 3, i * 3 + 3);
+    const faceTexture = box.faces?.[BOX_FACES[faceIndexForNormal(normal)]];
+    const rect = faceTexture && textureRects[faceTexture.texture];
+    if (faceTexture && rect) {
+      const point = babylonToModel(positions, i * 3, 16).map(shiftToCorner) as Vec3;
+      uvs.push(...faceTextureUV(box, BOX_FACES[faceIndexForNormal(normal)], faceTexture, rect, point));
+    } else {
+      const shifted = [0, 1, 2].map(toShiftedCoordinate(positions, i, shift));
+      uvs.push(...project(shifted, normal));
+    }
   }
   mesh.setVerticesData(VertexBuffer.UVKind, uvs);
+  if (box.faces) dropUnlistedFaces(mesh, box.faces, normals);
 
   if (box.rotation) {
     const { rotation } = box;
@@ -293,6 +302,52 @@ function buildModelBox(scene: Scene, box: ModelBox, project: CellUVProjector): M
   return mesh;
 }
 
+// CreateBox face order by Babylon normal, as model faces. Model y+ is south.
+const BOX_FACES: BoxFace[] = ['south', 'north', 'east', 'west', 'up', 'down'];
+
+// Per face: the model axis and direction that texture u follows, then v. Minecraft's element faces map this way,
+// with v running down the side faces. true means the coordinate falls as u or v grows.
+const FACE_UV_AXES: Record<BoxFace, [number, boolean, number, boolean]> = {
+  north: [0, true, 2, true],
+  south: [0, false, 2, true],
+  east: [1, true, 2, true],
+  west: [1, false, 2, true],
+  up: [0, false, 1, false],
+  down: [0, false, 1, true],
+};
+
+/**
+ * The atlas UV at a point on one face of a box with face textures. The point is in model axes and 1/16 units.
+ */
+function faceTextureUV(box: ModelBox, face: BoxFace, faceTexture: BoxFaceTexture, rect: FaceUV, point: Vec3): [number, number] {
+  const [uAxis, uFalls, vAxis, vFalls] = FACE_UV_AXES[face];
+  const fraction = (axis: number, falls: boolean): number => {
+    const span = box.to[axis] - box.from[axis];
+    const along = span > 0 ? (point[axis] - box.from[axis]) / span : 0;
+    return falls ? 1 - along : along;
+  };
+  let s = fraction(uAxis, uFalls);
+  let t = fraction(vAxis, vFalls);
+  // Each clockwise quarter turn of the texture moves the face's sample point a quarter turn counterclockwise
+  for (let turn = 0; turn < (faceTexture.rotation ?? 0) / 90; turn++) [s, t] = [t, 1 - s];
+
+  const [u0, v0, u1, v1] = faceTexture.uv;
+  const u = (u0 + s * (u1 - u0)) / 16;
+  const v = (v0 + t * (v1 - v0)) / 16;
+  return [rect.u0 + u * (rect.u1 - rect.u0), rect.v0 + v * (rect.v1 - rect.v0)];
+}
+
+function dropUnlistedFaces(mesh: Mesh, faces: NonNullable<ModelBox['faces']>, normals: ArrayLike<number>): void {
+  const indices = mesh.getIndices()!;
+  const kept: number[] = [];
+  for (let i = 0; i < indices.length; i += 3) {
+    const vertex = indices[i];
+    const face = BOX_FACES[faceIndexForNormal([normals[vertex * 3], normals[vertex * 3 + 1], normals[vertex * 3 + 2]])];
+    if (faces[face]) kept.push(indices[i], indices[i + 1], indices[i + 2]);
+  }
+  mesh.setIndices(kept);
+}
+
 const toShiftedCoordinate = (positions: ArrayLike<number>, vertex: number, shift: number[]) =>
   (axis: number): number => positions[vertex * 3 + axis] + shift[axis];
 
@@ -302,15 +357,18 @@ const shiftToCorner = (value: number): number => value + 8;
 /**
  * Merges the boxes into one mesh. Coordinates are model axes in 1/16 units (see BoxModel).
  * faceUVData follows CreateBox face order and the atlas 3D table, as for a full cube.
+ * textureRects maps each face texture's block ID to its untransformed atlas rectangle (the atlas 2D table).
+ * A face whose texture has no rectangle falls back to the full-cube projection.
  */
 export function createBoxModelMesh(
   scene: Scene,
   name: string,
   boxes: ModelBox[],
   faceUVData?: FaceUV[],
+  textureRects: Record<string, FaceUV> = {},
 ): Mesh {
   const project = createCellUVProjector(scene, faceUVData);
-  const build = (box: ModelBox): Mesh => buildModelBox(scene, box, project);
+  const build = (box: ModelBox): Mesh => buildModelBox(scene, box, project, textureRects);
   const parts = boxes.map(build);
   const merged = parts.length === 1 ? parts[0] : Mesh.MergeMeshes(parts, true, true, undefined, false, false);
   if (!merged) {

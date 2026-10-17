@@ -222,7 +222,13 @@ export class MaterialResolver {
       blockName.includes('door') ||
       blockName.includes('trapdoor');
 
-    if (needsAlphaCutout) {
+    // A campfire's fire planes cross its logs inside one mesh. Under blending, the depth prepass lets the
+    // planes' clear pixels hide the logs behind them, so the campfire tests alpha instead.
+    if (blockName.includes('campfire')) {
+      material.useAlphaFromDiffuseTexture = true;
+      material.transparencyMode = StandardMaterial.MATERIAL_ALPHATEST;
+      material.backFaceCulling = false;
+    } else if (needsAlphaCutout) {
       material.useAlphaFromDiffuseTexture = true;
       material.transparencyMode = StandardMaterial.MATERIAL_ALPHABLEND;
       material.backFaceCulling = false;
@@ -322,7 +328,13 @@ export class MaterialResolver {
       blockName.includes('door') ||
       blockName.includes('trapdoor');
 
-    if (needsAlphaCutout) {
+    // A campfire's fire planes cross its logs inside one mesh. Under blending, the depth prepass lets the
+    // planes' clear pixels hide the logs behind them, so the campfire tests alpha instead.
+    if (blockName.includes('campfire')) {
+      material.useAlphaFromAlbedoTexture = true;
+      material.transparencyMode = PBRMaterial.MATERIAL_ALPHATEST;
+      material.backFaceCulling = false;
+    } else if (needsAlphaCutout) {
       material.useAlphaFromAlbedoTexture = true;
       material.transparencyMode = PBRMaterial.MATERIAL_ALPHABLEND;
       material.backFaceCulling = false;

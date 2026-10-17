@@ -24,12 +24,13 @@ export interface BlockShape {
   getGeometryKey(blockState?: BlockStateProperties): string;
 
   /**
-   * Null means the default cube
+   * Null means the default cube. textureBlockId is the getTextureBlockId result that faceUVData belongs to.
    */
   createMesh(
     scene: Scene,
     blockState: BlockStateProperties,
     faceUVData?: FaceUVData,
+    textureBlockId?: string,
   ): Mesh | null;
 
   /**

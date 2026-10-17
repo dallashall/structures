@@ -157,6 +157,44 @@ describe('createBoxModelMesh', () => {
   });
 });
 
+describe('createBoxModelMesh face textures', () => {
+  const UNIT_RECT = { 'minecraft:log': { u0: 0, v0: 0, u1: 1, v1: 1 } };
+  const FULL: [number, number, number, number] = [0, 0, 16, 16];
+  const uvAt = (mesh: Mesh, position: number[], normal: number[]): number[] | undefined => {
+    const matches = (vertex: Vertex): boolean =>
+      vertex.position.join() === position.join() && vertex.normal.join() === normal.join();
+    return readVertices(mesh).find(matches)?.uv;
+  };
+
+  it('draws only the listed faces', () => {
+    const box = createBoxModelMesh(scene, 'top_only', [{
+      from: [0, 0, 0], to: [16, 16, 16], faces: { up: { texture: 'minecraft:log', uv: FULL } },
+    }], undefined, UNIT_RECT);
+    expect(box.getIndices()).toHaveLength(6);
+    box.dispose();
+  });
+
+  it('runs u toward the viewer\'s right and v downward, as Minecraft faces do', () => {
+    // Seen from the north, east (model x+) is on the left, so the north face's u starts at the east edge
+    const box = createBoxModelMesh(scene, 'north', [{
+      from: [0, 0, 0], to: [16, 16, 16], faces: { north: { texture: 'minecraft:log', uv: FULL } },
+    }], undefined, UNIT_RECT);
+    expect(uvAt(box, [0.5, 0.5, -0.5], [0, 0, -1])).toEqual([0, 0]);
+    expect(uvAt(box, [-0.5, -0.5, -0.5], [0, 0, -1])).toEqual([1, 1]);
+    box.dispose();
+  });
+
+  it('turns the texture clockwise by the face rotation', () => {
+    // A quarter turn puts the texture's top-left corner at the up face's north-east corner
+    const box = createBoxModelMesh(scene, 'turned', [{
+      from: [0, 0, 0], to: [16, 16, 16], faces: { up: { texture: 'minecraft:log', uv: FULL, rotation: 90 } },
+    }], undefined, UNIT_RECT);
+    expect(uvAt(box, [0.5, 0.5, -0.5], [0, 1, 0])).toEqual([0, 0]);
+    expect(uvAt(box, [-0.5, 0.5, -0.5], [0, 1, 0])).toEqual([0, 1]);
+    box.dispose();
+  });
+});
+
 const toKeyedUV = (vertex: Vertex): [string, number[]] => [vertexKey(vertex), vertex.uv];
 const toLocalFaceU = (face: number) => (vertex: Vertex): number => (vertex.uv[0] - face * TILE) / TILE;
 const toBabylonX = (vertex: Vertex): number => vertex.position[0];
